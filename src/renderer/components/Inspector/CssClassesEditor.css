@@ -1,0 +1,56 @@
+.css-classes-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.classes-input-container {
+  width: 100%;
+}
+
+.classes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.class-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.class-name {
+  margin-right: 4px;
+}
+
+.class-remove-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.class-remove-btn:hover {
+  color: #ff6b6b;
+}
+
+.no-classes {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 4px 0;
+}

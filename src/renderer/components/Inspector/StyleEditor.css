@@ -1,0 +1,56 @@
+.style-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.style-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.style-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.style-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.button-group {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.btn-toggle {
+  flex: 1;
+  background: var(--bg-primary);
+  border: none;
+  border-right: 1px solid var(--border-color);
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-toggle:last-child {
+  border-right: none;
+}
+
+.btn-toggle:hover {
+  background: var(--bg-secondary);
+}
+
+.btn-toggle.active {
+  background: var(--accent-color);
+  color: white;
+}

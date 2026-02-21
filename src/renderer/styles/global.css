@@ -1,0 +1,203 @@
+:root {
+  /* Light Theme (Default) */
+  --color-bg-primary: #eff1f5;
+  --color-bg-secondary: #e6e9ef;
+  --color-bg-surface: #dce0e8;
+  --color-bg-hover: #bcc0cc;
+  --color-text-primary: #4c4f69;
+  --color-text-secondary: #6c6f85;
+  --color-text-muted: #9ca0b0;
+  --color-border: #ccd0da;
+  --color-accent: #1e66f5;
+  --color-accent-hover: #7287fd;
+  --color-danger: #d20f39;
+  --color-success: #40a02b;
+  --color-warning: #df8e1d;
+
+  --sidebar-width: 260px;
+  --inspector-width: 300px;
+  --toolbar-height: 44px;
+  --code-editor-height: 250px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas,
+    'Courier New', monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+/* Dark Theme Override */
+body.dark {
+  --color-bg-primary: #1e1e2e;
+  --color-bg-secondary: #181825;
+  --color-bg-surface: #313244;
+  --color-bg-hover: #45475a;
+  --color-text-primary: #cdd6f4;
+  --color-text-secondary: #a6adc8;
+  --color-text-muted: #6c7086;
+  --color-border: #45475a;
+  --color-accent: #89b4fa;
+  --color-accent-hover: #74c7ec;
+  --color-danger: #f38ba8;
+  --color-success: #a6e3a1;
+  --color-warning: #fab387;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── App Layout ──────────────────────────────────────────────────────────── */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.editor-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ─── React Resizable Panels ──────────────────────────────────────────────── */
+
+/* The resize handle */
+.panel-resize-handle {
+  flex: 0 0 1px;
+  background-color: var(--color-border);
+  transition: background-color 0.2s;
+  outline: none;
+  position: relative;
+  z-index: 10;
+}
+
+.panel-resize-handle:hover,
+.panel-resize-handle[data-resize-handle-active] {
+  background-color: var(--color-accent);
+}
+
+/* Hit area for easier grabbing */
+.panel-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+  z-index: 10;
+}
+
+/* Horizontal handle (vertical split) */
+.panel-resize-handle-horizontal {
+  flex: 0 0 1px;
+  background-color: var(--color-border);
+  transition: background-color 0.2s;
+  outline: none;
+  position: relative;
+  z-index: 10;
+}
+
+.panel-resize-handle-horizontal:hover,
+.panel-resize-handle-horizontal[data-resize-handle-active] {
+  background-color: var(--color-accent);
+}
+
+.panel-resize-handle-horizontal::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  bottom: -4px;
+  z-index: 10;
+}
+
+/* ─── Panels ──────────────────────────────────────────────────────────────── */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-left {
+  width: var(--sidebar-width);
+  min-width: 200px;
+  max-width: 400px;
+  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border);
+}
+
+.panel-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.panel-right {
+  width: var(--inspector-width);
+  min-width: 240px;
+  max-width: 500px;
+  background: var(--color-bg-secondary);
+  border-left: 1px solid var(--color-border);
+}
+
+.canvas-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--color-bg-surface);
+}
+
+.code-editor-area {
+  height: var(--code-editor-height);
+  min-height: 100px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+
+/* ─── Scrollbar Styling ───────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-bg-hover);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

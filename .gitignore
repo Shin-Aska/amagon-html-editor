@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+release/
+
+# Vite / Electron-Vite caches
+.vite/
+.electron-vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Test / coverage
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs/editors
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea/
+*.iml
+
+# Misc
+*.local

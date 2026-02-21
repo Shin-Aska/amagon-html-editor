@@ -1,0 +1,114 @@
+.spacing-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.box-model-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 11px;
+  user-select: none;
+}
+
+.box-margin, .box-padding {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px dashed var(--border-color);
+  background-color: rgba(var(--accent-color-rgb), 0.05);
+  transition: all 0.2s;
+}
+
+.box-margin {
+  width: 200px;
+  height: 140px;
+  background-color: #f9f0ff; /* Light purple for margin */
+  border-color: #d8b4e2;
+}
+
+.box-padding {
+  width: 130px;
+  height: 80px;
+  background-color: #f0f9ff; /* Light blue for padding */
+  border-color: #b4d8e2;
+}
+
+.box-content {
+  width: 60px;
+  height: 30px;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.box-label {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.box-side {
+  position: absolute;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.box-side:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.box-side.active {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+/* Margin Positioning */
+.box-margin-top { top: 0; left: 0; right: 0; height: 30px; }
+.box-margin-bottom { bottom: 0; left: 0; right: 0; height: 30px; }
+.box-margin-left { top: 0; bottom: 0; left: 0; width: 35px; }
+.box-margin-right { top: 0; bottom: 0; right: 0; width: 35px; }
+
+/* Padding Positioning */
+.box-padding-top { top: 0; left: 0; right: 0; height: 25px; }
+.box-padding-bottom { bottom: 0; left: 0; right: 0; height: 25px; }
+.box-padding-left { top: 0; bottom: 0; left: 0; width: 35px; }
+.box-padding-right { top: 0; bottom: 0; right: 0; width: 35px; }
+
+.box-value {
+  z-index: 1;
+}
+
+.spacing-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.spacing-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.spacing-input-group input {
+  flex: 2;
+}
+
+.spacing-input-group select {
+  flex: 1;
+}

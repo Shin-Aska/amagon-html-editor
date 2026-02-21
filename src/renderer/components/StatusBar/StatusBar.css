@@ -1,0 +1,32 @@
+.status-bar {
+  height: 24px;
+  background-color: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  user-select: none;
+  justify-content: space-between;
+}
+
+.status-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-item span {
+  color: var(--color-text-primary);
+}
+
+.status-icon {
+  opacity: 0.7;
+}
