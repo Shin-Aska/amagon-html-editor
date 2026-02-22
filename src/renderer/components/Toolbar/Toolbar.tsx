@@ -103,18 +103,11 @@ export default function Toolbar({
   const [showExport, setShowExport] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [tempName, setTempName] = useState(projectName)
-  const [showPageMenu, setShowPageMenu] = useState(false)
-  const [isAddingPage, setIsAddingPage] = useState(false)
-  const [newPageName, setNewPageName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [showLayoutMenu, setShowLayoutMenu] = useState(false)
 
-  // Store access for pages
-  const pages = useProjectStore((s) => s.pages)
+  // Store access for pages (read-only for display)
   const currentPage = useProjectStore((s) => s.getCurrentPage())
-  const setCurrentPage = useProjectStore((s) => s.setCurrentPage)
-  const addPage = useProjectStore((s) => s.addPage)
-  const removePage = useProjectStore((s) => s.removePage)
 
   // Sync temp name when project name changes
   useEffect(() => {
@@ -273,38 +266,6 @@ export default function Toolbar({
     }
   }
 
-  // Page Operations
-  const handleAddPage = () => {
-    if (!newPageName.trim()) return
-
-    if (currentPageId) {
-      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
-    }
-    addPage(newPageName.trim())
-    setNewPageName('')
-    setIsAddingPage(false)
-    setShowPageMenu(false)
-    // Auto-switch to new page? The store's addPage already sets it as current.
-  }
-
-  const handleDeletePage = (e: React.MouseEvent, pageId: string) => {
-    e.stopPropagation()
-    if (pages.length <= 1) {
-      alert('Cannot delete the last page.')
-      return
-    }
-    if (confirm('Are you sure you want to delete this page?')) {
-      removePage(pageId)
-    }
-  }
-
-  // Edit Operations
-  const handleDelete = () => {
-    if (selectedBlockId) {
-      removeBlock(selectedBlockId)
-    }
-  }
-
   // Simple clipboard implementation (memory-only for now)
   const [clipboard, setClipboard] = useState<Block | null>(null)
 
@@ -342,6 +303,12 @@ export default function Toolbar({
       
       const newBlock = cloneBlock(clipboard)
       addBlock(newBlock, selectedBlockId) // Add as child of selected, or root
+    }
+  }
+
+  const handleDelete = () => {
+    if (selectedBlockId) {
+      removeBlock(selectedBlockId)
     }
   }
 
@@ -393,92 +360,6 @@ export default function Toolbar({
             >
               {projectName || 'Untitled Project'}
             </span>
-          )}
-        </div>
-        
-        {/* Page Selector */}
-        <div className="toolbar-page-wrapper">
-          <button
-            className="toolbar-btn toolbar-page-btn"
-            onClick={() => setShowPageMenu(!showPageMenu)}
-            title="Switch Page"
-          >
-            <span style={{ fontWeight: 500 }}>Page: {currentPage?.title || 'Page'}</span>
-            <span style={{ fontSize: 10, opacity: 0.7 }}>▼</span>
-          </button>
-
-          {showPageMenu && (
-            <div className="toolbar-page-menu">
-              {pages.map((p) => (
-                <div
-                  key={p.id}
-                  className="page-menu-item"
-                  onClick={() => {
-                    if (currentPageId && currentPageId !== p.id) {
-                      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
-                    }
-                    setCurrentPage(p.id)
-                    setShowPageMenu(false)
-                  }}
-                >
-                  <div className={`page-menu-label ${p.id === currentPageId ? 'active' : ''}`}>
-                    <span className="page-menu-check">{p.id === currentPageId ? '✓' : ''}</span>
-                    {p.title}
-                    {p.slug !== 'index' && <span className="page-slug">/{p.slug}</span>}
-                  </div>
-                  {pages.length > 1 && (
-                    <button
-                      className="page-menu-delete"
-                      onClick={(e) => handleDeletePage(e, p.id)}
-                      title="Delete Page"
-                    >
-                      &times;
-                    </button>
-                  )}
-                </div>
-              ))}
-              
-              <div className="page-menu-divider" />
-              
-              {isAddingPage ? (
-                <div className="page-menu-item" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    className="toolbar-input-name"
-                    style={{ width: '100%' }}
-                    placeholder="Page Name"
-                    value={newPageName}
-                    onChange={(e) => setNewPageName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddPage()
-                      if (e.key === 'Escape') setIsAddingPage(false)
-                    }}
-                    autoFocus
-                  />
-                </div>
-              ) : (
-                <div
-                  className="page-menu-item add-page"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setIsAddingPage(true)
-                  }}
-                >
-                  <FilePlus size={14} />
-                  <span>Add New Page</span>
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Overlay to close menu on click outside */}
-          {showPageMenu && (
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 90 }}
-              onClick={() => {
-                setShowPageMenu(false)
-                setIsAddingPage(false)
-              }}
-            />
           )}
         </div>
 

@@ -1,5 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { FilePlus, FileText } from 'lucide-react'
 import './Sidebar.css'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -54,7 +55,17 @@ function WidgetCategory({ title, widgets }: { title: string; widgets: BlockDefin
 function Sidebar(): JSX.Element {
   const categories = componentRegistry.getCategories()
   const userBlocks = useProjectStore((s) => s.userBlocks)
-  const [activeTab, setActiveTab] = useState<'widgets' | 'layers'>('widgets')
+  const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages'>('widgets')
+
+  // Page management
+  const pages = useProjectStore((s) => s.pages)
+  const currentPageId = useProjectStore((s) => s.currentPageId)
+  const setCurrentPage = useProjectStore((s) => s.setCurrentPage)
+  const addPage = useProjectStore((s) => s.addPage)
+  const removePage = useProjectStore((s) => s.removePage)
+  const updatePage = useProjectStore((s) => s.updatePage)
+  const [isAddingPage, setIsAddingPage] = useState(false)
+  const [newPageName, setNewPageName] = useState('')
 
   // Define a specific order for categories if desired, or just use the insertion order
   const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed']
@@ -70,12 +81,44 @@ function Sidebar(): JSX.Element {
     propsSchema: {} // Not needed for sidebar display
   }))
 
+  const handleAddPage = () => {
+    if (!newPageName.trim()) return
+    addPage(newPageName.trim())
+    setNewPageName('')
+    setIsAddingPage(false)
+  }
+
+  const handleDeletePage = (e: React.MouseEvent, pageId: string) => {
+    e.stopPropagation()
+    if (pages.length <= 1) {
+      alert('Cannot delete the last page.')
+      return
+    }
+    if (confirm('Are you sure you want to delete this page?')) {
+      removePage(pageId)
+    }
+  }
+
+  const handleSwitchPage = (pageId: string) => {
+    if (currentPageId && currentPageId !== pageId) {
+      // Save current page blocks before switching
+      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+    }
+    setCurrentPage(pageId)
+  }
+
   return (
     <div className="sidebar">
       <div className="sidebar-header">
         <h3>Design</h3>
       </div>
       <div className="sidebar-tabs">
+        <div
+          className={`sidebar-tab ${activeTab === 'pages' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pages')}
+        >
+          Pages
+        </div>
         <div
           className={`sidebar-tab ${activeTab === 'widgets' ? 'active' : ''}`}
           onClick={() => setActiveTab('widgets')}
@@ -90,6 +133,58 @@ function Sidebar(): JSX.Element {
         </div>
       </div>
       <div className="sidebar-content" style={{ display: 'flex', flexDirection: 'column' }}>
+        {activeTab === 'pages' && (
+          <div className="pages-panel">
+            <div className="pages-list">
+              {pages.map((page) => (
+                <div
+                  key={page.id}
+                  className={`page-item ${page.id === currentPageId ? 'active' : ''}`}
+                  onClick={() => handleSwitchPage(page.id)}
+                >
+                  <div className="page-info">
+                    <FileText size={14} className="page-icon" />
+                    <span className="page-name">{page.title}</span>
+                    {page.slug !== 'index' && <span className="page-slug">/{page.slug}</span>}
+                  </div>
+                  {pages.length > 1 && (
+                    <button
+                      className="page-delete-btn"
+                      onClick={(e) => handleDeletePage(e, page.id)}
+                      title="Delete Page"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {isAddingPage ? (
+              <div className="page-add-form">
+                <input
+                  className="page-add-input"
+                  placeholder="Page Name"
+                  value={newPageName}
+                  onChange={(e) => setNewPageName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddPage()
+                    if (e.key === 'Escape') {
+                      setIsAddingPage(false)
+                      setNewPageName('')
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <button className="page-add-btn" onClick={() => setIsAddingPage(true)}>
+                <FilePlus size={14} />
+                <span>Add New Page</span>
+              </button>
+            )}
+          </div>
+        )}
         {activeTab === 'widgets' ? (
           <>
             {allCategories.map((category) => (
