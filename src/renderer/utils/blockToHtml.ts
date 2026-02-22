@@ -149,14 +149,26 @@ function getBlockContent(block: Block): string {
     }
     case 'code-block': {
       const codeType = String(block.props.code ?? '')
+      const language = String(block.props.language ?? '')
+
       let highlighted = escapeAttrValue(codeType)
       try {
-        highlighted = hljs.highlightAuto(codeType).value
+        if (language && hljs.getLanguage(language)) {
+          highlighted = hljs.highlight(codeType, { language }).value
+        } else {
+          highlighted = hljs.highlightAuto(codeType).value
+        }
       } catch (e) {
         // Fallback to unhighlighted if hljs fails
         console.warn('Failed to highlight code block string', e)
       }
-      return `<pre><code class="hljs">${highlighted}</code></pre>`
+
+      const badgeHtml = language
+        ? `<div class="position-absolute top-0 end-0 mt-2 me-2 px-2 py-1 bg-secondary text-white rounded font-monospace" style="font-size: 0.75rem; opacity: 0.8; z-index: 5;">${language}</div>`
+        : ''
+
+      // Return just the inner generated html. The parent engine assigns external padding arrays to `tag`!
+      return `<div class="position-relative">${badgeHtml}<pre class="m-0" style="background: transparent; padding: 0;"><code class="hljs ${language ? `language-${language}` : ''}" style="background: transparent; padding: 0;">${highlighted}</code></pre></div>`
     }
 
     case 'icon':

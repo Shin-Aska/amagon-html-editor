@@ -233,6 +233,14 @@ function setCustomCss(css: string): void {
 }
 
 function initRuntime(): void {
+  // Inject Highlight.js CSS into the iframe's head dynamically so code blocks inherit colors
+  const hljsStyle = document.createElement('link')
+  hljsStyle.rel = 'stylesheet'
+  hljsStyle.id = 'hljs-theme'
+  // Use a default dark theme for now, we can update it dynamically if needed based on `isDark`
+  hljsStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css'
+  document.head.appendChild(hljsStyle)
+
   // Listen for messages from the parent editor
   window.addEventListener('message', (event: MessageEvent) => {
     const data = event.data as Partial<EditorMessage> | undefined
@@ -893,9 +901,11 @@ function ensureResizeHandles(overlay: HTMLDivElement): void {
   overlay.appendChild(br)
 
   // Floating Actions
-  const isDark = document.body.classList.contains('dark')
+  const isDark = document.body.classList.contains('dark') ||
+    (!document.body.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
   const bg = isDark ? '#1e1e2e' : '#ffffff'
-  const border = isDark ? '#313244' : '#e6e9ef'
+  const border = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
   const editColor = isDark ? '#cba6f7' : '#1e66f5'
   const deleteColor = isDark ? '#f38ba8' : '#d20f39'
   const editHover = isDark ? 'rgba(203, 166, 247, 0.15)' : 'rgba(30, 102, 245, 0.15)'

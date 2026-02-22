@@ -175,10 +175,10 @@ export function registerBlocks(): void {
       ]
     },
     propsSchema: {
-      slides: { 
-        type: 'array', 
-        label: 'Slides', 
-        default: [] 
+      slides: {
+        type: 'array',
+        label: 'Slides',
+        default: []
         // In a real implementation, we'd need a sub-schema for array items
       }
     }
@@ -641,12 +641,25 @@ export function registerBlocks(): void {
     label: 'Code Block',
     category: 'Typography',
     icon: '{ }',
-    defaultClasses: ['bg-dark', 'text-light', 'p-3', 'rounded'],
+    defaultClasses: ['bg-dark', 'text-light', 'p-3', 'rounded', 'position-relative'],
     defaultProps: {
-      code: 'console.log("Hello world");'
+      code: 'console.log("Hello world");',
+      language: 'javascript'
     },
     propsSchema: {
-      code: { type: 'textarea', label: 'Code', default: 'console.log("Hello world");' }
+      code: { type: 'textarea', label: 'Code', default: 'console.log("Hello world");' },
+      language: {
+        type: 'select',
+        label: 'Language',
+        options: [
+          { label: 'Auto (Detect)', value: '' },
+          { label: 'JavaScript', value: 'javascript' },
+          { label: 'TypeScript', value: 'typescript' },
+          { label: 'HTML', value: 'html' },
+          { label: 'CSS', value: 'css' },
+          { label: 'Python', value: 'python' }
+        ]
+      }
     }
   })
 }
