@@ -1,4 +1,7 @@
-import { ICON_PLACEHOLDER } from './placeholders'
+import { IMAGE_PLACEHOLDER, ICON_PLACEHOLDER } from './placeholders'
+import hljs from 'highlight.js'
+
+// We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 
 import type { Block } from '../store/types'
 
@@ -53,7 +56,7 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
 
   for (const [key, value] of Object.entries(props)) {
     if (value === undefined || value === null) continue
-    
+
     // Handle boolean attributes
     if (value === false) continue
     if (value === true) {
@@ -124,7 +127,7 @@ function getBlockContent(block: Block): string {
     case 'button':
     case 'link':
       return escapeAttrValue(String(props.text ?? ''))
-    
+
     case 'blockquote': {
       const text = escapeAttrValue(String(props.text ?? ''))
       const footer = props.footer ? `<footer class="blockquote-footer mt-2">${escapeAttrValue(String(props.footer))}</footer>` : ''
@@ -135,14 +138,25 @@ function getBlockContent(block: Block): string {
       const items = (props.items as string[]) ?? []
       return items.map((item) => `<li>${escapeAttrValue(item)}</li>`).join('\n')
     }
-    
+
     case 'select': {
       const options = (props.options as string[]) ?? []
       return options.map(opt => `<option value="${escapeAttrValue(opt)}">${escapeAttrValue(opt)}</option>`).join('\n')
     }
 
+    case 'raw-html': {
+      return block.props.content ? String(block.props.content) : ''
+    }
     case 'code-block': {
-      return `<code>${escapeAttrValue(String(props.code ?? ''))}</code>`
+      const codeType = String(block.props.code ?? '')
+      let highlighted = escapeAttrValue(codeType)
+      try {
+        highlighted = hljs.highlightAuto(codeType).value
+      } catch (e) {
+        // Fallback to unhighlighted if hljs fails
+        console.warn('Failed to highlight code block string', e)
+      }
+      return `<pre><code class="hljs">${highlighted}</code></pre>`
     }
 
     case 'icon':
@@ -151,8 +165,8 @@ function getBlockContent(block: Block): string {
     case 'carousel': {
       const id = String(props.id || 'carousel-' + Math.random().toString(36).substr(2, 9))
       const slides = (props.slides as Array<{ src: string; alt: string; caption?: string }>) ?? []
-      
-      const indicators = slides.map((_, i) => 
+
+      const indicators = slides.map((_, i) =>
         `<button type="button" data-bs-target="#${id}" data-bs-slide-to="${i}" class="${i === 0 ? 'active' : ''}" aria-current="${i === 0 ? 'true' : 'false'}" aria-label="Slide ${i + 1}"></button>`
       ).join('\n')
 
@@ -182,14 +196,14 @@ function getBlockContent(block: Block): string {
     case 'accordion': {
       const id = String(props.id || 'accordion-' + Math.random().toString(36).substr(2, 9))
       const items = (props.items as Array<{ title: string; content: string }>) ?? []
-      
+
       return items.map((item, i) => {
         const itemId = `${id}-item-${i}`
         const collapseId = `${id}-collapse-${i}`
         const isExpanded = i === 0 ? 'true' : 'false'
         const showClass = i === 0 ? 'show' : ''
         const collapsedClass = i === 0 ? '' : 'collapsed'
-        
+
         return `
         <div class="accordion-item">
           <h2 class="accordion-header" id="${itemId}">
@@ -209,12 +223,12 @@ function getBlockContent(block: Block): string {
     case 'tabs': {
       const id = String(props.id || 'tabs-' + Math.random().toString(36).substr(2, 9))
       const tabs = (props.tabs as Array<{ label: string; content: string }>) ?? []
-      
+
       const navItems = tabs.map((tab, i) => {
         const tabId = `${id}-tab-${i}`
         const contentId = `${id}-content-${i}`
         const activeClass = i === 0 ? 'active' : ''
-        
+
         return `
         <li class="nav-item" role="presentation">
           <button class="nav-link ${activeClass}" id="${tabId}" data-bs-toggle="tab" data-bs-target="#${contentId}" type="button" role="tab" aria-controls="${contentId}" aria-selected="${i === 0}">
@@ -227,7 +241,7 @@ function getBlockContent(block: Block): string {
         const tabId = `${id}-tab-${i}`
         const contentId = `${id}-content-${i}`
         const activeClass = i === 0 ? 'show active' : ''
-        
+
         return `
         <div class="tab-pane fade ${activeClass}" id="${contentId}" role="tabpanel" aria-labelledby="${tabId}">
           ${escapeAttrValue(tab.content)}
@@ -246,11 +260,11 @@ function getBlockContent(block: Block): string {
     case 'textarea':
       // Textarea content is the value
       return '' // Usually value is prop/attribute? Or content? 
-      // HTML textarea: <textarea>content</textarea>
-      // But standard way is often just attributes if controlled? 
-      // Let's assume empty for now as value attribute works too, or if we want defaults:
-      // return escapeAttrValue(String(props.value ?? '')) 
-      
+    // HTML textarea: <textarea>content</textarea>
+    // But standard way is often just attributes if controlled? 
+    // Let's assume empty for now as value attribute works too, or if we want defaults:
+    // return escapeAttrValue(String(props.value ?? '')) 
+
     case 'raw-html':
       return block.content ?? String(props.content ?? '')
 
@@ -293,7 +307,7 @@ function renderBlock(
   includeDataAttributes: boolean
 ): string {
   const pad = ' '.repeat(indent * indentSize)
-  
+
   // Special handling for Checkbox (composite component)
   if (block.type === 'checkbox') {
     const label = escapeAttrValue(String(block.props.label ?? ''))
@@ -302,7 +316,7 @@ function renderBlock(
     const id = block.id
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
     const classes = block.classes.join(' ')
-    
+
     return `${pad}<div class="form-check" ${dataAttr}>
 ${pad}  <input class="${classes}" type="checkbox" id="${id}" ${name} ${checked}>
 ${pad}  <label class="form-check-label" for="${id}">
@@ -320,37 +334,37 @@ ${pad}</div>`
     // The inner input rendering needs to NOT include data-block-id if we put it on the wrapper
     // But usually we want the wrapper to be the block target?
     // Let's put data-block-id on the wrapper.
-    
+
     // We need to generate the inner element string manually or call a helper
     // Let's generate it manually to correctly map props
-    
+
     const tag = block.type
     const classes = block.classes.join(' ')
-    
+
     // Build attributes for the input element
     const attrs: string[] = []
     attrs.push(`class="${classes}"`)
     attrs.push(`id="${id}"`)
-    
+
     // Style
     const styleStr = stylesToString(block.styles)
     if (styleStr) attrs.push(`style="${styleStr}"`)
-    
+
     // Props
     for (const [key, value] of Object.entries(block.props)) {
       if (key === 'label' || value === undefined || value === null || value === false) continue
       if (key === 'options') continue // select options
       if (key === 'text') continue // textarea text?
-      
+
       if (value === true) {
         attrs.push(escapeAttrName(key))
       } else {
         attrs.push(`${escapeAttrName(key)}="${escapeAttrValue(String(value))}"`)
       }
     }
-    
+
     const attrString = attrs.join(' ')
-    
+
     let inner = ''
     if (tag === 'input') {
       inner = `<input ${attrString}>`
@@ -374,7 +388,7 @@ ${pad}</div>`
       // But standard bootstrap form control spacing usually needs a wrapper?
       // Let's stick to wrapper if it helps, or just return inner with data-block-id injected.
       // Simpler: Just return the inner element with data-block-id injected if no label.
-      
+
       if (includeDataAttributes) {
         // We constructed inner without data-block-id. Let's inject it.
         // Hacky string injection? Or just rebuild.
@@ -391,16 +405,16 @@ ${pad}</div>`
   if (block.type === 'icon') {
     const iconClass = escapeAttrValue(String(block.props.iconClass ?? 'bi-star'))
     const classes = [...block.classes, iconClass].filter(Boolean).join(' ')
-    
+
     // Merge styles with props like size/color if they exist and aren't in styles
     const styles = { ...block.styles }
     if (block.props.size && !styles.fontSize) styles.fontSize = String(block.props.size)
     if (block.props.color && !styles.color) styles.color = String(block.props.color)
-    
+
     const styleStr = stylesToString(styles)
     const styleAttr = styleStr ? `style="${styleStr}"` : ''
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
-    
+
     return `${pad}<i class="${classes}" ${styleAttr} ${dataAttr}></i>`
   }
 

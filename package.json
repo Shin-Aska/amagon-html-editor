@@ -24,6 +24,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@monaco-editor/react": "^4.7.0",
+    "highlight.js": "^11.11.1",
     "lucide-react": "^0.575.0",
     "monaco-editor": "^0.47.0",
     "parse5": "^7.1.2",

@@ -169,7 +169,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     if (clipboard) {
       // Clone the clipboard block to generate new IDs
       const newBlock = cloneBlockTree(clipboard)
-      
+
       // Insert after selected block, or at root if nothing selected
       if (selectedBlockId) {
         const parent = findParentFromRoot(blocks, selectedBlockId)
@@ -211,9 +211,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
       // Find next sibling to select after deletion
       const nextSibling = findAdjacentSibling(blocks, selectedBlockId, 'next')
       const prevSibling = findAdjacentSibling(blocks, selectedBlockId, 'prev')
-      
+
       removeBlock(selectedBlockId)
-      
+
       // Select adjacent block
       if (nextSibling) {
         selectBlock(nextSibling.id)
@@ -286,11 +286,12 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Ignore if typing in an input, textarea, or contenteditable
     const target = e.target as HTMLElement
-    const isInputElement = 
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.contentEditable === 'true' ||
-      target.closest('[contenteditable="true"]') !== null
+    // If e.target is the Window (e.g. from artificial window.dispatchEvent bubbling from Canvas), these properties will be undefined
+    const isInputElement =
+      target?.tagName === 'INPUT' ||
+      target?.tagName === 'TEXTAREA' ||
+      target?.contentEditable === 'true' ||
+      target?.closest?.('[contenteditable="true"]') !== null
 
     // Special handling for Escape
     if (e.key === 'Escape') {
