@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Dev: Vite + Chrome",
+      "name": "Dev: Electron",
       "type": "pwa-node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -10,23 +10,12 @@
       "runtimeArgs": [
         "run",
         "dev",
-        "--",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "5173"
+        "--"
       ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "outputCapture": "std",
-      "skipFiles": ["<node_internals>/**"],
-      "serverReadyAction": {
-        "action": "debugWithChrome",
-        "pattern": "(https?://(?:127\\.0\\.0\\.1|localhost):\\d+/)",
-        "uriFormat": "%s",
-        "webRoot": "${workspaceFolder}",
-        "killOnServerStop": true
-      }
+      "skipFiles": ["<node_internals>/**"]
     },
     {
       "name": "Dev: Vite only",
@@ -36,7 +25,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
-        "dev",
+        "dev:web",
         "--",
         "--host",
         "127.0.0.1",

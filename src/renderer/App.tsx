@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import {
   DndContext,
@@ -15,19 +15,52 @@ import Canvas from './components/Canvas/Canvas'
 import Inspector from './components/Inspector/Inspector'
 import Toolbar from './components/Toolbar/Toolbar'
 import StatusBar from './components/StatusBar/StatusBar'
-import CodeEditor from './components/CodeEditor/CodeEditor'
 import DragOverlayManager, { type DropTargetHint } from './components/DragOverlayManager/DragOverlayManager'
+import CommandPalette from './components/CommandPalette/CommandPalette'
 import { useEditorStore } from './store/editorStore'
 import { useProjectStore } from './store/projectStore'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { Block } from './store/types'
 import { createBlock } from './store/types'
 import { componentRegistry } from './registry/ComponentRegistry'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
+import { getApi } from './utils/api'
+import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
+
+// Lazy load heavy components for performance
+const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'))
+const AssetManager = lazy(() => import('./components/AssetManager/AssetManager'))
+const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'))
+const ExportDialog = lazy(() => import('./components/ExportDialog/ExportDialog'))
+
+// Loading fallback component
+const DialogLoader = () => (
+  <div style={{ 
+    position: 'fixed', 
+    inset: 0, 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.5)',
+    zIndex: 9999
+  }}>
+    <div style={{ padding: 20, background: '#1e1e2e', borderRadius: 8 }}>
+      Loading...
+    </div>
+  </div>
+)
 
 function App(): JSX.Element {
+  const api = getApi()
+  
   const [leftPanelOpen, setLeftPanelOpen] = useState(true)
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [codeEditorOpen, setCodeEditorOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [showNewProject, setShowNewProject] = useState(false)
+  const [showAssetManager, setShowAssetManager] = useState(false)
+  const [showExport, setShowExport] = useState(false)
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
 
   const addBlock = useEditorStore((s) => s.addBlock)
   const selectBlock = useEditorStore((s) => s.selectBlock)
@@ -42,6 +75,87 @@ function App(): JSX.Element {
       activationConstraint: { distance: 6 }
     })
   )
+
+  // Handlers for keyboard shortcuts - direct API calls
+  const handleNewProject = useCallback(() => {
+    setShowNewProject(true)
+  }, [])
+
+  const handleSave = useCallback(async () => {
+    const currentPageId = useProjectStore.getState().currentPageId
+    if (currentPageId) {
+      useProjectStore.getState().updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+    }
+    const projectData = useProjectStore.getState().getProjectData()
+    const content = JSON.stringify(projectData, null, 2)
+    const filePath = useProjectStore.getState().filePath
+    
+    const result = await api.project.save({ filePath: filePath || undefined, content })
+    if (result.success && result.filePath) {
+      useProjectStore.getState().setFilePath(result.filePath)
+    }
+  }, [api])
+
+  const handleSaveAs = useCallback(async () => {
+    const currentPageId = useProjectStore.getState().currentPageId
+    if (currentPageId) {
+      useProjectStore.getState().updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+    }
+    const projectData = useProjectStore.getState().getProjectData()
+    const content = JSON.stringify(projectData, null, 2)
+    
+    const result = await api.project.saveAs({ content })
+    if (result.success && result.filePath) {
+      useProjectStore.getState().setFilePath(result.filePath)
+    }
+  }, [api])
+
+  const handleLoad = useCallback(async () => {
+    const result = await api.project.load()
+    if (result.success && result.content) {
+      useProjectStore.getState().setProject(result.content as any, result.filePath)
+      const data = result.content as any
+      if (data.pages && data.pages.length > 0) {
+        useEditorStore.getState().setPageBlocks(data.pages[0].blocks)
+      }
+    }
+  }, [api])
+
+  const handleExport = useCallback(() => {
+    setShowExport(true)
+  }, [])
+
+  // Setup keyboard shortcuts
+  useKeyboardShortcuts({
+    onSave: handleSave,
+    onSaveAs: handleSaveAs,
+    onOpen: handleLoad,
+    onExport: handleExport,
+    onToggleCodeEditor: () => setCodeEditorOpen(prev => !prev),
+    onToggleLeftPanel: () => setLeftPanelOpen(prev => !prev),
+    onToggleRightPanel: () => setRightPanelOpen(prev => !prev),
+    leftPanelOpen,
+    rightPanelOpen,
+    codeEditorOpen,
+    onNewProject: handleNewProject
+  })
+
+  // Command palette keyboard handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen(prev => !prev)
+      }
+      // Keyboard shortcuts help: Ctrl+?
+      if ((e.ctrlKey || e.metaKey) && e.key === '?') {
+        e.preventDefault()
+        setShowKeyboardShortcuts(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const [activeWidget, setActiveWidget] = useState<{ widgetType: string; label?: string; icon?: string } | null>(null)
   const [dropHint, setDropHint] = useState<DropTargetHint | null>(null)
@@ -180,11 +294,11 @@ function App(): JSX.Element {
         <div className="widget-drag-preview__label">{activeWidget.label ?? activeWidget.widgetType}</div>
       </div>
     )
+  }, [activeWidget])
+
   if (!isProjectLoaded) {
     return <WelcomeScreen />
   }
-
-  }, [activeWidget])
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
@@ -218,7 +332,9 @@ function App(): JSX.Element {
                 <>
                   <PanelResizeHandle className="panel-resize-handle-horizontal" />
                   <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code">
-                    <CodeEditor />
+                    <Suspense fallback={<div style={{ padding: 20 }}>Loading editor...</div>}>
+                      <CodeEditor />
+                    </Suspense>
                   </Panel>
                 </>
               )}
@@ -236,6 +352,43 @@ function App(): JSX.Element {
         </PanelGroup>
         <StatusBar />
       </div>
+
+      {commandPaletteOpen && (
+        <CommandPalette
+          isOpen={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+          onNewProject={handleNewProject}
+          onOpen={handleLoad}
+          onSave={handleSave}
+          onExport={handleExport}
+          onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
+          onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
+          onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+        />
+      )}
+
+      <Suspense fallback={<DialogLoader />}>
+        {showAssetManager && (
+          <AssetManager onClose={() => setShowAssetManager(false)} />
+        )}
+      </Suspense>
+
+      <Suspense fallback={<DialogLoader />}>
+        {showNewProject && (
+          <NewProjectWizard onClose={() => setShowNewProject(false)} />
+        )}
+      </Suspense>
+
+      <Suspense fallback={<DialogLoader />}>
+        {showExport && (
+          <ExportDialog onClose={() => setShowExport(false)} />
+        )}
+      </Suspense>
+
+      <KeyboardShortcutsHelp
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+      />
 
       <DragOverlay dropAnimation={null}>{dragOverlayPreview}</DragOverlay>
     </DndContext>

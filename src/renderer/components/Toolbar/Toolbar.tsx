@@ -284,8 +284,10 @@ export default function Toolbar({
             className={`toolbar-btn ${leftPanelOpen ? 'active' : ''}`}
             onClick={onToggleLeftPanel}
             title="Toggle Widgets Panel"
+            aria-label="Toggle left sidebar panel"
+            aria-pressed={leftPanelOpen}
           >
-            <Menu size={16} />
+            <Menu size={16} aria-hidden="true" />
           </button>
           
           <div className="toolbar-divider" />
@@ -394,38 +396,38 @@ export default function Toolbar({
 
         {/* LEFT-CENTER: File & Edit Operations */}
         <div className="toolbar-section">
-          <button className="toolbar-btn" onClick={() => setShowNewProject(true)} title="New Project">
-            <FilePlus size={16} />
+          <button className="toolbar-btn" onClick={() => setShowNewProject(true)} title="New Project" aria-label="Create new project">
+            <FilePlus size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={handleLoad} title="Open Project (Ctrl+O)">
-            <FolderOpen size={16} />
+          <button className="toolbar-btn" onClick={handleLoad} title="Open Project (Ctrl+O)" aria-label="Open existing project">
+            <FolderOpen size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={() => handleSave()} title="Save Project (Ctrl+S)">
-            <Save size={16} />
+          <button className="toolbar-btn" onClick={() => handleSave()} title="Save Project (Ctrl+S)" aria-label="Save project">
+            <Save size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={handleExport} title="Export">
-            <Download size={16} />
+          <button className="toolbar-btn" onClick={handleExport} title="Export" aria-label="Export project">
+            <Download size={16} aria-hidden="true" />
           </button>
           
           <div className="toolbar-divider" />
           
-          <button className="toolbar-btn" onClick={undo} title="Undo (Ctrl+Z)">
-            <Undo size={16} />
+          <button className="toolbar-btn" onClick={undo} title="Undo (Ctrl+Z)" aria-label="Undo last action">
+            <Undo size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={redo} title="Redo (Ctrl+Y)">
-            <Redo size={16} />
+          <button className="toolbar-btn" onClick={redo} title="Redo (Ctrl+Y)" aria-label="Redo last undone action">
+            <Redo size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={handleCut} disabled={!selectedBlockId} title="Cut">
-            <Scissors size={16} />
+          <button className="toolbar-btn" onClick={handleCut} disabled={!selectedBlockId} title="Cut" aria-label="Cut selected block">
+            <Scissors size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={handleCopy} disabled={!selectedBlockId} title="Copy">
-            <Copy size={16} />
+          <button className="toolbar-btn" onClick={handleCopy} disabled={!selectedBlockId} title="Copy" aria-label="Copy selected block">
+            <Copy size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={handlePaste} disabled={!clipboard} title="Paste">
-            <Clipboard size={16} />
+          <button className="toolbar-btn" onClick={handlePaste} disabled={!clipboard} title="Paste" aria-label="Paste block from clipboard">
+            <Clipboard size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={handleDelete} disabled={!selectedBlockId} title="Delete">
-            <Trash2 size={16} />
+          <button className="toolbar-btn" onClick={handleDelete} disabled={!selectedBlockId} title="Delete" aria-label="Delete selected block">
+            <Trash2 size={16} aria-hidden="true" />
           </button>
         </div>
 
@@ -436,42 +438,48 @@ export default function Toolbar({
               className={`toolbar-btn ${viewportMode === 'desktop' ? 'active' : ''}`}
               onClick={() => setViewportMode('desktop')}
               title="Desktop View"
+              aria-label="Switch to desktop viewport"
+              aria-pressed={viewportMode === 'desktop'}
             >
-              <Monitor size={16} />
+              <Monitor size={16} aria-hidden="true" />
             </button>
             <button
               className={`toolbar-btn ${viewportMode === 'tablet' ? 'active' : ''}`}
               onClick={() => setViewportMode('tablet')}
               title="Tablet View"
+              aria-label="Switch to tablet viewport"
+              aria-pressed={viewportMode === 'tablet'}
             >
-              <Tablet size={16} />
+              <Tablet size={16} aria-hidden="true" />
             </button>
             <button
               className={`toolbar-btn ${viewportMode === 'mobile' ? 'active' : ''}`}
               onClick={() => setViewportMode('mobile')}
               title="Mobile View"
+              aria-label="Switch to mobile viewport"
+              aria-pressed={viewportMode === 'mobile'}
             >
-              <Smartphone size={16} />
+              <Smartphone size={16} aria-hidden="true" />
             </button>
           </div>
 
           <div className="toolbar-divider" />
 
           <div className="toolbar-group">
-            <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out">
-              <ZoomOut size={16} />
+            <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out" aria-label="Zoom out">
+              <ZoomOut size={16} aria-hidden="true" />
             </button>
-            <span className="toolbar-text">{zoom}%</span>
-            <button className="toolbar-btn" onClick={() => setZoom(zoom + 10)} title="Zoom In">
-              <ZoomIn size={16} />
+            <span className="toolbar-text" aria-live="polite">{zoom}%</span>
+            <button className="toolbar-btn" onClick={() => setZoom(zoom + 10)} title="Zoom In" aria-label="Zoom in">
+              <ZoomIn size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
 
         {/* RIGHT: Tools, Theme, Panels */}
         <div className="toolbar-section toolbar-right">
-          <button className="toolbar-btn" onClick={() => setShowAssetManager(true)} title="Asset Manager">
-            <ImageIcon size={16} />
+          <button className="toolbar-btn" onClick={() => setShowAssetManager(true)} title="Asset Manager" aria-label="Open asset manager">
+            <ImageIcon size={16} aria-hidden="true" />
           </button>
           
           <div className="toolbar-divider" />
@@ -480,24 +488,29 @@ export default function Toolbar({
             className={`toolbar-btn ${codeEditorOpen ? 'active' : ''}`}
             onClick={onToggleCodeEditor}
             title="Toggle Code Editor"
+            aria-label="Toggle code editor panel"
+            aria-pressed={codeEditorOpen}
           >
-            <Code size={16} />
+            <Code size={16} aria-hidden="true" />
           </button>
 
           <button
             className="toolbar-btn"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             title="Toggle Theme"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           >
-            {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+            {theme === 'dark' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
           </button>
 
           <button
             className={`toolbar-btn ${rightPanelOpen ? 'active' : ''}`}
             onClick={onToggleRightPanel}
             title="Toggle Inspector"
+            aria-label="Toggle right inspector panel"
+            aria-pressed={rightPanelOpen}
           >
-            <Settings size={16} />
+            <Settings size={16} aria-hidden="true" />
           </button>
         </div>
       </div>

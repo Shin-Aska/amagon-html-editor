@@ -1,82 +1,136 @@
-# Hoarses
+# Hoarses HTML Editor
 
-Hoarses is an **offline visual HTML project editor** (in the spirit of Pingendo and Mobirise) built with **Electron + Vite + React + TypeScript**.
-
-It lets you build pages from reusable blocks, edit styles and properties, manage assets locally, and export clean HTML.
+An offline visual HTML editor — a Pingendo/Mobirise/Bootstrap Studio alternative for Linux.
 
 ## Features
 
-- Visual drag-and-drop page builder
-- Multi-page projects (page manager)
-- Inspector for block properties and styles
-- Monaco-powered code editor (optional panel)
-- Asset manager (import/list/delete project assets)
-- Export pipeline (single-page or multi-page export)
-- Dark/light UI theme
+### Visual Editing
+- **Drag & Drop Canvas**: Build pages by dragging blocks from the sidebar to the canvas
+- **Live Preview**: See your changes instantly in an isolated iframe canvas
+- **Responsive Preview**: Switch between desktop, tablet, and mobile viewports
+- **Block Library**: 50+ pre-built blocks including headers, heroes, grids, forms, and more
+- **Custom Components**: Save your own reusable block templates
+
+### Code Integration
+- **Monaco Editor**: Full-featured code editor with syntax highlighting and IntelliSense
+- **Bidirectional Sync**: Changes in code reflect in the visual editor and vice versa
+- **Clean Export**: Export to standalone HTML with no editor artifacts
+
+### Project Management
+- **Multi-page Projects**: Create and manage multiple pages in a single project
+- **Save/Load**: Native project files (.hoarses) with all assets
+- **Asset Manager**: Built-in image and asset management
+- **Auto-save**: Automatic background saving
+
+### Advanced Features
+- **Undo/Redo**: Full history with 50-step rollback
+- **Keyboard Shortcuts**: Power-user shortcuts for all operations (Ctrl+K for command palette)
+- **Clipboard Operations**: Copy/paste blocks within and across pages
+- **Custom CSS**: Add global styles that apply to all blocks
+- **Dark/Light Themes**: Choose your preferred editor theme
 
 ## Tech Stack
 
-- Electron (main + preload + renderer)
-- Vite + React 18
-- TypeScript
-- Zustand (state management)
-- Monaco Editor (code editor)
-- dnd-kit (drag and drop)
+- **Electron** — Cross-platform desktop app framework
+- **Vite** — Fast development and building
+- **React** — UI component library
+- **TypeScript** — Type-safe JavaScript
+- **Zustand** — Lightweight state management
+- **Monaco Editor** — VS Code's editor component
+- **dnd-kit** — Modern drag and drop primitives
+- **Bootstrap 5** — Default CSS framework
 
 ## Getting Started
 
 ### Prerequisites
-
-- Node.js (recommended: current LTS)
+- Node.js 18+
 - npm
 
-### Install
+### Install & Run
 
 ```bash
 npm install
-```
-
-### Run (Electron)
-
-```bash
 npm run dev
-```
-
-### Run (Web-only / Renderer in browser)
-
-```bash
-npm run dev:web
 ```
 
 ### Build
 
 ```bash
-npm run build
+npm run build        # Full Electron build
+npm run build:web    # Web-only build
+npm test             # Run tests
 ```
 
-### Build (web renderer only)
+## Keyboard Shortcuts
 
-```bash
-npm run build:web
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+S` | Save project |
+| `Ctrl+Shift+S` | Save As |
+| `Ctrl+O` | Open project |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
+| `Ctrl+C` | Copy selected block |
+| `Ctrl+X` | Cut selected block |
+| `Ctrl+V` | Paste block |
+| `Ctrl+D` | Duplicate selected block |
+| `Delete` / `Backspace` | Delete selected block |
+| `Escape` | Deselect / Cancel drag |
+| `Ctrl+E` | Toggle code editor |
+| `Ctrl+\` | Toggle left sidebar |
+| `Ctrl+/` | Toggle right sidebar |
+| `Ctrl+K` | Open command palette |
+| `Ctrl+?` | Show keyboard shortcuts |
+
+## Project Structure
+
+```
+src/
+├── main/                 # Electron main process
+├── preload/             # Electron preload scripts
+├── preview/             # Canvas runtime (iframe content)
+├── renderer/            # React app
+│   ├── components/      # React components
+│   ├── hooks/          # Custom React hooks
+│   ├── registry/       # Block definitions
+│   ├── store/          # Zustand stores
+│   ├── styles/         # CSS styles
+│   └── utils/          # Utility functions
+└── types/              # TypeScript types
 ```
 
-### Tests
+## Architecture
 
-```bash
-npm test
-```
+### State Management
+- **EditorStore**: Current page blocks, selection, history (undo/redo), clipboard
+- **ProjectStore**: Project settings, pages, user blocks, file paths
 
-## Project Structure (high level)
+### Canvas Rendering
+The canvas runs in an isolated iframe for security. Blocks are rendered to HTML, sent via postMessage, and interactions are relayed back.
 
-- `src/main/` Electron main process
-- `src/preload/` contextBridge API for renderer -> Electron IPC
-- `src/renderer/` React UI
-- `src/preview/` iframe runtime for the canvas
+## Export
 
-## Notes
+Projects export to clean HTML:
+- No editor artifacts
+- Optional inlined or external CSS
+- Asset consolidation
+- Standalone output
 
-- Projects are stored as JSON files.
-- Recent projects are stored in the OS userData directory.
+## Development Phases
+
+All 12 phases completed:
+1. ✅ Project scaffolding
+2. ✅ State management & block tree
+3. ✅ Canvas engine
+4. ✅ Drag & drop
+5. ✅ Monaco Editor integration
+6. ✅ Widget library
+7. ✅ Property inspector
+8. ✅ Asset management
+9. ✅ Export engine
+10. ✅ Editor UI & theming
+11. ✅ UX polish (shortcuts, clipboard, accessibility)
+12. ✅ Testing, performance & documentation
 
 ## License
 

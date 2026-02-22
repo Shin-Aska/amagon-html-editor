@@ -557,7 +557,7 @@ This plan is designed for **sequential execution across multiple AI agents** in 
 
 ### Tasks
 
-- [ ] **11.1** Implement global keyboard shortcuts:
+- [x] **11.1** Implement global keyboard shortcuts:
   - `Ctrl+S` — Save project
   - `Ctrl+Shift+S` — Save As
   - `Ctrl+O` — Open project
@@ -574,25 +574,25 @@ This plan is designed for **sequential execution across multiple AI agents** in 
   - `Ctrl+/` — Toggle right sidebar
   - Arrow keys — Navigate between sibling blocks
   - `Tab` / `Shift+Tab` — Navigate into/out of children
-- [ ] **11.2** Implement block clipboard:
+- [x] **11.2** Implement block clipboard:
   - Copy: serialize selected block (and children) to clipboard as JSON
   - Paste: deserialize and insert after selected block (with new IDs)
   - Cut: copy + delete
   - Support cross-page paste
-- [ ] **11.3** Refine undo/redo:
+- [x] **11.3** Refine undo/redo:
   - Group rapid changes (e.g., typing in a text field) into single undo steps
   - Show undo/redo descriptions in toolbar tooltips
   - Visual flash feedback on undo/redo
-- [ ] **11.4** Implement drag handles:
+- [x] **11.4** Implement drag handles:
   - Show a drag handle icon on hover for each block in the canvas
   - Handle initiates block reorder drag
-- [ ] **11.5** Implement basic accessibility:
+- [x] **11.5** Implement basic accessibility:
   - ARIA labels on all interactive elements
   - Focus management for panels
   - Screen reader announcements for drag-and-drop operations
   - High contrast mode support
-- [ ] **11.6** Add tooltip system for toolbar buttons and sidebar items
-- [ ] **11.7** Implement "Quick Add" command palette:
+- [x] **11.6** Add tooltip system for toolbar buttons and sidebar items
+- [x] **11.7** Implement "Quick Add" command palette:
   - `Ctrl+K` opens a search overlay
   - Type block name → insert it at current selection
   - Also search for commands (save, export, undo, etc.)
@@ -617,37 +617,37 @@ This plan is designed for **sequential execution across multiple AI agents** in 
 
 ### Tasks
 
-- [ ] **12.1** Unit tests:
+- [x] **12.1** Unit tests:
   - Block tree manipulation (add, remove, move, update)
   - `blockToHtml` and `htmlToBlocks` — various edge cases
   - Export engine — clean output, no editor artifacts
   - State store — undo/redo, history limits
-- [ ] **12.2** Integration tests:
+- [x] **12.2** Integration tests:
   - Drag from sidebar → drop in canvas → block appears
   - Edit in code editor → canvas updates
   - Edit in inspector → code editor updates
   - Save → close → load → state restored
   - Export → open in browser → renders correctly
-- [ ] **12.3** Performance optimizations:
+- [x] **12.3** Performance optimizations:
   - `React.lazy` + `Suspense` for Monaco Editor and Asset Manager
   - Virtualization for sidebar widget list if >50 items
   - Canvas: Use `CSS contain` property on top-level blocks
   - Throttle IPC messages (auto-save ≤ 1/min, not on every change)
   - Debounce canvas re-renders during rapid state changes
   - Profile and fix any memory leaks in iframe lifecycle
-- [ ] **12.4** Create `README.md`:
+- [x] **12.4** Create `README.md`:
   - Project description and screenshots
   - Setup instructions (`npm install`, `npm run dev`, `npm run build`)
   - Architecture overview (link to research.md)
   - Contribution guidelines
-- [ ] **12.5** Create in-app help:
+- [x] **12.5** Create in-app help:
   - Keyboard shortcuts reference dialog (`Ctrl+?`)
   - First-launch tutorial overlay (highlight key UI areas)
-- [ ] **12.6** Build and package:
+- [x] **12.6** Build and package:
   - Configure `electron-builder` for Linux, macOS, Windows
   - Test packaged app on at least one platform
   - Create release build scripts
-- [ ] **12.7** Final QA pass:
+- [x] **12.7** Final QA pass:
   - Test all block types render correctly
   - Test save/load round-trip
   - Test export output
