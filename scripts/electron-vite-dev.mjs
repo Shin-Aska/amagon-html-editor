@@ -47,7 +47,8 @@ if (port) env.HTML_EDITOR_DEV_PORT = String(port)
 
 const child = spawn('electron-vite', ['dev', ...out], {
   stdio: 'inherit',
-  env
+  env,
+  shell: process.platform === 'win32'
 })
 
 child.on('exit', (code) => {
