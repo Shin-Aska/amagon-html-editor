@@ -128,25 +128,11 @@ Projects export to clean HTML:
 - Asset consolidation
 - Standalone output
 
-## Development Phases
 
-All 12 phases completed:
-1. ✅ Project scaffolding
-2. ✅ State management & block tree
-3. ✅ Canvas engine
-4. ✅ Drag & drop
-5. ✅ Monaco Editor integration
-6. ✅ Widget library
-7. ✅ Property inspector
-8. ✅ Asset management
-9. ✅ Export engine
-10. ✅ Editor UI & theming
-11. ✅ UX polish (shortcuts, clipboard, accessibility)
-12. ✅ Testing, performance & documentation
 
 ## The Story of "Hoarses"
 
-During the initial scaffolding phase with Windsurf, the developer wanted a name that sounded fast but was unique enough to avoid conflicts with existing npm packages. **"Hoarses"** was chosen because it sounded like a heavy, breathing engine—similar to the "visual velocity" described in the research papers—but the extra "a" and "e" were added to ensure the internal directory names remained unique in the terminal.
+During the initial scaffolding phase, the developer wanted a name that sounded fast but was unique enough to avoid conflicts with existing npm packages. **"Hoarses"** was chosen because it sounded like a heavy, breathing engine, but the extra "a" and "e" were added to ensure the internal directory names remained unique in the terminal.
 
 Over time, it became a badge of honor among the contributors: **"Amagon is what the world sees, but Hoarses is the engine that screams"**.
 
