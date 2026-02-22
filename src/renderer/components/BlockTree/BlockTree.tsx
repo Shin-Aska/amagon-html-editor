@@ -1,15 +1,16 @@
 import React, { useState } from 'react'
 import './BlockTree.css'
 import { useEditorStore } from '../../store/editorStore'
-import { Block } from '../../types'
+import { type Block } from '../../store/types'
 import { componentRegistry } from '../../registry/ComponentRegistry'
 
 interface TreeNodeProps {
   block: Block
   depth: number
+  onContextMenu: (e: React.MouseEvent, blockId: string) => void
 }
 
-function TreeNode({ block, depth }: TreeNodeProps): JSX.Element {
+function TreeNode({ block, depth, onContextMenu }: TreeNodeProps): JSX.Element {
   const [expanded, setExpanded] = useState(true)
   const { selectedBlockId, hoveredBlockId, selectBlock, hoverBlock } = useEditorStore()
 
@@ -34,6 +35,7 @@ function TreeNode({ block, depth }: TreeNodeProps): JSX.Element {
         onClick={() => selectBlock(block.id)}
         onMouseEnter={() => hoverBlock(block.id)}
         onMouseLeave={() => hoverBlock(null)}
+        onContextMenu={(e) => onContextMenu(e, block.id)}
       >
         <div
           className={`tree-toggle ${hasChildren ? (expanded ? 'expanded' : '') : 'hidden'}`}
@@ -49,7 +51,7 @@ function TreeNode({ block, depth }: TreeNodeProps): JSX.Element {
       {hasChildren && expanded && (
         <div className="tree-children">
           {block.children.map((child) => (
-            <TreeNode key={child.id} block={child} depth={depth + 1} />
+            <TreeNode key={child.id} block={child} depth={depth + 1} onContextMenu={onContextMenu} />
           ))}
         </div>
       )}
@@ -57,8 +59,20 @@ function TreeNode({ block, depth }: TreeNodeProps): JSX.Element {
   )
 }
 
+import ContextMenu from '../ContextMenu/ContextMenu'
+
 export default function BlockTree(): JSX.Element {
   const blocks = useEditorStore((s) => s.blocks)
+  const removeBlock = useEditorStore((s) => s.removeBlock)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null)
+
+  const handleContextMenu = (e: React.MouseEvent, blockId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY, blockId })
+  }
+
+  const closeContextMenu = () => setContextMenu(null)
 
   if (blocks.length === 0) {
     return (
@@ -73,8 +87,23 @@ export default function BlockTree(): JSX.Element {
   return (
     <div className="block-tree">
       {blocks.map((block) => (
-        <TreeNode key={block.id} block={block} depth={0} />
+        <TreeNode key={block.id} block={block} depth={0} onContextMenu={handleContextMenu} />
       ))}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={closeContextMenu}
+          items={[
+            {
+              label: 'Delete Component',
+              danger: true,
+              action: () => removeBlock(contextMenu.blockId)
+            }
+          ]}
+        />
+      )}
     </div>
   )
 }

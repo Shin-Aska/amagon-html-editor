@@ -36,6 +36,26 @@ type CanvasRuntimeMessage =
     blockId: string
     dropTarget: { targetBlockId: string; mode: 'inside' | 'before' | 'after' }
   }
+  | {
+    source: 'canvas-runtime'
+    type: 'updateText'
+    blockId: string
+    text: string
+  }
+  | {
+    source: 'canvas-runtime'
+    type: 'keydown'
+    key: string
+    ctrlKey: boolean
+    metaKey: boolean
+    shiftKey: boolean
+    altKey: boolean
+  }
+  | {
+    source: 'canvas-runtime'
+    type: 'deleteBlock'
+    blockId: string
+  }
 
 function findBlockById(blocks: Block[], id: string): Block | null {
   for (const block of blocks) {
@@ -78,12 +98,14 @@ function Canvas(): JSX.Element {
   const addBlock = useEditorStore((s) => s.addBlock)
   const removeBlock = useEditorStore((s) => s.removeBlock)
   const getBlockById = useEditorStore((s) => s.getBlockById)
+  const updateBlock = useEditorStore((s) => s.updateBlock)
   const setClipboard = useEditorStore((s) => s.setClipboard)
   const clipboard = useEditorStore((s) => s.clipboard)
   const isTypingCode = useEditorStore((s) => s.isTypingCode)
   const customCss = useEditorStore((s) => s.customCss)
   const viewportMode = useEditorStore((s) => s.viewportMode)
   const zoom = useEditorStore((s) => s.zoom)
+  const theme = useEditorStore((s) => s.theme)
   const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
   const projectTheme = useProjectStore((s) => s.settings.theme)
 
@@ -185,12 +207,37 @@ function Canvas(): JSX.Element {
           moveBlock(movedId, newParentId, newIndex)
           break
         }
+        case 'updateText': {
+          if (data.blockId && data.text !== undefined) {
+            updateBlock(data.blockId, { props: { text: data.text } })
+          }
+          break
+        }
+        case 'keydown': {
+          const ke = new KeyboardEvent('keydown', {
+            key: data.key,
+            ctrlKey: data.ctrlKey,
+            metaKey: data.metaKey,
+            shiftKey: data.shiftKey,
+            altKey: data.altKey,
+            bubbles: true,
+            cancelable: true
+          })
+          window.dispatchEvent(ke)
+          break
+        }
+        case 'deleteBlock': {
+          if (data.blockId) {
+            removeBlock(data.blockId)
+          }
+          break
+        }
       }
     }
 
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [hoverBlock, isTypingCode, moveBlock, selectBlock, zoom])
+  }, [hoverBlock, isTypingCode, moveBlock, selectBlock, zoom, updateBlock, removeBlock])
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     if (!contextMenu) return []
@@ -283,6 +330,11 @@ function Canvas(): JSX.Element {
     if (!runtimeReady) return
     postToIframe({ type: 'toggleLayoutOutlines', show: showLayoutOutlines })
   }, [runtimeReady, showLayoutOutlines])
+
+  useEffect(() => {
+    if (!runtimeReady) return
+    postToIframe({ type: 'setUiTheme', isDark: theme === 'dark' })
+  }, [runtimeReady, theme])
 
   const viewportMaxWidth =
     viewportMode === 'desktop' ? '100%' : viewportMode === 'tablet' ? '820px' : '390px'

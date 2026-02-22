@@ -10,6 +10,7 @@ type EditorMessage =
   | { type: 'scrollToElement'; blockId?: string | null }
   | { type: 'setCustomCss'; css?: string }
   | { type: 'setThemeCss'; css?: string }
+  | { type: 'setUiTheme'; isDark: boolean }
   | { type: 'toggleLayoutOutlines'; show: boolean }
   | { type: 'dragMove'; x: number; y: number }
   | { type: 'dragEnd' }
@@ -23,14 +24,17 @@ type RuntimeMessage =
   | { type: 'clicked'; blockId?: string; rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number } }
   | { type: 'hovered'; blockId?: string }
   | {
-      type: 'contextMenu'
-      blockId?: string
-      rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
-      clientX?: number
-      clientY?: number
-    }
+    type: 'contextMenu'
+    blockId?: string
+    rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
+    clientX?: number
+    clientY?: number
+  }
   | { type: 'dropTarget'; dropTarget?: DropTargetHint }
   | { type: 'moveBlock'; blockId: string; dropTarget: DropTargetHint }
+  | { type: 'updateText'; blockId: string; text: string }
+  | { type: 'keydown'; key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }
+  | { type: 'deleteBlock'; blockId: string }
   | { type: 'ready' }
 
 function sendToParent(message: RuntimeMessage): void {
@@ -251,6 +255,19 @@ function initRuntime(): void {
       case 'setThemeCss':
         setThemeCss((data as { css?: string }).css ?? '')
         break
+      case 'setUiTheme':
+        if ((data as { isDark?: boolean }).isDark) {
+          document.body.classList.add('dark')
+        } else {
+          document.body.classList.remove('dark')
+        }
+
+        // Clear cached overlays so the floating toolbar regenerates with new theme colors
+        const overlays = document.querySelectorAll('.editor-overlay')
+        overlays.forEach(o => o.remove())
+
+        refreshOverlays()
+        break
       case 'select':
         setSelected((data as { blockId?: string | null }).blockId ?? null)
         break
@@ -329,6 +346,20 @@ function attachBlockListeners(): void {
       endExistingDrag(true)
     })
 
+    window.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLElement && e.target.isContentEditable) return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+
+      sendToParent({
+        type: 'keydown',
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey
+      })
+    })
+
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) return
       if (!dragCandidateBlockId && !draggingExistingBlockId) return
@@ -395,6 +426,13 @@ function attachBlockListeners(): void {
       sendToParent({ type: 'hovered' })
     })
 
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation()
+      const blockId = el.dataset.blockId
+      if (!blockId) return
+      beginTextEditing(el, blockId)
+    })
+
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault()
       const blockId = el.dataset.blockId
@@ -436,6 +474,29 @@ function attachBlockListeners(): void {
       }
     })
   })
+}
+
+function beginTextEditing(el: HTMLElement, blockId: string): void {
+  const blockType = el.dataset.blockType || ''
+  if (!['heading', 'paragraph', 'button', 'link', 'blockquote'].includes(blockType)) return
+
+  suppressNextClick = true
+  el.contentEditable = 'true'
+  el.focus()
+
+  const selection = window.getSelection()
+  const range = document.createRange()
+  range.selectNodeContents(el)
+  selection?.removeAllRanges()
+  selection?.addRange(range)
+
+  const onBlur = () => {
+    el.contentEditable = 'false'
+    el.removeEventListener('blur', onBlur)
+    const text = el.innerText || el.textContent || ''
+    sendToParent({ type: 'updateText', blockId, text })
+  }
+  el.addEventListener('blur', onBlur)
 }
 
 function beginExistingDrag(): void {
@@ -794,6 +855,14 @@ function renderOverlay(blockId: string | null, mode: 'selected' | 'hovered'): vo
 
   if (mode === 'selected') {
     ensureResizeHandles(overlay)
+    const toolbar = overlay.querySelector('.action-toolbar') as HTMLElement
+    if (toolbar) {
+      if (rect.top < 32) {
+        toolbar.style.top = '4px'
+      } else {
+        toolbar.style.top = '-28px'
+      }
+    }
   } else {
     overlay.replaceChildren()
   }
@@ -822,6 +891,59 @@ function ensureResizeHandles(overlay: HTMLDivElement): void {
   overlay.appendChild(tr)
   overlay.appendChild(bl)
   overlay.appendChild(br)
+
+  // Floating Actions
+  const isDark = document.body.classList.contains('dark')
+  const bg = isDark ? '#1e1e2e' : '#ffffff'
+  const border = isDark ? '#313244' : '#e6e9ef'
+  const editColor = isDark ? '#cba6f7' : '#1e66f5'
+  const deleteColor = isDark ? '#f38ba8' : '#d20f39'
+  const editHover = isDark ? 'rgba(203, 166, 247, 0.15)' : 'rgba(30, 102, 245, 0.15)'
+  const deleteHover = isDark ? 'rgba(243, 139, 168, 0.15)' : 'rgba(210, 15, 57, 0.15)'
+  const shadow = isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.1)'
+
+  const actionToolbar = document.createElement('div')
+  actionToolbar.className = 'action-toolbar'
+  actionToolbar.setAttribute('style', `position:absolute; top:-28px; right:0; background:${bg}; border:1px solid ${border}; border-radius:6px; padding:2px; display:flex; gap:2px; pointer-events:auto; box-shadow:0 4px 6px ${shadow}; z-index: 1000000;`)
+
+  const deleteBtn = document.createElement('div')
+  deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${deleteColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`
+  deleteBtn.setAttribute('style', 'width:22px; height:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; background:transparent; border-radius:4px; transition:background 0.2s;')
+  deleteBtn.onmouseenter = () => deleteBtn.style.background = deleteHover
+  deleteBtn.onmouseleave = () => deleteBtn.style.background = 'transparent'
+  deleteBtn.onclick = (e) => {
+    e.stopPropagation()
+    const blockId = selectedBlockId
+    if (!blockId) return
+    sendToParent({
+      type: 'deleteBlock',
+      blockId
+    })
+  }
+
+  const editBtn = document.createElement('div')
+  editBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${editColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`
+  editBtn.setAttribute('style', 'width:22px; height:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; background:transparent; border-radius:4px; transition:background 0.2s;')
+  editBtn.onmouseenter = () => editBtn.style.background = editHover
+  editBtn.onmouseleave = () => editBtn.style.background = 'transparent'
+  editBtn.onclick = (e) => {
+    e.stopPropagation()
+    const blockId = selectedBlockId
+    if (!blockId) return
+    const el = document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement
+    if (el) {
+      beginTextEditing(el, blockId)
+    }
+  }
+
+  const selectedEl = selectedBlockId ? document.querySelector(`[data-block-id="${selectedBlockId}"]`) as HTMLElement : null
+  const selectedType = selectedEl?.dataset.blockType || ''
+  if (['heading', 'paragraph', 'button', 'link', 'blockquote'].includes(selectedType)) {
+    actionToolbar.appendChild(editBtn)
+  }
+
+  actionToolbar.appendChild(deleteBtn)
+  overlay.appendChild(actionToolbar)
 }
 
 function installResizeObserver(mode: 'selected' | 'hovered'): void {
