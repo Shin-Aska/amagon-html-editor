@@ -15,6 +15,7 @@ interface UseKeyboardShortcutsOptions {
   rightPanelOpen: boolean
   codeEditorOpen: boolean
   onNewProject: () => void
+  onSetEditorLayout?: (layout: 'standard' | 'no-sidebar' | 'no-inspector' | 'canvas-only' | 'code-focus' | 'zen') => void
 }
 
 // Deep clone a block tree with new IDs
@@ -122,7 +123,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     onToggleCodeEditor,
     onToggleLeftPanel,
     onToggleRightPanel,
-    onNewProject
+    onNewProject,
+    onSetEditorLayout
   } = options
 
   // Store access
@@ -394,6 +396,32 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
           if (e.key === '2') onToggleCodeEditor()
           if (e.key === '3') onToggleRightPanel()
           return
+
+        // Layout switching with F1-F6
+        case 'f1':
+          e.preventDefault()
+          onSetEditorLayout?.('standard')
+          return
+        case 'f2':
+          e.preventDefault()
+          onSetEditorLayout?.('no-sidebar')
+          return
+        case 'f3':
+          e.preventDefault()
+          onSetEditorLayout?.('no-inspector')
+          return
+        case 'f4':
+          e.preventDefault()
+          onSetEditorLayout?.('canvas-only')
+          return
+        case 'f5':
+          e.preventDefault()
+          onSetEditorLayout?.('code-focus')
+          return
+        case 'f6':
+          e.preventDefault()
+          onSetEditorLayout?.('zen')
+          return
       }
     }
 
@@ -436,6 +464,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     onToggleCodeEditor,
     onToggleLeftPanel,
     onToggleRightPanel,
+    onSetEditorLayout,
     undo,
     redo,
     handleCopy,

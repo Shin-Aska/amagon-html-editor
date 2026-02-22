@@ -17,8 +17,10 @@ import Toolbar from './components/Toolbar/Toolbar'
 import StatusBar from './components/StatusBar/StatusBar'
 import DragOverlayManager, { type DropTargetHint } from './components/DragOverlayManager/DragOverlayManager'
 import CommandPalette from './components/CommandPalette/CommandPalette'
+import Toast from './components/Toast/Toast'
 import { useEditorStore } from './store/editorStore'
 import { useProjectStore } from './store/projectStore'
+import { useToastStore } from './store/toastStore'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { Block } from './store/types'
 import { createBlock } from './store/types'
@@ -32,6 +34,7 @@ const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'))
 const AssetManager = lazy(() => import('./components/AssetManager/AssetManager'))
 const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'))
 const ExportDialog = lazy(() => import('./components/ExportDialog/ExportDialog'))
+const ThemeEditor = lazy(() => import('./components/ThemeEditor/ThemeEditor'))
 
 // Loading fallback component
 const DialogLoader = () => (
@@ -52,6 +55,8 @@ const DialogLoader = () => (
 
 function App(): JSX.Element {
   const api = getApi()
+
+  const showToast = useToastStore((s) => s.showToast)
   
   const [leftPanelOpen, setLeftPanelOpen] = useState(true)
   const [rightPanelOpen, setRightPanelOpen] = useState(true)
@@ -61,14 +66,48 @@ function App(): JSX.Element {
   const [showAssetManager, setShowAssetManager] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const [showThemeEditor, setShowThemeEditor] = useState(false)
 
   const addBlock = useEditorStore((s) => s.addBlock)
   const selectBlock = useEditorStore((s) => s.selectBlock)
   const blocks = useEditorStore((s) => s.blocks)
   const isTypingCode = useEditorStore((s) => s.isTypingCode)
   const setIsDragging = useEditorStore((s) => s.setIsDragging)
+  const markSaved = useEditorStore((s) => s.markSaved)
+  const setCustomCss = useEditorStore((s) => s.setCustomCss)
+  const editorLayout = useEditorStore((s) => s.editorLayout)
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
   const userBlocks = useProjectStore((s) => s.userBlocks)
   const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded)
+  const currentPageId = useProjectStore((s) => s.currentPageId)
+
+  const prevPageIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!isProjectLoaded) {
+      prevPageIdRef.current = null
+      return
+    }
+
+    const projectState = useProjectStore.getState()
+    const nextPageId = projectState.currentPageId
+    if (!nextPageId) return
+
+    const prevPageId = prevPageIdRef.current
+    if (prevPageId && prevPageId !== nextPageId) {
+      const prevExists = projectState.pages.some((p) => p.id === prevPageId)
+      if (prevExists) {
+        projectState.updatePage(prevPageId, { blocks: useEditorStore.getState().blocks })
+      }
+    }
+
+    const nextPage = projectState.pages.find((p) => p.id === nextPageId)
+    if (nextPage) {
+      useEditorStore.getState().loadPageBlocks(nextPage.blocks)
+    }
+
+    prevPageIdRef.current = nextPageId
+  }, [currentPageId, isProjectLoaded])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -81,43 +120,127 @@ function App(): JSX.Element {
     setShowNewProject(true)
   }, [])
 
+  const ensureBackendReadyAndFlushEdits = useCallback(async (): Promise<boolean> => {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
+    const isElectron = /electron/i.test(ua)
+    if (isElectron && !window.api) {
+      showToast('Electron backend not available (window.api missing)', 'error')
+      return false
+    }
+
+    const active = document.activeElement as HTMLElement | null
+    active?.blur?.()
+    await new Promise((r) => setTimeout(r, 0))
+
+    if (useEditorStore.getState().isTypingCode) {
+      await new Promise((r) => setTimeout(r, 900))
+    }
+    return true
+  }, [showToast])
+
   const handleSave = useCallback(async () => {
-    const currentPageId = useProjectStore.getState().currentPageId
-    if (currentPageId) {
-      useProjectStore.getState().updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+    const ok = await ensureBackendReadyAndFlushEdits()
+    if (!ok) return
+
+    const editorState = useEditorStore.getState()
+    const projectState = useProjectStore.getState()
+    const pageId = projectState.currentPageId
+
+    const pages = projectState.pages.map((p) =>
+      pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+    )
+
+    const content = JSON.stringify(
+      {
+        projectSettings: projectState.settings,
+        pages,
+        userBlocks: projectState.userBlocks,
+        customCss: editorState.customCss
+      },
+      null,
+      2
+    )
+
+    if (pageId) {
+      projectState.updatePage(pageId, { blocks: editorState.blocks })
     }
-    const projectData = useProjectStore.getState().getProjectData()
-    const content = JSON.stringify(projectData, null, 2)
-    const filePath = useProjectStore.getState().filePath
+    const filePath = projectState.filePath
     
-    const result = await api.project.save({ filePath: filePath || undefined, content })
-    if (result.success && result.filePath) {
-      useProjectStore.getState().setFilePath(result.filePath)
+    try {
+      const result = await api.project.save({ filePath: filePath || undefined, content })
+      if (result.success && result.filePath) {
+        useProjectStore.getState().setFilePath(result.filePath)
+        markSaved()
+        showToast(`Saved: ${result.filePath}`, 'success')
+        return
+      }
+      if (!result.canceled) {
+        showToast(result.error || 'Save failed', 'error')
+      }
+    } catch (err) {
+      showToast(String(err), 'error')
     }
-  }, [api])
+  }, [api, ensureBackendReadyAndFlushEdits])
 
   const handleSaveAs = useCallback(async () => {
-    const currentPageId = useProjectStore.getState().currentPageId
-    if (currentPageId) {
-      useProjectStore.getState().updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+    const ok = await ensureBackendReadyAndFlushEdits()
+    if (!ok) return
+
+    const editorState = useEditorStore.getState()
+    const projectState = useProjectStore.getState()
+    const pageId = projectState.currentPageId
+
+    const pages = projectState.pages.map((p) =>
+      pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+    )
+
+    const content = JSON.stringify(
+      {
+        projectSettings: projectState.settings,
+        pages,
+        userBlocks: projectState.userBlocks,
+        customCss: editorState.customCss
+      },
+      null,
+      2
+    )
+
+    if (pageId) {
+      projectState.updatePage(pageId, { blocks: editorState.blocks })
     }
-    const projectData = useProjectStore.getState().getProjectData()
-    const content = JSON.stringify(projectData, null, 2)
     
-    const result = await api.project.saveAs({ content })
-    if (result.success && result.filePath) {
-      useProjectStore.getState().setFilePath(result.filePath)
+    try {
+      const result = await api.project.saveAs({ content })
+      if (result.success && result.filePath) {
+        useProjectStore.getState().setFilePath(result.filePath)
+        markSaved()
+        showToast(`Saved: ${result.filePath}`, 'success')
+        return
+      }
+      if (!result.canceled) {
+        showToast(result.error || 'Save failed', 'error')
+      }
+    } catch (err) {
+      showToast(String(err), 'error')
     }
-  }, [api])
+  }, [api, ensureBackendReadyAndFlushEdits])
 
   const handleLoad = useCallback(async () => {
     const result = await api.project.load()
     if (result.success && result.content) {
       useProjectStore.getState().setProject(result.content as any, result.filePath)
       const data = result.content as any
-      if (data.pages && data.pages.length > 0) {
-        useEditorStore.getState().setPageBlocks(data.pages[0].blocks)
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      if (firstPage && Array.isArray(firstPage.blocks)) {
+        useEditorStore.getState().loadPageBlocks(firstPage.blocks)
       }
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
+      markSaved()
+      showToast('Project loaded', 'success')
+      return
+    }
+    if (!result.canceled) {
+      showToast(result.error || 'Load failed', 'error')
     }
   }, [api])
 
@@ -125,7 +248,10 @@ function App(): JSX.Element {
     setShowExport(true)
   }, [])
 
-  // Setup keyboard shortcuts
+  // Derived panel visibility from layout
+  const showSidebar = editorLayout === 'standard' || editorLayout === 'no-inspector'
+  const showInspector = editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'zen'
+  const showCodeEditor = codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen')
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
@@ -137,7 +263,8 @@ function App(): JSX.Element {
     leftPanelOpen,
     rightPanelOpen,
     codeEditorOpen,
-    onNewProject: handleNewProject
+    onNewProject: handleNewProject,
+    onSetEditorLayout: setEditorLayout
   })
 
   // Command palette keyboard handler
@@ -304,15 +431,18 @@ function App(): JSX.Element {
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
       <div className="app-container">
         <Toolbar
-          leftPanelOpen={leftPanelOpen}
-          rightPanelOpen={rightPanelOpen}
+          leftPanelOpen={showSidebar}
+          rightPanelOpen={showInspector}
           codeEditorOpen={codeEditorOpen}
+          editorLayout={editorLayout}
           onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
           onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
           onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
+          onSetEditorLayout={setEditorLayout}
+          onOpenThemeEditor={() => setShowThemeEditor(true)}
         />
         <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {leftPanelOpen && (
+          {showSidebar && (
             <>
               <Panel defaultSize={20} minSize={15} maxSize={40} className="panel panel-left" id="panel-left">
                 <Sidebar />
@@ -328,7 +458,7 @@ function App(): JSX.Element {
                 <DragOverlayManager onDropTargetChange={setDropHint} />
               </Panel>
 
-              {codeEditorOpen && (
+              {showCodeEditor && (
                 <>
                   <PanelResizeHandle className="panel-resize-handle-horizontal" />
                   <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code">
@@ -341,7 +471,7 @@ function App(): JSX.Element {
             </PanelGroup>
           </Panel>
 
-          {rightPanelOpen && (
+          {showInspector && (
             <>
               <PanelResizeHandle className="panel-resize-handle" />
               <Panel defaultSize={25} minSize={20} maxSize={45} className="panel panel-right" id="panel-right">
@@ -352,6 +482,8 @@ function App(): JSX.Element {
         </PanelGroup>
         <StatusBar />
       </div>
+
+      <Toast />
 
       {commandPaletteOpen && (
         <CommandPalette
@@ -389,6 +521,15 @@ function App(): JSX.Element {
         isOpen={showKeyboardShortcuts}
         onClose={() => setShowKeyboardShortcuts(false)}
       />
+
+      <Suspense fallback={<DialogLoader />}>
+        {showThemeEditor && (
+          <ThemeEditor
+            isOpen={showThemeEditor}
+            onClose={() => setShowThemeEditor(false)}
+          />
+        )}
+      </Suspense>
 
       <DragOverlay dropAnimation={null}>{dragOverlayPreview}</DragOverlay>
     </DndContext>

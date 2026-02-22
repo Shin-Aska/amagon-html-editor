@@ -136,6 +136,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     zoom: 100,
     theme: 'dark',
     showLayoutOutlines: false,
+    editorLayout: 'standard',
     clipboard: null,
 
     // ─── Block Mutations ───────────────────────────────────────────────
@@ -228,6 +229,10 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       set({ showLayoutOutlines: show })
     },
 
+    setEditorLayout: (layout) => {
+      set({ editorLayout: layout })
+    },
+
     setClipboard: (block) => {
       set({ clipboard: block })
     },
@@ -243,6 +248,26 @@ export const useEditorStore = create<EditorStore>((set, get) => {
           ...pushHistory(newBlocks)
         }
       })
+    },
+
+    loadPageBlocks: (blocks) => {
+      set((state) => {
+        const newBlocks = cloneBlocks(blocks)
+        return {
+          blocks: newBlocks,
+          selectedBlockId: null,
+          hoveredBlockId: null,
+          // Do not mark dirty on page load/switch
+          isDirty: state.isDirty,
+          // Reset history for the newly loaded page
+          history: [createHistoryEntry(newBlocks)],
+          historyIndex: 0
+        }
+      })
+    },
+
+    markSaved: () => {
+      set({ isDirty: false })
     },
 
     // ─── Selection ─────────────────────────────────────────────────────

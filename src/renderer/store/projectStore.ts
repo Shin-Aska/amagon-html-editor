@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Page, ProjectSettings, ProjectData, FrameworkChoice, UserBlock } from './types'
-import { generateBlockId } from './types'
+import type { Page, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme } from './types'
+import { generateBlockId, createDefaultTheme } from './types'
 
 // ─── Project State ───────────────────────────────────────────────────────────
 
@@ -20,6 +20,15 @@ interface ProjectActions {
   setFramework: (framework: FrameworkChoice) => void
   setFilePath: (path: string | null) => void
   getProjectData: () => ProjectData
+
+  // Theme management
+  setProjectTheme: (theme: ProjectTheme) => void
+  updateProjectTheme: (patch: Partial<ProjectTheme>) => void
+  updateThemeColors: (patch: Partial<ProjectTheme['colors']>) => void
+  updateThemeTypography: (patch: Partial<ProjectTheme['typography']>) => void
+  updateThemeSpacing: (patch: Partial<ProjectTheme['spacing']>) => void
+  updateThemeBorders: (patch: Partial<ProjectTheme['borders']>) => void
+  setThemeCustomCss: (css: string) => void
 
   // Page management
   addPage: (title: string, slug?: string) => Page
@@ -42,7 +51,7 @@ function createDefaultSettings(): ProjectSettings {
   return {
     name: 'Untitled Project',
     framework: 'bootstrap-5',
-    theme: 'default',
+    theme: createDefaultTheme(),
     globalStyles: {}
   }
 }
@@ -77,8 +86,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     // ─── Project-level ───────────────────────────────────────────────
 
     setProject: (data, filePath) => {
+      // Backward compatibility: migrate old string theme to ProjectTheme object
+      const incoming = data.projectSettings
+      const migratedSettings = {
+        ...createDefaultSettings(),
+        ...incoming,
+        theme:
+          incoming?.theme && typeof incoming.theme === 'object' && (incoming.theme as ProjectTheme).colors
+            ? (incoming.theme as ProjectTheme)
+            : createDefaultTheme()
+      }
+
       set({
-        settings: { ...createDefaultSettings(), ...data.projectSettings },
+        settings: migratedSettings,
         pages: data.pages.length > 0 ? data.pages : [createDefaultPage()],
         userBlocks: data.userBlocks || [],
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
@@ -110,6 +130,65 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         pages: state.pages,
         userBlocks: state.userBlocks
       }
+    },
+
+    // ─── Theme management ─────────────────────────────────────────────
+
+    setProjectTheme: (theme) => {
+      set((state) => ({
+        settings: { ...state.settings, theme }
+      }))
+    },
+
+    updateProjectTheme: (patch) => {
+      set((state) => ({
+        settings: { ...state.settings, theme: { ...state.settings.theme, ...patch } }
+      }))
+    },
+
+    updateThemeColors: (patch) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: { ...state.settings.theme, colors: { ...state.settings.theme.colors, ...patch } }
+        }
+      }))
+    },
+
+    updateThemeTypography: (patch) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: { ...state.settings.theme, typography: { ...state.settings.theme.typography, ...patch } }
+        }
+      }))
+    },
+
+    updateThemeSpacing: (patch) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: { ...state.settings.theme, spacing: { ...state.settings.theme.spacing, ...patch } }
+        }
+      }))
+    },
+
+    updateThemeBorders: (patch) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: { ...state.settings.theme, borders: { ...state.settings.theme.borders, ...patch } }
+        }
+      }))
+    },
+
+    setThemeCustomCss: (css) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: { ...state.settings.theme, customCss: css }
+        }
+      }))
     },
 
     // ─── Page management ─────────────────────────────────────────────

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ContextMenu, { type ContextMenuItem } from '../ContextMenu/ContextMenu'
 import './Canvas.css'
 import { useEditorStore } from '../../store/editorStore'
+import { useProjectStore } from '../../store/projectStore'
 import { blockToHtml } from '../../utils/blockToHtml'
-import { createBlock } from '../../store/types'
+import { createBlock, themeToCSS } from '../../store/types'
 import type { Block } from '../../store/types'
 
 type ViewportMode = 'desktop' | 'tablet' | 'mobile'
@@ -84,6 +85,7 @@ function Canvas(): JSX.Element {
   const viewportMode = useEditorStore((s) => s.viewportMode)
   const zoom = useEditorStore((s) => s.zoom)
   const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
+  const projectTheme = useProjectStore((s) => s.settings.theme)
 
   const blocksRef = useRef(blocks)
   useEffect(() => {
@@ -255,6 +257,12 @@ function Canvas(): JSX.Element {
     const html = blockToHtml(blocks, { includeDataAttributes: true })
     postToIframe({ type: 'render', html })
   }, [blocks, runtimeReady])
+
+  useEffect(() => {
+    if (!runtimeReady) return
+    const themeCss = themeToCSS(projectTheme)
+    postToIframe({ type: 'setThemeCss', css: themeCss })
+  }, [projectTheme, runtimeReady])
 
   useEffect(() => {
     if (!runtimeReady) return

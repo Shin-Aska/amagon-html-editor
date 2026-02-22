@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { X, Command, Save, FolderOpen, Undo, Redo, Copy, Scissors, Clipboard, Trash2, Monitor, Moon, Sun, Code, Menu, Settings, Search, HelpCircle } from 'lucide-react'
+import { X, Command, Save, FolderOpen, Undo, Redo, Copy, Scissors, Clipboard, Trash2, Monitor, Moon, Sun, Code, Menu, Settings, Search, HelpCircle, Layout } from 'lucide-react'
 import './KeyboardShortcutsHelp.css'
 
 interface KeyboardShortcutsHelpProps {
@@ -41,6 +41,17 @@ const shortcutCategories: ShortcutCategory[] = [
       { key: 'Ctrl+\\', description: 'Toggle left sidebar', icon: <Menu size={14} /> },
       { key: 'Ctrl+/', description: 'Toggle right sidebar', icon: <Settings size={14} /> },
       { key: 'Ctrl+M', description: 'Toggle theme (dark/light)', icon: <Moon size={14} /> },
+    ]
+  },
+  {
+    name: 'Layout Switching',
+    shortcuts: [
+      { key: 'F1', description: 'Standard layout', icon: <Layout size={14} /> },
+      { key: 'F2', description: 'No Sidebar (canvas + inspector)' },
+      { key: 'F3', description: 'No Inspector (canvas + sidebar)' },
+      { key: 'F4', description: 'Canvas Only' },
+      { key: 'F5', description: 'Code Focus (canvas + code editor)' },
+      { key: 'F6', description: 'Zen Mode (canvas + code + inspector)' },
     ]
   },
   {

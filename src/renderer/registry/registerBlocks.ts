@@ -124,10 +124,10 @@ export function registerBlocks(): void {
     label: 'Image',
     category: 'Media',
     icon: '📷',
-    defaultProps: { src: '${IMAGE_PLACEHOLDER}', alt: 'Image' },
+    defaultProps: { src: IMAGE_PLACEHOLDER, alt: 'Image' },
     defaultClasses: ['img-fluid'],
     propsSchema: {
-      src: { type: 'image', label: 'Source URL', default: '${IMAGE_PLACEHOLDER}' },
+      src: { type: 'image', label: 'Source URL', default: IMAGE_PLACEHOLDER },
       alt: { type: 'text', label: 'Alt Text', default: 'Image' }
     }
   })
@@ -169,9 +169,9 @@ export function registerBlocks(): void {
     defaultProps: {
       id: 'carousel-' + Math.random().toString(36).substr(2, 9),
       slides: [
-        { src: '${IMAGE_PLACEHOLDER}', alt: 'Slide 1', caption: 'First Slide' },
-        { src: '${IMAGE_PLACEHOLDER}', alt: 'Slide 2', caption: 'Second Slide' },
-        { src: '${IMAGE_PLACEHOLDER}', alt: 'Slide 3', caption: 'Third Slide' }
+        { src: IMAGE_PLACEHOLDER, alt: 'Slide 1', caption: 'First Slide' },
+        { src: IMAGE_PLACEHOLDER, alt: 'Slide 2', caption: 'Second Slide' },
+        { src: IMAGE_PLACEHOLDER, alt: 'Slide 3', caption: 'Third Slide' }
       ]
     },
     propsSchema: {
@@ -389,7 +389,7 @@ export function registerBlocks(): void {
     defaultChildren: [
       {
         type: 'image',
-        props: { src: '${IMAGE_PLACEHOLDER}', alt: 'Feature' },
+        props: { src: IMAGE_PLACEHOLDER, alt: 'Feature' },
         classes: ['card-img-top']
       },
       {
@@ -529,7 +529,7 @@ export function registerBlocks(): void {
     icon: '📣',
     defaultClasses: ['px-4', 'py-5', 'my-5', 'text-center'],
     defaultChildren: [
-      { type: 'image', props: { src: '${IMAGE_PLACEHOLDER}', alt: 'Logo' }, classes: ['d-block', 'mx-auto', 'mb-4'] },
+      { type: 'image', props: { src: IMAGE_PLACEHOLDER, alt: 'Logo' }, classes: ['d-block', 'mx-auto', 'mb-4'] },
       { type: 'heading', props: { text: 'Centered hero', level: 1 }, classes: ['display-5', 'fw-bold', 'text-body-emphasis'] },
       {
         type: 'column',

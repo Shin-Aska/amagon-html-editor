@@ -1,0 +1,338 @@
+/* Theme Editor Modal */
+.theme-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.theme-editor-dialog {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  width: 640px;
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.theme-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.theme-editor-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-editor-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+}
+
+.theme-editor-close:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* Tabs */
+.theme-editor-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 20px;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.theme-editor-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.theme-editor-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.theme-editor-tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 500;
+}
+
+/* Content */
+.theme-editor-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Section */
+.theme-section {
+  margin-bottom: 24px;
+}
+
+.theme-section:last-child {
+  margin-bottom: 0;
+}
+
+.theme-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+/* Color Grid */
+.theme-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.theme-color-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-color-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.theme-color-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.theme-color-swatch input[type="color"] {
+  width: 48px;
+  height: 48px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin: -8px;
+}
+
+.theme-color-hex {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+}
+
+.theme-color-hex:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Field Group */
+.theme-field-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.theme-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-field-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.theme-field-input {
+  padding: 6px 10px;
+  font-size: 13px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+}
+
+.theme-field-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Custom CSS */
+.theme-custom-css textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 10px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.theme-custom-css textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* Footer */
+.theme-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border);
+  gap: 8px;
+}
+
+.theme-editor-footer-left {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-editor-footer-right {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-btn {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.theme-btn:hover {
+  background: var(--color-bg-hover);
+}
+
+.theme-btn-primary {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.theme-btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Preset Grid */
+.theme-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.theme-preset-card {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.theme-preset-card:hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-bg-hover);
+}
+
+.theme-preset-card.active {
+  border-color: var(--color-accent);
+}
+
+.theme-preset-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.theme-preset-swatches {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-preset-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Spacing scale preview */
+.theme-spacing-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.theme-spacing-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.theme-spacing-bar-fill {
+  height: 8px;
+  background: var(--color-accent);
+  border-radius: 2px;
+  opacity: 0.6;
+  transition: width 0.2s ease;
+}

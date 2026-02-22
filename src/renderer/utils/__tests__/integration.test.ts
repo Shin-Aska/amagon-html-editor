@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
-import { createBlock, type Block, type ProjectData } from '../../store/types'
+import { createBlock, createDefaultTheme, type Block, type ProjectData } from '../../store/types'
 import { exportProject } from '../../utils/exportEngine'
 
 /**
@@ -70,7 +70,7 @@ describe('Integration: Save/Load Round-trip', () => {
       settings: {
         name: 'Test Project',
         framework: 'bootstrap-5',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [{
@@ -123,7 +123,7 @@ describe('Integration: Save/Load Round-trip', () => {
       projectSettings: {
         name: 'Imported',
         framework: 'bootstrap-5',
-        theme: 'dark',
+        theme: createDefaultTheme(),
         globalStyles: { 'body-font': 'Arial' }
       },
       pages: [
@@ -156,7 +156,7 @@ describe('Integration: Export Engine', () => {
       projectSettings: {
         name: 'Export Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -197,7 +197,7 @@ describe('Integration: Export Engine', () => {
       projectSettings: {
         name: 'CSS Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [{
@@ -214,10 +214,18 @@ describe('Integration: Export Engine', () => {
       customCss: 'body { background: red; }'
     })
     
+    // Custom CSS is included in the external styles.css alongside theme CSS
+    const cssFile = files.find(f => f.path === 'styles.css')
+    expect(cssFile).toBeDefined()
+    const css = cssFile?.content as string
+    expect(css).toContain('body { background: red; }')
+    // Theme variables should also be present
+    expect(css).toContain('--theme-primary')
+    
+    // HTML should reference the stylesheet
     const htmlFile = files.find(f => f.path === 'index.html')
     const html = htmlFile?.content as string
-    
-    expect(html).toContain('body { background: red; }')
+    expect(html).toContain('styles.css')
   })
 })
 
@@ -227,7 +235,7 @@ describe('Integration: Multi-page Workflow', () => {
       settings: {
         name: 'Multi-page',
         framework: 'bootstrap-5',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [

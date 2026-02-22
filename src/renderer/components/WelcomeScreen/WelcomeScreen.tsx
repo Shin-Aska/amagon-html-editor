@@ -9,7 +9,9 @@ import './WelcomeScreen.css'
 export default function WelcomeScreen(): JSX.Element {
   const api = getApi()
   const setProject = useProjectStore((s) => s.setProject)
-  const setPageBlocks = useEditorStore((s) => s.setPageBlocks)
+  const setCustomCss = useEditorStore((s) => s.setCustomCss)
+  const markSaved = useEditorStore((s) => s.markSaved)
+  const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
   
   const [recentProjects, setRecentProjects] = useState<string[]>([])
   const [showNewProject, setShowNewProject] = useState(false)
@@ -29,9 +31,12 @@ export default function WelcomeScreen(): JSX.Element {
     if (result.success && result.content) {
       setProject(result.content as any, result.filePath)
       const data = result.content as any
-      if (data.pages && data.pages.length > 0) {
-        setPageBlocks(data.pages[0].blocks)
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      if (firstPage && Array.isArray(firstPage.blocks)) {
+        loadPageBlocks(firstPage.blocks)
       }
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
+      markSaved()
     }
   }
 
@@ -40,9 +45,12 @@ export default function WelcomeScreen(): JSX.Element {
     if (result.success && result.content) {
       setProject(result.content as any, result.filePath)
       const data = result.content as any
-      if (data.pages && data.pages.length > 0) {
-        setPageBlocks(data.pages[0].blocks)
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      if (firstPage && Array.isArray(firstPage.blocks)) {
+        loadPageBlocks(firstPage.blocks)
       }
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
+      markSaved()
     } else {
       console.error('Failed to load recent project:', result.error)
       alert(`Failed to load project: ${result.error}`)

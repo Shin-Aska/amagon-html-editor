@@ -6,6 +6,7 @@ import CssClassesEditor from './CssClassesEditor'
 import BlockActions from './BlockActions'
 import ResponsiveOverrides from './ResponsiveOverrides'
 import BlockIcon from '../BlockIcon/BlockIcon'
+import ImageField from './ImageField'
 import './Inspector.css'
 
 function Inspector(): JSX.Element {
@@ -131,6 +132,18 @@ function Inspector(): JSX.Element {
               placeholder="#000000"
             />
           </div>
+        )
+      case 'image':
+        return <ImageField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
+      case 'measurement':
+        return (
+          <input 
+            type="text" 
+            className="inspector-input"
+            value={val || ''} 
+            onChange={(e) => handlePropChange(key, e.target.value)} 
+            placeholder="e.g. 16px, 2rem"
+          />
         )
       default:
         return <span className="unsupported-prop">Unsupported type: {schema.type}</span>

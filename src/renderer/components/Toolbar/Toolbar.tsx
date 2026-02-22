@@ -21,13 +21,18 @@ import {
   Code,
   Settings,
   Image as ImageIcon,
-  FileType
+  FileType,
+  Layout,
+  PanelLeft,
+  PanelRight,
+  Palette
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useToastStore } from '../../store/toastStore'
 import { createBlock } from '../../store/types'
-import type { Block } from '../../store/types'
+import type { Block, EditorLayout } from '../../store/types'
 import AssetManager from '../AssetManager/AssetManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
@@ -37,20 +42,28 @@ interface ToolbarProps {
   leftPanelOpen: boolean
   rightPanelOpen: boolean
   codeEditorOpen: boolean
+  editorLayout: EditorLayout
   onToggleLeftPanel: () => void
   onToggleRightPanel: () => void
   onToggleCodeEditor: () => void
+  onSetEditorLayout: (layout: EditorLayout) => void
+  onOpenThemeEditor: () => void
 }
 
 export default function Toolbar({
   leftPanelOpen,
   rightPanelOpen,
   codeEditorOpen,
+  editorLayout,
   onToggleLeftPanel,
   onToggleRightPanel,
-  onToggleCodeEditor
+  onToggleCodeEditor,
+  onSetEditorLayout,
+  onOpenThemeEditor
 }: ToolbarProps): JSX.Element {
   const api = getApi()
+
+  const showToast = useToastStore((s) => s.showToast)
   
   // Project Store
   const getProjectData = useProjectStore((s) => s.getProjectData)
@@ -70,6 +83,8 @@ export default function Toolbar({
   const zoom = useEditorStore((s) => s.zoom)
   const theme = useEditorStore((s) => s.theme)
   const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
+  const markSaved = useEditorStore((s) => s.markSaved)
+  const setCustomCss = useEditorStore((s) => s.setCustomCss)
   
   const addBlock = useEditorStore((s) => s.addBlock)
   const removeBlock = useEditorStore((s) => s.removeBlock)
@@ -91,6 +106,8 @@ export default function Toolbar({
   const [showPageMenu, setShowPageMenu] = useState(false)
   const [isAddingPage, setIsAddingPage] = useState(false)
   const [newPageName, setNewPageName] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [showLayoutMenu, setShowLayoutMenu] = useState(false)
 
   // Store access for pages
   const pages = useProjectStore((s) => s.pages)
@@ -112,26 +129,78 @@ export default function Toolbar({
     return cleanup
   }, [filePath, currentPageId])
 
-  const handleSave = async (silent = false): Promise<void> => {
-    if (currentPageId) {
-      updatePage(currentPageId, { blocks: editorBlocks })
+  const ensureBackendReadyAndFlushEdits = async (): Promise<boolean> => {
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
+    const isElectron = /electron/i.test(ua)
+    if (isElectron && !window.api) {
+      showToast('Electron backend not available (window.api missing)', 'error')
+      return false
     }
 
-    const projectData = getProjectData()
-    const content = JSON.stringify(projectData, null, 2)
+    const active = document.activeElement as HTMLElement | null
+    active?.blur?.()
+    await new Promise((r) => setTimeout(r, 0))
 
-    const result = await api.project.save({
-      filePath: filePath || undefined,
-      content
-    })
+    // If the user is typing in the code editor, wait for the debounce commit.
+    // (HTML parse debounce is 800ms; CSS debounce is 500ms.)
+    if (useEditorStore.getState().isTypingCode) {
+      await new Promise((r) => setTimeout(r, 900))
+    }
+    return true
+  }
 
-    if (result.success) {
-      if (!silent) console.log('Project saved successfully!')
-      if (result.filePath && result.filePath !== filePath) {
-        setFilePath(result.filePath)
+  const handleSave = async (silent = false): Promise<void> => {
+    if (isSaving) return
+    setIsSaving(true)
+
+    try {
+      const ok = await ensureBackendReadyAndFlushEdits()
+      if (!ok) return
+
+      const editorState = useEditorStore.getState()
+      const projectState = useProjectStore.getState()
+      const pageId = projectState.currentPageId
+
+      const pages = projectState.pages.map((p) =>
+        pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+      )
+
+      const content = JSON.stringify(
+        {
+          projectSettings: projectState.settings,
+          pages,
+          userBlocks: projectState.userBlocks,
+          customCss: editorState.customCss
+        },
+        null,
+        2
+      )
+
+      if (pageId) {
+        projectState.updatePage(pageId, { blocks: editorState.blocks })
       }
-    } else if (!result.canceled) {
-      console.error('Save failed:', result.error)
+
+      const result = await api.project.save({
+        filePath: projectState.filePath || undefined,
+        content
+      })
+
+      if (result.success) {
+        markSaved()
+        if (result.filePath && result.filePath !== projectState.filePath) {
+          projectState.setFilePath(result.filePath)
+        }
+        if (!silent) {
+          const shownPath = (result.filePath || projectState.filePath || '').toString()
+          showToast(shownPath ? `Saved: ${shownPath}` : 'Saved', 'success')
+        }
+      } else if (!result.canceled) {
+        if (!silent) showToast(result.error || 'Save failed', 'error')
+      }
+    } catch (err) {
+      if (!silent) showToast(String(err), 'error')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -140,25 +209,33 @@ export default function Toolbar({
     if (result.success && result.content) {
       setProject(result.content as any, result.filePath)
       const data = result.content as any
-      if (data.pages && data.pages.length > 0) {
-        useEditorStore.getState().setPageBlocks(data.pages[0].blocks)
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      if (firstPage && Array.isArray(firstPage.blocks)) {
+        useEditorStore.getState().loadPageBlocks(firstPage.blocks)
       }
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
+      markSaved()
+      showToast('Project loaded', 'success')
     } else if (!result.canceled) {
-      console.error('Load failed:', result.error)
+      showToast(result.error || 'Load failed', 'error')
     }
   }
 
   const handleExport = async (): Promise<void> => {
+    const ok = await ensureBackendReadyAndFlushEdits()
+    if (!ok) return
     if (currentPageId) {
-      updatePage(currentPageId, { blocks: editorBlocks })
+      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
     }
     setShowExport(true)
   }
 
   const handleCopyHtml = async (): Promise<void> => {
     try {
+      const ok = await ensureBackendReadyAndFlushEdits()
+      if (!ok) return
       if (currentPageId) {
-        updatePage(currentPageId, { blocks: editorBlocks })
+        updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
       }
       const projectData = getProjectData()
       const { exportProject } = await import('../../utils/exportEngine')
@@ -199,9 +276,14 @@ export default function Toolbar({
   // Page Operations
   const handleAddPage = () => {
     if (!newPageName.trim()) return
-    const page = addPage(newPageName.trim())
+
+    if (currentPageId) {
+      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+    }
+    addPage(newPageName.trim())
     setNewPageName('')
     setIsAddingPage(false)
+    setShowPageMenu(false)
     // Auto-switch to new page? The store's addPage already sets it as current.
   }
 
@@ -321,7 +403,7 @@ export default function Toolbar({
             onClick={() => setShowPageMenu(!showPageMenu)}
             title="Switch Page"
           >
-            <span style={{ fontWeight: 500 }}>{currentPage?.title || 'Page'}</span>
+            <span style={{ fontWeight: 500 }}>Page: {currentPage?.title || 'Page'}</span>
             <span style={{ fontSize: 10, opacity: 0.7 }}>▼</span>
           </button>
 
@@ -332,11 +414,15 @@ export default function Toolbar({
                   key={p.id}
                   className="page-menu-item"
                   onClick={() => {
+                    if (currentPageId && currentPageId !== p.id) {
+                      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+                    }
                     setCurrentPage(p.id)
                     setShowPageMenu(false)
                   }}
                 >
                   <div className={`page-menu-label ${p.id === currentPageId ? 'active' : ''}`}>
+                    <span className="page-menu-check">{p.id === currentPageId ? '✓' : ''}</span>
                     {p.title}
                     {p.slug !== 'index' && <span className="page-slug">/{p.slug}</span>}
                   </div>
@@ -404,7 +490,7 @@ export default function Toolbar({
           <button className="toolbar-btn" onClick={handleLoad} title="Open Project (Ctrl+O)" aria-label="Open existing project">
             <FolderOpen size={16} aria-hidden="true" />
           </button>
-          <button className="toolbar-btn" onClick={() => handleSave()} title="Save Project (Ctrl+S)" aria-label="Save project">
+          <button className="toolbar-btn" onClick={() => handleSave()} disabled={isSaving} title="Save Project (Ctrl+S)" aria-label="Save project">
             <Save size={16} aria-hidden="true" />
           </button>
           <button className="toolbar-btn" onClick={handleExport} title="Export" aria-label="Export project">
@@ -505,6 +591,82 @@ export default function Toolbar({
           >
             <Code size={16} aria-hidden="true" />
           </button>
+
+          {/* Theme Editor */}
+          <button
+            className="toolbar-btn"
+            onClick={onOpenThemeEditor}
+            title="Theme Editor"
+            aria-label="Open theme editor"
+          >
+            <Palette size={16} aria-hidden="true" />
+          </button>
+
+          {/* Layout Switcher */}
+          <div className="toolbar-layout-switcher" style={{ position: 'relative' }}>
+            <button
+              className="toolbar-btn"
+              onClick={() => setShowLayoutMenu(!showLayoutMenu)}
+              title="Change Layout"
+              aria-label="Change editor layout"
+              aria-haspopup="menu"
+              aria-expanded={showLayoutMenu}
+            >
+              <Layout size={16} aria-hidden="true" />
+            </button>
+            {showLayoutMenu && (
+              <>
+                <div className="toolbar-layout-menu" role="menu">
+                  <div
+                    className={`toolbar-layout-item ${editorLayout === 'standard' ? 'active' : ''}`}
+                    onClick={() => { onSetEditorLayout('standard'); setShowLayoutMenu(false); }}
+                    role="menuitem"
+                  >
+                    Standard
+                  </div>
+                  <div
+                    className={`toolbar-layout-item ${editorLayout === 'no-sidebar' ? 'active' : ''}`}
+                    onClick={() => { onSetEditorLayout('no-sidebar'); setShowLayoutMenu(false); }}
+                    role="menuitem"
+                  >
+                    No Sidebar
+                  </div>
+                  <div
+                    className={`toolbar-layout-item ${editorLayout === 'no-inspector' ? 'active' : ''}`}
+                    onClick={() => { onSetEditorLayout('no-inspector'); setShowLayoutMenu(false); }}
+                    role="menuitem"
+                  >
+                    No Inspector
+                  </div>
+                  <div
+                    className={`toolbar-layout-item ${editorLayout === 'canvas-only' ? 'active' : ''}`}
+                    onClick={() => { onSetEditorLayout('canvas-only'); setShowLayoutMenu(false); }}
+                    role="menuitem"
+                  >
+                    Canvas Only
+                  </div>
+                  <div
+                    className={`toolbar-layout-item ${editorLayout === 'code-focus' ? 'active' : ''}`}
+                    onClick={() => { onSetEditorLayout('code-focus'); setShowLayoutMenu(false); }}
+                    role="menuitem"
+                  >
+                    Code Focus
+                  </div>
+                  <div
+                    className={`toolbar-layout-item ${editorLayout === 'zen' ? 'active' : ''}`}
+                    onClick={() => { onSetEditorLayout('zen'); setShowLayoutMenu(false); }}
+                    role="menuitem"
+                  >
+                    Zen Mode
+                  </div>
+                </div>
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 89 }}
+                  onClick={() => setShowLayoutMenu(false)}
+                />
+              </>
+            )}
+          </div>
 
           <button
             className="toolbar-btn"

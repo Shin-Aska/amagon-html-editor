@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useProjectStore } from '../../store/projectStore'
-import { createBlock } from '../../store/types'
+import { createBlock, createDefaultTheme } from '../../store/types'
 import type { UserBlock } from '../../store/types'
 
 // Initial state for resetting store between tests
@@ -8,7 +8,7 @@ const initialProjectState = {
   settings: {
     name: 'Untitled Project',
     framework: 'bootstrap-5' as const,
-    theme: 'default',
+    theme: createDefaultTheme(),
     globalStyles: {}
   },
   pages: [{
@@ -43,8 +43,9 @@ describe('projectStore', () => {
     })
 
     it('updates theme', () => {
-      store.updateSettings({ theme: 'dark' })
-      expect(store.settings.theme).toBe('dark')
+      const darkTheme = { ...createDefaultTheme(), name: 'Dark' }
+      store.updateSettings({ theme: darkTheme })
+      expect(store.settings.theme.name).toBe('Dark')
     })
 
     it('updates framework', () => {
@@ -160,7 +161,7 @@ describe('projectStore', () => {
         projectSettings: {
           name: 'Imported',
           framework: 'bootstrap-5' as const,
-          theme: 'dark',
+          theme: createDefaultTheme(),
           globalStyles: {}
         },
         pages: [
@@ -188,7 +189,7 @@ describe('projectStore', () => {
         projectSettings: {
           name: 'Empty',
           framework: 'vanilla' as const,
-          theme: 'default',
+          theme: createDefaultTheme(),
           globalStyles: {}
         },
         pages: [],
@@ -215,7 +216,7 @@ describe('projectStore', () => {
         projectSettings: {
           name: 'Test',
           framework: 'bootstrap-5' as const,
-          theme: 'default',
+          theme: createDefaultTheme(),
           globalStyles: {}
         },
         pages: [{ id: 'p1', title: 'Page', slug: 'page', meta: {}, blocks: [] }],

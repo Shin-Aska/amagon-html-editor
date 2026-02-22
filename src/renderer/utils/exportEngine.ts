@@ -1,4 +1,5 @@
 import type { Block, FrameworkChoice, ProjectData } from '../store/types'
+import { themeToCSS } from '../store/types'
 import { blockToHtml } from './blockToHtml'
 import { getApi } from './api'
 
@@ -506,6 +507,13 @@ function sanitizeSlug(slug: string): string {
 
 function buildStylesCss(ctx: BuildContext, project: ProjectData, customCss?: string): string {
   const lines: string[] = []
+
+  // Theme CSS variables and base styles (inserted first so everything else can override)
+  const theme = project.projectSettings.theme
+  if (theme && typeof theme === 'object' && theme.colors) {
+    const themeCss = themeToCSS(theme)
+    if (themeCss.trim()) lines.push(themeCss.trim())
+  }
 
   const globalStyles = buildGlobalStylesCss(project.projectSettings.globalStyles)
   if (globalStyles) lines.push(globalStyles)

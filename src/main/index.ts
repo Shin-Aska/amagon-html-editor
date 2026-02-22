@@ -222,6 +222,17 @@ function registerIpcHandlers(): void {
       try {
         let targetPath = data.filePath
 
+        // If the renderer passes a relative path (e.g. "project.json"), resolve it
+        // against the current project directory (when available). Otherwise treat
+        // it as an unsaved project and show the Save dialog.
+        if (targetPath && !path.isAbsolute(targetPath)) {
+          if (currentProjectDir) {
+            targetPath = path.join(currentProjectDir, targetPath)
+          } else {
+            targetPath = undefined
+          }
+        }
+
         // If no path or untitled, show Save As dialog
         if (!targetPath || targetPath === 'untitled-project.json') {
           const { canceled, filePath } = await dialog.showSaveDialog(mainWindow!, {
@@ -664,7 +675,23 @@ function registerIpcHandlers(): void {
           projectSettings: {
             name: data.name,
             framework: data.framework,
-            theme: 'default',
+            theme: {
+              name: 'Default',
+              colors: {
+                primary: '#1e66f5', secondary: '#6c757d', accent: '#7c3aed',
+                background: '#ffffff', surface: '#f8f9fa', text: '#212529',
+                textMuted: '#6c757d', border: '#dee2e6',
+                success: '#198754', warning: '#ffc107', danger: '#dc3545'
+              },
+              typography: {
+                fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                headingFontFamily: 'inherit',
+                baseFontSize: '16px', lineHeight: '1.6', headingLineHeight: '1.2'
+              },
+              spacing: { baseUnit: '8px', scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8] },
+              borders: { radius: '6px', width: '1px', color: '#dee2e6' },
+              customCss: ''
+            },
             globalStyles: {}
           },
           pages: [

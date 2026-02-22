@@ -9,6 +9,7 @@ type EditorMessage =
   | { type: 'clearSelection' }
   | { type: 'scrollToElement'; blockId?: string | null }
   | { type: 'setCustomCss'; css?: string }
+  | { type: 'setThemeCss'; css?: string }
   | { type: 'toggleLayoutOutlines'; show: boolean }
   | { type: 'dragMove'; x: number; y: number }
   | { type: 'dragEnd' }
@@ -181,6 +182,32 @@ function injectLayoutOutlinesCss(): void {
   document.head.appendChild(style)
 }
 
+function setThemeCss(css: string): void {
+  const trimmed = css.trim()
+  const existing = document.querySelector<HTMLStyleElement>('style#hoarses-theme-css')
+
+  if (trimmed.length === 0) {
+    existing?.remove()
+    return
+  }
+
+  if (existing) {
+    existing.textContent = trimmed
+    return
+  }
+
+  const style = document.createElement('style')
+  style.id = 'hoarses-theme-css'
+  style.textContent = trimmed
+  // Insert theme CSS before custom CSS so custom CSS can override
+  const customCssEl = document.querySelector('style#html-editor-custom-css')
+  if (customCssEl) {
+    customCssEl.before(style)
+  } else {
+    document.head.appendChild(style)
+  }
+}
+
 function setCustomCss(css: string): void {
   const trimmed = css.trim()
   const existing = document.querySelector<HTMLStyleElement>('style#html-editor-custom-css')
@@ -220,6 +247,9 @@ function initRuntime(): void {
         break
       case 'setCustomCss':
         setCustomCss((data as { css?: string }).css ?? '')
+        break
+      case 'setThemeCss':
+        setThemeCss((data as { css?: string }).css ?? '')
         break
       case 'select':
         setSelected((data as { blockId?: string | null }).blockId ?? null)

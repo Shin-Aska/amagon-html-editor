@@ -16,9 +16,11 @@ interface ElectronApi {
   }
   assets: {
     selectImage: () => Promise<any>
+    selectSingleImage: () => Promise<any>
     list: () => Promise<any>
     delete: (relativePath: string) => Promise<any>
     readAsset: (assetPath: string) => Promise<any>
+    readFileAsBase64: (filePath: string) => Promise<any>
     import: (srcPath: string) => Promise<any>
   }
   autosave: {

@@ -2,6 +2,8 @@
 // In production (Electron), this will be replaced by the real IPC bridge.
 // For now, uses browser APIs (localStorage, File API, download links).
 
+import { createDefaultTheme } from '../store/types'
+
 export interface IpcResult {
   success: boolean
   canceled?: boolean
@@ -162,7 +164,7 @@ const mockApi: ElectronApi = {
         projectSettings: {
           name: data.name,
           framework: data.framework,
-          theme: 'default',
+          theme: createDefaultTheme(),
           globalStyles: {}
         },
         pages: [
@@ -208,6 +210,62 @@ const mockApi: ElectronApi = {
           }
           input.oncancel = () => resolve({ success: false, canceled: true })
           input.click()
+        })
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
+    },
+
+    selectSingleImage: async (): Promise<IpcResult> => {
+      try {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp'
+
+        return new Promise((resolve) => {
+          input.onchange = () => {
+            const file = input.files?.[0]
+            if (!file) {
+              resolve({ success: false, canceled: true })
+              return
+            }
+            const blobUrl = URL.createObjectURL(file)
+            resolve({
+              success: true,
+              filePath: blobUrl,
+              data: file.name,
+              mimeType: file.type
+            })
+          }
+          input.oncancel = () => resolve({ success: false, canceled: true })
+          input.click()
+        })
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
+    },
+
+    readFileAsBase64: async (filePath: string): Promise<IpcResult> => {
+      try {
+        const response = await fetch(filePath)
+        const blob = await response.blob()
+        const sizeMB = blob.size / (1024 * 1024)
+        if (sizeMB > 5) {
+          return { success: false, error: `File is too large (${sizeMB.toFixed(1)}MB). Max 5MB for base64 embedding.` }
+        }
+        return new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            resolve({
+              success: true,
+              data: reader.result as string,
+              mimeType: blob.type
+            })
+          }
+          reader.onerror = () => {
+            resolve({ success: false, error: 'Failed to read file' })
+          }
+          reader.readAsDataURL(blob)
         })
       } catch (error) {
         return { success: false, error: String(error) }
@@ -267,9 +325,17 @@ const mockApi: ElectronApi = {
 
 // Export the API — in Electron mode, window.api will be set by the preload script.
 // In browser mode, we use this mock.
+let didWarnMissingElectronApi = false
 export function getApi(): ElectronApi {
   if (window.api) {
     return window.api
+  }
+
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
+  const isElectron = /electron/i.test(ua)
+  if (isElectron && !didWarnMissingElectronApi) {
+    didWarnMissingElectronApi = true
+    console.warn('[Hoarses] window.api is missing in Electron. Falling back to mock API; save/load will not persist to disk.')
   }
   return mockApi
 }

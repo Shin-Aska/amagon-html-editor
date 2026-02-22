@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parse } from 'parse5'
 import { exportProject } from '../exportEngine'
-import { createBlock } from '../../store/types'
+import { createBlock, createDefaultTheme } from '../../store/types'
 import type { ProjectData } from '../../store/types'
 
 describe('exportEngine', () => {
@@ -10,7 +10,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -59,7 +59,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -98,7 +98,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -135,7 +135,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -186,7 +186,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'bootstrap-5',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -217,7 +217,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -247,7 +247,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
@@ -282,7 +282,7 @@ describe('exportEngine', () => {
       projectSettings: {
         name: 'Test',
         framework: 'vanilla',
-        theme: 'default',
+        theme: createDefaultTheme(),
         globalStyles: {}
       },
       pages: [
