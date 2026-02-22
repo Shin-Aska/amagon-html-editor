@@ -1,7 +1,7 @@
 {
   "name": "hoarses-html-editor",
   "version": "0.1.0",
-  "description": "Hoarses — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
+  "description": "Amagon — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
@@ -48,7 +48,7 @@
   },
   "build": {
     "appId": "com.hoarses.editor",
-    "productName": "Hoarses HTML Editor",
+    "productName": "Amagon HTML Editor",
     "directories": {
       "output": "release"
     },
@@ -60,7 +60,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.developer-tools"
@@ -69,7 +72,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -77,11 +82,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Development"

@@ -1,6 +1,18 @@
-# Hoarses HTML Editor
+# Amagon HTML Editor
+
+<p align="center">
+  <img src="docs/images/logo.png" alt="Amagon Logo" width="200" />
+</p>
 
 An offline visual HTML editor — a Pingendo/Mobirise/Bootstrap Studio alternative for Linux.
+
+![App Preview](docs/images/app.jpg)
+
+## Why "Amagon"?
+
+**Amagon** is derived from the Cebuano (Bisaya) word *Amag*, which means "to glow" or "luminescence". Like a glowing phosphor in a dark terminal, Amagon is designed to illuminate the path between visual design and high-performance code.
+
+---
 
 ## Features
 
@@ -18,7 +30,7 @@ An offline visual HTML editor — a Pingendo/Mobirise/Bootstrap Studio alternati
 
 ### Project Management
 - **Multi-page Projects**: Create and manage multiple pages in a single project
-- **Save/Load**: Native project files (.hoarses) with all assets
+- **Save/Load**: Native project files (.json) with all assets
 - **Asset Manager**: Built-in image and asset management
 - **Auto-save**: Automatic background saving
 
@@ -132,6 +144,13 @@ All 12 phases completed:
 11. ✅ UX polish (shortcuts, clipboard, accessibility)
 12. ✅ Testing, performance & documentation
 
+## The Story of "Hoarses"
+
+During the initial scaffolding phase with Windsurf, the developer wanted a name that sounded fast but was unique enough to avoid conflicts with existing npm packages. **"Hoarses"** was chosen because it sounded like a heavy, breathing engine—similar to the "visual velocity" described in the research papers—but the extra "a" and "e" were added to ensure the internal directory names remained unique in the terminal.
+
+Over time, it became a badge of honor among the contributors: **"Amagon is what the world sees, but Hoarses is the engine that screams"**.
+
 ## License
 
 Private / internal project.
+

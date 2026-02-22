@@ -106,7 +106,7 @@ async function createWindow(): Promise<void> {
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    title: 'Hoarses',
+    title: 'Amagon',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),
       nodeIntegration: false,
@@ -240,7 +240,7 @@ function registerIpcHandlers(): void {
               app.getPath('documents'),
               'project.json'
             ),
-            filters: [{ name: 'Hoarses Project', extensions: ['json'] }]
+            filters: [{ name: 'Amagon Project', extensions: ['json'] }]
           })
           if (canceled || !filePath) return { success: false, canceled: true }
           targetPath = filePath
@@ -274,7 +274,7 @@ function registerIpcHandlers(): void {
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow!, {
           title: 'Save Project As',
           defaultPath: path.join(app.getPath('documents'), 'project.json'),
-          filters: [{ name: 'Hoarses Project', extensions: ['json'] }]
+          filters: [{ name: 'Amagon Project', extensions: ['json'] }]
         })
         if (canceled || !filePath) return { success: false, canceled: true }
 
@@ -300,7 +300,7 @@ function registerIpcHandlers(): void {
     try {
       const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
         title: 'Open Project',
-        filters: [{ name: 'Hoarses Project', extensions: ['json'] }],
+        filters: [{ name: 'Amagon Project', extensions: ['json'] }],
         properties: ['openFile']
       })
 

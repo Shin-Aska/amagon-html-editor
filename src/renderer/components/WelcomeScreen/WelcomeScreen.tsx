@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FilePlus, FolderOpen } from 'lucide-react'
+import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -12,7 +12,7 @@ export default function WelcomeScreen(): JSX.Element {
   const setCustomCss = useEditorStore((s) => s.setCustomCss)
   const markSaved = useEditorStore((s) => s.markSaved)
   const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
-  
+
   const [recentProjects, setRecentProjects] = useState<string[]>([])
   const [showNewProject, setShowNewProject] = useState(false)
 
@@ -59,48 +59,74 @@ export default function WelcomeScreen(): JSX.Element {
 
   return (
     <div className="welcome-screen">
-      <div className="welcome-content">
-        <div className="welcome-left">
-          <div>
-            <div className="welcome-logo">Hoarses</div>
-            <div className="welcome-subtitle">
-              Visual builder for Bootstrap & Tailwind.<br />
-              Create beautiful websites in minutes.
-            </div>
-          </div>
+      {/* Background elements */}
+      <div className="bg-shape shape-1" />
+      <div className="bg-shape shape-2" />
+      <div className="bg-grid" />
 
-          <div className="welcome-actions">
-            <button className="welcome-btn primary" onClick={() => setShowNewProject(true)}>
-              <FilePlus size={20} />
-              <div>
-                <div style={{ fontWeight: 600 }}>New Project</div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Start from scratch</div>
-              </div>
-            </button>
-            
-            <button className="welcome-btn" onClick={handleLoad}>
-              <FolderOpen size={20} />
-              <div>
-                <div style={{ fontWeight: 600 }}>Open Project</div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>Load existing .json file</div>
-              </div>
-            </button>
+      <div className="welcome-content">
+        <div className="welcome-header">
+          <div className="logo-container">
+            <Activity className="logo-icon" size={40} />
+            <div className="welcome-logo">Amagon</div>
+          </div>
+          <div className="welcome-subtitle">
+            Visual Website Builder. <span className="highlight">Build websites within minutes.</span>
           </div>
         </div>
 
-        <div className="welcome-right">
-          <div className="recent-header">Recent Projects</div>
-          <div className="recent-list">
-            {recentProjects.length === 0 ? (
-              <div className="recent-empty">No recent projects</div>
-            ) : (
-              recentProjects.map((path) => (
-                <div key={path} className="recent-item" onClick={() => handleOpenRecent(path)}>
-                  <div className="recent-name">{path.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'}</div>
-                  <div className="recent-path">{path}</div>
+        <div className="welcome-body">
+          <div className="welcome-actions">
+            <button className="welcome-btn primary-action" onClick={() => setShowNewProject(true)}>
+              <div className="btn-icon-wrapper">
+                <FilePlus size={24} />
+              </div>
+              <div className="btn-text">
+                <div className="btn-title">New Project</div>
+                <div className="btn-desc">Start building from scratch</div>
+              </div>
+              <ChevronRight className="btn-arrow" size={20} />
+            </button>
+
+            <button className="welcome-btn secondary-action" onClick={handleLoad}>
+              <div className="btn-icon-wrapper">
+                <FolderOpen size={24} />
+              </div>
+              <div className="btn-text">
+                <div className="btn-title">Open Project</div>
+                <div className="btn-desc">Load an existing .json file</div>
+              </div>
+              <ChevronRight className="btn-arrow" size={20} />
+            </button>
+          </div>
+
+          <div className="welcome-recent">
+            <div className="recent-header">
+              <Clock size={16} />
+              <span>Recent Projects</span>
+            </div>
+            <div className="recent-list">
+              {recentProjects.length === 0 ? (
+                <div className="recent-empty">
+                  No recent projects found
                 </div>
-              ))
-            )}
+              ) : (
+                recentProjects.map((path) => {
+                  const name = path.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'
+                  return (
+                    <div key={path} className="recent-item" onClick={() => handleOpenRecent(path)}>
+                      <div className="recent-item-icon">
+                        <Zap size={14} />
+                      </div>
+                      <div className="recent-item-info">
+                        <div className="recent-name">{name}</div>
+                        <div className="recent-path">{path}</div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>

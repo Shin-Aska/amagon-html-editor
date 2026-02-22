@@ -145,7 +145,7 @@ const mockApi: ElectronApi = {
 
     onExportProgress: (_callback: (data: { written: number; total: number; path?: string }) => void) => {
       // No-op in browser mode
-      return () => {}
+      return () => { }
     },
 
     getRecent: async (): Promise<IpcResult> => {
@@ -318,7 +318,7 @@ const mockApi: ElectronApi = {
 
     onTick: (_callback: () => void) => {
       // No-op in browser mode
-      return () => {}
+      return () => { }
     }
   }
 }
@@ -335,7 +335,7 @@ export function getApi(): ElectronApi {
   const isElectron = /electron/i.test(ua)
   if (isElectron && !didWarnMissingElectronApi) {
     didWarnMissingElectronApi = true
-    console.warn('[Hoarses] window.api is missing in Electron. Falling back to mock API; save/load will not persist to disk.')
+    console.warn('[Amagon] window.api is missing in Electron. Falling back to mock API; save/load will not persist to disk.')
   }
   return mockApi
 }

@@ -12,30 +12,30 @@ type ViewportMode = 'desktop' | 'tablet' | 'mobile'
 type CanvasRuntimeMessage =
   | { source: 'canvas-runtime'; type: 'ready' }
   | {
-      source: 'canvas-runtime'
-      type: 'clicked'
-      blockId?: string
-      rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
-    }
+    source: 'canvas-runtime'
+    type: 'clicked'
+    blockId?: string
+    rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
+  }
   | {
-      source: 'canvas-runtime'
-      type: 'hovered'
-      blockId?: string
-    }
+    source: 'canvas-runtime'
+    type: 'hovered'
+    blockId?: string
+  }
   | {
-      source: 'canvas-runtime'
-      type: 'contextMenu'
-      blockId?: string
-      rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
-      clientX?: number
-      clientY?: number
-    }
+    source: 'canvas-runtime'
+    type: 'contextMenu'
+    blockId?: string
+    rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
+    clientX?: number
+    clientY?: number
+  }
   | {
-      source: 'canvas-runtime'
-      type: 'moveBlock'
-      blockId: string
-      dropTarget: { targetBlockId: string; mode: 'inside' | 'before' | 'after' }
-    }
+    source: 'canvas-runtime'
+    type: 'moveBlock'
+    blockId: string
+    dropTarget: { targetBlockId: string; mode: 'inside' | 'before' | 'after' }
+  }
 
 function findBlockById(blocks: Block[], id: string): Block | null {
   for (const block of blocks) {
@@ -98,7 +98,7 @@ function Canvas(): JSX.Element {
         classes: ['container', 'py-5', 'text-center'],
         children: [
           createBlock('heading', {
-            props: { text: 'Welcome to Hoarses', level: 1 },
+            props: { text: 'Welcome to Amagon', level: 1 },
             classes: ['mb-3']
           }),
           createBlock('paragraph', {
