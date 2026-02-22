@@ -252,6 +252,7 @@ function App(): JSX.Element {
   const showSidebar = editorLayout === 'standard' || editorLayout === 'no-inspector'
   const showInspector = editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'zen'
   const showCodeEditor = codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen')
+  const showCanvas = editorLayout !== 'code-focus'  // Hide canvas in code-focus layout
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
@@ -444,29 +445,32 @@ function App(): JSX.Element {
         <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {showSidebar && (
             <>
-              <Panel defaultSize={20} minSize={15} maxSize={40} className="panel panel-left" id="panel-left">
+              <Panel defaultSize={20} minSize={15} maxSize={40} className="panel panel-left" id="panel-left" order={1}>
                 <Sidebar />
               </Panel>
               <PanelResizeHandle className="panel-resize-handle" />
             </>
           )}
 
-          <Panel className="panel panel-center" id="panel-center">
+          <Panel className="panel panel-center" id="panel-center" order={2}>
             <PanelGroup id="html-editor-center" autoSaveId="html-editor-center" direction="vertical">
-              <Panel className="canvas-area" id="panel-canvas">
-                <Canvas />
-                <DragOverlayManager onDropTargetChange={setDropHint} />
-              </Panel>
+              {showCanvas && (
+                <Panel className="canvas-area" id="panel-canvas" order={1}>
+                  <Canvas />
+                  <DragOverlayManager onDropTargetChange={setDropHint} />
+                </Panel>
+              )}
+
+              {showCodeEditor && showCanvas && (
+                <PanelResizeHandle className="panel-resize-handle-horizontal" />
+              )}
 
               {showCodeEditor && (
-                <>
-                  <PanelResizeHandle className="panel-resize-handle-horizontal" />
-                  <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code">
-                    <Suspense fallback={<div style={{ padding: 20 }}>Loading editor...</div>}>
-                      <CodeEditor />
-                    </Suspense>
-                  </Panel>
-                </>
+                <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code" order={2}>
+                  <Suspense fallback={<div style={{ padding: 20 }}>Loading editor...</div>}>
+                    <CodeEditor />
+                  </Suspense>
+                </Panel>
               )}
             </PanelGroup>
           </Panel>
@@ -474,7 +478,7 @@ function App(): JSX.Element {
           {showInspector && (
             <>
               <PanelResizeHandle className="panel-resize-handle" />
-              <Panel defaultSize={25} minSize={20} maxSize={45} className="panel panel-right" id="panel-right">
+              <Panel defaultSize={25} minSize={20} maxSize={45} className="panel panel-right" id="panel-right" order={3}>
                 <Inspector />
               </Panel>
             </>
