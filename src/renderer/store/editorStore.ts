@@ -135,6 +135,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     viewportMode: 'desktop',
     zoom: 100,
     theme: 'dark',
+    showLayoutOutlines: false,
     clipboard: null,
 
     // ─── Block Mutations ───────────────────────────────────────────────
@@ -221,6 +222,10 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       } else {
         document.body.classList.remove('dark')
       }
+    },
+
+    setLayoutOutlines: (show) => {
+      set({ showLayoutOutlines: show })
     },
 
     setClipboard: (block) => {

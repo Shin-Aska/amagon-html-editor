@@ -69,6 +69,7 @@ export default function Toolbar({
   const viewportMode = useEditorStore((s) => s.viewportMode)
   const zoom = useEditorStore((s) => s.zoom)
   const theme = useEditorStore((s) => s.theme)
+  const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
   
   const addBlock = useEditorStore((s) => s.addBlock)
   const removeBlock = useEditorStore((s) => s.removeBlock)
@@ -76,6 +77,7 @@ export default function Toolbar({
   const setViewportMode = useEditorStore((s) => s.setViewportMode)
   const setZoom = useEditorStore((s) => s.setZoom)
   const setTheme = useEditorStore((s) => s.setTheme)
+  const setLayoutOutlines = useEditorStore((s) => s.setLayoutOutlines)
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const getBlockById = useEditorStore((s) => s.getBlockById)
@@ -466,6 +468,16 @@ export default function Toolbar({
           <div className="toolbar-divider" />
 
           <div className="toolbar-group">
+            <button
+              className={`toolbar-btn ${showLayoutOutlines ? 'active' : ''}`}
+              onClick={() => setLayoutOutlines(!showLayoutOutlines)}
+              title="Toggle Layout Outlines"
+              aria-label="Toggle layout outlines"
+              aria-pressed={showLayoutOutlines}
+            >
+              <FileType size={16} aria-hidden="true" />
+            </button>
+            <div className="toolbar-divider" />
             <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out" aria-label="Zoom out">
               <ZoomOut size={16} aria-hidden="true" />
             </button>

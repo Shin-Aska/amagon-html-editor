@@ -413,6 +413,7 @@ ${pad}</div>`
   // data-block-id (editor mode only)
   if (includeDataAttributes) {
     parts.push(`data-block-id="${block.id}"`)
+    parts.push(`data-block-type="${block.type}"`)
   }
 
   // Classes

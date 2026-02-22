@@ -83,6 +83,7 @@ function Canvas(): JSX.Element {
   const customCss = useEditorStore((s) => s.customCss)
   const viewportMode = useEditorStore((s) => s.viewportMode)
   const zoom = useEditorStore((s) => s.zoom)
+  const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
 
   const blocksRef = useRef(blocks)
   useEffect(() => {
@@ -269,6 +270,11 @@ function Canvas(): JSX.Element {
     if (!runtimeReady) return
     postToIframe({ type: 'highlight', blockId: hoveredBlockId })
   }, [runtimeReady, hoveredBlockId])
+
+  useEffect(() => {
+    if (!runtimeReady) return
+    postToIframe({ type: 'toggleLayoutOutlines', show: showLayoutOutlines })
+  }, [runtimeReady, showLayoutOutlines])
 
   const viewportMaxWidth =
     viewportMode === 'desktop' ? '100%' : viewportMode === 'tablet' ? '820px' : '390px'

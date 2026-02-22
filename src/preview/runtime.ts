@@ -9,6 +9,7 @@ type EditorMessage =
   | { type: 'clearSelection' }
   | { type: 'scrollToElement'; blockId?: string | null }
   | { type: 'setCustomCss'; css?: string }
+  | { type: 'toggleLayoutOutlines'; show: boolean }
   | { type: 'dragMove'; x: number; y: number }
   | { type: 'dragEnd' }
 
@@ -44,6 +45,72 @@ function ensureOverlayRoot(): HTMLDivElement {
     document.body.appendChild(root)
   }
   return root
+}
+
+let layoutOutlinesEnabled = false
+
+function setLayoutOutlines(show: boolean): void {
+  layoutOutlinesEnabled = show
+  if (show) {
+    document.body.classList.add('show-layout-outlines')
+    injectLayoutOutlinesCss()
+  } else {
+    document.body.classList.remove('show-layout-outlines')
+  }
+}
+
+function injectLayoutOutlinesCss(): void {
+  if (document.getElementById('editor-layout-outlines-css')) return
+
+  const style = document.createElement('style')
+  style.id = 'editor-layout-outlines-css'
+  style.textContent = `
+    body.show-layout-outlines [data-block-type="container"],
+    body.show-layout-outlines [data-block-type="row"],
+    body.show-layout-outlines [data-block-type="column"],
+    body.show-layout-outlines [data-block-type="section"],
+    body.show-layout-outlines [data-block-type="header"],
+    body.show-layout-outlines [data-block-type="footer"],
+    body.show-layout-outlines [data-block-type="article"],
+    body.show-layout-outlines [data-block-type="aside"],
+    body.show-layout-outlines [data-block-type="nav"] {
+      outline: 1px dashed rgba(128, 128, 255, 0.3) !important;
+      min-height: 32px !important;
+      position: relative !important;
+    }
+    
+    body.show-layout-outlines [data-block-type="column"] {
+      min-height: 40px !important; /* Columns need a bit more height to be grab-able if empty */
+    }
+
+    body.show-layout-outlines [data-block-type="container"]::before,
+    body.show-layout-outlines [data-block-type="row"]::before,
+    body.show-layout-outlines [data-block-type="column"]::before,
+    body.show-layout-outlines [data-block-type="section"]::before,
+    body.show-layout-outlines [data-block-type="header"]::before,
+    body.show-layout-outlines [data-block-type="footer"]::before,
+    body.show-layout-outlines [data-block-type="article"]::before,
+    body.show-layout-outlines [data-block-type="aside"]::before,
+    body.show-layout-outlines [data-block-type="nav"]::before {
+      content: attr(data-block-type);
+      display: block;
+      font-size: 9px;
+      line-height: 1;
+      color: rgba(128, 128, 255, 0.8);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 1px 3px;
+      border-radius: 0 0 3px 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 99;
+      pointer-events: none;
+      border: 1px solid rgba(128, 128, 255, 0.2);
+      border-top: none;
+      border-left: none;
+    }
+  `
+  document.head.appendChild(style)
 }
 
 function setCustomCss(css: string): void {
@@ -715,6 +782,13 @@ function installOverlayRefreshHandlers(): void {
 }
 
 // Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initRuntime)
+} else {
+  initRuntime()
+}
+
+installOverlayRefreshHandlers()
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initRuntime)
 } else {

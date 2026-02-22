@@ -74,6 +74,7 @@ export interface EditorState {
   viewportMode: 'desktop' | 'tablet' | 'mobile'
   zoom: number
   theme: 'light' | 'dark'
+  showLayoutOutlines: boolean
 
   // Clipboard
   clipboard: Block | null
@@ -94,6 +95,7 @@ export interface EditorActions {
   setViewportMode: (mode: 'desktop' | 'tablet' | 'mobile') => void
   setZoom: (zoom: number) => void
   setTheme: (theme: 'light' | 'dark') => void
+  setLayoutOutlines: (show: boolean) => void
   setClipboard: (block: Block | null) => void
 
   // Bulk replace (for code→visual sync)

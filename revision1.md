@@ -163,15 +163,15 @@ Same workflow as `plan.md`:
 
 ### Tasks:
 
-- [ ] **R2.1** In `runtime.ts`, add an editor-mode stylesheet that applies to all blocks with `data-block-id` whose tag is a layout container (`div`, `section`, `header`, `footer`, `article`, `aside`, `nav`):
+- [x] **R2.1** In `runtime.ts`, add an editor-mode stylesheet that applies to all blocks with `data-block-id` whose tag is a layout container (`div`, `section`, `header`, `footer`, `article`, `aside`, `nav`):
   - Subtle dashed border (e.g. `1px dashed rgba(128, 128, 255, 0.3)`)
   - Minimal padding (e.g. `min-height: 40px; padding: 8px`) so empty containers are clickable/visible
   - Nesting depth indication via increasing border opacity or alternating border colors
   - A small floating label in the top-left corner showing the block type (e.g. "container", "row", "col") using `::before` pseudo-element with `content: attr(data-block-type)` or similar
-- [ ] **R2.2** Modify `blockToHtml.ts` to include a `data-block-type` attribute when `includeDataAttributes` is true, so the CSS can use `attr()` or type-based selectors.
-- [ ] **R2.3** Ensure the layout indicators do NOT appear in exported HTML (only when `includeDataAttributes` is true).
-- [ ] **R2.4** Add a toggle in the toolbar or canvas controls to show/hide layout outlines (for users who find them distracting). Store the preference in `useEditorStore` (e.g. `showLayoutOutlines: boolean`).
-- [ ] **R2.5** Test with:
+- [x] **R2.2** Modify `blockToHtml.ts` to include a `data-block-type` attribute when `includeDataAttributes` is true, so the CSS can use `attr()` or type-based selectors.
+- [x] **R2.3** Ensure the layout indicators do NOT appear in exported HTML (only when `includeDataAttributes` is true).
+- [x] **R2.4** Add a toggle in the toolbar or canvas controls to show/hide layout outlines (for users who find them distracting). Store the preference in `useEditorStore` (e.g. `showLayoutOutlines: boolean`).
+- [x] **R2.5** Test with:
   - Empty container (should be visible and clickable)
   - Container > Row > Column > Paragraph (3-level nesting should show depth)
   - Columns side by side (should show column boundaries)
