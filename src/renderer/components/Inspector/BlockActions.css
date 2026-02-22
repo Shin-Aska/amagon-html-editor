@@ -16,9 +16,9 @@
   justify-content: center;
   gap: 6px;
   padding: 8px;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
@@ -26,13 +26,13 @@
 }
 
 .action-btn:hover:not(:disabled) {
-  background-color: var(--bg-secondary);
+  background-color: var(--color-bg-secondary);
 }
 
 .action-btn.active {
-  background-color: rgba(var(--accent-color-rgb), 0.1);
-  border-color: var(--accent-color);
-  color: var(--accent-color);
+  background-color: rgba(23, 106, 255, 0.1);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .action-btn:disabled {
@@ -45,9 +45,9 @@
 }
 
 .primary-action-btn {
-  background-color: var(--accent-color);
+  background-color: var(--color-accent);
   color: white;
-  border-color: var(--accent-color);
+  border-color: var(--color-accent);
 }
 
 .primary-action-btn:hover:not(:disabled) {

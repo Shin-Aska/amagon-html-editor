@@ -19,25 +19,25 @@
 
 .style-label {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .button-group {
   display: flex;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .btn-toggle {
   flex: 1;
-  background: var(--bg-primary);
+  background: var(--color-bg-primary);
   border: none;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--color-border);
   padding: 4px 0;
   font-size: 12px;
-  color: var(--text-primary);
+  color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -47,10 +47,10 @@
 }
 
 .btn-toggle:hover {
-  background: var(--bg-secondary);
+  background: var(--color-bg-secondary);
 }
 
 .btn-toggle.active {
-  background: var(--accent-color);
+  background: var(--color-accent);
   color: white;
 }

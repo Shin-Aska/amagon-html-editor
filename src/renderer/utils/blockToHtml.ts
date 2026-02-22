@@ -1,3 +1,5 @@
+import { ICON_PLACEHOLDER } from './placeholders'
+
 import type { Block } from '../store/types'
 
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
@@ -144,7 +146,7 @@ function getBlockContent(block: Block): string {
     }
 
     case 'icon':
-      return '' // Icon content is empty, classes/styles handle it
+      return `<img src="${ICON_PLACEHOLDER}" alt="icon" width="100%" height="100%" />`
 
     case 'carousel': {
       const id = String(props.id || 'carousel-' + Math.random().toString(36).substr(2, 9))

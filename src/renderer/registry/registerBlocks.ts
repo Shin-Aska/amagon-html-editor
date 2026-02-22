@@ -1,3 +1,5 @@
+import { IMAGE_PLACEHOLDER, ICON_PLACEHOLDER } from '../utils/placeholders'
+
 import { componentRegistry } from './ComponentRegistry'
 
 export function registerBlocks(): void {
@@ -122,10 +124,10 @@ export function registerBlocks(): void {
     label: 'Image',
     category: 'Media',
     icon: '📷',
-    defaultProps: { src: 'https://via.placeholder.com/900x300', alt: 'Image' },
+    defaultProps: { src: '${IMAGE_PLACEHOLDER}', alt: 'Image' },
     defaultClasses: ['img-fluid'],
     propsSchema: {
-      src: { type: 'image', label: 'Source URL', default: 'https://via.placeholder.com/900x300' },
+      src: { type: 'image', label: 'Source URL', default: '${IMAGE_PLACEHOLDER}' },
       alt: { type: 'text', label: 'Alt Text', default: 'Image' }
     }
   })
@@ -167,9 +169,9 @@ export function registerBlocks(): void {
     defaultProps: {
       id: 'carousel-' + Math.random().toString(36).substr(2, 9),
       slides: [
-        { src: 'https://via.placeholder.com/800x400?text=Slide+1', alt: 'Slide 1', caption: 'First Slide' },
-        { src: 'https://via.placeholder.com/800x400?text=Slide+2', alt: 'Slide 2', caption: 'Second Slide' },
-        { src: 'https://via.placeholder.com/800x400?text=Slide+3', alt: 'Slide 3', caption: 'Third Slide' }
+        { src: '${IMAGE_PLACEHOLDER}', alt: 'Slide 1', caption: 'First Slide' },
+        { src: '${IMAGE_PLACEHOLDER}', alt: 'Slide 2', caption: 'Second Slide' },
+        { src: '${IMAGE_PLACEHOLDER}', alt: 'Slide 3', caption: 'Third Slide' }
       ]
     },
     propsSchema: {
@@ -387,7 +389,7 @@ export function registerBlocks(): void {
     defaultChildren: [
       {
         type: 'image',
-        props: { src: 'https://via.placeholder.com/300x200', alt: 'Feature' },
+        props: { src: '${IMAGE_PLACEHOLDER}', alt: 'Feature' },
         classes: ['card-img-top']
       },
       {
@@ -527,7 +529,7 @@ export function registerBlocks(): void {
     icon: '📣',
     defaultClasses: ['px-4', 'py-5', 'my-5', 'text-center'],
     defaultChildren: [
-      { type: 'image', props: { src: 'https://via.placeholder.com/100x100', alt: 'Logo' }, classes: ['d-block', 'mx-auto', 'mb-4'] },
+      { type: 'image', props: { src: '${IMAGE_PLACEHOLDER}', alt: 'Logo' }, classes: ['d-block', 'mx-auto', 'mb-4'] },
       { type: 'heading', props: { text: 'Centered hero', level: 1 }, classes: ['display-5', 'fw-bold', 'text-body-emphasis'] },
       {
         type: 'column',
@@ -612,6 +614,10 @@ export function registerBlocks(): void {
     category: 'Typography',
     icon: '❝',
     defaultClasses: ['blockquote'],
+    defaultProps: {
+      text: 'A well-known quote, contained in a blockquote element.',
+      footer: 'Someone famous'
+    },
     propsSchema: {
       text: { type: 'textarea', label: 'Quote', default: 'A well-known quote, contained in a blockquote element.' },
       footer: { type: 'text', label: 'Source', default: 'Someone famous' }
@@ -635,7 +641,10 @@ export function registerBlocks(): void {
     label: 'Code Block',
     category: 'Typography',
     icon: '{ }',
-    defaultClasses: ['bg-light', 'p-3', 'rounded'],
+    defaultClasses: ['bg-dark', 'text-light', 'p-3', 'rounded'],
+    defaultProps: {
+      code: 'console.log("Hello world");'
+    },
     propsSchema: {
       code: { type: 'textarea', label: 'Code', default: 'console.log("Hello world");' }
     }

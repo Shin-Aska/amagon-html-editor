@@ -5,6 +5,8 @@ import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
 import { componentRegistry, type BlockDefinition } from '../../registry/ComponentRegistry'
 import BlockIcon from '../BlockIcon/BlockIcon'
+import BlockTree from '../BlockTree/BlockTree'
+import { useState } from 'react'
 
 function WidgetItem({ widget }: { widget: BlockDefinition }): JSX.Element {
   const isTypingCode = useEditorStore((s) => s.isTypingCode)
@@ -52,10 +54,10 @@ function WidgetCategory({ title, widgets }: { title: string; widgets: BlockDefin
 function Sidebar(): JSX.Element {
   const categories = componentRegistry.getCategories()
   const userBlocks = useProjectStore((s) => s.userBlocks)
+  const [activeTab, setActiveTab] = useState<'widgets' | 'layers'>('widgets')
 
   // Define a specific order for categories if desired, or just use the insertion order
   const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed']
-  
   // Combine ordered known categories with any others found in the registry
   const allCategories = Array.from(new Set([...orderedCategories, ...categories]))
 
@@ -71,18 +73,38 @@ function Sidebar(): JSX.Element {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h3>Widgets</h3>
+        <h3>Design</h3>
       </div>
-      <div className="sidebar-content">
-        {allCategories.map((category) => (
-          <WidgetCategory
-            key={category}
-            title={category}
-            widgets={componentRegistry.getByCategory(category)}
-          />
-        ))}
-        {userBlockDefinitions.length > 0 && (
-          <WidgetCategory title="User Blocks" widgets={userBlockDefinitions} />
+      <div className="sidebar-tabs">
+        <div
+          className={`sidebar-tab ${activeTab === 'widgets' ? 'active' : ''}`}
+          onClick={() => setActiveTab('widgets')}
+        >
+          Widgets
+        </div>
+        <div
+          className={`sidebar-tab ${activeTab === 'layers' ? 'active' : ''}`}
+          onClick={() => setActiveTab('layers')}
+        >
+          Layers
+        </div>
+      </div>
+      <div className="sidebar-content" style={{ display: 'flex', flexDirection: 'column' }}>
+        {activeTab === 'widgets' ? (
+          <>
+            {allCategories.map((category) => (
+              <WidgetCategory
+                key={category}
+                title={category}
+                widgets={componentRegistry.getByCategory(category)}
+              />
+            ))}
+            {userBlockDefinitions.length > 0 && (
+              <WidgetCategory title="User Blocks" widgets={userBlockDefinitions} />
+            )}
+          </>
+        ) : (
+          <BlockTree />
         )}
       </div>
     </div>
