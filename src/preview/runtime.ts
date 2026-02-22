@@ -65,47 +65,115 @@ function injectLayoutOutlinesCss(): void {
   const style = document.createElement('style')
   style.id = 'editor-layout-outlines-css'
   style.textContent = `
-    body.show-layout-outlines [data-block-type="container"],
-    body.show-layout-outlines [data-block-type="row"],
-    body.show-layout-outlines [data-block-type="column"],
-    body.show-layout-outlines [data-block-type="section"],
-    body.show-layout-outlines [data-block-type="header"],
-    body.show-layout-outlines [data-block-type="footer"],
-    body.show-layout-outlines [data-block-type="article"],
-    body.show-layout-outlines [data-block-type="aside"],
-    body.show-layout-outlines [data-block-type="nav"] {
-      outline: 1px dashed rgba(128, 128, 255, 0.3) !important;
-      min-height: 32px !important;
+    body.show-layout-outlines :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    ) {
+      outline: 2px dashed rgba(137, 180, 250, 0.8) !important;
+      outline-offset: -2px !important;
+      box-shadow: inset 0 0 0 1px rgba(137, 180, 250, 0.25) !important;
+      min-height: 40px !important;
       position: relative !important;
     }
-    
+
     body.show-layout-outlines [data-block-type="column"] {
-      min-height: 40px !important; /* Columns need a bit more height to be grab-able if empty */
+      min-height: 48px !important;
     }
 
-    body.show-layout-outlines [data-block-type="container"]::before,
-    body.show-layout-outlines [data-block-type="row"]::before,
-    body.show-layout-outlines [data-block-type="column"]::before,
-    body.show-layout-outlines [data-block-type="section"]::before,
-    body.show-layout-outlines [data-block-type="header"]::before,
-    body.show-layout-outlines [data-block-type="footer"]::before,
-    body.show-layout-outlines [data-block-type="article"]::before,
-    body.show-layout-outlines [data-block-type="aside"]::before,
-    body.show-layout-outlines [data-block-type="nav"]::before {
+    body.show-layout-outlines :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    ) :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    ) {
+      outline-color: rgba(250, 179, 135, 0.85) !important;
+      box-shadow: inset 0 0 0 1px rgba(250, 179, 135, 0.25) !important;
+    }
+
+    body.show-layout-outlines :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    ) :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    ) :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    ) {
+      outline-color: rgba(166, 227, 161, 0.9) !important;
+      box-shadow: inset 0 0 0 1px rgba(166, 227, 161, 0.25) !important;
+    }
+
+    body.show-layout-outlines :is(
+      [data-block-type="container"],
+      [data-block-type="row"],
+      [data-block-type="column"],
+      [data-block-type="section"],
+      [data-block-type="header"],
+      [data-block-type="footer"],
+      [data-block-type="article"],
+      [data-block-type="aside"],
+      [data-block-type="nav"]
+    )::before {
       content: attr(data-block-type);
-      display: block;
-      font-size: 9px;
+      display: inline-block;
+      font-size: 10px;
       line-height: 1;
-      color: rgba(128, 128, 255, 0.8);
-      background: rgba(255, 255, 255, 0.9);
-      padding: 1px 3px;
-      border-radius: 0 0 3px 0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.95);
+      background: rgba(17, 17, 27, 0.75);
+      padding: 2px 6px;
+      border-radius: 0 0 6px 0;
       position: absolute;
       top: 0;
       left: 0;
       z-index: 99;
       pointer-events: none;
-      border: 1px solid rgba(128, 128, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-top: none;
       border-left: none;
     }
@@ -180,6 +248,9 @@ function initRuntime(): void {
         clearDropIndicator()
         clearContainerHoverIndicator()
         publishDropTarget(null)
+        break
+      case 'toggleLayoutOutlines':
+        setLayoutOutlines(Boolean((data as { show?: boolean }).show))
         break
     }
   })
@@ -782,13 +853,6 @@ function installOverlayRefreshHandlers(): void {
 }
 
 // Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initRuntime)
-} else {
-  initRuntime()
-}
-
-installOverlayRefreshHandlers()
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initRuntime)
 } else {
