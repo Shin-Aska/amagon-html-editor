@@ -7,6 +7,7 @@ import { useProjectStore } from '../../store/projectStore'
 import { componentRegistry, type BlockDefinition } from '../../registry/ComponentRegistry'
 import BlockIcon from '../BlockIcon/BlockIcon'
 import BlockTree from '../BlockTree/BlockTree'
+import AiAssistant from '../AiAssistant/AiAssistant'
 import { useState } from 'react'
 
 function WidgetItem({ widget }: { widget: BlockDefinition }): JSX.Element {
@@ -57,7 +58,7 @@ function WidgetCategory({ title, widgets }: { title: string; widgets: BlockDefin
 function Sidebar(): JSX.Element {
   const categories = componentRegistry.getCategories()
   const userBlocks = useProjectStore((s) => s.userBlocks)
-  const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages'>('widgets')
+  const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets')
 
   // Page management
   const pages = useProjectStore((s) => s.pages)
@@ -133,6 +134,12 @@ function Sidebar(): JSX.Element {
         >
           Layers
         </div>
+        <div
+          className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ai')}
+        >
+          AI
+        </div>
       </div>
       <div className="sidebar-content" style={{ display: 'flex', flexDirection: 'column' }}>
         {activeTab === 'pages' && (
@@ -202,6 +209,7 @@ function Sidebar(): JSX.Element {
           </>
         )}
         {activeTab === 'layers' && <BlockTree />}
+        {activeTab === 'ai' && <AiAssistant />}
       </div>
     </div>
   )

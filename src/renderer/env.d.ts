@@ -28,6 +28,12 @@ interface ElectronApi {
     stop: () => Promise<any>
     onTick: (callback: () => void) => () => void
   }
+  ai: {
+    chat: (data: any) => Promise<any>
+    getConfig: () => Promise<any>
+    setConfig: (config: any) => Promise<any>
+    getModels: () => Promise<any>
+  }
 }
 
 interface Window {

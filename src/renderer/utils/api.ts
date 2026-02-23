@@ -320,6 +320,46 @@ const mockApi: ElectronApi = {
       // No-op in browser mode
       return () => { }
     }
+  },
+
+  ai: {
+    chat: async (_data: any): Promise<IpcResult> => {
+      // Simulated AI response in browser mode
+      return {
+        success: true,
+        content: 'This is a simulated AI response. To use real AI, run the app in Electron mode and configure your API key in the AI settings.'
+      } as any
+    },
+
+    getConfig: async (): Promise<any> => {
+      return {
+        success: true,
+        config: {
+          provider: 'openai',
+          model: 'gpt-4o',
+          apiKey: '',
+          ollamaUrl: 'http://localhost:11434'
+        }
+      }
+    },
+
+    setConfig: async (_config: any): Promise<any> => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { apiKey: _, ...rest } = _config
+      return { success: true, config: { ...rest, apiKey: '' } }
+    },
+
+    getModels: async (): Promise<any> => {
+      return {
+        success: true,
+        models: {
+          openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
+          anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+          google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+          ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3']
+        }
+      }
+    }
   }
 }
 

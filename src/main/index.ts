@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
+import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
 
 const { app, ipcMain, protocol, dialog, shell, net } = electron
 const BrowserWindowCtor = electron.BrowserWindow
@@ -773,6 +774,82 @@ function registerIpcHandlers(): void {
       }
     } catch (error: any) {
       return { success: false, error: error.message }
+    }
+  })
+
+  // ── AI Assistant ─────────────────────────────────────────────────────
+
+  ipcMain.handle(
+    'ai:chat',
+    async (
+      _,
+      data: { messages: ChatMessage[]; blockRegistry?: string; config?: any }
+    ) => {
+      try {
+        // Prepend system prompt if block registry schema is provided
+        let messages = data.messages
+        if (data.blockRegistry) {
+          const systemPrompt = buildSystemPrompt(data.blockRegistry)
+          messages = [
+            { role: 'system' as const, content: systemPrompt },
+            ...messages.filter((m) => m.role !== 'system')
+          ]
+        }
+
+        const result = await aiChat(messages, data.config)
+        if (result.error) {
+          return { success: false, error: result.error }
+        }
+        return { success: true, content: result.content }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    }
+  )
+
+  ipcMain.handle('ai:getConfig', async () => {
+    try {
+      const config = await aiLoadConfig()
+      // Never send the raw API key to the renderer — mask it
+      return {
+        success: true,
+        config: {
+          ...config,
+          apiKey: maskApiKey(config.apiKey)
+        }
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('ai:setConfig', async (_, config: any) => {
+    try {
+      const configToSave = { ...config }
+      // If the renderer sent back a masked key, the user didn't change it
+      if (configToSave.apiKey && configToSave.apiKey.startsWith(MASKED_KEY_PREFIX)) {
+        delete configToSave.apiKey  // preserve existing encrypted key
+      }
+      const saved = await aiSaveConfig(configToSave)
+      return {
+        success: true,
+        config: {
+          ...saved,
+          apiKey: maskApiKey(saved.apiKey)
+        }
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('ai:getModels', async () => {
+    try {
+      const models = await fetchAvailableModels()
+      return { success: true, models }
+    } catch {
+      // Fall back to static list if dynamic fetch fails entirely
+      return { success: true, models: PROVIDER_MODELS }
     }
   })
 }

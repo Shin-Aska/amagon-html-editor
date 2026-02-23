@@ -73,6 +73,20 @@ const api = {
       ipcRenderer.on('auto-save-tick', callback)
       return () => ipcRenderer.removeListener('auto-save-tick', callback)
     }
+  },
+
+  ai: {
+    chat: (data: {
+      messages: { role: string; content: string }[]
+      blockRegistry?: string
+      config?: any
+    }) => ipcRenderer.invoke('ai:chat', data),
+
+    getConfig: () => ipcRenderer.invoke('ai:getConfig'),
+
+    setConfig: (config: any) => ipcRenderer.invoke('ai:setConfig', config),
+
+    getModels: () => ipcRenderer.invoke('ai:getModels')
   }
 }
 
