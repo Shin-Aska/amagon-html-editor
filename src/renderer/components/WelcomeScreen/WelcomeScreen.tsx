@@ -59,15 +59,10 @@ export default function WelcomeScreen(): JSX.Element {
 
   return (
     <div className="welcome-screen">
-      {/* Background elements */}
-      <div className="bg-shape shape-1" />
-      <div className="bg-shape shape-2" />
-      <div className="bg-grid" />
-
       <div className="welcome-content">
         <div className="welcome-header">
           <div className="logo-container">
-            <Activity className="logo-icon" size={40} />
+            <Activity className="logo-icon" size={32} />
             <div className="welcome-logo">Amagon</div>
           </div>
           <div className="welcome-subtitle">
