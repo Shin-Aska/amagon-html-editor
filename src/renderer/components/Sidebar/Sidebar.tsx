@@ -17,9 +17,11 @@ function WidgetItem({ widget }: { widget: BlockDefinition }): JSX.Element {
     data: { widgetType: widget.type, label: widget.label, icon: widget.icon }
   })
 
-  const style = {
-    transform: CSS.Translate.toString(transform)
-  }
+  const style = transform ? {
+    // DragOverlay handles the dragged preview.
+    // To prevent the original element from shifting around while dragging,
+    // we do not apply the transform here.
+  } : undefined
 
   return (
     <div
@@ -159,7 +161,7 @@ function Sidebar(): JSX.Element {
                 </div>
               ))}
             </div>
-            
+
             {isAddingPage ? (
               <div className="page-add-form">
                 <input
@@ -185,7 +187,7 @@ function Sidebar(): JSX.Element {
             )}
           </div>
         )}
-        {activeTab === 'widgets' ? (
+        {activeTab === 'widgets' && (
           <>
             {allCategories.map((category) => (
               <WidgetCategory
@@ -198,9 +200,8 @@ function Sidebar(): JSX.Element {
               <WidgetCategory title="User Blocks" widgets={userBlockDefinitions} />
             )}
           </>
-        ) : (
-          <BlockTree />
         )}
+        {activeTab === 'layers' && <BlockTree />}
       </div>
     </div>
   )

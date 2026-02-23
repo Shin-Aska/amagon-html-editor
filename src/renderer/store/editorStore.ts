@@ -123,6 +123,19 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     }
   }
 
+  // ─── Restore persisted theme preference ──────────────────────────────
+  const savedTheme = (typeof window !== 'undefined' && localStorage.getItem('hoarses-theme')) as 'light' | 'dark' | null
+  const initialTheme: 'light' | 'dark' = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark'
+
+  // Apply the initial theme class to <body> immediately
+  if (typeof document !== 'undefined') {
+    if (initialTheme === 'dark') {
+      document.body.classList.add('dark')
+    } else {
+      document.body.classList.remove('dark')
+    }
+  }
+
   return {
     // ─── Initial State ─────────────────────────────────────────────────
     blocks: [],
@@ -139,8 +152,8 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     viewportMode: 'desktop',
     zoom: 100,
-    theme: 'dark',
-    showLayoutOutlines: false,
+    theme: initialTheme,
+    showLayoutOutlines: true,
     editorLayout: 'standard',
     clipboard: null,
 
@@ -228,6 +241,8 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       } else {
         document.body.classList.remove('dark')
       }
+      // Persist the preference so it survives reloads
+      try { localStorage.setItem('hoarses-theme', theme) } catch { /* quota or SSR */ }
     },
 
     setLayoutOutlines: (show) => {

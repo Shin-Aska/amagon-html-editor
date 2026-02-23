@@ -191,7 +191,7 @@ export function registerBlocks(): void {
     category: 'Interactive',
     icon: '☐',
     defaultProps: { text: 'Button', type: 'button' },
-    defaultClasses: ['btn', 'btn-primary'],
+    defaultClasses: ['btn', 'btn-primary', 'mt-3'],
     propsSchema: {
       text: { type: 'text', label: 'Label', default: 'Button' },
       variant: {
