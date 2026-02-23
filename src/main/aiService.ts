@@ -186,7 +186,7 @@ interface Block {
 ${blockRegistryJson}
 
 ## Rules
-- When the user asks you to **generate UI components**, respond with a JSON object:
+- When the user asks you to **generate UI components**, ALWAYS start with a brief 1-2 sentence summary describing what you built (e.g. "Here's a pricing table with three tiers…"). Then provide the JSON block on the next line:
   \`\`\`json
   { "blocks": [ ...array of Block objects... ] }
   \`\`\`

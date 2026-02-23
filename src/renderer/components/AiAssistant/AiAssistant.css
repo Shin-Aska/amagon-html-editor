@@ -96,6 +96,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -176,6 +177,52 @@
   color: var(--color-accent);
 }
 
+.ai-action-insert {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.ai-action-insert:hover {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  border-color: var(--color-accent);
+}
+
+/* ─── Block preview in chat ──────────────────────────────────────────────── */
+
+.ai-preview-container {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #fff;
+  margin-top: 4px;
+}
+
+.ai-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ai-preview-iframe {
+  width: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+  transition: height 0.2s ease;
+  min-height: 60px;
+  max-height: 400px;
+}
+
 /* ─── Loading indicator ──────────────────────────────────────────────────── */
 
 .ai-loading {
@@ -213,10 +260,14 @@
 }
 
 @keyframes ai-dot-bounce {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
+
   40% {
     opacity: 1;
     transform: scale(1);
@@ -348,8 +399,13 @@
 }
 
 @keyframes ai-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .ai-settings-modal {

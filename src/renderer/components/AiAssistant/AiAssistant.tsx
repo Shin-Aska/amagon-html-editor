@@ -1,29 +1,49 @@
-import { useEffect, useRef, useState } from 'react'
-import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye } from 'lucide-react'
 import { useAiStore, type AiProvider } from '../../store/aiStore'
 import { useEditorStore } from '../../store/editorStore'
 import { createBlock, type Block } from '../../store/types'
+import { blockToHtml } from '../../utils/blockToHtml'
 import './AiAssistant.css'
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Try to extract a JSON blocks payload from the AI response */
-function tryParseBlocks(content: string): Block[] | null {
-    try {
-        // Look for JSON object with a "blocks" array
-        const jsonMatch = content.match(/\{[\s\S]*"blocks"\s*:\s*\[[\s\S]*\][\s\S]*\}/)
-        if (!jsonMatch) return null
+interface ParsedAiResponse {
+    /** Explanatory text from the AI (everything outside the JSON) */
+    text: string
+    /** Parsed blocks, if the response contained a blocks JSON payload */
+    blocks: Block[] | null
+}
 
-        const parsed = JSON.parse(jsonMatch[0])
-        if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-            return parsed.blocks
+/** Parse an AI response into explanatory text + optional blocks */
+function parseAiResponse(content: string): ParsedAiResponse {
+    try {
+        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\})\s*```/)
+            || content.match(/(\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\})/)
+
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0])
+            if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
+                // Extract the text portion (everything that isn't the JSON)
+                let text = content
+                    .replace(/```(?:json)?\s*\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\}\s*```/g, '')
+                    .replace(/\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\}/g, '')
+                    .trim()
+
+                // Clean up markdown artifacts
+                text = text.replace(/^\s*```\s*/gm, '').replace(/\s*```\s*$/gm, '').trim()
+
+                const blocks = parsed.blocks.map(buildBlockFromAiData)
+                return { text, blocks }
+            }
         }
     } catch {
-        // Not valid JSON — that's fine, it's a text response
+        // Not valid JSON — treat as text-only response
     }
-    return null
+
+    return { text: content, blocks: null }
 }
 
 function buildBlockFromAiData(data: any): Block {
@@ -36,6 +56,83 @@ function buildBlockFromAiData(data: any): Block {
             ? data.children.map(buildBlockFromAiData)
             : []
     })
+}
+
+// ---------------------------------------------------------------------------
+// Block Preview Component
+// ---------------------------------------------------------------------------
+
+function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
+    const iframeRef = useRef<HTMLIFrameElement>(null)
+    const [height, setHeight] = useState(120)
+
+    const html = useMemo(() => blockToHtml(blocks), [blocks])
+
+    const previewDoc = useMemo(() => `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #fff;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    body { padding: 12px; }
+    img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>${html}</body>
+<script>
+    function sendHeight() {
+        const h = Math.max(
+            document.body.scrollHeight,
+            document.body.offsetHeight,
+            document.documentElement.scrollHeight
+        );
+        parent.postMessage({ source: 'ai-preview', height: h }, '*');
+    }
+    // Send height after load and after images load
+    sendHeight();
+    window.addEventListener('load', sendHeight);
+    new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
+<\/script>
+</html>`, [html])
+
+    useEffect(() => {
+        const onMessage = (e: MessageEvent) => {
+            if (e.data?.source === 'ai-preview' && typeof e.data.height === 'number') {
+                // Only update if the message came from our iframe
+                if (iframeRef.current && e.source === iframeRef.current.contentWindow) {
+                    setHeight(Math.min(Math.max(e.data.height, 60), 400))
+                }
+            }
+        }
+        window.addEventListener('message', onMessage)
+        return () => window.removeEventListener('message', onMessage)
+    }, [])
+
+    return (
+        <div className="ai-preview-container">
+            <div className="ai-preview-label">
+                <Eye size={11} />
+                <span>Preview</span>
+            </div>
+            <iframe
+                ref={iframeRef}
+                className="ai-preview-iframe"
+                srcDoc={previewDoc}
+                title="Block Preview"
+                sandbox="allow-scripts"
+                style={{ height: `${height}px` }}
+            />
+        </div>
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +279,97 @@ function AiSettingsModal(): JSX.Element {
 }
 
 // ---------------------------------------------------------------------------
+// AI Message Bubble
+// ---------------------------------------------------------------------------
+
+function AiMessageBubble({
+    msg,
+    onInsertBlocks,
+    onCopy
+}: {
+    msg: { id: string; role: string; content: string; timestamp: number; isError?: boolean }
+    onInsertBlocks: (blocks: Block[]) => void
+    onCopy: (content: string) => void
+}): JSX.Element {
+    const parsed = useMemo(() => {
+        if (msg.role !== 'assistant' || msg.isError) return null
+        return parseAiResponse(msg.content)
+    }, [msg.role, msg.content, msg.isError])
+
+    const hasBlocks = parsed?.blocks && parsed.blocks.length > 0
+
+    // Build display text: use AI's text if available, otherwise auto-generate a summary
+    const displayText = useMemo(() => {
+        if (msg.role === 'user' || msg.isError) return msg.content
+        if (!parsed) return msg.content
+        if (parsed.text) return parsed.text
+        // Fallback: auto-generate summary when the AI sent only JSON
+        if (hasBlocks && parsed.blocks) {
+            const types = [...new Set(parsed.blocks.map((b) => b.type))]
+            const typeList = types.slice(0, 4).join(', ') + (types.length > 4 ? '…' : '')
+            return `Generated ${parsed.blocks.length} block${parsed.blocks.length > 1 ? 's' : ''}: ${typeList}. Click "Insert" to add ${parsed.blocks.length > 1 ? 'them' : 'it'} to your page.`
+        }
+        return msg.content
+    }, [msg.role, msg.content, msg.isError, parsed, hasBlocks])
+
+    const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
+    const getBlockById = useEditorStore((s) => s.getBlockById)
+
+    // Determine insert target label
+    const insertTargetLabel = useMemo(() => {
+        if (!selectedBlockId) return 'page root'
+        const block = getBlockById(selectedBlockId)
+        if (!block) return 'page root'
+        const label = (block.props?.text as string) || block.type
+        return label.length > 20 ? label.slice(0, 20) + '…' : label
+    }, [selectedBlockId, getBlockById])
+
+    return (
+        <div className={`ai-message ${msg.role} ${msg.isError ? 'error' : ''}`}>
+            {/* Text content */}
+            {displayText && (
+                <div className="ai-message-content">{displayText}</div>
+            )}
+
+            {/* Live preview for block responses */}
+            {hasBlocks && parsed?.blocks && (
+                <BlockPreview blocks={parsed.blocks} />
+            )}
+
+            {/* Timestamp */}
+            <div className="ai-message-time">
+                {new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
+            </div>
+
+            {/* Action buttons */}
+            {msg.role === 'assistant' && !msg.isError && (
+                <div className="ai-message-actions">
+                    {hasBlocks && parsed?.blocks && (
+                        <button
+                            className="ai-action-btn ai-action-insert"
+                            onClick={() => onInsertBlocks(parsed.blocks!)}
+                            title={`Insert into ${insertTargetLabel}`}
+                        >
+                            <ArrowDownToLine size={12} /> Insert into {insertTargetLabel}
+                        </button>
+                    )}
+                    <button
+                        className="ai-action-btn"
+                        onClick={() => onCopy(msg.content)}
+                        title="Copy response"
+                    >
+                        <Copy size={12} /> Copy
+                    </button>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// ---------------------------------------------------------------------------
 // Main AI Assistant Component
 // ---------------------------------------------------------------------------
 
@@ -195,6 +383,7 @@ const SUGGESTIONS = [
 export default function AiAssistant(): JSX.Element {
     const { messages, isLoading, config, configLoaded, showSettings, sendMessage, clearChat, loadConfig, setShowSettings } = useAiStore()
     const addBlock = useEditorStore((s) => s.addBlock)
+    const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
     const [input, setInput] = useState('')
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -226,13 +415,11 @@ export default function AiAssistant(): JSX.Element {
         }
     }
 
-    const handleInsertBlocks = (content: string) => {
-        const blocks = tryParseBlocks(content)
-        if (!blocks) return
-
-        for (const blockData of blocks) {
-            const block = buildBlockFromAiData(blockData)
-            addBlock(block)
+    const handleInsertBlocks = (blocks: Block[]) => {
+        // Insert into selected container, or at page root
+        const parentId = selectedBlockId || null
+        for (const block of blocks) {
+            addBlock(block, parentId)
         }
     }
 
@@ -313,38 +500,12 @@ export default function AiAssistant(): JSX.Element {
                 ) : (
                     <>
                         {messages.map((msg) => (
-                            <div
+                            <AiMessageBubble
                                 key={msg.id}
-                                className={`ai-message ${msg.role} ${msg.isError ? 'error' : ''}`}
-                            >
-                                <div className="ai-message-content">{msg.content}</div>
-                                <div className="ai-message-time">
-                                    {new Date(msg.timestamp).toLocaleTimeString([], {
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    })}
-                                </div>
-                                {msg.role === 'assistant' && !msg.isError && (
-                                    <div className="ai-message-actions">
-                                        {tryParseBlocks(msg.content) && (
-                                            <button
-                                                className="ai-action-btn"
-                                                onClick={() => handleInsertBlocks(msg.content)}
-                                                title="Insert blocks into canvas"
-                                            >
-                                                <ArrowDownToLine size={12} /> Insert
-                                            </button>
-                                        )}
-                                        <button
-                                            className="ai-action-btn"
-                                            onClick={() => handleCopy(msg.content)}
-                                            title="Copy response"
-                                        >
-                                            <Copy size={12} /> Copy
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                                msg={msg}
+                                onInsertBlocks={handleInsertBlocks}
+                                onCopy={handleCopy}
+                            />
                         ))}
 
                         {isLoading && (
