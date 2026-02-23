@@ -77,7 +77,12 @@ function updateBlockInTree(
 ): Block[] {
   return blocks.map((block) => {
     if (block.id === id) {
-      return { ...block, ...patch }
+      return {
+        ...block,
+        ...patch,
+        props: patch.props ? { ...block.props, ...patch.props } : block.props,
+        styles: patch.styles ? { ...block.styles, ...patch.styles } : block.styles
+      }
     }
     return { ...block, children: updateBlockInTree(block.children, id, patch) }
   })

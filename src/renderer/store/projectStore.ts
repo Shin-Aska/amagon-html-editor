@@ -70,6 +70,22 @@ function createDefaultPage(title = 'Home', slug = 'index'): Page {
   }
 }
 
+function normalizeSlug(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
+function ensureUniqueSlug(baseSlug: string, pages: Page[]): string {
+  const existing = new Set(pages.map((p) => p.slug))
+  if (!existing.has(baseSlug)) return baseSlug
+
+  let i = 1
+  while (existing.has(`${baseSlug}-${i}`)) i++
+  return `${baseSlug}-${i}`
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
@@ -194,12 +210,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     // ─── Page management ─────────────────────────────────────────────
 
     addPage: (title, slug) => {
-      const page = createDefaultPage(title, slug ?? title.toLowerCase().replace(/\s+/g, '-'))
-      set((state) => ({
-        pages: [...state.pages, page],
-        currentPageId: page.id
-      }))
-      return page
+      const state = get()
+      const base = normalizeSlug(slug ?? title) || 'page'
+      const unique = ensureUniqueSlug(base, state.pages)
+      const created = createDefaultPage(title, unique)
+
+      set({
+        pages: [...state.pages, created],
+        currentPageId: created.id
+      })
+
+      return created
     },
 
     removePage: (id) => {

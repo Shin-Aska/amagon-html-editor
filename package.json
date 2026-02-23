@@ -40,12 +40,15 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^40.6.0",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "jsdom": "^28.1.0",
     "typescript": "^5.7.2",
-    "vite": "^5.4.11",
+    "vite": "^7.3.1",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "minimatch": "^10.2.2"
   },
   "build": {
     "appId": "com.hoarses.editor",

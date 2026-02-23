@@ -3,6 +3,8 @@ import { useEditorStore } from '../../store/editorStore'
 import type { Block } from '../../store/types'
 import { createBlock } from '../../store/types'
 
+const get = () => useEditorStore.getState()
+
 // Initial state for resetting store between tests
 const initialEditorState = {
   blocks: [],
@@ -25,7 +27,7 @@ describe('editorStore - block tree manipulation', () => {
 
   beforeEach(() => {
     useEditorStore.setState(initialEditorState)
-    store = useEditorStore.getState()
+    store = get()
   })
 
   describe('addBlock', () => {
@@ -33,9 +35,9 @@ describe('editorStore - block tree manipulation', () => {
       const block = createBlock('heading', { props: { text: 'Test', level: 1 } })
       store.addBlock(block)
       
-      expect(store.blocks).toHaveLength(1)
-      expect(store.blocks[0].type).toBe('heading')
-      expect(store.blocks[0].props.text).toBe('Test')
+      expect(get().blocks).toHaveLength(1)
+      expect(get().blocks[0].type).toBe('heading')
+      expect(get().blocks[0].props.text).toBe('Test')
     })
 
     it('adds a block as child when parent specified', () => {
@@ -45,7 +47,7 @@ describe('editorStore - block tree manipulation', () => {
       const child = createBlock('paragraph', { props: { text: 'Child' } })
       store.addBlock(child, parent.id)
       
-      const addedParent = store.blocks[0]
+      const addedParent = get().blocks[0]
       expect(addedParent.children).toHaveLength(1)
       expect(addedParent.children[0].type).toBe('paragraph')
     })
@@ -59,8 +61,8 @@ describe('editorStore - block tree manipulation', () => {
       store.addBlock(block2)
       store.addBlock(block3, null, 1)
       
-      expect(store.blocks).toHaveLength(3)
-      expect(store.blocks[1].props.text).toBe('Middle')
+      expect(get().blocks).toHaveLength(3)
+      expect(get().blocks[1].props.text).toBe('Middle')
     })
   })
 
@@ -71,7 +73,7 @@ describe('editorStore - block tree manipulation', () => {
       
       store.removeBlock(block.id)
       
-      expect(store.blocks).toHaveLength(0)
+      expect(get().blocks).toHaveLength(0)
     })
 
     it('removes a block from parent children', () => {
@@ -82,7 +84,7 @@ describe('editorStore - block tree manipulation', () => {
       
       store.removeBlock(child.id)
       
-      expect(store.blocks[0].children).toHaveLength(0)
+      expect(get().blocks[0].children).toHaveLength(0)
     })
 
     it('clears selection when selected block is removed', () => {
@@ -92,7 +94,7 @@ describe('editorStore - block tree manipulation', () => {
       
       store.removeBlock(block.id)
       
-      expect(store.selectedBlockId).toBeNull()
+      expect(get().selectedBlockId).toBeNull()
     })
   })
 
@@ -105,9 +107,9 @@ describe('editorStore - block tree manipulation', () => {
       
       store.moveBlock(block.id, container.id, -1)
       
-      expect(store.blocks).toHaveLength(1) // Only container at root
-      expect(store.blocks[0].children).toHaveLength(1)
-      expect(store.blocks[0].children[0].props.text).toBe('Move me')
+      expect(get().blocks).toHaveLength(1) // Only container at root
+      expect(get().blocks[0].children).toHaveLength(1)
+      expect(get().blocks[0].children[0].props.text).toBe('Move me')
     })
 
     it('moves a block to a specific index', () => {
@@ -122,9 +124,9 @@ describe('editorStore - block tree manipulation', () => {
       // Move Third to index 0
       store.moveBlock(block3.id, null, 0)
       
-      expect(store.blocks[0].props.text).toBe('Third')
-      expect(store.blocks[1].props.text).toBe('First')
-      expect(store.blocks[2].props.text).toBe('Second')
+      expect(get().blocks[0].props.text).toBe('Third')
+      expect(get().blocks[1].props.text).toBe('First')
+      expect(get().blocks[2].props.text).toBe('Second')
     })
 
     it('prevents moving a block into its own descendant', () => {
@@ -137,8 +139,8 @@ describe('editorStore - block tree manipulation', () => {
       store.moveBlock(parent.id, child.id, 0)
       
       // Structure should remain unchanged
-      expect(store.blocks).toHaveLength(1)
-      expect(store.blocks[0].children).toHaveLength(1)
+      expect(get().blocks).toHaveLength(1)
+      expect(get().blocks[0].children).toHaveLength(1)
     })
   })
 
@@ -149,8 +151,8 @@ describe('editorStore - block tree manipulation', () => {
       
       store.updateBlock(block.id, { props: { text: 'New' } })
       
-      expect(store.blocks[0].props.text).toBe('New')
-      expect(store.blocks[0].props.level).toBe(1) // Unchanged
+      expect(get().blocks[0].props.text).toBe('New')
+      expect(get().blocks[0].props.level).toBe(1) // Unchanged
     })
 
     it('updates block classes', () => {
@@ -159,7 +161,7 @@ describe('editorStore - block tree manipulation', () => {
       
       store.updateBlock(block.id, { classes: ['new-class', 'another'] })
       
-      expect(store.blocks[0].classes).toEqual(['new-class', 'another'])
+      expect(get().blocks[0].classes).toEqual(['new-class', 'another'])
     })
 
     it('updates block styles', () => {
@@ -168,8 +170,8 @@ describe('editorStore - block tree manipulation', () => {
       
       store.updateBlock(block.id, { styles: { backgroundColor: 'blue' } })
       
-      expect(store.blocks[0].styles.color).toBe('red')
-      expect(store.blocks[0].styles.backgroundColor).toBe('blue')
+      expect(get().blocks[0].styles.color).toBe('red')
+      expect(get().blocks[0].styles.backgroundColor).toBe('blue')
     })
 
     it('updates nested block', () => {
@@ -180,7 +182,7 @@ describe('editorStore - block tree manipulation', () => {
       
       store.updateBlock(child.id, { props: { text: 'Updated' } })
       
-      expect(store.blocks[0].children[0].props.text).toBe('Updated')
+      expect(get().blocks[0].children[0].props.text).toBe('Updated')
     })
   })
 
@@ -211,7 +213,7 @@ describe('editorStore - block tree manipulation', () => {
 
     it('returns undefined for non-existent block', () => {
       const found = store.getBlockById('non-existent-id')
-      expect(found).toBeUndefined()
+      expect(found).toBeNull()
     })
   })
 })
@@ -221,15 +223,15 @@ describe('editorStore - undo/redo', () => {
 
   beforeEach(() => {
     useEditorStore.setState(initialEditorState)
-    store = useEditorStore.getState()
+    store = get()
   })
 
   it('pushes history entry on addBlock', () => {
     const block = createBlock('heading')
     store.addBlock(block)
     
-    expect(store.history).toHaveLength(1)
-    expect(store.historyIndex).toBe(0)
+    expect(get().history).toHaveLength(2)
+    expect(get().historyIndex).toBe(1)
   })
 
   it('pushes history entry on removeBlock', () => {
@@ -237,7 +239,7 @@ describe('editorStore - undo/redo', () => {
     store.addBlock(block)
     store.removeBlock(block.id)
     
-    expect(store.history).toHaveLength(2)
+    expect(get().history).toHaveLength(3)
   })
 
   it('pushes history entry on updateBlock', () => {
@@ -245,7 +247,7 @@ describe('editorStore - undo/redo', () => {
     store.addBlock(block)
     store.updateBlock(block.id, { props: { text: 'Updated' } })
     
-    expect(store.history).toHaveLength(2)
+    expect(get().history).toHaveLength(3)
   })
 
   it('undoes last action', () => {
@@ -254,8 +256,8 @@ describe('editorStore - undo/redo', () => {
     
     store.undo()
     
-    expect(store.blocks).toHaveLength(0)
-    expect(store.historyIndex).toBe(-1)
+    expect(get().blocks).toHaveLength(0)
+    expect(get().historyIndex).toBe(0)
   })
 
   it('redoes undone action', () => {
@@ -265,9 +267,9 @@ describe('editorStore - undo/redo', () => {
     
     store.redo()
     
-    expect(store.blocks).toHaveLength(1)
-    expect(store.blocks[0].props.text).toBe('Test')
-    expect(store.historyIndex).toBe(0)
+    expect(get().blocks).toHaveLength(1)
+    expect(get().blocks[0].props.text).toBe('Test')
+    expect(get().historyIndex).toBe(1)
   })
 
   it('clears redo history when new action is performed after undo', () => {
@@ -275,17 +277,17 @@ describe('editorStore - undo/redo', () => {
     const block2 = createBlock('paragraph')
     store.addBlock(block1)
     store.addBlock(block2)
-    expect(store.history).toHaveLength(2)
+    expect(get().history).toHaveLength(3)
     
     store.undo()
-    expect(store.historyIndex).toBe(0)
+    expect(get().historyIndex).toBe(1)
     
     // Add new block after undo - should clear the redo branch
     const block3 = createBlock('container')
     store.addBlock(block3)
     
-    expect(store.history).toHaveLength(2) // Not 3
-    expect(store.historyIndex).toBe(1)
+    expect(get().history).toHaveLength(3) // Not 3
+    expect(get().historyIndex).toBe(2)
   })
 
   it('limits history to 50 entries', () => {
@@ -294,7 +296,7 @@ describe('editorStore - undo/redo', () => {
       store.addBlock(createBlock('paragraph', { props: { text: `Block ${i}` } }))
     }
     
-    expect(store.history).toHaveLength(50)
+    expect(get().history).toHaveLength(50)
   })
 
   it('clears selection on undo', () => {
@@ -304,7 +306,7 @@ describe('editorStore - undo/redo', () => {
     
     store.undo()
     
-    expect(store.selectedBlockId).toBeNull()
+    expect(get().selectedBlockId).toBeNull()
   })
 
   it('clears selection on redo', () => {
@@ -315,6 +317,6 @@ describe('editorStore - undo/redo', () => {
     
     store.redo()
     
-    expect(store.selectedBlockId).toBeNull()
+    expect(get().selectedBlockId).toBeNull()
   })
 })

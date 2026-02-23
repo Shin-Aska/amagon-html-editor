@@ -143,10 +143,6 @@ function getBlockContent(block: Block): string {
       const options = (props.options as string[]) ?? []
       return options.map(opt => `<option value="${escapeAttrValue(opt)}">${escapeAttrValue(opt)}</option>`).join('\n')
     }
-
-    case 'raw-html': {
-      return block.props.content ? String(block.props.content) : ''
-    }
     case 'code-block': {
       const codeType = String(block.props.code ?? '')
       const language = String(block.props.language ?? '')
