@@ -527,3 +527,17 @@
 .ai-settings-cancel-btn:hover {
   background: var(--color-bg-hover);
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ai-settings-spinner {
+  vertical-align: middle;
+}
+
+.ai-settings-field select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

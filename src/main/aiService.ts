@@ -430,37 +430,58 @@ async function fetchOllamaModels(ollamaUrl: string): Promise<string[]> {
     }
 }
 
-/**
- * Fetch real model lists from provider APIs. Returns the fallback list
- * for any provider whose API could not be reached.
- */
+export async function fetchModelsForProvider(
+    provider: AiProvider,
+    apiKey: string,
+    ollamaUrl?: string
+): Promise<string[]> {
+    try {
+        if (provider !== 'ollama' && !apiKey) return []
+        if (provider === 'openai') return await fetchOpenAIModels(apiKey)
+        if (provider === 'google') return await fetchGoogleModels(apiKey)
+        if (provider === 'ollama') {
+            const models = await fetchOllamaModels(ollamaUrl || 'http://localhost:11434')
+            return models.length > 0 ? models : FALLBACK_MODELS.ollama
+        }
+        // Anthropic has no public list-models endpoint
+        if (provider === 'anthropic') {
+            return apiKey ? FALLBACK_MODELS.anthropic : []
+        }
+    } catch {
+        // fall through
+    }
+    return provider === 'ollama' ? (FALLBACK_MODELS[provider] || []) : []
+}
+
 export async function fetchAvailableModels(): Promise<Record<AiProvider, string[]>> {
     const config = await loadConfig()
     const result: Record<AiProvider, string[]> = {
-        openai: [...FALLBACK_MODELS.openai],
-        anthropic: [...FALLBACK_MODELS.anthropic],
-        google: [...FALLBACK_MODELS.google],
+        openai: [],
+        anthropic: [],
+        google: [],
         ollama: [...FALLBACK_MODELS.ollama]
     }
 
     const fetchers: Promise<void>[] = []
 
-    // Query the currently-configured provider (we only have one API key)
+    if (config.provider === 'anthropic' && config.apiKey) {
+        result.anthropic = [...FALLBACK_MODELS.anthropic]
+    }
+
     if (config.apiKey) {
         if (config.provider === 'google') {
             fetchers.push(
                 fetchGoogleModels(config.apiKey)
-                    .then((models) => { if (models.length > 0) result.google = models })
-                    .catch(() => { /* keep fallback */ })
+                    .then((models) => { result.google = models })
+                    .catch(() => { /* keep empty */ })
             )
         } else if (config.provider === 'openai') {
             fetchers.push(
                 fetchOpenAIModels(config.apiKey)
-                    .then((models) => { if (models.length > 0) result.openai = models })
-                    .catch(() => { /* keep fallback */ })
+                    .then((models) => { result.openai = models })
+                    .catch(() => { /* keep empty */ })
             )
         }
-        // Anthropic doesn't expose a public list-models endpoint—keep fallback
     }
 
     // Ollama: always try (local server, no API key needed)

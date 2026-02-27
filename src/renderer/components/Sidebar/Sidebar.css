@@ -84,9 +84,17 @@
   color: var(--color-text-secondary);
 }
 
+.widget-item.custom {
+  color: var(--color-accent);
+}
+
 .widget-item:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
+}
+
+.widget-item.custom:hover {
+  color: var(--color-accent);
 }
 
 .widget-item:active {

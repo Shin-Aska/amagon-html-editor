@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye, Loader2 } from 'lucide-react'
 import { useAiStore, type AiProvider } from '../../store/aiStore'
 import { useEditorStore } from '../../store/editorStore'
 import { createBlock, type Block } from '../../store/types'
@@ -140,23 +140,82 @@ function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
 // ---------------------------------------------------------------------------
 
 function AiSettingsModal(): JSX.Element {
-    const { config, providerModels, saveConfig, setShowSettings, loadModels } = useAiStore()
+    const { config, saveConfig, setShowSettings, fetchModelsForProvider } = useAiStore()
     const [localConfig, setLocalConfig] = useState(() => ({
         ...config,
         apiKey: '' // Never pre-fill with the masked key
     }))
     const hasExistingKey = !!(config.apiKey && config.apiKey.startsWith('\u2022\u2022\u2022\u2022'))
+    const [isLoadingModels, setIsLoadingModels] = useState(false)
+    const [fetchedModels, setFetchedModels] = useState<string[]>([])
+    const [modelsFetched, setModelsFetched] = useState(false)
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+    const hasStoredKeyForProvider = hasExistingKey && localConfig.provider === config.provider
+    const hasUsableKey = localConfig.provider === 'ollama' || !!localConfig.apiKey || hasStoredKeyForProvider
+
+    // Fetch models when API key changes (debounced)
+    const triggerModelFetch = useCallback((provider: AiProvider, apiKey: string, ollamaUrl?: string) => {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+
+        // For non-ollama providers, require an API key
+        if (provider !== 'ollama' && !apiKey) {
+            setFetchedModels([])
+            setModelsFetched(false)
+            setIsLoadingModels(false)
+            setLocalConfig((prev) => ({ ...prev, model: '' }))
+            return
+        }
+
+        setIsLoadingModels(true)
+        debounceRef.current = setTimeout(async () => {
+            try {
+                const models = await fetchModelsForProvider(provider, apiKey, ollamaUrl)
+                setFetchedModels(models)
+                setModelsFetched(true)
+                // Auto-select first model if current model is empty or not in list
+                if (models.length > 0) {
+                    setLocalConfig((prev) => {
+                        if (!prev.model || !models.includes(prev.model)) {
+                            return { ...prev, model: models[0] }
+                        }
+                        return prev
+                    })
+                }
+            } finally {
+                setIsLoadingModels(false)
+            }
+        }, 500)
+    }, [fetchModelsForProvider])
+
+    // Fetch models on mount if we already have a key configured
     useEffect(() => {
-        loadModels()
-    }, [loadModels])
+        if (hasStoredKeyForProvider || localConfig.provider === 'ollama') {
+            triggerModelFetch(localConfig.provider, hasStoredKeyForProvider ? config.apiKey : '', localConfig.ollamaUrl)
+        }
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current)
+        }
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const models = providerModels[localConfig.provider] || []
+    const models = modelsFetched ? fetchedModels : []
 
     const handleProviderChange = (provider: AiProvider) => {
-        const defaultModel =
-            providerModels[provider]?.[0] || (provider === 'ollama' ? 'llama3' : 'gpt-4o')
-        setLocalConfig({ ...localConfig, provider, model: defaultModel })
+        const useStored = hasExistingKey && provider === config.provider
+        setLocalConfig((prev) => ({ ...prev, provider, model: '', apiKey: '' }))
+        setFetchedModels([])
+        setModelsFetched(false)
+        triggerModelFetch(provider, useStored ? config.apiKey : '', localConfig.ollamaUrl)
+    }
+
+    const handleApiKeyChange = (apiKey: string) => {
+        setLocalConfig((prev) => ({ ...prev, apiKey, model: apiKey ? prev.model : '' }))
+        triggerModelFetch(localConfig.provider, apiKey, localConfig.ollamaUrl)
+    }
+
+    const handleOllamaUrlChange = (ollamaUrl: string) => {
+        setLocalConfig((prev) => ({ ...prev, ollamaUrl }))
+        triggerModelFetch(localConfig.provider, '', ollamaUrl)
     }
 
     const handleSave = () => {
@@ -194,42 +253,6 @@ function AiSettingsModal(): JSX.Element {
                         </select>
                     </div>
 
-                    <div className="ai-settings-field">
-                        <label>Model</label>
-                        <select
-                            value={models.includes(localConfig.model) ? localConfig.model : 'custom'}
-                            onChange={(e) => {
-                                if (e.target.value !== 'custom') {
-                                    setLocalConfig({ ...localConfig, model: e.target.value })
-                                } else {
-                                    setLocalConfig({ ...localConfig, model: '' })
-                                }
-                            }}
-                        >
-                            {models.map((m) => (
-                                <option key={m} value={m}>
-                                    {m}
-                                </option>
-                            ))}
-                            <option value="custom">-- Custom Model --</option>
-                        </select>
-
-                        {!models.includes(localConfig.model) && (
-                            <input
-                                type="text"
-                                style={{ marginTop: '4px' }}
-                                value={localConfig.model}
-                                onChange={(e) => setLocalConfig({ ...localConfig, model: e.target.value })}
-                                placeholder="Enter custom model name"
-                            />
-                        )}
-                        <span className="ai-settings-hint">
-                            {localConfig.provider === 'ollama'
-                                ? 'Type any model name or pick from suggestions. Make sure it\'s pulled via `ollama pull <model>`.'
-                                : 'Pick from suggestions or type any model name (e.g. a new release).'}
-                        </span>
-                    </div>
-
                     {localConfig.provider !== 'ollama' ? (
                         <div className="ai-settings-field">
                             <label>API Key</label>
@@ -237,14 +260,14 @@ function AiSettingsModal(): JSX.Element {
                                 type="password"
                                 value={localConfig.apiKey}
                                 placeholder={
-                                    hasExistingKey
+                                    hasStoredKeyForProvider
                                         ? `Key configured (${config.apiKey}). Enter new key to replace.`
                                         : `Enter your ${localConfig.provider === 'openai' ? 'OpenAI' : localConfig.provider === 'anthropic' ? 'Anthropic' : 'Google'} API key`
                                 }
-                                onChange={(e) => setLocalConfig({ ...localConfig, apiKey: e.target.value })}
+                                onChange={(e) => handleApiKeyChange(e.target.value)}
                             />
                             <span className="ai-settings-hint">
-                                {hasExistingKey
+                                {hasStoredKeyForProvider
                                     ? 'Your API key is encrypted and stored securely. Leave empty to keep the current key.'
                                     : 'Your API key is encrypted and stored securely on your machine.'}
                             </span>
@@ -256,13 +279,76 @@ function AiSettingsModal(): JSX.Element {
                                 type="text"
                                 value={localConfig.ollamaUrl}
                                 placeholder="http://localhost:11434"
-                                onChange={(e) => setLocalConfig({ ...localConfig, ollamaUrl: e.target.value })}
+                                onChange={(e) => handleOllamaUrlChange(e.target.value)}
                             />
                             <span className="ai-settings-hint">
                                 Default is http://localhost:11434. Make sure Ollama is running.
                             </span>
                         </div>
                     )}
+
+                    <div className="ai-settings-field">
+                        <label>
+                            Model
+                            {isLoadingModels && (
+                                <Loader2 size={12} className="ai-settings-spinner" style={{ marginLeft: 6, display: 'inline-block', animation: 'spin 1s linear infinite' }} />
+                            )}
+                        </label>
+                        {!hasUsableKey ? (
+                            <>
+                                <select disabled>
+                                    <option>-- Enter API key first --</option>
+                                </select>
+                                <span className="ai-settings-hint">
+                                    Provide an API key above to load available models.
+                                </span>
+                            </>
+                        ) : ((!modelsFetched || isLoadingModels) && models.length === 0) ? (
+                            <>
+                                <select disabled>
+                                    <option>Loading models...</option>
+                                </select>
+                                <span className="ai-settings-hint">
+                                    Fetching available models from {localConfig.provider === 'ollama' ? 'Ollama server' : 'provider API'}...
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <select
+                                    value={models.includes(localConfig.model) ? localConfig.model : 'custom'}
+                                    onChange={(e) => {
+                                        if (e.target.value !== 'custom') {
+                                            setLocalConfig({ ...localConfig, model: e.target.value })
+                                        } else {
+                                            setLocalConfig({ ...localConfig, model: '' })
+                                        }
+                                    }}
+                                >
+                                    {models.map((m) => (
+                                        <option key={m} value={m}>
+                                            {m}
+                                        </option>
+                                    ))}
+                                    <option value="custom">-- Custom Model --</option>
+                                </select>
+
+                                {!models.includes(localConfig.model) && (
+                                    <input
+                                        type="text"
+                                        style={{ marginTop: '4px' }}
+                                        value={localConfig.model}
+                                        onChange={(e) => setLocalConfig({ ...localConfig, model: e.target.value })}
+                                        placeholder="Enter custom model name"
+                                    />
+                                )}
+                                <span className="ai-settings-hint">
+                                    {localConfig.provider === 'ollama'
+                                        ? 'Type any model name or pick from suggestions. Make sure it\'s pulled via `ollama pull <model>`.'
+                                        : 'Pick from suggestions or type any model name (e.g. a new release).'}
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="ai-settings-footer">

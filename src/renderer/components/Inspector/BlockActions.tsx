@@ -2,7 +2,11 @@ import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
 import { createBlock } from '../../store/types'
 import { componentRegistry } from '../../registry/ComponentRegistry'
+import { useToastStore } from '../../store/toastStore'
+import { getApi } from '../../utils/api'
 import './BlockActions.css'
+import { useMemo, useState } from 'react'
+import SaveCustomBlockDialog from './SaveCustomBlockDialog'
 
 interface BlockActionsProps {
   blockId: string
@@ -10,6 +14,7 @@ interface BlockActionsProps {
 }
 
 export default function BlockActions({ blockId, blockType }: BlockActionsProps): JSX.Element {
+  const api = getApi()
   const getBlockById = useEditorStore((s) => s.getBlockById)
   const getBlockPath = useEditorStore((s) => s.getBlockPath)
   const addBlock = useEditorStore((s) => s.addBlock)
@@ -18,6 +23,10 @@ export default function BlockActions({ blockId, blockType }: BlockActionsProps):
   const moveBlock = useEditorStore((s) => s.moveBlock)
   const blocks = useEditorStore((s) => s.blocks)
   const addUserBlock = useProjectStore((s) => s.addUserBlock)
+  const userBlocks = useProjectStore((s) => s.userBlocks)
+  const showToast = useToastStore((s) => s.showToast)
+
+  const [showSaveCustomBlock, setShowSaveCustomBlock] = useState(false)
 
   const block = getBlockById(blockId)
   if (!block) return <></>
@@ -101,18 +110,37 @@ export default function BlockActions({ blockId, blockType }: BlockActionsProps):
   }
 
   const handleSaveAsUserBlock = () => {
-    const label = prompt('Enter a name for this custom block:', 'My Custom Block')
-    if (label) {
-      const definition = componentRegistry.get(blockType)
-      addUserBlock({
-        id: `custom-${Date.now().toString(36)}`,
-        label,
-        icon: typeof definition?.icon === 'string' ? definition.icon : '🧩',
-        content: block
-      })
-      alert(`Block "${label}" saved to User Blocks!`)
-    }
+    setShowSaveCustomBlock(true)
   }
+
+  const saveDefaults = useMemo(() => {
+    const definition = componentRegistry.get(blockType)
+    const defaultLabel = definition?.label ? `${definition.label}` : 'My Custom Block'
+    const defaultIcon = typeof definition?.icon === 'string' ? definition.icon : '🧩'
+    const defaultCategory = definition?.category ? definition.category : 'User Blocks'
+
+    const preferredCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed']
+    const existingCategories = componentRegistry.getCategories()
+    const userCategories = (userBlocks || []).map((ub) => (ub.category || '').trim()).filter(Boolean)
+
+    const registryIcons = componentRegistry
+      .getAll()
+      .map((d) => (typeof d.icon === 'string' ? d.icon : ''))
+      .filter(Boolean)
+    const preferredIcons = ['🧩', '⭐', '✨', '📦', '🧱', '🧰', '⚙️', '🔗', '🖼️', '🎛️', '📐', '🧷', '🧲', '📣', '💡']
+    const userIcons = (userBlocks || []).map((ub) => (ub.icon || '').trim()).filter(Boolean)
+
+    const availableCategories = Array.from(new Set([...preferredCategories, ...existingCategories, ...userCategories]))
+    const availableIcons = Array.from(new Set([defaultIcon, ...preferredIcons, ...registryIcons, ...userIcons]))
+
+    return {
+      availableCategories,
+      availableIcons,
+      defaultLabel,
+      defaultIcon,
+      defaultCategory
+    }
+  }, [blockType, userBlocks])
 
   return (
     <div className="block-actions-editor">
@@ -134,6 +162,67 @@ export default function BlockActions({ blockId, blockType }: BlockActionsProps):
       <button className="action-btn primary-action-btn mt-2" onClick={handleSaveAsUserBlock} title="Save as reusable block">
         <span className="action-icon">⭐</span> Save as Custom Block
       </button>
+
+      <SaveCustomBlockDialog
+        isOpen={showSaveCustomBlock}
+        availableCategories={saveDefaults.availableCategories}
+        availableIcons={saveDefaults.availableIcons}
+        defaultLabel={saveDefaults.defaultLabel}
+        defaultIcon={saveDefaults.defaultIcon}
+        defaultCategory={saveDefaults.defaultCategory}
+        onCancel={() => setShowSaveCustomBlock(false)}
+        onSave={({ label, icon, category }) => {
+          const clonedContent = JSON.parse(JSON.stringify(block))
+          addUserBlock({
+            id: `custom-${Date.now().toString(36)}`,
+            label,
+            icon,
+            category,
+            content: clonedContent
+          })
+          setShowSaveCustomBlock(false)
+          showToast(`Saved custom block: ${label}`, 'success')
+
+          ;(async () => {
+            try {
+              const editorState = useEditorStore.getState()
+              const projectState = useProjectStore.getState()
+              const pageId = projectState.currentPageId
+              if (!projectState.filePath) return
+
+              const pages = projectState.pages.map((p) =>
+                pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+              )
+
+              if (pageId) {
+                projectState.updatePage(pageId, { blocks: editorState.blocks })
+              }
+
+              const content = JSON.stringify(
+                {
+                  projectSettings: projectState.settings,
+                  pages,
+                  userBlocks: projectState.userBlocks,
+                  customCss: editorState.customCss
+                },
+                null,
+                2
+              )
+
+              const result = await api.project.save({
+                filePath: projectState.filePath || undefined,
+                content
+              })
+
+              if (result.success && result.filePath && result.filePath !== projectState.filePath) {
+                projectState.setFilePath(result.filePath)
+              }
+            } catch {
+              // ignore background persistence errors
+            }
+          })()
+        }}
+      />
 
       <button className="action-btn danger-action-btn mt-2" onClick={handleDelete} title="Delete Block" disabled={isLocked}>
         <span className="action-icon">🗑️</span> Delete Block

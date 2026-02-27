@@ -24,6 +24,7 @@ export interface UserBlock {
   id: string
   label: string
   icon?: string
+  category?: string
   content: Block
 }
 

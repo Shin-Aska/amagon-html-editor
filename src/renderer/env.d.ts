@@ -33,6 +33,7 @@ interface ElectronApi {
     getConfig: () => Promise<any>
     setConfig: (config: any) => Promise<any>
     getModels: () => Promise<any>
+    fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) => Promise<any>
   }
 }
 

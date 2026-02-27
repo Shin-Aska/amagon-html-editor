@@ -359,6 +359,21 @@ const mockApi: ElectronApi = {
           ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3']
         }
       }
+    },
+
+    fetchModelsForProvider: async (data: { provider: string; apiKey: string; ollamaUrl?: string }): Promise<any> => {
+      // Simulate a brief network delay
+      await new Promise((r) => setTimeout(r, 600))
+      const fallback: Record<string, string[]> = {
+        openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
+        anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+        google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+        ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3']
+      }
+      if (!data.apiKey && data.provider !== 'ollama') {
+        return { success: true, models: [] }
+      }
+      return { success: true, models: fallback[data.provider] || [] }
     }
   }
 }

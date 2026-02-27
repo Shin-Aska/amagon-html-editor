@@ -86,7 +86,10 @@ const api = {
 
     setConfig: (config: any) => ipcRenderer.invoke('ai:setConfig', config),
 
-    getModels: () => ipcRenderer.invoke('ai:getModels')
+    getModels: () => ipcRenderer.invoke('ai:getModels'),
+
+    fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) =>
+      ipcRenderer.invoke('ai:fetchModelsForProvider', data)
   }
 }
 

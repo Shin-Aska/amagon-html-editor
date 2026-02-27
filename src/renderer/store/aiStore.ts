@@ -42,6 +42,7 @@ interface AiActions {
     loadConfig: () => Promise<void>
     saveConfig: (config: Partial<AiConfig>) => Promise<void>
     loadModels: () => Promise<void>
+    fetchModelsForProvider: (provider: string, apiKey: string, ollamaUrl?: string) => Promise<string[]>
     setShowSettings: (show: boolean) => void
 }
 
@@ -194,6 +195,23 @@ export const useAiStore = create<AiStore>((set, get) => ({
         } catch {
             // use defaults
         }
+    },
+
+    fetchModelsForProvider: async (provider: string, apiKey: string, ollamaUrl?: string): Promise<string[]> => {
+        try {
+            const api = getApi()
+            const result = await (api as any).ai.fetchModelsForProvider({ provider, apiKey, ollamaUrl })
+            if (result.success && result.models) {
+                // Merge into providerModels so the dropdown can use them
+                set((state) => ({
+                    providerModels: { ...state.providerModels, [provider]: result.models }
+                }))
+                return result.models as string[]
+            }
+        } catch {
+            // ignore
+        }
+        return []
     },
 
     setShowSettings: (show: boolean) => {

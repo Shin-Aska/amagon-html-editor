@@ -14,7 +14,27 @@ import {
   FormInput,
   BoxSelect,
   Puzzle,
-  Code
+  Code,
+  LayoutTemplate,
+  Quote,
+  Braces,
+  List,
+  TextCursorInput,
+  AlignLeft,
+  CheckSquare,
+  ChevronDown,
+  PanelTop,
+  Sparkles,
+  CreditCard,
+  PanelBottom,
+  ChevronsUpDown,
+  BookOpen,
+  DollarSign,
+  MessageCircle,
+  Megaphone,
+  AppWindow,
+  FileCode,
+  Globe
 } from 'lucide-react'
 
 interface BlockIconProps {
@@ -28,10 +48,14 @@ const ICONS: Record<string, any> = {
   'row': Rows,
   'column': Columns,
   'divider': Minus,
+  'section': LayoutTemplate,
   
   // Typography
   'heading': Heading,
   'paragraph': Type,
+  'blockquote': Quote,
+  'code-block': Braces,
+  'list': List,
   
   // Media
   'image': Image,
@@ -43,6 +67,26 @@ const ICONS: Record<string, any> = {
   'button': MousePointerClick,
   'link': Link,
   'form': FormInput,
+  'input': TextCursorInput,
+  'textarea': AlignLeft,
+  'checkbox': CheckSquare,
+  'select': ChevronDown,
+  
+  // Components
+  'navbar': PanelTop,
+  'hero': Sparkles,
+  'feature-card': CreditCard,
+  'footer': PanelBottom,
+  'accordion': ChevronsUpDown,
+  'tabs': BookOpen,
+  'pricing-table': DollarSign,
+  'testimonial': MessageCircle,
+  'cta-section': Megaphone,
+  'modal': AppWindow,
+  
+  // Embed
+  'raw-html': FileCode,
+  'iframe': Globe,
   
   // Other
   'user-block': Puzzle,

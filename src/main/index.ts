@@ -4,7 +4,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
-import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
+import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
 
 const { app, ipcMain, protocol, dialog, shell, net } = electron
 const BrowserWindowCtor = electron.BrowserWindow
@@ -850,6 +850,24 @@ function registerIpcHandlers(): void {
     } catch {
       // Fall back to static list if dynamic fetch fails entirely
       return { success: true, models: PROVIDER_MODELS }
+    }
+  })
+
+  ipcMain.handle('ai:fetchModelsForProvider', async (_event, data: { provider: string; apiKey: string; ollamaUrl?: string }) => {
+    try {
+      let apiKeyToUse = data.apiKey || ''
+      if (apiKeyToUse && apiKeyToUse.startsWith(MASKED_KEY_PREFIX)) {
+        const saved = await aiLoadConfig()
+        apiKeyToUse = saved.provider === data.provider ? saved.apiKey : ''
+      } else if (!apiKeyToUse) {
+        const saved = await aiLoadConfig()
+        apiKeyToUse = saved.provider === data.provider ? saved.apiKey : ''
+      }
+
+      const models = await fetchModelsForProvider(data.provider as any, apiKeyToUse, data.ollamaUrl)
+      return { success: true, models }
+    } catch (error: any) {
+      return { success: false, error: error.message, models: [] }
     }
   })
 }
