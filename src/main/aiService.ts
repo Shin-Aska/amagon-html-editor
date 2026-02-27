@@ -164,9 +164,35 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
 // System prompt builder
 // ---------------------------------------------------------------------------
 
-export function buildSystemPrompt(blockRegistryJson: string): string {
+export function buildSystemPrompt(
+    blockRegistryJson: string,
+    themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
+): string {
+    const projectTheme = themeContext?.projectTheme
+    const uiTheme = themeContext?.uiTheme
+
+    const safeThemeJson = (() => {
+        if (!projectTheme || typeof projectTheme !== 'object') return ''
+        try {
+            const raw = JSON.stringify(projectTheme, null, 2)
+            return raw.length > 6000 ? raw.slice(0, 6000) + '\n…(truncated)…' : raw
+        } catch {
+            return ''
+        }
+    })()
+
+    const themeSection = safeThemeJson
+        ? `\n## Project Theme\nThe current project has a theme system applied to the canvas.\n\nTheme CSS variables available in the page:\n- --theme-primary, --theme-secondary, --theme-accent\n- --theme-bg, --theme-surface\n- --theme-text, --theme-text-muted\n- --theme-border\n- --theme-success, --theme-warning, --theme-danger\n- --theme-font-family, --theme-heading-font-family, --theme-font-size\n- --theme-line-height, --theme-heading-line-height\n- --theme-spacing-unit, --theme-space-0..--theme-space-8\n- --theme-border-radius, --theme-border-width, --theme-border-color\n\nTheme JSON (reference values):\n\n\`\`\`json\n${safeThemeJson}\n\`\`\`\n`
+        : ''
+
+    const uiThemeSection = uiTheme
+        ? `\n## Editor UI Theme\nThe editor UI is currently in ${uiTheme} mode. This does not change the exported page, but it may influence what users expect to see in previews.\n`
+        : ''
+
     return `You are an AI assistant embedded in "Amagon", a visual HTML editor that uses Bootstrap 5.
 The editor represents the page as a tree of Block objects.
+
+${themeSection}${uiThemeSection}
 
 ## Block Interface
 \`\`\`ts
@@ -202,6 +228,10 @@ ${blockRegistryJson}
 
 - Keep your responses concise and practical. You are helping build real web pages.
 - Use Bootstrap 5 classes wherever appropriate.
+- If a project theme is provided, prefer theme consistency over Bootstrap defaults:
+  - Use theme CSS variables via inline styles (e.g. backgroundColor: 'var(--theme-surface)'; color: 'var(--theme-text)') instead of hard-coded hex colors.
+  - Avoid Bootstrap semantic colors (e.g. 'text-muted', 'bg-light') when they would conflict with a dark or custom theme; use theme variables instead.
+  - Prefer borderRadius: 'var(--theme-border-radius)' and borderColor: 'var(--theme-border)'.
 `
 }
 

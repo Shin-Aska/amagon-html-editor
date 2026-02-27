@@ -46,6 +46,7 @@ type CanvasRuntimeMessage =
     source: 'canvas-runtime'
     type: 'keydown'
     key: string
+    code?: string
     ctrlKey: boolean
     metaKey: boolean
     shiftKey: boolean
@@ -216,6 +217,7 @@ function Canvas(): JSX.Element {
         case 'keydown': {
           const ke = new KeyboardEvent('keydown', {
             key: data.key,
+            code: data.code,
             ctrlKey: data.ctrlKey,
             metaKey: data.metaKey,
             shiftKey: data.shiftKey,

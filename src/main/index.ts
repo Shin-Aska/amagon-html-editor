@@ -783,13 +783,18 @@ function registerIpcHandlers(): void {
     'ai:chat',
     async (
       _,
-      data: { messages: ChatMessage[]; blockRegistry?: string; config?: any }
+      data: {
+        messages: ChatMessage[]
+        blockRegistry?: string
+        config?: any
+        themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
+      }
     ) => {
       try {
         // Prepend system prompt if block registry schema is provided
         let messages = data.messages
         if (data.blockRegistry) {
-          const systemPrompt = buildSystemPrompt(data.blockRegistry)
+          const systemPrompt = buildSystemPrompt(data.blockRegistry, data.themeContext)
           messages = [
             { role: 'system' as const, content: systemPrompt },
             ...messages.filter((m) => m.role !== 'system')

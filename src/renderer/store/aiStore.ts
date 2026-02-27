@@ -5,6 +5,8 @@
 import { create } from 'zustand'
 import { getApi } from '../utils/api'
 import { componentRegistry } from '../registry/ComponentRegistry'
+import { useEditorStore } from './editorStore'
+import { useProjectStore } from './projectStore'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,6 +114,9 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const api = getApi()
             const { messages } = get()
 
+            const projectTheme = useProjectStore.getState().settings.theme
+            const uiTheme = useEditorStore.getState().theme
+
             // Build messages array for the API (only role + content)
             const apiMessages = messages.map((m) => ({
                 role: m.role,
@@ -120,7 +125,11 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
             const result = await (api as any).ai.chat({
                 messages: apiMessages,
-                blockRegistry: getBlockRegistrySchema()
+                blockRegistry: getBlockRegistrySchema(),
+                themeContext: {
+                    projectTheme,
+                    uiTheme
+                }
             })
 
             const assistantMessage: ChatMessage = {

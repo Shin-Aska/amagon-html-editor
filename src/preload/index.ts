@@ -80,6 +80,7 @@ const api = {
       messages: { role: string; content: string }[]
       blockRegistry?: string
       config?: any
+      themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
     }) => ipcRenderer.invoke('ai:chat', data),
 
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),

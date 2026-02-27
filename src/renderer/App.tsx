@@ -58,8 +58,6 @@ function App(): JSX.Element {
 
   const showToast = useToastStore((s) => s.showToast)
   
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true)
-  const [rightPanelOpen, setRightPanelOpen] = useState(true)
   const [codeEditorOpen, setCodeEditorOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
@@ -248,6 +246,32 @@ function App(): JSX.Element {
     setShowExport(true)
   }, [])
 
+  const getLayoutPanels = useCallback((layout: typeof editorLayout) => {
+    const sidebar = layout === 'standard' || layout === 'no-inspector'
+    const inspector = layout === 'standard' || layout === 'no-sidebar' || layout === 'zen'
+    return { sidebar, inspector }
+  }, [])
+
+  const layoutFromPanels = useCallback(
+    (sidebar: boolean, inspector: boolean): typeof editorLayout => {
+      if (sidebar && inspector) return 'standard'
+      if (!sidebar && inspector) return 'no-sidebar'
+      if (sidebar && !inspector) return 'no-inspector'
+      return 'canvas-only'
+    },
+    []
+  )
+
+  const handleToggleSidebar = useCallback(() => {
+    const { sidebar, inspector } = getLayoutPanels(editorLayout)
+    setEditorLayout(layoutFromPanels(!sidebar, inspector))
+  }, [editorLayout, getLayoutPanels, layoutFromPanels, setEditorLayout])
+
+  const handleToggleInspector = useCallback(() => {
+    const { sidebar, inspector } = getLayoutPanels(editorLayout)
+    setEditorLayout(layoutFromPanels(sidebar, !inspector))
+  }, [editorLayout, getLayoutPanels, layoutFromPanels, setEditorLayout])
+
   // Derived panel visibility from layout
   const showSidebar = editorLayout === 'standard' || editorLayout === 'no-inspector'
   const showInspector = editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'zen'
@@ -259,10 +283,10 @@ function App(): JSX.Element {
     onOpen: handleLoad,
     onExport: handleExport,
     onToggleCodeEditor: () => setCodeEditorOpen(prev => !prev),
-    onToggleLeftPanel: () => setLeftPanelOpen(prev => !prev),
-    onToggleRightPanel: () => setRightPanelOpen(prev => !prev),
-    leftPanelOpen,
-    rightPanelOpen,
+    onToggleLeftPanel: handleToggleSidebar,
+    onToggleRightPanel: handleToggleInspector,
+    leftPanelOpen: showSidebar,
+    rightPanelOpen: showInspector,
     codeEditorOpen,
     onNewProject: handleNewProject,
     onSetEditorLayout: setEditorLayout
@@ -436,8 +460,8 @@ function App(): JSX.Element {
           rightPanelOpen={showInspector}
           codeEditorOpen={codeEditorOpen}
           editorLayout={editorLayout}
-          onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
-          onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+          onToggleLeftPanel={handleToggleSidebar}
+          onToggleRightPanel={handleToggleInspector}
           onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
           onSetEditorLayout={setEditorLayout}
           onOpenThemeEditor={() => setShowThemeEditor(true)}
@@ -498,8 +522,8 @@ function App(): JSX.Element {
           onSave={handleSave}
           onExport={handleExport}
           onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
-          onToggleLeftPanel={() => setLeftPanelOpen(!leftPanelOpen)}
-          onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+          onToggleLeftPanel={handleToggleSidebar}
+          onToggleRightPanel={handleToggleInspector}
         />
       )}
 

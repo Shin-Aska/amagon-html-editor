@@ -323,7 +323,12 @@ const mockApi: ElectronApi = {
   },
 
   ai: {
-    chat: async (_data: any): Promise<IpcResult> => {
+    chat: async (_data: {
+      messages: { role: string; content: string }[]
+      blockRegistry?: string
+      config?: any
+      themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
+    }): Promise<IpcResult> => {
       // Simulated AI response in browser mode
       return {
         success: true,

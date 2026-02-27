@@ -29,7 +29,12 @@ interface ElectronApi {
     onTick: (callback: () => void) => () => void
   }
   ai: {
-    chat: (data: any) => Promise<any>
+    chat: (data: {
+      messages: { role: string; content: string }[]
+      blockRegistry?: string
+      config?: any
+      themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
+    }) => Promise<any>
     getConfig: () => Promise<any>
     setConfig: (config: any) => Promise<any>
     getModels: () => Promise<any>

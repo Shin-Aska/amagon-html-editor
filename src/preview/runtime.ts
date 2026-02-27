@@ -33,7 +33,7 @@ type RuntimeMessage =
   | { type: 'dropTarget'; dropTarget?: DropTargetHint }
   | { type: 'moveBlock'; blockId: string; dropTarget: DropTargetHint }
   | { type: 'updateText'; blockId: string; text: string }
-  | { type: 'keydown'; key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }
+  | { type: 'keydown'; key: string; code?: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }
   | { type: 'deleteBlock'; blockId: string }
   | { type: 'ready' }
 
@@ -356,12 +356,16 @@ function attachBlockListeners(): void {
 
     window.addEventListener('keydown', (e) => {
       const isCtrl = e.ctrlKey || e.metaKey
-      if (isCtrl && e.key.toLowerCase() === 's') {
+      const isBackslash = e.key === '\\' || e.code === 'Backslash' || e.code === 'IntlBackslash'
+      const isSlash = e.key === '/' || e.code === 'Slash'
+
+      if (isCtrl && (e.key.toLowerCase() === 's' || isBackslash || isSlash)) {
         e.preventDefault()
         e.stopPropagation()
         sendToParent({
           type: 'keydown',
           key: e.key,
+          code: e.code,
           ctrlKey: e.ctrlKey,
           metaKey: e.metaKey,
           shiftKey: e.shiftKey,
@@ -376,6 +380,7 @@ function attachBlockListeners(): void {
       sendToParent({
         type: 'keydown',
         key: e.key,
+        code: e.code,
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
         shiftKey: e.shiftKey,

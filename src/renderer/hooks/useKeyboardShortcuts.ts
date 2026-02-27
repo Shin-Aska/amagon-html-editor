@@ -296,6 +296,15 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
     const isCtrl = e.ctrlKey || e.metaKey
 
+    const isBackslash =
+      e.code === 'Backslash' ||
+      e.code === 'IntlBackslash' ||
+      e.code === 'IntlYen' ||
+      e.key === '\\' ||
+      e.key === '¥'
+    const isSlash = e.code === 'Slash' || e.code === 'NumpadDivide' || e.key === '/'
+    const isQuestionMark = e.key === '?'
+
     if (isCtrl && e.key.toLowerCase() === 's') {
       e.preventDefault()
       if (e.shiftKey) {
@@ -306,9 +315,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
       return
     }
 
-    if (isCtrl && (e.key === '\\' || e.key === '/')) {
+    if (isCtrl && (isBackslash || (isSlash && !isQuestionMark))) {
       e.preventDefault()
-      if (e.key === '\\') {
+      if (isBackslash) {
         onToggleLeftPanel()
       } else {
         onToggleRightPanel()

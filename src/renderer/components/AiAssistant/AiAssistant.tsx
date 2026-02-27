@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye, Loader2 } from 'lucide-react'
 import { useAiStore, type AiProvider } from '../../store/aiStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useProjectStore } from '../../store/projectStore'
 import { createBlock, type Block } from '../../store/types'
+import { themeToCSS } from '../../store/types'
 import { blockToHtml } from '../../utils/blockToHtml'
 import './AiAssistant.css'
 
@@ -66,6 +68,9 @@ function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const [height, setHeight] = useState(120)
 
+    const projectTheme = useProjectStore((s) => s.settings.theme)
+    const themeCss = useMemo(() => themeToCSS(projectTheme), [projectTheme])
+
     const html = useMemo(() => blockToHtml(blocks), [blocks])
 
     const previewDoc = useMemo(() => `<!DOCTYPE html>
@@ -74,14 +79,17 @@ function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style id="hoarses-theme-css">
+${themeCss}
+</style>
 <style>
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background: #fff;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--theme-bg);
+        font-family: var(--theme-font-family);
     }
     body { padding: 12px; }
     img { max-width: 100%; height: auto; }
@@ -102,7 +110,7 @@ function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
     window.addEventListener('load', sendHeight);
     new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
 <\/script>
-</html>`, [html])
+</html>`, [html, themeCss])
 
     useEffect(() => {
         const onMessage = (e: MessageEvent) => {
