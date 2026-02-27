@@ -21,6 +21,15 @@ function WidgetItem({ widget, onContextMenu }: { widget: BlockDefinition; onCont
     data: { widgetType: widget.type, label: widget.label, icon: widget.icon }
   })
 
+  const iconString = typeof widget.icon === 'string' ? widget.icon.trim() : ''
+  const isBadIconGlyph = (s: string): boolean => {
+    if (!s) return true
+    if (s.startsWith('lucide:')) return false
+    if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true
+    if (s === '☐' || s === '☑' || s === '▢' || s === '▣' || s === '▭' || s === '🔲' || s === '🔳') return true
+    return false
+  }
+
   const style = transform ? {
     // DragOverlay handles the dragged preview.
     // To prevent the original element from shifting around while dragging,
@@ -37,7 +46,17 @@ function WidgetItem({ widget, onContextMenu }: { widget: BlockDefinition; onCont
       onContextMenu={(e) => onContextMenu?.(e, widget)}
     >
       <div className="widget-icon">
-        {widget.type.startsWith('user:') ? (typeof widget.icon === 'string' ? widget.icon : '🧩') : <BlockIcon name={widget.type} />}
+        {widget.type.startsWith('user:') ? (
+          iconString && iconString.startsWith('lucide:') ? (
+            <BlockIcon name={iconString.replace(/^lucide:/, '')} />
+          ) : iconString && !isBadIconGlyph(iconString) ? (
+            iconString
+          ) : (
+            <BlockIcon name="user-block" />
+          )
+        ) : (
+          <BlockIcon name={widget.type} />
+        )}
       </div>
       <span>{widget.label}</span>
     </div>
@@ -94,7 +113,12 @@ function Sidebar(): JSX.Element {
     type: `user:${ub.id}`,
     label: ub.label,
     category: ub.category || 'User Blocks',
-    icon: ub.icon || '🧩',
+    icon:
+      typeof ub.icon === 'string' && ub.icon.trim() && ub.icon.trim().startsWith('lucide:')
+        ? ub.icon.trim()
+        : typeof ub.icon === 'string' && ub.icon.trim() && !/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(ub.icon.trim())
+          ? ub.icon.trim()
+          : 'lucide:user-block',
     propsSchema: {} // Not needed for sidebar display
   }))
 

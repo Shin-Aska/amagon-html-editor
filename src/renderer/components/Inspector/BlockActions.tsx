@@ -116,22 +116,20 @@ export default function BlockActions({ blockId, blockType }: BlockActionsProps):
   const saveDefaults = useMemo(() => {
     const definition = componentRegistry.get(blockType)
     const defaultLabel = definition?.label ? `${definition.label}` : 'My Custom Block'
-    const defaultIcon = typeof definition?.icon === 'string' ? definition.icon : '🧩'
+    const defaultIcon = blockType ? `lucide:${blockType}` : 'lucide:user-block'
     const defaultCategory = definition?.category ? definition.category : 'User Blocks'
 
     const preferredCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed']
     const existingCategories = componentRegistry.getCategories()
     const userCategories = (userBlocks || []).map((ub) => (ub.category || '').trim()).filter(Boolean)
 
-    const registryIcons = componentRegistry
-      .getAll()
-      .map((d) => (typeof d.icon === 'string' ? d.icon : ''))
-      .filter(Boolean)
-    const preferredIcons = ['🧩', '⭐', '✨', '📦', '🧱', '🧰', '⚙️', '🔗', '🖼️', '🎛️', '📐', '🧷', '🧲', '📣', '💡']
-    const userIcons = (userBlocks || []).map((ub) => (ub.icon || '').trim()).filter(Boolean)
+    const registryLucideIcons = componentRegistry.getAll().map((d) => `lucide:${d.type}`)
+    const userIcons = (userBlocks || [])
+      .map((ub) => (ub.icon || '').trim())
+      .filter((i) => !!i && i.startsWith('lucide:'))
 
     const availableCategories = Array.from(new Set([...preferredCategories, ...existingCategories, ...userCategories]))
-    const availableIcons = Array.from(new Set([defaultIcon, ...preferredIcons, ...registryIcons, ...userIcons]))
+    const availableIcons = Array.from(new Set([defaultIcon, ...registryLucideIcons, ...userIcons]))
 
     return {
       availableCategories,

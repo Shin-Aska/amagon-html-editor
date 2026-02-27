@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import BlockIcon from '../BlockIcon/BlockIcon'
 import './SaveCustomBlockDialog.css'
 
 interface SaveCustomBlockDialogProps {
@@ -25,6 +26,86 @@ export default function SaveCustomBlockDialog({
   const [label, setLabel] = useState(defaultLabel)
   const [icon, setIcon] = useState(defaultIcon)
   const [category, setCategory] = useState(defaultCategory)
+  const iconSupportCacheRef = useRef<Map<string, boolean>>(new Map())
+
+  const isLikelyRenderableIcon = (value: string): boolean => {
+    const trimmed = String(value || '').trim()
+    if (!trimmed) return false
+    if (trimmed.startsWith('lucide:')) return true
+    if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(trimmed)) return false
+    if (trimmed === '☐' || trimmed === '☑' || trimmed === '▢' || trimmed === '▣' || trimmed === '▭' || trimmed === '🔲' || trimmed === '🔳') return false
+
+    const cached = iconSupportCacheRef.current.get(trimmed)
+    if (cached !== undefined) return cached
+
+    try {
+      if (typeof document === 'undefined') {
+        iconSupportCacheRef.current.set(trimmed, true)
+        return true
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 28
+      canvas.height = 28
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) {
+        iconSupportCacheRef.current.set(trimmed, true)
+        return true
+      }
+
+      const render = (s: string) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.fillStyle = '#fff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.textBaseline = 'top'
+        ctx.font = '20px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Noto Emoji",sans-serif'
+        ctx.fillStyle = '#000'
+        ctx.fillText(s, 2, 2)
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+        let hasNonGray = false
+        let hash = 2166136261
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i] || 0
+          const g = data[i + 1] || 0
+          const b = data[i + 2] || 0
+          const a = data[i + 3] || 0
+          if (a > 0 && (r !== g || g !== b)) hasNonGray = true
+          hash ^= r
+          hash = Math.imul(hash, 16777619)
+          hash ^= g
+          hash = Math.imul(hash, 16777619)
+          hash ^= b
+          hash = Math.imul(hash, 16777619)
+          hash ^= a
+          hash = Math.imul(hash, 16777619)
+        }
+        return { hash, hasNonGray }
+      }
+
+      const rendered = render(trimmed)
+      if (rendered.hasNonGray) {
+        iconSupportCacheRef.current.set(trimmed, true)
+        return true
+      }
+
+      const missing1 = render('\u0378')
+      const missing2 = render('\u{10ffff}')
+      const replacement = render('\uFFFD')
+      const whiteSquare = render('\u25A1')
+
+      const supported =
+        rendered.hash !== missing1.hash &&
+        rendered.hash !== missing2.hash &&
+        rendered.hash !== replacement.hash &&
+        rendered.hash !== whiteSquare.hash
+      iconSupportCacheRef.current.set(trimmed, supported)
+      return supported
+    } catch {
+      iconSupportCacheRef.current.set(trimmed, true)
+      return true
+    }
+  }
 
   useEffect(() => {
     if (!isOpen) return
@@ -54,6 +135,7 @@ export default function SaveCustomBlockDialog({
       if (!trimmed) continue
       if (seen.has(trimmed)) continue
       seen.add(trimmed)
+      if (!isLikelyRenderableIcon(trimmed)) continue
       list.push(trimmed)
     }
     return list
@@ -64,6 +146,9 @@ export default function SaveCustomBlockDialog({
   const canSave = !!label.trim() && !!category.trim()
   const categoryTrimmed = category.trim()
   const selectedCategory = dedupedCategories.includes(categoryTrimmed) ? categoryTrimmed : ''
+  const fallbackIcon = 'lucide:user-block'
+  const iconTrimmed = icon.trim()
+  const iconToSave = iconTrimmed && isLikelyRenderableIcon(iconTrimmed) ? iconTrimmed : fallbackIcon
 
   return (
     <div className="scb-overlay" onClick={onCancel}>
@@ -86,7 +171,7 @@ export default function SaveCustomBlockDialog({
               onKeyDown={(e) => {
                 if (e.key === 'Escape') onCancel()
                 if (e.key === 'Enter' && canSave) {
-                  onSave({ label: label.trim(), icon: icon.trim() || '🧩', category: category.trim() })
+                  onSave({ label: label.trim(), icon: iconToSave, category: category.trim() })
                 }
               }}
             />
@@ -96,13 +181,19 @@ export default function SaveCustomBlockDialog({
             <label className="scb-label">Icon</label>
             <div className="scb-icon-row">
               <div className="scb-icon-preview" aria-label="Selected icon">
-                {icon.trim() || '🧩'}
+                {iconToSave.startsWith('lucide:') ? (
+                  <BlockIcon name={iconToSave.replace(/^lucide:/, '')} className="scb-lucide" />
+                ) : !iconTrimmed ? (
+                  <BlockIcon name="user-block" className="scb-lucide" />
+                ) : (
+                  icon.trim()
+                )}
               </div>
               <input
                 className="scb-input"
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
-                placeholder="e.g. 🧩"
+                placeholder="e.g. 🧩 or lucide:container"
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') onCancel()
                 }}
@@ -112,6 +203,8 @@ export default function SaveCustomBlockDialog({
             <div className="scb-icon-grid" role="list">
               {dedupedIcons.slice(0, 40).map((i) => {
                 const active = (icon || '').trim() === i
+                const isLucide = i.startsWith('lucide:')
+                const lucideName = i.replace(/^lucide:/, '')
                 return (
                   <button
                     key={i}
@@ -120,7 +213,7 @@ export default function SaveCustomBlockDialog({
                     onClick={() => setIcon(i)}
                     title={`Use icon ${i}`}
                   >
-                    {i}
+                    {isLucide ? <BlockIcon name={lucideName} /> : i}
                   </button>
                 )
               })}
@@ -168,7 +261,7 @@ export default function SaveCustomBlockDialog({
           </button>
           <button
             className="scb-btn-primary"
-            onClick={() => onSave({ label: label.trim(), icon: icon.trim() || '🧩', category: category.trim() })}
+            onClick={() => onSave({ label: label.trim(), icon: iconToSave, category: category.trim() })}
             disabled={!canSave}
           >
             Save

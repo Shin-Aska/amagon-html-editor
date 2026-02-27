@@ -355,6 +355,21 @@ function attachBlockListeners(): void {
     })
 
     window.addEventListener('keydown', (e) => {
+      const isCtrl = e.ctrlKey || e.metaKey
+      if (isCtrl && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        e.stopPropagation()
+        sendToParent({
+          type: 'keydown',
+          key: e.key,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey
+        })
+        return
+      }
+
       if (e.target instanceof HTMLElement && e.target.isContentEditable) return
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
@@ -366,7 +381,7 @@ function attachBlockListeners(): void {
         shiftKey: e.shiftKey,
         altKey: e.altKey
       })
-    })
+    }, true)
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) return

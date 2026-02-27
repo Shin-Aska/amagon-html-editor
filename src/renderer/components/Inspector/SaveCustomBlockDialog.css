@@ -108,7 +108,13 @@
   align-items: center;
   justify-content: center;
   font-size: 18px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Noto Emoji", sans-serif;
   flex: 0 0 auto;
+}
+
+.scb-icon-preview .scb-lucide {
+  width: 18px;
+  height: 18px;
 }
 
 .scb-icon-grid {
@@ -126,7 +132,13 @@
   color: var(--color-text-primary);
   cursor: pointer;
   font-size: 14px;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Noto Emoji", sans-serif;
   line-height: 1;
+}
+
+.scb-icon-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .scb-icon-btn:hover {

@@ -287,11 +287,34 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     // Ignore if typing in an input, textarea, or contenteditable
     const target = e.target as HTMLElement
     // If e.target is the Window (e.g. from artificial window.dispatchEvent bubbling from Canvas), these properties will be undefined
+    const closestContentEditable = target?.closest?.('[contenteditable="true"]') ?? null
     const isInputElement =
       target?.tagName === 'INPUT' ||
       target?.tagName === 'TEXTAREA' ||
       target?.contentEditable === 'true' ||
-      target?.closest?.('[contenteditable="true"]') !== null
+      closestContentEditable !== null
+
+    const isCtrl = e.ctrlKey || e.metaKey
+
+    if (isCtrl && e.key.toLowerCase() === 's') {
+      e.preventDefault()
+      if (e.shiftKey) {
+        onSaveAs()
+      } else {
+        onSave()
+      }
+      return
+    }
+
+    if (isCtrl && (e.key === '\\' || e.key === '/')) {
+      e.preventDefault()
+      if (e.key === '\\') {
+        onToggleLeftPanel()
+      } else {
+        onToggleRightPanel()
+      }
+      return
+    }
 
     // Special handling for Escape
     if (e.key === 'Escape') {
@@ -312,19 +335,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     if (isInputElement) return
 
     // Handle Ctrl/Cmd key combinations
-    const isCtrl = e.ctrlKey || e.metaKey
-
     if (isCtrl) {
       switch (e.key.toLowerCase()) {
-        case 's':
-          e.preventDefault()
-          if (e.shiftKey) {
-            onSaveAs()
-          } else {
-            onSave()
-          }
-          return
-
         case 'o':
           e.preventDefault()
           onOpen()
@@ -337,7 +349,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
         case 'e':
           e.preventDefault()
-          onExport()
+          onToggleCodeEditor()
           return
 
         case 'z':
@@ -478,9 +490,9 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
   ])
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [handleKeyDown])
 }
