@@ -9,8 +9,8 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   height: 100vh;
   width: 100vw;
-  background-color: #f8f9fa;
-  color: #1a1a1a;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +24,7 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-image: radial-gradient(circle, #d1d5db 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
   background-size: 24px 24px;
   opacity: 0.4;
   pointer-events: none;
@@ -36,10 +36,10 @@
   z-index: 10;
   width: 100%;
   max-width: 720px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.18);
   padding: 48px;
   display: flex;
   flex-direction: column;
@@ -64,25 +64,25 @@
 }
 
 .logo-icon {
-  color: #2563eb;
+  color: var(--color-accent);
 }
 
 .welcome-logo {
   font-size: 32px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   letter-spacing: -0.5px;
   line-height: 1.2;
 }
 
 .welcome-subtitle {
   font-size: 15px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-weight: 400;
 }
 
 .welcome-subtitle .highlight {
-  color: #2563eb;
+  color: var(--color-accent);
   font-weight: 500;
 }
 
@@ -111,15 +111,15 @@
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
-  border: 1px solid #e5e7eb;
-  background: #fafafa;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
   position: relative;
   overflow: hidden;
 }
 
 .welcome-btn:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  background: var(--color-bg-hover);
+  border-color: var(--color-border);
   transform: translateY(-1px);
 }
 
@@ -134,20 +134,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
   transition: all 0.15s ease;
 }
 
 .welcome-btn:hover .btn-icon-wrapper {
-  color: #2563eb;
-  border-color: #2563eb;
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .primary-action:hover .btn-icon-wrapper {
-  color: #059669;
-  border-color: #059669;
+  color: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .btn-text {
@@ -160,29 +160,29 @@
 .btn-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .btn-desc {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 .btn-arrow {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   transition: transform 0.15s ease;
 }
 
 .welcome-btn:hover .btn-arrow {
   transform: translateX(3px);
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 /* Right side - Recent Projects */
 .welcome-recent {
   flex: 1;
-  background: #fafafa;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -191,16 +191,16 @@
 
 .recent-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-weight: 500;
   font-size: 12px;
   letter-spacing: 0.3px;
   text-transform: uppercase;
-  background: #ffffff;
+  background: var(--color-bg-secondary);
 }
 
 .recent-list {
@@ -217,7 +217,7 @@
   width: 6px;
 }
 .recent-list::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--color-border);
   border-radius: 3px;
 }
 .recent-list::-webkit-scrollbar-track {
@@ -226,7 +226,7 @@
 
 .recent-empty {
   margin: auto;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   font-size: 13px;
   padding: 20px;
   text-align: center;
@@ -243,15 +243,15 @@
 }
 
 .recent-item:hover {
-  background: #ffffff;
+  background: var(--color-bg-secondary);
 }
 
 .recent-item-icon {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: #e5e7eb;
-  color: #6b7280;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,8 +259,8 @@
 }
 
 .recent-item:hover .recent-item-icon {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--color-accent);
+  color: var(--color-bg-primary);
 }
 
 .recent-item-info {
@@ -273,7 +273,7 @@
 .recent-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -281,7 +281,7 @@
 
 .recent-path {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
