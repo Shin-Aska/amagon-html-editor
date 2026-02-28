@@ -18,6 +18,8 @@ An offline, AI-powered visual HTML editor — a Pingendo/Mobirise/Bootstrap Stud
 
 ### 🤖 AI Assistant
 
+![AI Assistant](docs/images/ai.jpg)
+
 Amagon ships with a built-in AI assistant that understands your project's block structure, theme, and design system — so you can build pages with natural language.
 
 - **Multi-Provider Support**: Connect to **OpenAI** (GPT-4o, o3-mini, …), **Anthropic** (Claude Sonnet/Opus/Haiku), **Google** (Gemini 2.5 Flash/Pro, …), or **Ollama** for fully offline, local LLM inference
@@ -30,6 +32,8 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 
 ### 🎨 Visual Editing
 
+![Visual Editing](docs/images/visual-editing.jpg)
+
 - **Drag & Drop Canvas**: Build pages by dragging blocks from the sidebar to the canvas
 - **Live Preview**: See your changes instantly in an isolated iframe canvas
 - **Inline Editing**: Double-click any text block on the canvas to edit content directly in place
@@ -40,12 +44,16 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 
 ### 🖥️ Code Integration
 
+![Code Integration](docs/images/code-editor.jpg)
+
 - **Monaco Editor**: Full-featured code editor (the same engine behind VS Code) with syntax highlighting and IntelliSense
 - **Bidirectional Sync**: Changes in code reflect in the visual editor and vice versa
 - **Code Syntax Highlighting**: Code blocks in the canvas are rendered with highlight.js syntax coloring
 - **Clean Export**: Export to standalone HTML with no editor artifacts
 
 ### 🎭 Theme System
+
+![Theme System](docs/images/theme-editor.jpg)
 
 - **Visual Theme Editor**: Customize your entire site's look from a dedicated editor with tabs for colors, typography, spacing, borders, and custom CSS
 - **Theme Presets**: Choose from built-in presets to quickly set a cohesive visual style
