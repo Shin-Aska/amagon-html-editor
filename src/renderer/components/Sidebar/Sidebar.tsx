@@ -391,6 +391,46 @@ function Sidebar(): JSX.Element {
     }
   }
 
+  const isBackgroundDropTarget = (target: EventTarget | null): target is HTMLElement => {
+    if (!(target instanceof HTMLElement)) return false
+    return !(
+      target.closest('.folder-header') ||
+      target.closest('.page-item') ||
+      target.closest('.ungrouped-drop-zone') ||
+      target.closest('.page-actions')
+    )
+  }
+
+  const handleBackgroundDragOver = (e: React.DragEvent) => {
+    if (!dragPageIdRef.current) return
+    if (!isBackgroundDropTarget(e.target)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDropTargetFolderId('__root__')
+    setDropTargetId(null)
+    setDropPosition(null)
+  }
+
+  const handleBackgroundDrop = (e: React.DragEvent) => {
+    if (!dragPageIdRef.current) return
+    if (!isBackgroundDropTarget(e.target)) return
+    e.preventDefault()
+    const draggedId = dragPageIdRef.current
+    if (!draggedId) return
+    updatePage(draggedId, { folderId: undefined })
+    dragPageIdRef.current = null
+    setDragPageId(null)
+    setDropTargetId(null)
+    setDropPosition(null)
+    setDropTargetFolderId(null)
+  }
+
+  const handleBackgroundDragLeave = (e: React.DragEvent) => {
+    if (e.target === e.currentTarget) {
+      setDropTargetFolderId(null)
+    }
+  }
+
   const renderPageItem = (page: typeof pages[0], indented = false) => {
     const effectiveTags = getEffectiveTags(page)
     const ownTags = page.tags ?? []
@@ -478,7 +518,12 @@ function Sidebar(): JSX.Element {
       </div>
       <div className="sidebar-content" style={{ display: 'flex', flexDirection: 'column' }}>
         {activeTab === 'pages' && (
-          <div className="pages-panel">
+          <div
+            className={`pages-panel${dropTargetFolderId === '__root__' ? ' root-drop-active' : ''}`}
+            onDragOverCapture={handleBackgroundDragOver}
+            onDropCapture={handleBackgroundDrop}
+            onDragLeaveCapture={handleBackgroundDragLeave}
+          >
             <div className="pages-list">
               {/* Folders */}
               {folders.map((folder) => {
@@ -522,13 +567,13 @@ function Sidebar(): JSX.Element {
 
               {/* Ungrouped pages */}
               <div
-                className={`ungrouped-drop-zone${dropTargetFolderId === '__root__' ? ' drop-active' : ''}`}
+                className={`ungrouped-drop-zone${dropTargetFolderId === '__ungrouped__' ? ' drop-active' : ''}`}
                 onDragOver={(e) => {
                   const draggedId = dragPageIdRef.current
                   if (draggedId) {
                     e.preventDefault()
                     e.dataTransfer.dropEffect = 'move'
-                    setDropTargetFolderId('__root__')
+                    setDropTargetFolderId('__ungrouped__')
                     setDropTargetId(null)
                     setDropPosition(null)
                   }
@@ -556,7 +601,7 @@ function Sidebar(): JSX.Element {
                   setDropTargetFolderId(null)
                 }}
                 onDragLeave={() => {
-                  if (dropTargetFolderId === '__root__') {
+                  if (dropTargetFolderId === '__ungrouped__') {
                     setDropTargetFolderId(null)
                   }
                 }}
