@@ -8,7 +8,7 @@ import { componentRegistry, type BlockDefinition } from '../../registry/Componen
 import BlockIcon from '../BlockIcon/BlockIcon'
 import BlockTree from '../BlockTree/BlockTree'
 import AiAssistant from '../AiAssistant/AiAssistant'
-import { useState, type MouseEvent } from 'react'
+import { useRef, useState, type MouseEvent } from 'react'
 import ContextMenu from '../ContextMenu/ContextMenu'
 import { useToastStore } from '../../store/toastStore'
 import { getApi } from '../../utils/api'
@@ -102,6 +102,7 @@ function Sidebar(): JSX.Element {
   const removePage = useProjectStore((s) => s.removePage)
   const updatePage = useProjectStore((s) => s.updatePage)
   const getEffectiveTags = useProjectStore((s) => s.getEffectiveTags)
+  const reorderPages = useProjectStore((s) => s.reorderPages)
 
   // Folder management
   const folders = useProjectStore((s) => s.folders)
@@ -116,6 +117,7 @@ function Sidebar(): JSX.Element {
     folderId?: string
     initialName?: string
     initialTags?: string[]
+    initialPath?: string
     targetFolderId?: string // folder to place new page into
   } | null>(null)
 
@@ -127,6 +129,12 @@ function Sidebar(): JSX.Element {
   } | null>(null)
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+
+  // Page drag-reorder state
+  const [dragPageId, setDragPageId] = useState<string | null>(null)
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
+  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null)
+  const dragPageIdRef = useRef<string | null>(null)
 
   // Define a specific order for categories if desired, or just use the insertion order
   const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed']
@@ -191,8 +199,8 @@ function Sidebar(): JSX.Element {
     })
   }
 
-  const handleCreatePage = (name: string, tags: string[]) => {
-    const created = addPage(name)
+  const handleCreatePage = (name: string, tags: string[], path?: string) => {
+    const created = addPage(name, path || undefined)
     const patch: Record<string, unknown> = {}
     if (tags.length > 0) patch.tags = tags
     if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId
@@ -200,9 +208,11 @@ function Sidebar(): JSX.Element {
     setPageModal(null)
   }
 
-  const handleEditPage = (name: string, tags: string[]) => {
+  const handleEditPage = (name: string, tags: string[], path?: string) => {
     if (!pageModal?.pageId) return
-    updatePage(pageModal.pageId, { title: name, tags })
+    const patch: Partial<{ title: string; tags: string[]; slug: string }> = { title: name, tags }
+    if (path) patch.slug = path
+    updatePage(pageModal.pageId, patch)
     setPageModal(null)
   }
 
@@ -269,18 +279,84 @@ function Sidebar(): JSX.Element {
 
   // ── Render a page item ────────────────────────────────────────────────
 
+  const getDraggedPageId = (e: React.DragEvent | null): string | null => {
+    if (dragPageIdRef.current) return dragPageIdRef.current
+    const dt = e?.dataTransfer?.getData('text/plain')
+    return dt ? String(dt) : null
+  }
+
+  const handlePageDragStart = (e: React.DragEvent, pageId: string) => {
+    dragPageIdRef.current = pageId
+    setDragPageId(pageId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', pageId)
+  }
+
+  const handlePageDragOver = (e: React.DragEvent, pageId: string) => {
+    const draggedId = getDraggedPageId(e)
+    if (!draggedId || draggedId === pageId) return
+    // Required for onDrop to fire in HTML5 DnD.
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    setDropTargetId(pageId)
+    setDropPosition(e.clientY < midY ? 'above' : 'below')
+  }
+
+  const handlePageDrop = (e: React.DragEvent, targetPageId: string) => {
+    e.preventDefault()
+    const draggedId = getDraggedPageId(e)
+    if (!draggedId || draggedId === targetPageId) return
+
+    const fromIndex = pages.findIndex((p) => p.id === draggedId)
+    let toIndex = pages.findIndex((p) => p.id === targetPageId)
+    if (fromIndex === -1 || toIndex === -1) return
+
+    // Determine above/below using the drop position at the moment of drop.
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    const isBelow = e.clientY >= midY
+
+    if (isBelow) toIndex += 1
+    if (fromIndex < toIndex) toIndex -= 1
+    if (fromIndex !== toIndex) reorderPages(fromIndex, toIndex)
+
+    dragPageIdRef.current = null
+    setDragPageId(null)
+    setDropTargetId(null)
+    setDropPosition(null)
+  }
+
+  const handlePageDragEnd = () => {
+    dragPageIdRef.current = null
+    setDragPageId(null)
+    setDropTargetId(null)
+    setDropPosition(null)
+  }
+
   const renderPageItem = (page: typeof pages[0], indented = false) => {
     const effectiveTags = getEffectiveTags(page)
     const ownTags = page.tags ?? []
     const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null
     const inheritedTags = folder?.tags?.filter((t) => !ownTags.includes(t)) ?? []
 
+    const isDragOver = dropTargetId === page.id
+    const dropClass = isDragOver ? (dropPosition === 'above' ? 'drop-above' : 'drop-below') : ''
+    const isDragging = dragPageId === page.id
+
     return (
       <div
         key={page.id}
-        className={`page-item ${page.id === currentPageId ? 'active' : ''} ${indented ? 'indented' : ''}`}
+        className={`page-item ${page.id === currentPageId ? 'active' : ''} ${indented ? 'indented' : ''} ${dropClass} ${isDragging ? 'dragging' : ''}`}
         onClick={() => handleSwitchPage(page.id)}
         onContextMenu={(e) => handlePageContextMenu(e, page.id)}
+        draggable
+        onDragStart={(e) => handlePageDragStart(e, page.id)}
+        onDragOver={(e) => handlePageDragOver(e, page.id)}
+        onDrop={(e) => handlePageDrop(e, page.id)}
+        onDragEnd={handlePageDragEnd}
+        onDragLeave={() => { if (dropTargetId === page.id) { setDropTargetId(null); setDropPosition(null) } }}
       >
         <div className="page-info">
           <FileText size={14} className="page-icon" />
@@ -303,11 +379,11 @@ function Sidebar(): JSX.Element {
 
   // ── Main render ──────────────────────────────────────────────────────
 
-  const handleModalSave = (name: string, tags: string[]) => {
+  const handleModalSave = (name: string, tags: string[], path?: string) => {
     if (!pageModal) return
     switch (pageModal.mode) {
-      case 'create': handleCreatePage(name, tags); break
-      case 'edit': handleEditPage(name, tags); break
+      case 'create': handleCreatePage(name, tags, path); break
+      case 'edit': handleEditPage(name, tags, path); break
       case 'create-folder': handleCreateFolder(name, tags); break
       case 'edit-folder': handleEditFolder(name, tags); break
     }
@@ -536,7 +612,8 @@ function Sidebar(): JSX.Element {
                         mode: 'edit',
                         pageId: page.id,
                         initialName: page.title,
-                        initialTags: page.tags || []
+                        initialTags: page.tags || [],
+                        initialPath: page.slug
                       })
                     }
                   }
@@ -567,6 +644,7 @@ function Sidebar(): JSX.Element {
           mode={pageModal.mode}
           initialName={pageModal.initialName}
           initialTags={pageModal.initialTags}
+          initialPath={pageModal.initialPath}
           onSave={handleModalSave}
           onCancel={() => setPageModal(null)}
         />

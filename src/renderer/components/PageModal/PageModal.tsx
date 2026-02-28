@@ -7,7 +7,8 @@ interface PageModalProps {
     mode: PageModalMode
     initialName?: string
     initialTags?: string[]
-    onSave: (name: string, tags: string[]) => void
+    initialPath?: string
+    onSave: (name: string, tags: string[], path?: string) => void
     onCancel: () => void
 }
 
@@ -15,11 +16,13 @@ export default function PageModal({
     mode,
     initialName = '',
     initialTags = [],
+    initialPath = '',
     onSave,
     onCancel
 }: PageModalProps): JSX.Element {
     const [name, setName] = useState(initialName)
     const [tagsInput, setTagsInput] = useState(initialTags.join(', '))
+    const [pathInput, setPathInput] = useState(initialPath)
     const nameRef = useRef<HTMLInputElement>(null)
 
     const isFolder = mode === 'create-folder' || mode === 'edit-folder'
@@ -40,7 +43,8 @@ export default function PageModal({
     const handleSave = () => {
         const trimmed = name.trim()
         if (!trimmed) return
-        onSave(trimmed, parseTags(tagsInput))
+        const trimmedPath = pathInput.trim()
+        onSave(trimmed, parseTags(tagsInput), trimmedPath || undefined)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -93,6 +97,22 @@ export default function PageModal({
                                 : 'Comma-separated. Used to filter pages in components like the Navbar.'}
                         </span>
                     </div>
+
+                    {!isFolder && (
+                        <div className="page-modal-field">
+                            <label>Path (optional)</label>
+                            <input
+                                type="text"
+                                value={pathInput}
+                                onChange={(e) => setPathInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="e.g. about-us"
+                            />
+                            <span className="field-hint">
+                                Sets the page slug / output filename. Leave empty to auto-generate from the page name.
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="page-modal-footer">

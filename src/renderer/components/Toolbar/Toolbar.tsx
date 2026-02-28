@@ -162,6 +162,7 @@ export default function Toolbar({
         {
           projectSettings: projectState.settings,
           pages,
+          folders: projectState.folders,
           userBlocks: projectState.userBlocks,
           customCss: editorState.customCss
         },

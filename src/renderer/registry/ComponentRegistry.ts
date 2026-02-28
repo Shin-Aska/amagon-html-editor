@@ -11,6 +11,7 @@ export type PropType =
   | 'icon'
   | 'measurement' // e.g. "10px", "1rem"
   | 'array' // for lists
+  | 'combobox' // editable dropdown with suggestions
 
 export interface PropSchema {
   type: PropType
@@ -22,6 +23,7 @@ export interface PropSchema {
   max?: number
   step?: number
   group?: string // for grouping in inspector
+  dataSource?: string // for combobox: e.g. 'tags' to pull options from project tags
 }
 
 export interface BlockDefinition {

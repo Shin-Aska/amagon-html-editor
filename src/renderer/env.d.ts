@@ -29,6 +29,9 @@ interface ElectronApi {
     stop: () => Promise<any>
     onTick: (callback: () => void) => () => void
   }
+  menu: {
+    onAction: (callback: (action: string) => void) => () => void
+  }
   ai: {
     chat: (data: {
       messages: { role: string; content: string }[]

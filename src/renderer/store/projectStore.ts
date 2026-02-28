@@ -18,6 +18,7 @@ interface ProjectState {
 interface ProjectActions {
   // Project-level
   setProject: (data: ProjectData, filePath?: string) => void
+  closeProject: () => void
   updateSettings: (patch: Partial<ProjectSettings>) => void
   setFramework: (framework: FrameworkChoice) => void
   setFilePath: (path: string | null) => void
@@ -132,6 +133,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
         filePath: filePath ?? null,
         isProjectLoaded: true
+      })
+    },
+
+    closeProject: () => {
+      const newDefault = createDefaultPage()
+      set({
+        settings: createDefaultSettings(),
+        pages: [newDefault],
+        folders: [],
+        userBlocks: [],
+        currentPageId: newDefault.id,
+        filePath: null,
+        isProjectLoaded: false
       })
     },
 

@@ -311,6 +311,40 @@ function App(): JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Electron menu action listener
+  useEffect(() => {
+    const cleanup = api.menu.onAction((action: string) => {
+      switch (action) {
+        case 'new-project': handleNewProject(); break
+        case 'open-project': handleLoad(); break
+        case 'close-project': {
+          useProjectStore.getState().closeProject()
+          useEditorStore.getState().loadPageBlocks([])
+          break
+        }
+        case 'save': handleSave(); break
+        case 'save-as': handleSaveAs(); break
+        case 'export': handleExport(); break
+        case 'undo': useEditorStore.getState().undo(); break
+        case 'redo': useEditorStore.getState().redo(); break
+        case 'cut':
+        case 'copy':
+        case 'paste':
+        case 'duplicate':
+        case 'delete':
+          // These are handled by keyboard shortcuts via accelerators;
+          // dispatch a synthetic keydown so the existing handler picks them up
+          break
+        case 'toggle-sidebar': handleToggleSidebar(); break
+        case 'toggle-inspector': handleToggleInspector(); break
+        case 'toggle-code-editor': setCodeEditorOpen(prev => !prev); break
+        case 'command-palette': setCommandPaletteOpen(prev => !prev); break
+        case 'keyboard-shortcuts': setShowKeyboardShortcuts(prev => !prev); break
+      }
+    })
+    return cleanup
+  }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector])
+
   const [activeWidget, setActiveWidget] = useState<{ widgetType: string; label?: string; icon?: string } | null>(null)
   const [dropHint, setDropHint] = useState<DropTargetHint | null>(null)
 

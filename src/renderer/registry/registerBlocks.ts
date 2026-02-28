@@ -351,7 +351,7 @@ export function registerBlocks(): void {
       brandText: { type: 'text', label: 'Brand Text', default: 'Brand' },
       brandImage: { type: 'text', label: 'Brand Image URL (optional)', default: '' },
       usePages: { type: 'boolean', label: 'Use Pages as Links', default: true },
-      filterTag: { type: 'text', label: 'Filter by Tag (optional)', default: '' },
+      filterTag: { type: 'combobox', label: 'Filter by Tag (optional)', default: '', dataSource: 'tags' },
       theme: {
         type: 'select',
         label: 'Theme',

@@ -7,6 +7,8 @@ import BlockActions from './BlockActions'
 import ResponsiveOverrides from './ResponsiveOverrides'
 import BlockIcon from '../BlockIcon/BlockIcon'
 import ImageField from './ImageField'
+import ComboboxField from './ComboboxField'
+import { useProjectStore } from '../../store/projectStore'
 import './Inspector.css'
 
 function Inspector(): JSX.Element {
@@ -145,6 +147,27 @@ function Inspector(): JSX.Element {
             placeholder="e.g. 16px, 2rem"
           />
         )
+      case 'combobox': {
+        let comboOptions: string[] = []
+        if (schema.dataSource === 'tags') {
+          const pages = useProjectStore.getState().pages
+          const folders = useProjectStore.getState().folders
+          const tagSet = new Set<string>()
+          pages.forEach((p) => p.tags?.forEach((t) => tagSet.add(t)))
+          folders.forEach((f) => f.tags?.forEach((t) => tagSet.add(t)))
+          comboOptions = Array.from(tagSet).sort()
+        } else if (schema.options) {
+          comboOptions = schema.options.map((o) => String(o.value))
+        }
+        return (
+          <ComboboxField
+            value={val || ''}
+            options={comboOptions}
+            onChange={(v) => handlePropChange(key, v)}
+            placeholder={schema.default !== undefined ? String(schema.default) : ''}
+          />
+        )
+      }
       default:
         return <span className="unsupported-prop">Unsupported type: {schema.type}</span>
     }

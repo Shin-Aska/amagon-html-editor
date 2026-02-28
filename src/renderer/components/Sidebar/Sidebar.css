@@ -317,3 +317,17 @@
   color: var(--color-accent);
   background: var(--color-bg-hover);
 }
+
+/* ── Page drag reorder ───────────────────────────────── */
+
+.page-item.dragging {
+  opacity: 0.4;
+}
+
+.page-item.drop-above {
+  border-top: 2px solid var(--color-accent);
+}
+
+.page-item.drop-below {
+  border-bottom: 2px solid var(--color-accent);
+}

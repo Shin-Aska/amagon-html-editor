@@ -5,9 +5,10 @@ import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
 import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
+import { buildAppMenu } from './menu'
 import { createWelcomeBlocks } from '../shared/welcomeBlocks'
 
-const { app, ipcMain, protocol, dialog, shell, net } = electron
+const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron
 const BrowserWindowCtor = electron.BrowserWindow
 
 // ---------------------------------------------------------------------------
@@ -901,10 +902,15 @@ function registerIpcHandlers(): void {
 // App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   registerAppMediaProtocol()
   registerIpcHandlers()
-  createWindow()
+  await createWindow()
+
+  if (mainWindow) {
+    const menu = buildAppMenu(mainWindow)
+    Menu.setApplicationMenu(menu)
+  }
 
   app.on('activate', () => {
     if (BrowserWindowCtor.getAllWindows().length === 0) {

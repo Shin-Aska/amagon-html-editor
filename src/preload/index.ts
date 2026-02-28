@@ -78,6 +78,16 @@ const api = {
     }
   },
 
+  menu: {
+    onAction: (callback: (action: string) => void) => {
+      const handler = (_event: any, action: string) => {
+        callback(action)
+      }
+      ipcRenderer.on('menu:action', handler)
+      return () => ipcRenderer.removeListener('menu:action', handler)
+    }
+  },
+
   ai: {
     chat: (data: {
       messages: { role: string; content: string }[]

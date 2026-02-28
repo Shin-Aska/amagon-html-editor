@@ -337,6 +337,13 @@ const mockApi: ElectronApi = {
     }
   },
 
+  menu: {
+    onAction: (_callback: (action: string) => void) => {
+      // No-op in browser mode — menus are Electron-only
+      return () => { }
+    }
+  },
+
   ai: {
     chat: async (_data: {
       messages: { role: string; content: string }[]

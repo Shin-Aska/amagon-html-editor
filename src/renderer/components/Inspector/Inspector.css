@@ -152,3 +152,37 @@ textarea.inspector-input {
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* Combobox */
+.combobox-wrapper {
+  position: relative;
+}
+
+.combobox-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.combobox-option {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.combobox-option:hover,
+.combobox-option.selected {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
