@@ -115,33 +115,7 @@ function Canvas(): JSX.Element {
     blocksRef.current = blocks
   }, [blocks])
 
-  const seededBlocks = useMemo(() => {
-    return [
-      createBlock('container', {
-        classes: ['container', 'py-5', 'text-center'],
-        children: [
-          createBlock('heading', {
-            props: { text: 'Welcome to Amagon', level: 1 },
-            classes: ['mb-3']
-          }),
-          createBlock('paragraph', {
-            props: { text: 'Drag widgets from the sidebar to start building your page.' },
-            classes: ['text-muted']
-          }),
-          createBlock('button', {
-            props: { text: 'Get Started', type: 'button' },
-            classes: ['btn', 'btn-primary', 'mt-3']
-          })
-        ]
-      })
-    ]
-  }, [])
 
-  useEffect(() => {
-    if (blocks.length === 0) {
-      setPageBlocks(seededBlocks)
-    }
-  }, [blocks.length, seededBlocks, setPageBlocks])
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
