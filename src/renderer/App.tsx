@@ -152,6 +152,7 @@ function App(): JSX.Element {
       {
         projectSettings: projectState.settings,
         pages,
+        folders: projectState.folders,
         userBlocks: projectState.userBlocks,
         customCss: editorState.customCss
       },
@@ -196,6 +197,7 @@ function App(): JSX.Element {
       {
         projectSettings: projectState.settings,
         pages,
+        folders: projectState.folders,
         userBlocks: projectState.userBlocks,
         customCss: editorState.customCss
       },
