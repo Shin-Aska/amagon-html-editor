@@ -15,16 +15,23 @@ The top toolbar provides essential project and editing controls at your fingerti
 The left sidebar is your primary tool for navigating and building the structure of your website. It is divided into four main tabs:
 
 ### Pages Tab
-Manage the structure of your website's pages. You can add new pages, create folders to stay organized, and quickly switch between different pages in your project.
-![Pages Tab](./assets/pages_tab.png)
+Manage the structure of your website's pages. 
+
+- **Adding a New Page:** Click the **Add New Page** button at the bottom of the tab. You will be prompted to enter a name (e.g., "About Us") and a URL slug (e.g., "/about-us").
+- **Organizing with Folders:** Keeping your project tidy is essential as it grows. Click **New Folder** to create a category (e.g., "Marketing" or "Legal"). 
+- **Nesting Pages:** You can drag and drop any individual page directly into a folder. This helps you visually group related pages together, making navigation of large projects much easier.
+![Pages and Folders](./assets/pages_folders.png)
 
 ### Widgets Tab
-This is where the magic happens. The Widgets tab contains all the building blocks for your site:
-- **Layouts:** Containers, Rows, Columns, Sections.
+This is where the magic happens. The Widgets tab contains all the building blocks for your site broken down by category:
+- **Layout:** Containers, Rows, Columns, Sections. Use these to structure where your content goes.
 - **Typography:** Headings, Paragraphs, Quotes.
 - **Media:** Images, Videos.
-**Drag and Drop:** Simply click and drag any widget from this panel directly onto the center canvas to add it to your page!
-![Widgets Tab](./assets/widgets_tab.png)
+
+**Custom Widgets:**
+Amagon isn't just limited to standard blocks. If you build a complex layout—say a beautiful "Pricing Card" consisting of a container, heading, list, and button—you don't have to rebuild it every time. You can save combined elements as a **Custom Widget**. 
+Custom widgets will appear in their own dedicated "Custom" section at the bottom of the Widgets tab, allowing you to drag and drop your own pre-built components anywhere in your project just like native widgets!
+![Custom Widgets](./assets/custom_widgets.png)
 
 ### Layers Tab
 The Layers tab provides a tree-view outline of the elements on your selected page. This is incredibly useful for:
@@ -34,8 +41,11 @@ The Layers tab provides a tree-view outline of the elements on your selected pag
 ![Layers Tab](./assets/layers_tab.png)
 
 ### AI Tab
-Need a jumpstart? The AI Assistant tab allows you to configure your OpenAI API key and use AI to generate layouts, suggest styles, or help you build complex website sections automatically!
-![AI Tab](./assets/ai_tab.png)
+Need a jumpstart? The AI Assistant tab allows you to integrate powerful generative AI directly into your workflow.
+
+- **Setup Your Agent:** Before you begin, click the **Settings (gear) icon** in the AI tab. A modal will appear where you can securely enter your OpenAI API key and select your preferred model (e.g., GPT-4o).
+- **Benefits:** Once configured, the AI can act as your personal web developer. You can prompt it to generate entire sections of a website, write contextual placeholder copy, or suggest color palettes. It drastically reduces the time from blank canvas to final design.
+![AI Setup](./assets/ai_setup.png)
 
 ---
 
@@ -48,13 +58,17 @@ The center area is the canvas where your website comes to life.
 
 ---
 
-## 4. Right Sidebar: Properties Inspector
-When you select an element on the canvas (or via the Layers tab), the right sidebar becomes your Properties Inspector. This panel allows unparalleled control over the element:
-- **General:** Modify the element's core content, such as text, heading levels (H1, H2, etc.), or image sources.
-- **Layout:** Adjust the element's Display type (block, inline, flex), Width, Height, and Alignment.
-- **Spacing:** Visually manipulate margins and padding to get the layout exactly right.
-- **Typography:** Change fonts, sizes, weights, and colors.
-- **Styling:** Add borders, backgrounds, shadows, and more.
+## 4. Right Sidebar: Deep Dive into the Properties Inspector
+When you select an element on the canvas (or via the Layers tab), the right sidebar becomes your Properties Inspector. This panel is categorized to give you unparalleled, granular control over every CSS property:
+
+- **General:** Modify the element's core content. For a Heading, this is where you change the text itself and select the HTML tag level (H1, H2, H3, etc.). For an image, this is where you paste the image source URL.
+- **Layout (Flexbox & Grid):** Adjust how the element behaves in relation to others. Set Display types (block, inline, flex), define specific Widths and Heights (using px, %, or vh/vw), and control Flexbox alignment properties to center or distribute content perfectly.
+- **Spacing (The Box Model):** A visual interface for manipulating Margins (space *outside* the element) and Padding (space *inside* the element). You can click and drag values to see the layout shift in real-time on the canvas.
+- **Typography:** Change Font Families (integrate Google Fonts), adjust Font Sizes, set Line Heights for readability, and pick Text Colors.
+- **Background & Borders:** Apply solid colors or gradient Backgrounds. Add Borders with specific widths, styles (solid, dashed), colors, and Border Radiuses to round the corners of your containers.
+- **Effects:** Add professional polish like Box Shadows or Opacity adjustments.
+
+ Every change made in the Inspector instantly updates the element on the canvas.
 ![Editing Properties](./assets/edit_properties.png)
 
 ---
