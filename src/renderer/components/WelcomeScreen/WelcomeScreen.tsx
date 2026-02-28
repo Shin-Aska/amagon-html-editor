@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity } from 'lucide-react'
+import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity, X } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -54,6 +54,16 @@ export default function WelcomeScreen(): JSX.Element {
     } else {
       console.error('Failed to load recent project:', result.error)
       alert(`Failed to load project: ${result.error}`)
+    }
+  }
+
+  const handleRemoveRecent = async (e: React.MouseEvent, path: string) => {
+    e.stopPropagation()
+    const result = await api.project.removeRecent(path)
+    if (result.success && result.projects) {
+      setRecentProjects(result.projects)
+    } else {
+      setRecentProjects((prev) => prev.filter((p) => p !== path))
     }
   }
 
@@ -117,6 +127,13 @@ export default function WelcomeScreen(): JSX.Element {
                         <div className="recent-name">{name}</div>
                         <div className="recent-path">{path}</div>
                       </div>
+                      <button
+                        className="recent-item-remove"
+                        onClick={(e) => handleRemoveRecent(e, path)}
+                        title="Remove from recent projects"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
                   )
                 })

@@ -42,6 +42,9 @@ const api = {
 
     getRecent: () => ipcRenderer.invoke('project:getRecent'),
 
+    removeRecent: (projectPath: string) =>
+      ipcRenderer.invoke('project:removeRecent', projectPath),
+
     new: (data: { name: string; framework: string; directory?: string }) =>
       ipcRenderer.invoke('project:new', data),
 

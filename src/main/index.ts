@@ -97,6 +97,14 @@ async function addRecentProject(projectPath: string): Promise<void> {
   await fs.writeFile(filePath, JSON.stringify(filtered), 'utf-8')
 }
 
+async function removeRecentProject(projectPath: string): Promise<string[]> {
+  const recents = await loadRecentProjects()
+  const filtered = recents.filter((p) => p !== projectPath)
+  const filePath = await getRecentProjectsPath()
+  await fs.writeFile(filePath, JSON.stringify(filtered), 'utf-8')
+  return filtered
+}
+
 // ---------------------------------------------------------------------------
 // Window creation
 // ---------------------------------------------------------------------------
@@ -363,6 +371,15 @@ function registerIpcHandlers(): void {
       return { success: true, projects: valid }
     } catch (error: any) {
       return { success: false, error: error.message, projects: [] }
+    }
+  })
+
+  ipcMain.handle('project:removeRecent', async (_, projectPath: string) => {
+    try {
+      const updated = await removeRecentProject(projectPath)
+      return { success: true, projects: updated }
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   })
 

@@ -158,6 +158,18 @@ const mockApi: ElectronApi = {
       }
     },
 
+    removeRecent: async (projectPath: string): Promise<IpcResult> => {
+      try {
+        const raw = localStorage.getItem('recent-projects')
+        const projects: string[] = raw ? JSON.parse(raw) : []
+        const filtered = projects.filter((p) => p !== projectPath)
+        localStorage.setItem('recent-projects', JSON.stringify(filtered))
+        return { success: true, projects: filtered }
+      } catch {
+        return { success: true, projects: [] }
+      }
+    },
+
     new: async (data: { name: string; framework: string; directory?: string }): Promise<IpcResult> => {
       // In browser mode, just return a fresh project object
       const projectData = {

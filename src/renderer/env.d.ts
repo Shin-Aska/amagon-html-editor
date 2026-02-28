@@ -11,6 +11,7 @@ interface ElectronApi {
     openInBrowser: (filePath: string) => Promise<any>
     onExportProgress: (callback: (data: { written: number; total: number; path?: string }) => void) => () => void
     getRecent: () => Promise<any>
+    removeRecent: (path: string) => Promise<any>
     new: (data: { name: string; framework: string; directory?: string }) => Promise<any>
     getDir: () => Promise<any>
   }
