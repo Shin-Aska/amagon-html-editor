@@ -109,6 +109,8 @@ function Canvas(): JSX.Element {
   const theme = useEditorStore((s) => s.theme)
   const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
   const projectTheme = useProjectStore((s) => s.settings.theme)
+  const pages = useProjectStore((s) => s.pages)
+  const folders = useProjectStore((s) => s.folders)
 
   const blocksRef = useRef(blocks)
   useEffect(() => {
@@ -277,9 +279,9 @@ function Canvas(): JSX.Element {
 
   useEffect(() => {
     if (!runtimeReady) return
-    const html = blockToHtml(blocks, { includeDataAttributes: true })
+    const html = blockToHtml(blocks, { includeDataAttributes: true, pages, folders })
     postToIframe({ type: 'render', html })
-  }, [blocks, runtimeReady])
+  }, [blocks, runtimeReady, pages, folders])
 
   useEffect(() => {
     if (!runtimeReady) return

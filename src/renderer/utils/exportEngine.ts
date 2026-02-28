@@ -1,4 +1,4 @@
-import type { Block, FrameworkChoice, ProjectData } from '../store/types'
+import type { Block, Page, PageFolder, FrameworkChoice, ProjectData } from '../store/types'
 import { themeToCSS } from '../store/types'
 import { blockToHtml } from './blockToHtml'
 import { getApi } from './api'
@@ -142,7 +142,9 @@ export async function exportProject(
       includeStylesheet: hasCss && !options.inlineCss,
       inlineCssText: hasCss && options.inlineCss ? css : null,
       googleFonts: ctx.googleFonts,
-      includeJs: options.includeJs ?? true
+      includeJs: options.includeJs ?? true,
+      pages: project.pages,
+      folders: project.folders
     })
 
     const htmlRaw = replaceAssetTokens(rawHtml, ctx)
@@ -624,11 +626,15 @@ function buildPageHtml(params: {
   inlineCssText: string | null
   googleFonts: Set<string>
   includeJs: boolean
+  pages?: Page[]
+  folders?: PageFolder[]
 }): string {
   const bodyHtml = blockToHtml(params.bodyBlocks, {
     indent: 1,
     indentSize: 2,
-    includeDataAttributes: false
+    includeDataAttributes: false,
+    pages: params.pages,
+    folders: params.folders
   })
 
   const headParts: string[] = []

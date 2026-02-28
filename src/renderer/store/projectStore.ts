@@ -1,12 +1,14 @@
 import { create } from 'zustand'
-import type { Page, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme } from './types'
+import type { Page, PageFolder, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme } from './types'
 import { generateBlockId, createDefaultTheme } from './types'
+import { createPageHeaderBlock } from '../../shared/welcomeBlocks'
 
 // ─── Project State ───────────────────────────────────────────────────────────
 
 interface ProjectState {
   settings: ProjectSettings
   pages: Page[]
+  folders: PageFolder[]
   userBlocks: UserBlock[]
   currentPageId: string | null
   filePath: string | null
@@ -37,6 +39,14 @@ interface ProjectActions {
   setCurrentPage: (id: string) => void
   getCurrentPage: () => Page | null
   reorderPages: (fromIndex: number, toIndex: number) => void
+
+  // Folder management
+  addFolder: (name: string, tags?: string[]) => PageFolder
+  removeFolder: (id: string) => void
+  updateFolder: (id: string, patch: Partial<Omit<PageFolder, 'id'>>) => void
+
+  // Effective tags (page own tags + folder inherited tags)
+  getEffectiveTags: (page: Page) => string[]
 
   // User Blocks
   addUserBlock: (block: UserBlock) => void
@@ -94,6 +104,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
   return {
     settings: createDefaultSettings(),
     pages: [defaultPage],
+    folders: [],
     userBlocks: [],
     currentPageId: defaultPage.id,
     filePath: null,
@@ -116,6 +127,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set({
         settings: migratedSettings,
         pages: data.pages.length > 0 ? data.pages : [createDefaultPage()],
+        folders: data.folders || [],
         userBlocks: data.userBlocks || [],
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
         filePath: filePath ?? null,
@@ -144,6 +156,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       return {
         projectSettings: state.settings,
         pages: state.pages,
+        folders: state.folders,
         userBlocks: state.userBlocks
       }
     },
@@ -214,6 +227,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       const base = normalizeSlug(slug ?? title) || 'page'
       const unique = ensureUniqueSlug(base, state.pages)
       const created = createDefaultPage(title, unique)
+      created.blocks = createPageHeaderBlock(title) as any
 
       set({
         pages: [...state.pages, created],
@@ -257,6 +271,48 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         pages.splice(toIndex, 0, moved)
         return { pages }
       })
+    },
+
+    // ─── Folder management ───────────────────────────────────────────
+
+    addFolder: (name, tags) => {
+      const folder: PageFolder = {
+        id: generateBlockId(),
+        name,
+        tags: tags && tags.length > 0 ? tags : undefined
+      }
+      set((state) => ({
+        folders: [...state.folders, folder]
+      }))
+      return folder
+    },
+
+    removeFolder: (id) => {
+      set((state) => ({
+        folders: state.folders.filter((f) => f.id !== id),
+        // Unset folderId on pages that belonged to this folder
+        pages: state.pages.map((p) =>
+          p.folderId === id ? { ...p, folderId: undefined } : p
+        )
+      }))
+    },
+
+    updateFolder: (id, patch) => {
+      set((state) => ({
+        folders: state.folders.map((f) => (f.id === id ? { ...f, ...patch } : f))
+      }))
+    },
+
+    getEffectiveTags: (page) => {
+      const state = get()
+      const ownTags = page.tags ?? []
+      if (!page.folderId) return ownTags
+
+      const folder = state.folders.find((f) => f.id === page.folderId)
+      if (!folder || !folder.tags || folder.tags.length === 0) return ownTags
+
+      // Merge and deduplicate
+      return Array.from(new Set([...ownTags, ...folder.tags]))
     },
 
     // ─── User Blocks ─────────────────────────────────────────────────

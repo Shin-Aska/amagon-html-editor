@@ -184,33 +184,117 @@
   flex-shrink: 0;
 }
 
-.page-delete-btn {
-  width: 20px;
-  height: 20px;
+.page-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.page-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.page-item.active .page-tag {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.page-tag.inherited {
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  opacity: 0.65;
+  font-style: italic;
+}
+
+.page-item.active .page-tag.inherited {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.page-tag.folder-tag {
+  background: var(--color-accent);
+  color: white;
+  opacity: 0.75;
+}
+
+/* ── Folder group ─────────────────────────────────────── */
+
+.folder-group {
+  margin-bottom: 2px;
+}
+
+.folder-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: 16px;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  border-radius: var(--radius-sm);
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: background 0.15s ease;
+  user-select: none;
 }
 
-.page-item:hover .page-delete-btn {
-  opacity: 0.6;
+.folder-header:hover {
+  background: var(--color-bg-hover);
 }
 
-.page-item:hover .page-delete-btn:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.1);
+.folder-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text-secondary);
 }
 
-.page-item.active .page-delete-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+.folder-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-count {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  background: var(--color-bg-surface);
+  padding: 0 5px;
+  border-radius: 8px;
+  line-height: 16px;
+}
+
+.folder-children {
+  padding-left: 4px;
+}
+
+.page-item.indented {
+  padding-left: 28px;
+}
+
+.folder-empty {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 6px 28px;
+  font-style: italic;
+}
+
+/* ── Page action buttons ──────────────────────────────── */
+
+.page-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
 }
 
 .page-add-btn {
@@ -218,8 +302,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px;
-  margin-top: 8px;
+  padding: 8px;
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
   background: transparent;
@@ -233,23 +316,4 @@
   border-color: var(--color-accent);
   color: var(--color-accent);
   background: var(--color-bg-hover);
-}
-
-.page-add-form {
-  margin-top: 8px;
-}
-
-.page-add-input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  font-size: 13px;
-  outline: none;
-}
-
-.page-add-input:focus {
-  border-color: var(--color-accent);
 }

@@ -3,7 +3,7 @@ import hljs from 'highlight.js'
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 
-import type { Block } from '../store/types'
+import type { Block, Page, PageFolder } from '../store/types'
 
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
 
@@ -301,18 +301,22 @@ export interface BlockToHtmlOptions {
   indent?: number          // Starting indent level (default 0)
   indentSize?: number      // Spaces per indent (default 2)
   includeDataAttributes?: boolean  // Include data-block-id for editor use
+  pages?: Page[]           // Page list for components that use pages as datasource (e.g. navbar)
+  folders?: PageFolder[]   // Folder list for effective tag resolution
 }
 
 export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): string {
-  const { indent = 0, indentSize = 2, includeDataAttributes = false } = options
-  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes)).join('\n')
+  const { indent = 0, indentSize = 2, includeDataAttributes = false, pages, folders } = options
+  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, pages, folders)).join('\n')
 }
 
 function renderBlock(
   block: Block,
   indent: number,
   indentSize: number,
-  includeDataAttributes: boolean
+  includeDataAttributes: boolean,
+  pages?: Page[],
+  folders?: PageFolder[]
 ): string {
   const pad = ' '.repeat(indent * indentSize)
 
@@ -331,6 +335,59 @@ ${pad}  <label class="form-check-label" for="${id}">
 ${pad}    ${label}
 ${pad}  </label>
 ${pad}</div>`
+  }
+
+  // Special handling for Navbar with pages datasource
+  if (block.type === 'navbar' && block.props.usePages && pages && pages.length > 0) {
+    const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : ''
+    const classes = block.classes.join(' ')
+    const styleStr = stylesToString(block.styles)
+    const styleAttr = styleStr ? ` style="${styleStr}"` : ''
+    const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'))
+    const brandImage = String(block.props.brandImage || '').trim()
+    const filterTag = String(block.props.filterTag || '').trim()
+
+    // Helper to get effective tags for a page (own + folder inherited)
+    const getEffective = (p: Page): string[] => {
+      const own = p.tags ?? []
+      if (!p.folderId || !folders) return own
+      const folder = folders.find((f) => f.id === p.folderId)
+      if (!folder?.tags?.length) return own
+      return Array.from(new Set([...own, ...folder.tags]))
+    }
+
+    const filteredPages = filterTag
+      ? pages.filter((p) => getEffective(p).includes(filterTag))
+      : pages
+
+    const navLinks = filteredPages.map((p) => {
+      const href = p.slug === 'index' ? 'index.html' : `${p.slug}.html`
+      return `${pad}            <li class="nav-item"><a class="nav-link" href="${href}">${escapeAttrValue(p.title)}</a></li>`
+    }).join('\n')
+
+    const navbarId = `navbar-${block.id.replace(/[^a-zA-Z0-9]/g, '')}`
+
+    // Brand: image + text, image only, or text only
+    let brandHtml: string
+    if (brandImage) {
+      brandHtml = `<img src="${escapeAttrValue(brandImage)}" alt="${brandText}" height="30" class="d-inline-block align-text-top me-2">${brandText}`
+    } else {
+      brandHtml = brandText
+    }
+
+    return `${pad}<nav class="${classes}"${styleAttr} ${dataAttr}>
+${pad}  <div class="container">
+${pad}    <a class="navbar-brand" href="#">${brandHtml}</a>
+${pad}    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#${navbarId}" aria-controls="${navbarId}" aria-expanded="false" aria-label="Toggle navigation">
+${pad}      <span class="navbar-toggler-icon"></span>
+${pad}    </button>
+${pad}    <div class="collapse navbar-collapse" id="${navbarId}">
+${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+${navLinks}
+${pad}      </ul>
+${pad}    </div>
+${pad}  </div>
+${pad}</nav>`
   }
 
   // Special handling for Input/Textarea/Select (Form controls with labels)
@@ -485,7 +542,7 @@ ${pad}</div>`
 
   if (hasChildren) {
     for (const child of block.children) {
-      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes))
+      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders))
     }
   }
 
@@ -500,6 +557,8 @@ export interface PageHtmlOptions extends BlockToHtmlOptions {
   framework?: 'bootstrap-5' | 'tailwind' | 'vanilla'
   meta?: Record<string, string>
   customCss?: string
+  pages?: Page[]
+  folders?: PageFolder[]
 }
 
 export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): string {
@@ -511,7 +570,7 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
     ...blockOptions
   } = options
 
-  const bodyHtml = blockToHtml(blocks, { ...blockOptions, indent: 1 })
+  const bodyHtml = blockToHtml(blocks, { ...blockOptions, indent: 1, pages: options.pages, folders: options.folders })
 
   const metaTags = Object.entries(meta)
     .map(([name, content]) => `    <meta name="${escapeAttrValue(name)}" content="${escapeAttrValue(content)}">`)

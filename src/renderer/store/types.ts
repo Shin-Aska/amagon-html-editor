@@ -16,8 +16,16 @@ export interface Page {
   id: string
   title: string
   slug: string
+  tags?: string[]
+  folderId?: string
   blocks: Block[]
   meta: Record<string, string>
+}
+
+export interface PageFolder {
+  id: string
+  name: string
+  tags?: string[]
 }
 
 export interface UserBlock {
@@ -187,6 +195,7 @@ export interface ProjectSettings {
 export interface ProjectData {
   projectSettings: ProjectSettings
   pages: Page[]
+  folders?: PageFolder[]
   userBlocks: UserBlock[]
   isProjectLoaded?: boolean
 }

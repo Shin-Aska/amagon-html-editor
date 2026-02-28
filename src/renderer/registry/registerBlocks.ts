@@ -332,11 +332,12 @@ export function registerBlocks(): void {
     category: 'Components',
     icon: '≡',
     defaultClasses: ['navbar', 'navbar-expand-lg', 'bg-body-tertiary'],
-    // Pre-filled children logic will be handled in createBlock logic or via a special 'template' prop
-    // For now we rely on the hardcoded logic in App.tsx or move it here.
-    // Let's attach the structure as a special "defaultChildren" property or similar if possible.
-    // Since types.ts Block definition is recursive, we can construct it.
-    // But ComponentRegistry definition uses `defaultChildren?: any[]`.
+    defaultProps: {
+      brandText: 'Brand',
+      brandImage: '',
+      usePages: true,
+      filterTag: ''
+    },
     defaultChildren: [
       {
         type: 'container',
@@ -347,6 +348,10 @@ export function registerBlocks(): void {
       }
     ],
     propsSchema: {
+      brandText: { type: 'text', label: 'Brand Text', default: 'Brand' },
+      brandImage: { type: 'text', label: 'Brand Image URL (optional)', default: '' },
+      usePages: { type: 'boolean', label: 'Use Pages as Links', default: true },
+      filterTag: { type: 'text', label: 'Filter by Tag (optional)', default: '' },
       theme: {
         type: 'select',
         label: 'Theme',

@@ -5,6 +5,7 @@ import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
 import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
+import { createWelcomeBlocks } from '../shared/welcomeBlocks'
 
 const { app, ipcMain, protocol, dialog, shell, net } = electron
 const BrowserWindowCtor = electron.BrowserWindow
@@ -716,7 +717,8 @@ function registerIpcHandlers(): void {
               id: `page_${Date.now().toString(36)}`,
               title: 'Home',
               slug: 'index',
-              blocks: [],
+              tags: ['nav'],
+              blocks: createWelcomeBlocks(data.name),
               meta: {
                 charset: 'UTF-8',
                 viewport: 'width=device-width, initial-scale=1.0',
@@ -724,6 +726,7 @@ function registerIpcHandlers(): void {
               }
             }
           ],
+          folders: [],
           userBlocks: []
         }
 

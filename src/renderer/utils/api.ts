@@ -3,6 +3,7 @@
 // For now, uses browser APIs (localStorage, File API, download links).
 
 import { createDefaultTheme } from '../store/types'
+import { createWelcomeBlocks } from '../../shared/welcomeBlocks'
 
 export interface IpcResult {
   success: boolean
@@ -184,7 +185,8 @@ const mockApi: ElectronApi = {
             id: `page_${Date.now().toString(36)}`,
             title: 'Home',
             slug: 'index',
-            blocks: [],
+            tags: ['nav'],
+            blocks: createWelcomeBlocks(data.name),
             meta: {
               charset: 'UTF-8',
               viewport: 'width=device-width, initial-scale=1.0',
@@ -192,6 +194,7 @@ const mockApi: ElectronApi = {
             }
           }
         ],
+        folders: [],
         userBlocks: []
       }
       return { success: true, filePath: 'project.json', content: projectData }
