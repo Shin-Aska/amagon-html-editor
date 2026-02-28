@@ -134,6 +134,7 @@ function Sidebar(): JSX.Element {
   const [dragPageId, setDragPageId] = useState<string | null>(null)
   const [dropTargetId, setDropTargetId] = useState<string | null>(null)
   const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null)
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null)
   const dragPageIdRef = useRef<string | null>(null)
 
   // Define a specific order for categories if desired, or just use the insertion order
@@ -309,6 +310,10 @@ function Sidebar(): JSX.Element {
     const draggedId = getDraggedPageId(e)
     if (!draggedId || draggedId === targetPageId) return
 
+    const draggedPage = pages.find((p) => p.id === draggedId)
+    const targetPage = pages.find((p) => p.id === targetPageId)
+    if (!draggedPage || !targetPage) return
+
     const fromIndex = pages.findIndex((p) => p.id === draggedId)
     let toIndex = pages.findIndex((p) => p.id === targetPageId)
     if (fromIndex === -1 || toIndex === -1) return
@@ -322,10 +327,19 @@ function Sidebar(): JSX.Element {
     if (fromIndex < toIndex) toIndex -= 1
     if (fromIndex !== toIndex) reorderPages(fromIndex, toIndex)
 
+    const targetFolderId = targetPage.folderId ?? undefined
+    if ((draggedPage.folderId ?? undefined) !== targetFolderId) {
+      updatePage(draggedId, { folderId: targetFolderId })
+      if (targetFolderId) {
+        setExpandedFolders((prev) => new Set([...prev, targetFolderId]))
+      }
+    }
+
     dragPageIdRef.current = null
     setDragPageId(null)
     setDropTargetId(null)
     setDropPosition(null)
+    setDropTargetFolderId(null)
   }
 
   const handlePageDragEnd = () => {
@@ -333,6 +347,48 @@ function Sidebar(): JSX.Element {
     setDragPageId(null)
     setDropTargetId(null)
     setDropPosition(null)
+    setDropTargetFolderId(null)
+  }
+
+  const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
+    const draggedId = dragPageIdRef.current
+    if (!draggedId) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDropTargetFolderId(folderId)
+    setDropTargetId(null)
+    setDropPosition(null)
+  }
+
+  const handleFolderDrop = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault()
+    const draggedId = dragPageIdRef.current
+    if (!draggedId) return
+    const draggedPage = pages.find(p => p.id === draggedId)
+    if (!draggedPage || draggedPage.folderId === folderId) {
+      // No-op if page already in this folder
+      dragPageIdRef.current = null
+      setDragPageId(null)
+      setDropTargetId(null)
+      setDropPosition(null)
+      setDropTargetFolderId(null)
+      return
+    }
+    updatePage(draggedId, { folderId })
+    // Auto-expand folder
+    setExpandedFolders(prev => new Set([...prev, folderId]))
+    // Reset drag state
+    dragPageIdRef.current = null
+    setDragPageId(null)
+    setDropTargetId(null)
+    setDropPosition(null)
+    setDropTargetFolderId(null)
+  }
+
+  const handleFolderDragLeave = (e: React.DragEvent, folderId: string) => {
+    if (dropTargetFolderId === folderId) {
+      setDropTargetFolderId(null)
+    }
   }
 
   const renderPageItem = (page: typeof pages[0], indented = false) => {
@@ -431,9 +487,12 @@ function Sidebar(): JSX.Element {
                 return (
                   <div key={folder.id} className="folder-group">
                     <div
-                      className="folder-header"
+                      className={`folder-header${dropTargetFolderId === folder.id ? ' folder-drop-target' : ''}`}
                       onClick={() => toggleFolder(folder.id)}
                       onContextMenu={(e) => handleFolderContextMenu(e, folder.id)}
+                      onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                      onDrop={(e) => handleFolderDrop(e, folder.id)}
+                      onDragLeave={(e) => handleFolderDragLeave(e, folder.id)}
                     >
                       <div className="folder-info">
                         {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -462,7 +521,48 @@ function Sidebar(): JSX.Element {
               })}
 
               {/* Ungrouped pages */}
-              {ungroupedPages.map((page) => renderPageItem(page))}
+              <div
+                className={`ungrouped-drop-zone${dropTargetFolderId === '__root__' ? ' drop-active' : ''}`}
+                onDragOver={(e) => {
+                  const draggedId = dragPageIdRef.current
+                  if (draggedId) {
+                    e.preventDefault()
+                    e.dataTransfer.dropEffect = 'move'
+                    setDropTargetFolderId('__root__')
+                    setDropTargetId(null)
+                    setDropPosition(null)
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const draggedId = dragPageIdRef.current
+                  if (!draggedId) return
+                  const draggedPage = pages.find(p => p.id === draggedId)
+                  if (!draggedPage || draggedPage.folderId === undefined) {
+                    // No-op if page already ungrouped
+                    dragPageIdRef.current = null
+                    setDragPageId(null)
+                    setDropTargetId(null)
+                    setDropPosition(null)
+                    setDropTargetFolderId(null)
+                    return
+                  }
+                  updatePage(draggedId, { folderId: undefined })
+                  // Reset drag state
+                  dragPageIdRef.current = null
+                  setDragPageId(null)
+                  setDropTargetId(null)
+                  setDropPosition(null)
+                  setDropTargetFolderId(null)
+                }}
+                onDragLeave={() => {
+                  if (dropTargetFolderId === '__root__') {
+                    setDropTargetFolderId(null)
+                  }
+                }}
+              >
+                {ungroupedPages.map((page) => renderPageItem(page))}
+              </div>
             </div>
 
             <div className="page-actions">

@@ -331,3 +331,22 @@
 .page-item.drop-below {
   border-bottom: 2px solid var(--color-accent);
 }
+
+/* ── Folder drop targets ───────────────────────────────── */
+
+.folder-header.folder-drop-target {
+  background: var(--color-bg-hover);
+  border: 2px dashed var(--color-accent);
+  border-radius: var(--radius-md);
+}
+
+.folder-header.folder-drop-target .folder-info {
+  color: var(--color-accent);
+}
+
+.ungrouped-drop-zone.drop-active {
+  border: 2px dashed var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-hover);
+  min-height: 32px;
+}
