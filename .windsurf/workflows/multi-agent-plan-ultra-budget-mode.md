@@ -1,6 +1,6 @@
 ---
 description: multi-agent planning via claude opus 4.6 with ultra budget executors
-auto_execution_mode: 3
+auto_execution_mode: 0
 ---
 
 ## Overview
@@ -9,6 +9,8 @@ Use this workflow when you want **Claude Opus 4.6** to design the overall plan, 
 Because the executor models are more limited, the plan must be **extremely explicit, broken into small verifiable tasks, and anchored to file paths**.
 
 The key requirement: **Claude must output a Markdown checkbox plan** (not prose) that you can execute phase-by-phase with other agents.
+
+This workflow is **plan-only**: it must end after writing the plan to `plan.md`. Execution happens in a separate workflow.
 
 ## Steps
 1. **Collect current context**
@@ -26,18 +28,12 @@ The key requirement: **Claude must output a Markdown checkbox plan** (not prose)
    - Ensure tasks are small enough for ultra-budget executors.
    - Ensure every checkbox is verifiable and references concrete files/identifiers.
    - Lock the plan before delegating work.
-4. **Delegate execution to specialized agents**
-   - For each phase, paste the handoff prompt into the assigned agent.
-   - Keep the plan as the single source of truth; check off items as they’re completed.
-5. **Integrate results**
-   - Verify each deliverable against acceptance criteria.
-   - Run tests/demos.
-   - If issues appear:
-     - Re-brief the same executor with the failing acceptance criteria, OR
-     - Escalate to Opus to replan.
-6. **Close out**
-   - Summarize what was delivered, remaining risks, and follow-up items.
-   - Store the plan + transcripts for future reference.
+4. **Write the plan to `plan.md` (repo root)**
+   - Save Claude’s output verbatim into `plan.md`.
+   - Ensure the plan is Markdown with checkboxes.
+5. **Stop**
+   - Do not execute any phases in this workflow.
+   - Next: run the `/execute-plan` workflow to execute the next phase (or a user-specified phase).
 
 ## Claude Opus prompt template (ultra-budget, strictest)
 Copy/paste the following into Claude Opus 4.6. Replace the bracketed sections.
@@ -66,7 +62,7 @@ Hard requirements (must follow exactly):
    - **Validation:** explicit commands (if applicable) + manual verification steps
 7) Include a "Risks / Edge Cases" section as a checklist (so we can track mitigations).
 8) Include a Dependency Graph section and a Recommended Execution Order table.
-9) Include a Handoff Prompts section: for each Phase, provide a one-line message I can paste into the assigned agent, e.g. "Execute Phase 3 of plan.md".
+9) Include a Handoff Prompts section: for each Phase, provide a one-line message I can paste into the assigned agent, e.g. "Run /execute-plan Phase 3".
 10) No vague tasks like "improve" or "polish". Replace them with concrete UI/behavior changes.
 
 Project context:

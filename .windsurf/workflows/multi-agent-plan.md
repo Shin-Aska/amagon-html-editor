@@ -1,12 +1,14 @@
 ---
 description: multi-agent planning via claude opus 4.6 with specialized executors
-auto_execution_mode: 3
+auto_execution_mode: 0
 ---
 
 ## Overview
 Use this workflow when you want Claude Opus 4.6 to design the overall plan, then hand off each task to the agent best suited for it.
 
 The key requirement: **Claude must output a Markdown checkbox plan** (not prose) that you can execute phase-by-phase with other agents.
+
+This workflow is **plan-only**: it must end after writing the plan to `plan.md`. Execution happens in a separate workflow.
 
 ## Steps
 1. **Collect current context**
@@ -20,19 +22,12 @@ The key requirement: **Claude must output a Markdown checkbox plan** (not prose)
    - Sanity-check scope, ordering, and dependencies.
    - If adjustments are needed, iterate with Claude until the plan is actionable.
    - Lock the plan before delegating work.
-4. **Delegate execution to specialized agents**
-   - For each task, brief the selected agent with:
-     - The relevant slice of the plan and context.
-     - Input/output expectations.
-     - Any artifacts from previous steps.
-   - Capture agent outputs and feed them back into the shared plan log.
-5. **Integrate results**
-   - Verify each deliverable against the plan’s success criteria.
-   - Run tests or demos as required.
-   - If issues appear, either loop back with the same agent or escalate to Claude for replanning.
-6. **Close out**
-   - Summarize what was delivered, remaining risks, and follow-up items.
-   - Store the plan + transcripts for future reference.
+4. **Write the plan to `plan.md` (repo root)**
+   - Save Claude’s output verbatim into `plan.md`.
+   - Ensure the plan is Markdown with checkboxes.
+5. **Stop**
+   - Do not execute any phases in this workflow.
+   - Next: run the `/execute-plan` workflow to execute the next phase (or a user-specified phase).
 
 ## Claude Opus prompt template (forces checkbox plan)
 Copy/paste the following into Claude Opus 4.6. Replace the bracketed sections.
@@ -53,7 +48,7 @@ Hard requirements (must follow exactly):
    - Acceptance Criteria section as a checklist
    - Validation steps (tests to run, manual verification)
 6) Include a Dependency Graph section and a Recommended Execution Order table.
-7) Include a Handoff Prompts section: for each Phase, provide a one-line message I can paste into the assigned agent, e.g. "Execute Phase 3 of plan.md".
+7) Include a Handoff Prompts section: for each Phase, provide a one-line message I can paste into the assigned agent, e.g. "Run /execute-plan Phase 3".
 8) Keep it actionable: no vague tasks like "improve" or "polish". Prefer file paths, components, and APIs.
 9) Every phase must only be assign to one agent. You cannot have multiple agents working on the same phase (that also means you cannot have subtasks assigned to different agents)
 
