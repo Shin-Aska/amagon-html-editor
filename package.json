@@ -103,7 +103,8 @@
     "publish": {
       "provider": "github",
       "owner": "Shin-Aska",
-      "repo": "amagon-html-editor"
+      "repo": "amagon-html-editor",
+      "releaseType": "release"
     }
   }
 }
