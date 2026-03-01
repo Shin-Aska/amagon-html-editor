@@ -8,6 +8,10 @@ on:
   # Allows you to trigger the build manually from the GitHub Actions tab
   workflow_dispatch:
 
+# Grant the GITHUB_TOKEN permission to create releases and upload assets
+permissions:
+  contents: write
+
 jobs:
   release:
     # Use a matrix to run the job on different OS virtual machines
