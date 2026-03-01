@@ -254,4 +254,4 @@ Over time, it became a badge of honor among the contributors: **"Amagon is what 
 
 ## License
 
-Private / internal project.
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE.txt](LICENSE.txt) file for details.
