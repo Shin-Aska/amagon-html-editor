@@ -37,6 +37,14 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Delete existing release (if any)
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          delete_release: true
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Code
         run: npm run build
 
