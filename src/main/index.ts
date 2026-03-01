@@ -118,6 +118,7 @@ async function createWindow(): Promise<void> {
     minWidth: 900,
     minHeight: 600,
     title: 'Amagon',
+    icon: path.join(__dirname, process.platform === 'win32' ? '../../assets/app.ico' : '../../assets/app.png'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.mjs'),
       nodeIntegration: false,
@@ -224,6 +225,15 @@ function stopAutoSave(): void {
 // ---------------------------------------------------------------------------
 
 function registerIpcHandlers(): void {
+  // ── Menu State ─────────────────────────────────────────────────────────
+
+  ipcMain.handle('menu:setProjectLoaded', (_, isLoaded: boolean) => {
+    if (mainWindow) {
+      const menu = buildAppMenu(mainWindow, isLoaded)
+      Menu.setApplicationMenu(menu)
+    }
+  })
+
   // ── 8.2  Project Save ────────────────────────────────────────────────────
 
   ipcMain.handle(
@@ -908,7 +918,7 @@ app.whenReady().then(async () => {
   await createWindow()
 
   if (mainWindow) {
-    const menu = buildAppMenu(mainWindow)
+    const menu = buildAppMenu(mainWindow, false)
     Menu.setApplicationMenu(menu)
   }
 

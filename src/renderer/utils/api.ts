@@ -338,6 +338,10 @@ const mockApi: ElectronApi = {
   },
 
   menu: {
+    setProjectLoaded: async (_isLoaded: boolean): Promise<any> => {
+      // No-op in browser mode
+      return { success: true }
+    },
     onAction: (_callback: (action: string) => void) => {
       // No-op in browser mode — menus are Electron-only
       return () => { }

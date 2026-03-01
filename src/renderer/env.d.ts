@@ -30,6 +30,7 @@ interface ElectronApi {
     onTick: (callback: () => void) => () => void
   }
   menu: {
+    setProjectLoaded: (isLoaded: boolean) => Promise<any>
     onAction: (callback: (action: string) => void) => () => void
   }
   ai: {

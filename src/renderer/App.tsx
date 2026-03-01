@@ -35,14 +35,15 @@ const AssetManager = lazy(() => import('./components/AssetManager/AssetManager')
 const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'))
 const ExportDialog = lazy(() => import('./components/ExportDialog/ExportDialog'))
 const ThemeEditor = lazy(() => import('./components/ThemeEditor/ThemeEditor'))
+const AboutAmagon = lazy(() => import('./components/AboutAmagon/AboutAmagon'))
 
 // Loading fallback component
 const DialogLoader = () => (
-  <div style={{ 
-    position: 'fixed', 
-    inset: 0, 
-    display: 'flex', 
-    alignItems: 'center', 
+  <div style={{
+    position: 'fixed',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
     justifyContent: 'center',
     background: 'rgba(0,0,0,0.5)',
     zIndex: 9999
@@ -57,7 +58,7 @@ function App(): JSX.Element {
   const api = getApi()
 
   const showToast = useToastStore((s) => s.showToast)
-  
+
   const [codeEditorOpen, setCodeEditorOpen] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
@@ -65,6 +66,7 @@ function App(): JSX.Element {
   const [showExport, setShowExport] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showThemeEditor, setShowThemeEditor] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
 
   const addBlock = useEditorStore((s) => s.addBlock)
   const selectBlock = useEditorStore((s) => s.selectBlock)
@@ -106,6 +108,13 @@ function App(): JSX.Element {
 
     prevPageIdRef.current = nextPageId
   }, [currentPageId, isProjectLoaded])
+
+  // Sync menu state with the main process based on project load status
+  useEffect(() => {
+    if (window.api && window.api.menu && window.api.menu.setProjectLoaded) {
+      window.api.menu.setProjectLoaded(isProjectLoaded)
+    }
+  }, [isProjectLoaded, api])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -164,7 +173,7 @@ function App(): JSX.Element {
       projectState.updatePage(pageId, { blocks: editorState.blocks })
     }
     const filePath = projectState.filePath
-    
+
     try {
       const result = await api.project.save({ filePath: filePath || undefined, content })
       if (result.success && result.filePath) {
@@ -208,7 +217,7 @@ function App(): JSX.Element {
     if (pageId) {
       projectState.updatePage(pageId, { blocks: editorState.blocks })
     }
-    
+
     try {
       const result = await api.project.saveAs({ content })
       if (result.success && result.filePath) {
@@ -340,6 +349,7 @@ function App(): JSX.Element {
         case 'toggle-code-editor': setCodeEditorOpen(prev => !prev); break
         case 'command-palette': setCommandPaletteOpen(prev => !prev); break
         case 'keyboard-shortcuts': setShowKeyboardShortcuts(prev => !prev); break
+        case 'about': setShowAbout(true); break
       }
     })
     return cleanup
@@ -484,68 +494,77 @@ function App(): JSX.Element {
     )
   }, [activeWidget])
 
-  if (!isProjectLoaded) {
-    return <WelcomeScreen />
+  const renderEditorContent = () => {
+    if (!isProjectLoaded) {
+      return <WelcomeScreen />
+    }
+
+    return (
+      <DndContext sensors={sensors} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
+        <div className="app-container">
+          <Toolbar
+            leftPanelOpen={showSidebar}
+            rightPanelOpen={showInspector}
+            codeEditorOpen={codeEditorOpen}
+            editorLayout={editorLayout}
+            onToggleLeftPanel={handleToggleSidebar}
+            onToggleRightPanel={handleToggleInspector}
+            onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
+            onSetEditorLayout={setEditorLayout}
+            onOpenThemeEditor={() => setShowThemeEditor(true)}
+          />
+          <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            {showSidebar && (
+              <>
+                <Panel defaultSize={20} minSize={15} maxSize={40} className="panel panel-left" id="panel-left" order={1}>
+                  <Sidebar />
+                </Panel>
+                <PanelResizeHandle className="panel-resize-handle" />
+              </>
+            )}
+
+            <Panel className="panel panel-center" id="panel-center" order={2}>
+              <PanelGroup id="html-editor-center" autoSaveId="html-editor-center" direction="vertical">
+                {showCanvas && (
+                  <Panel className="canvas-area" id="panel-canvas" order={1}>
+                    <Canvas />
+                    <DragOverlayManager onDropTargetChange={setDropHint} />
+                  </Panel>
+                )}
+
+                {showCodeEditor && showCanvas && (
+                  <PanelResizeHandle className="panel-resize-handle-horizontal" />
+                )}
+
+                {showCodeEditor && (
+                  <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code" order={2}>
+                    <Suspense fallback={<div style={{ padding: 20 }}>Loading editor...</div>}>
+                      <CodeEditor />
+                    </Suspense>
+                  </Panel>
+                )}
+              </PanelGroup>
+            </Panel>
+
+            {showInspector && (
+              <>
+                <PanelResizeHandle className="panel-resize-handle" />
+                <Panel defaultSize={25} minSize={20} maxSize={45} className="panel panel-right" id="panel-right" order={3}>
+                  <Inspector />
+                </Panel>
+              </>
+            )}
+          </PanelGroup>
+          <StatusBar />
+        </div>
+        <DragOverlay dropAnimation={null}>{dragOverlayPreview}</DragOverlay>
+      </DndContext>
+    )
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragCancel={onDragCancel} onDragEnd={onDragEnd}>
-      <div className="app-container">
-        <Toolbar
-          leftPanelOpen={showSidebar}
-          rightPanelOpen={showInspector}
-          codeEditorOpen={codeEditorOpen}
-          editorLayout={editorLayout}
-          onToggleLeftPanel={handleToggleSidebar}
-          onToggleRightPanel={handleToggleInspector}
-          onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
-          onSetEditorLayout={setEditorLayout}
-          onOpenThemeEditor={() => setShowThemeEditor(true)}
-        />
-        <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {showSidebar && (
-            <>
-              <Panel defaultSize={20} minSize={15} maxSize={40} className="panel panel-left" id="panel-left" order={1}>
-                <Sidebar />
-              </Panel>
-              <PanelResizeHandle className="panel-resize-handle" />
-            </>
-          )}
-
-          <Panel className="panel panel-center" id="panel-center" order={2}>
-            <PanelGroup id="html-editor-center" autoSaveId="html-editor-center" direction="vertical">
-              {showCanvas && (
-                <Panel className="canvas-area" id="panel-canvas" order={1}>
-                  <Canvas />
-                  <DragOverlayManager onDropTargetChange={setDropHint} />
-                </Panel>
-              )}
-
-              {showCodeEditor && showCanvas && (
-                <PanelResizeHandle className="panel-resize-handle-horizontal" />
-              )}
-
-              {showCodeEditor && (
-                <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code" order={2}>
-                  <Suspense fallback={<div style={{ padding: 20 }}>Loading editor...</div>}>
-                    <CodeEditor />
-                  </Suspense>
-                </Panel>
-              )}
-            </PanelGroup>
-          </Panel>
-
-          {showInspector && (
-            <>
-              <PanelResizeHandle className="panel-resize-handle" />
-              <Panel defaultSize={25} minSize={20} maxSize={45} className="panel panel-right" id="panel-right" order={3}>
-                <Inspector />
-              </Panel>
-            </>
-          )}
-        </PanelGroup>
-        <StatusBar />
-      </div>
+    <>
+      {renderEditorContent()}
 
       <Toast />
 
@@ -595,8 +614,24 @@ function App(): JSX.Element {
         )}
       </Suspense>
 
-      <DragOverlay dropAnimation={null}>{dragOverlayPreview}</DragOverlay>
-    </DndContext>
+      <Suspense fallback={<DialogLoader />}>
+        {showAbout && (
+          <AboutAmagon
+            isOpen={showAbout}
+            onClose={() => setShowAbout(false)}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={<DialogLoader />}>
+        {showAbout && (
+          <AboutAmagon
+            isOpen={showAbout}
+            onClose={() => setShowAbout(false)}
+          />
+        )}
+      </Suspense>
+    </>
   )
 }
 

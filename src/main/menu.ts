@@ -3,7 +3,7 @@ import { Menu, type BrowserWindow } from 'electron'
 const isMac = process.platform === 'darwin'
 const mod = isMac ? 'Cmd' : 'Ctrl'
 
-export function buildAppMenu(mainWindow: BrowserWindow): Menu {
+export function buildAppMenu(mainWindow: BrowserWindow, isProjectLoaded: boolean = false): Menu {
   const send = (action: string) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('menu:action', action)
@@ -28,23 +28,27 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
         {
           label: 'Close Project',
           accelerator: `${mod}+W`,
+          enabled: isProjectLoaded,
           click: () => send('close-project')
         },
         { type: 'separator' },
         {
           label: 'Save',
           accelerator: 'CmdOrCtrl+S',
+          enabled: isProjectLoaded,
           click: () => send('save')
         },
         {
           label: 'Save As',
           accelerator: 'CmdOrCtrl+Shift+S',
+          enabled: isProjectLoaded,
           click: () => send('save-as')
         },
         { type: 'separator' },
         {
           label: 'Export',
           accelerator: 'CmdOrCtrl+E',
+          enabled: isProjectLoaded,
           click: () => send('export')
         },
         { type: 'separator' },
@@ -59,38 +63,45 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
         {
           label: 'Undo',
           accelerator: 'CmdOrCtrl+Z',
+          enabled: isProjectLoaded,
           click: () => send('undo')
         },
         {
           label: 'Redo',
           accelerator: 'CmdOrCtrl+Shift+Z',
+          enabled: isProjectLoaded,
           click: () => send('redo')
         },
         { type: 'separator' },
         {
           label: 'Cut',
           accelerator: 'CmdOrCtrl+X',
+          enabled: isProjectLoaded,
           click: () => send('cut')
         },
         {
           label: 'Copy',
           accelerator: 'CmdOrCtrl+C',
+          enabled: isProjectLoaded,
           click: () => send('copy')
         },
         {
           label: 'Paste',
           accelerator: 'CmdOrCtrl+V',
+          enabled: isProjectLoaded,
           click: () => send('paste')
         },
         {
           label: 'Duplicate',
           accelerator: 'CmdOrCtrl+D',
+          enabled: isProjectLoaded,
           click: () => send('duplicate')
         },
         { type: 'separator' },
         {
           label: 'Delete',
           accelerator: 'Delete',
+          enabled: isProjectLoaded,
           click: () => send('delete')
         }
       ]
@@ -103,22 +114,26 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
         {
           label: 'Toggle Sidebar',
           accelerator: 'CmdOrCtrl+\\',
+          enabled: isProjectLoaded,
           click: () => send('toggle-sidebar')
         },
         {
           label: 'Toggle Inspector',
           accelerator: 'CmdOrCtrl+/',
+          enabled: isProjectLoaded,
           click: () => send('toggle-inspector')
         },
         {
           label: 'Toggle Code Editor',
           accelerator: 'CmdOrCtrl+E',
+          enabled: isProjectLoaded,
           click: () => send('toggle-code-editor')
         },
         { type: 'separator' },
         {
           label: 'Command Palette',
           accelerator: 'CmdOrCtrl+K',
+          enabled: isProjectLoaded,
           click: () => send('command-palette')
         },
         { type: 'separator' },
@@ -157,7 +172,7 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
           role: 'toggleDevTools'
         },
         {
-          label: 'About Hoarses',
+          label: 'About Amagon',
           click: () => send('about')
         }
       ]
@@ -167,7 +182,7 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
   // macOS: prepend app menu
   if (isMac) {
     template.unshift({
-      label: 'Hoarses',
+      label: 'Amagon',
       submenu: [
         { role: 'about' },
         { type: 'separator' },

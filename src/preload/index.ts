@@ -79,6 +79,9 @@ const api = {
   },
 
   menu: {
+    setProjectLoaded: (isLoaded: boolean) =>
+      ipcRenderer.invoke('menu:setProjectLoaded', isLoaded),
+
     onAction: (callback: (action: string) => void) => {
       const handler = (_event: any, action: string) => {
         callback(action)

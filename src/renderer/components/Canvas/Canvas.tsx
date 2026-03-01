@@ -337,7 +337,7 @@ function Canvas(): JSX.Element {
         <iframe
           ref={iframeRef}
           className="canvas-iframe"
-          src="/canvas.html"
+          src="./canvas.html"
           title="Page Preview"
           sandbox="allow-scripts allow-same-origin"
         />
