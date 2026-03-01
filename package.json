@@ -99,6 +99,11 @@
         }
       ],
       "category": "Development"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Shin-Aska",
+      "repo": "hoarses-html-editor"
     }
   }
 }
