@@ -103,7 +103,7 @@
     "publish": {
       "provider": "github",
       "owner": "Shin-Aska",
-      "repo": "hoarses-html-editor"
+      "repo": "amagon-html-editor"
     }
   }
 }
