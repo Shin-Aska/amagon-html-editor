@@ -91,21 +91,6 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **Preview in Browser**: one-click preview of exported pages in your default browser
 - **Lazy Loading**: Heavy components (code editor, dialogs) are code-split and lazy-loaded for fast startup
 
-## Tech Stack
-
-- **Electron** — Cross-platform desktop app framework
-- **Vite** — Fast development and building
-- **React** — UI component library
-- **TypeScript** — Type-safe JavaScript
-- **Zustand** — Lightweight state management
-- **Monaco Editor** — VS Code's editor component
-- **highlight.js** — Syntax highlighting for code blocks
-- **dnd-kit** — Modern drag and drop primitives
-- **Lucide React** — Icon library
-- **react-resizable-panels** — Resizable split panes
-- **parse5** — HTML parsing for bidirectional code sync
-- **Bootstrap 5** — Default CSS framework for generated pages
-
 ## Getting Started
 
 ### Prerequisites
@@ -134,6 +119,31 @@ npm run dist:linux   # AppImage + .deb
 npm run dist:mac     # .dmg (x64 + arm64)
 npm run dist:win     # NSIS installer (x64)
 ```
+
+## System Requirements & Compatibility
+
+Amagon targets standard Windows 10/11 and mainstream Linux distributions. Custom "debloated" Windows builds like ReviOS apply an aggressive playbook that removes and disables many bundled apps and system components.
+
+According to the ReviOS documentation, the playbook can:
+
+- Remove Microsoft Edge and related runtimes (for example `Microsoft.MicrosoftEdge.Stable`, `MicrosoftEdgeDevToolsClient`, and the Edge/WebView runtime)
+- Remove large sets of UWP / APPX applications and their supporting services
+- Strip additional system packages via WinSxS removal (telemetry, error reporting, targeted content, Defender, and more)
+- Prevent Windows Update from reinstalling the removed packages (from the 23.12 playbook onward)
+
+These changes mean a ReviOS system is **not equivalent** to a stock Windows installation. Electron/Chromium‑based desktop apps like Amagon expect a relatively complete and up‑to‑date Windows environment; when core components or services are missing or altered, this can show up as:
+
+- Buttons or controls that don’t respond to clicks
+- Layout, fonts, or theming that look broken or incomplete
+- Dialogs, external links, or embedded web content failing to open
+
+If Amagon’s UI appears broken on ReviOS but works correctly on a standard Windows install, the most likely cause is missing or modified OS components rather than an Amagon bug.
+
+**Recommendations**
+
+- Prefer a standard, fully supported Windows 10/11 installation (or Linux) for running Amagon.
+- On ReviOS, try restoring removed components (especially Microsoft Edge / WebView runtime, system fonts, and related packages) using the Revision Tool, and ensure GPU drivers are up to date.
+- When reporting issues, please verify that the problem reproduces on a stock Windows or Linux environment. ReviOS‑specific problems are currently outside the project’s official support scope.
 
 ## AI Setup
 
@@ -192,6 +202,21 @@ src/
 │   └── utils/           # Utility functions
 └── types/               # TypeScript types
 ```
+
+## Tech Stack
+
+- **Electron** — Cross-platform desktop app framework
+- **Vite** — Fast development and building
+- **React** — UI component library
+- **TypeScript** — Type-safe JavaScript
+- **Zustand** — Lightweight state management
+- **Monaco Editor** — VS Code's editor component
+- **highlight.js** — Syntax highlighting for code blocks
+- **dnd-kit** — Modern drag and drop primitives
+- **Lucide React** — Icon library
+- **react-resizable-panels** — Resizable split panes
+- **parse5** — HTML parsing for bidirectional code sync
+- **Bootstrap 5** — Default CSS framework for generated pages
 
 ## Architecture
 
