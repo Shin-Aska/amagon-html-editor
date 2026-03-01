@@ -2,6 +2,7 @@
   "name": "hoarses-html-editor",
   "version": "0.1.0",
   "description": "Amagon — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
+  "author": "Shin-Aska <Orillarichard@pm.me>",
   "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
