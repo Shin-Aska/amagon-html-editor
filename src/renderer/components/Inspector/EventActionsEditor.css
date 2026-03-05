@@ -113,13 +113,15 @@
     top: 100%;
     left: 0;
     right: 0;
-    background: var(--surface);
+    background: #2a2b38;
+    /* Solid background instead of var(--surface) which might be translucent */
     border: 1px solid var(--border);
     border-radius: 4px;
     z-index: 100;
     max-height: 200px;
     overflow-y: auto;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    /* Stronger shadow for separation */
     margin-top: 2px;
 }
 
