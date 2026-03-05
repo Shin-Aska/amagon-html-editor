@@ -34,7 +34,8 @@ import {
   Megaphone,
   AppWindow,
   FileCode,
-  Globe
+  Globe,
+  Newspaper
 } from 'lucide-react'
 
 interface BlockIconProps {
@@ -49,20 +50,20 @@ const ICONS: Record<string, any> = {
   'column': Columns,
   'divider': Minus,
   'section': LayoutTemplate,
-  
+
   // Typography
   'heading': Heading,
   'paragraph': Type,
   'blockquote': Quote,
   'code-block': Braces,
   'list': List,
-  
+
   // Media
   'image': Image,
   'video': Video,
   'icon': Star,
   'carousel': GalleryHorizontal,
-  
+
   // Interactive
   'button': MousePointerClick,
   'link': Link,
@@ -71,7 +72,7 @@ const ICONS: Record<string, any> = {
   'textarea': AlignLeft,
   'checkbox': CheckSquare,
   'select': ChevronDown,
-  
+
   // Components
   'navbar': PanelTop,
   'hero': Sparkles,
@@ -83,11 +84,13 @@ const ICONS: Record<string, any> = {
   'testimonial': MessageCircle,
   'cta-section': Megaphone,
   'modal': AppWindow,
-  
+  'blog-list': Newspaper,
+  'page-list': Newspaper,
+
   // Embed
   'raw-html': FileCode,
   'iframe': Globe,
-  
+
   // Other
   'user-block': Puzzle,
   'default': BoxSelect,

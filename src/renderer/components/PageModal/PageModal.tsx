@@ -8,21 +8,34 @@ interface PageModalProps {
     initialName?: string
     initialTags?: string[]
     initialPath?: string
-    onSave: (name: string, tags: string[], path?: string) => void
+    initialDescription?: string
+    initialMeta?: Record<string, string>
+    onSave: (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => void
     onCancel: () => void
 }
+
+const DEFAULT_META_KEYS = ['description', 'charset', 'viewport', 'author', 'keywords', 'robots']
 
 export default function PageModal({
     mode,
     initialName = '',
     initialTags = [],
     initialPath = '',
+    initialDescription = '',
+    initialMeta = {},
     onSave,
     onCancel
 }: PageModalProps): JSX.Element {
     const [name, setName] = useState(initialName)
     const [tagsInput, setTagsInput] = useState(initialTags.join(', '))
     const [pathInput, setPathInput] = useState(initialPath)
+    const [description, setDescription] = useState(initialDescription)
+    const [metaEntries, setMetaEntries] = useState<Array<{ key: string; value: string }>>(() => {
+        const entries = Object.entries(initialMeta)
+            .filter(([k]) => k !== 'description') // description has its own field
+            .map(([key, value]) => ({ key, value }))
+        return entries.length > 0 ? entries : []
+    })
     const nameRef = useRef<HTMLInputElement>(null)
 
     const isFolder = mode === 'create-folder' || mode === 'edit-folder'
@@ -44,17 +57,43 @@ export default function PageModal({
         const trimmed = name.trim()
         if (!trimmed) return
         const trimmedPath = pathInput.trim()
-        onSave(trimmed, parseTags(tagsInput), trimmedPath || undefined)
+
+        // Build meta from entries
+        const meta: Record<string, string> = {}
+        if (description.trim()) {
+            meta.description = description.trim()
+        }
+        for (const entry of metaEntries) {
+            const k = entry.key.trim()
+            const v = entry.value.trim()
+            if (k && v) meta[k] = v
+        }
+
+        onSave(trimmed, parseTags(tagsInput), trimmedPath || undefined, description.trim() || undefined, Object.keys(meta).length > 0 ? meta : undefined)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') handleSave()
+        if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) handleSave()
         if (e.key === 'Escape') onCancel()
+    }
+
+    const addMetaEntry = () => {
+        setMetaEntries((prev) => [...prev, { key: '', value: '' }])
+    }
+
+    const removeMetaEntry = (index: number) => {
+        setMetaEntries((prev) => prev.filter((_, i) => i !== index))
+    }
+
+    const updateMetaEntry = (index: number, field: 'key' | 'value', value: string) => {
+        setMetaEntries((prev) =>
+            prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry))
+        )
     }
 
     const title = isCreate
         ? isFolder ? 'New Folder' : 'New Page'
-        : isFolder ? 'Edit Folder' : 'Edit Page'
+        : isFolder ? 'Edit Folder' : 'Page Properties'
 
     const namePlaceholder = isFolder ? 'e.g. Navigation Pages' : 'e.g. About Us'
     const tagsPlaceholder = isFolder ? 'e.g. nav' : 'e.g. nav, footer'
@@ -111,6 +150,59 @@ export default function PageModal({
                             <span className="field-hint">
                                 Sets the page slug / output filename. Leave empty to auto-generate from the page name.
                             </span>
+                        </div>
+                    )}
+
+                    {!isFolder && (
+                        <div className="page-modal-field">
+                            <label>Description</label>
+                            <textarea
+                                className="page-modal-textarea"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="A short description of this page for SEO and page lists."
+                                rows={3}
+                            />
+                        </div>
+                    )}
+
+                    {!isFolder && (
+                        <div className="page-modal-field">
+                            <label>Meta Tags</label>
+                            <span className="field-hint" style={{ marginBottom: 6 }}>
+                                Custom &lt;meta&gt; tags for this page. Common tags like charset and viewport are set automatically.
+                            </span>
+                            {metaEntries.map((entry, index) => (
+                                <div key={index} className="meta-tag-row">
+                                    <input
+                                        type="text"
+                                        className="meta-tag-key"
+                                        value={entry.key}
+                                        onChange={(e) => updateMetaEntry(index, 'key', e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="name"
+                                    />
+                                    <input
+                                        type="text"
+                                        className="meta-tag-value"
+                                        value={entry.value}
+                                        onChange={(e) => updateMetaEntry(index, 'value', e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="content"
+                                    />
+                                    <button
+                                        className="meta-tag-remove"
+                                        onClick={() => removeMetaEntry(index)}
+                                        title="Remove"
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+                            ))}
+                            <button className="meta-tag-add-btn" onClick={addMetaEntry}>
+                                + Add Meta Tag
+                            </button>
                         </div>
                     )}
                 </div>

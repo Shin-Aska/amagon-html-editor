@@ -118,6 +118,8 @@ function Sidebar(): JSX.Element {
     initialName?: string
     initialTags?: string[]
     initialPath?: string
+    initialDescription?: string
+    initialMeta?: Record<string, string>
     targetFolderId?: string // folder to place new page into
   } | null>(null)
 
@@ -200,19 +202,42 @@ function Sidebar(): JSX.Element {
     })
   }
 
-  const handleCreatePage = (name: string, tags: string[], path?: string) => {
+  const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
     const created = addPage(name, path || undefined)
     const patch: Record<string, unknown> = {}
     if (tags.length > 0) patch.tags = tags
     if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId
+    // Merge provided meta with the defaults already on the page
+    if (description || meta) {
+      const existing = created.meta || {}
+      const merged = { ...existing }
+      if (description) merged.description = description
+      if (meta) Object.assign(merged, meta)
+      patch.meta = merged
+    }
     if (Object.keys(patch).length > 0) updatePage(created.id, patch)
     setPageModal(null)
   }
 
-  const handleEditPage = (name: string, tags: string[], path?: string) => {
+  const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
     if (!pageModal?.pageId) return
-    const patch: Partial<{ title: string; tags: string[]; slug: string }> = { title: name, tags }
+    const page = pages.find((p) => p.id === pageModal.pageId)
+    const patch: Record<string, unknown> = { title: name, tags }
     if (path) patch.slug = path
+    // Build final meta: start from existing, update description, merge custom meta
+    const existingMeta = { ...(page?.meta || {}) }
+    if (description !== undefined) existingMeta.description = description || ''
+    if (meta) {
+      // Remove old custom entries not in the new meta (but keep default ones)
+      const newKeys = new Set(Object.keys(meta))
+      for (const k of Object.keys(existingMeta)) {
+        if (k !== 'description' && k !== 'charset' && k !== 'viewport' && !newKeys.has(k)) {
+          delete existingMeta[k]
+        }
+      }
+      Object.assign(existingMeta, meta)
+    }
+    patch.meta = existingMeta
     updatePage(pageModal.pageId, patch)
     setPageModal(null)
   }
@@ -475,11 +500,11 @@ function Sidebar(): JSX.Element {
 
   // ── Main render ──────────────────────────────────────────────────────
 
-  const handleModalSave = (name: string, tags: string[], path?: string) => {
+  const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
     if (!pageModal) return
     switch (pageModal.mode) {
-      case 'create': handleCreatePage(name, tags, path); break
-      case 'edit': handleEditPage(name, tags, path); break
+      case 'create': handleCreatePage(name, tags, path, description, meta); break
+      case 'edit': handleEditPage(name, tags, path, description, meta); break
       case 'create-folder': handleCreateFolder(name, tags); break
       case 'edit-folder': handleEditFolder(name, tags); break
     }
@@ -749,7 +774,7 @@ function Sidebar(): JSX.Element {
                   }
                 },
                 {
-                  label: 'Edit Metadata',
+                  label: 'Page Properties',
                   action: () => {
                     const page = pages.find((p) => p.id === pageContextMenu.pageId)
                     if (page) {
@@ -758,7 +783,9 @@ function Sidebar(): JSX.Element {
                         pageId: page.id,
                         initialName: page.title,
                         initialTags: page.tags || [],
-                        initialPath: page.slug
+                        initialPath: page.slug,
+                        initialDescription: page.meta?.description || '',
+                        initialMeta: page.meta || {}
                       })
                     }
                   }
@@ -790,6 +817,8 @@ function Sidebar(): JSX.Element {
           initialName={pageModal.initialName}
           initialTags={pageModal.initialTags}
           initialPath={pageModal.initialPath}
+          initialDescription={pageModal.initialDescription}
+          initialMeta={pageModal.initialMeta}
           onSave={handleModalSave}
           onCancel={() => setPageModal(null)}
         />

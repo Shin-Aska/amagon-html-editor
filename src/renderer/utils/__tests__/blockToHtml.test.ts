@@ -207,3 +207,76 @@ describe('pageToHtml', () => {
     expect(html).toContain('name="author" content="Test"')
   })
 })
+
+describe('page-list block', () => {
+  const makePages = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: `p${i}`,
+      title: `Post ${i + 1}`,
+      slug: `post-${i + 1}`,
+      tags: [],
+      blocks: [],
+      meta: { description: `Description for post ${i + 1}` }
+    }))
+
+  it('renders blog post cards from pages', () => {
+    const block = createBlock('page-list', {
+      props: { filterTag: '', itemsPerPage: 6, columns: 3, showDescription: true }
+    })
+    const pages = makePages(3)
+    const html = blockToHtml([block], { pages })
+    expect(html).toContain('Post 1')
+    expect(html).toContain('Post 2')
+    expect(html).toContain('Post 3')
+    expect(html).toContain('card-title')
+    expect(html).toContain('href="post-1.html"')
+    expect(html).toContain('Description for post 1')
+  })
+
+  it('filters pages by tag', () => {
+    const block = createBlock('page-list', {
+      props: { filterTag: 'news', itemsPerPage: 6, columns: 3, showDescription: true }
+    })
+    const pages = [
+      { id: 'p1', title: 'Tagged', slug: 'tagged', tags: ['news'], blocks: [], meta: {} },
+      { id: 'p2', title: 'Not Tagged', slug: 'not-tagged', tags: [], blocks: [], meta: {} }
+    ]
+    const html = blockToHtml([block], { pages })
+    expect(html).toContain('Tagged')
+    expect(html).not.toContain('Not Tagged')
+  })
+
+  it('renders pagination when pages exceed itemsPerPage', () => {
+    const block = createBlock('page-list', {
+      props: { filterTag: '', itemsPerPage: 2, columns: 3, showDescription: false }
+    })
+    const pages = makePages(5)
+    const html = blockToHtml([block], { pages })
+    // 5 pages / 2 per page = 3 pagination pages
+    expect(html).toContain('data-page-list-page="0"')
+    expect(html).toContain('data-page-list-page="1"')
+    expect(html).toContain('data-page-list-page="2"')
+    expect(html).toContain('pagination')
+    expect(html).toContain('data-page-list-target="0"')
+    expect(html).toContain('data-page-list-target="2"')
+  })
+
+  it('does not render pagination when items fit on one page', () => {
+    const block = createBlock('page-list', {
+      props: { filterTag: '', itemsPerPage: 10, columns: 3, showDescription: true }
+    })
+    const pages = makePages(3)
+    const html = blockToHtml([block], { pages })
+    expect(html).not.toContain('pagination')
+  })
+
+  it('renders nothing meaningful without pages', () => {
+    const block = createBlock('page-list', {
+      props: { filterTag: '', itemsPerPage: 6, columns: 3, showDescription: true }
+    })
+    const html = blockToHtml([block])
+    // Without pages, falls through to default rendering (empty div)
+    expect(html).toContain('<div')
+    expect(html).not.toContain('card-title')
+  })
+})

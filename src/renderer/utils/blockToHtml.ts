@@ -40,7 +40,8 @@ const DEFAULT_TAGS: Record<string, string> = {
   'icon': 'i',
   'accordion': 'div',
   'tabs': 'div',
-  'modal': 'div'
+  'modal': 'div',
+  'page-list': 'div'
 }
 
 // Self-closing HTML tags
@@ -78,6 +79,9 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
       case 'options': // select options
       case 'label': // checkbox label
       case 'code': // code-block content
+      case 'itemsPerPage': // blog-list
+      case 'showDescription': // blog-list
+      case 'filterTag': // blog-list / navbar
         // These are content props, not attributes
         continue
       case 'level':
@@ -388,6 +392,72 @@ ${pad}      </ul>
 ${pad}    </div>
 ${pad}  </div>
 ${pad}</nav>`
+  }
+
+  // Special handling for Page List with pagination
+  if (block.type === 'page-list' && pages && pages.length > 0) {
+    const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="page-list"` : ''
+    const classes = block.classes.length > 0 ? block.classes.join(' ') : ''
+    const styleStr = stylesToString(block.styles)
+    const styleAttr = styleStr ? ` style="${styleStr}"` : ''
+    const filterTag = String(block.props.filterTag || '').trim()
+    const itemsPerPage = Math.max(1, Number(block.props.itemsPerPage) || 6)
+    const cols = Number(block.props.columns) || 3
+    const showDesc = block.props.showDescription !== false
+    const pageListId = `page-list-${block.id.replace(/[^a-zA-Z0-9]/g, '')}`
+
+    // Resolve effective tags (own + folder inherited) — same pattern as navbar
+    const getEffective = (p: Page): string[] => {
+      const own = p.tags ?? []
+      if (!p.folderId || !folders) return own
+      const folder = folders.find((f) => f.id === p.folderId)
+      if (!folder?.tags?.length) return own
+      return Array.from(new Set([...own, ...folder.tags]))
+    }
+
+    const filteredPages = filterTag
+      ? pages.filter((p) => getEffective(p).includes(filterTag))
+      : pages
+
+    const totalPages = Math.ceil(filteredPages.length / itemsPerPage)
+    const colClass = cols === 1 ? 'col-12' : cols === 2 ? 'col-md-6' : 'col-md-6 col-lg-4'
+
+    // Build card HTML for each page
+    const cards = filteredPages.map((p) => {
+      const href = p.slug === 'index' ? 'index.html' : `${p.slug}.html`
+      const title = escapeAttrValue(p.title)
+      const desc = showDesc && p.meta?.description ? `<p class="card-text text-muted">${escapeAttrValue(p.meta.description)}</p>` : ''
+      return `<div class="${colClass} mb-4"><div class="card h-100"><div class="card-body d-flex flex-column"><h5 class="card-title">${title}</h5>${desc}<a href="${href}" class="btn btn-primary mt-auto">Read more</a></div></div></div>`
+    })
+
+    // Group cards into pages
+    const pageGroups: string[][] = []
+    for (let i = 0; i < cards.length; i += itemsPerPage) {
+      pageGroups.push(cards.slice(i, i + itemsPerPage))
+    }
+
+    // Render each page group as a row with data-page attribute
+    const groupsHtml = pageGroups.map((group, idx) => {
+      const display = idx === 0 ? '' : ' style="display:none"'
+      return `${pad}  <div class="row" data-page-list-page="${idx}"${display}>\n${group.map(c => `${pad}    ${c}`).join('\n')}\n${pad}  </div>`
+    }).join('\n')
+
+    // Pagination nav
+    let paginationHtml = ''
+    if (totalPages > 1) {
+      const pageItems = Array.from({ length: totalPages }, (_, i) => {
+        const activeClass = i === 0 ? ' active' : ''
+        return `${pad}      <li class="page-item${activeClass}"><a class="page-link" href="#" data-page-list-target="${i}">${i + 1}</a></li>`
+      }).join('\n')
+
+      paginationHtml = `\n${pad}  <nav aria-label="Page list pagination">\n${pad}    <ul class="pagination justify-content-center mt-4">\n${pageItems}\n${pad}    </ul>\n${pad}  </nav>`
+    }
+
+    // Inline script for pagination
+    const script = totalPages > 1 ? `\n${pad}  <script>\n${pad}    (function(){\n${pad}      var c=document.getElementById('${pageListId}');\n${pad}      if(!c)return;\n${pad}      c.addEventListener('click',function(e){\n${pad}        var t=e.target.closest('[data-page-list-target]');\n${pad}        if(!t)return;\n${pad}        e.preventDefault();\n${pad}        var p=parseInt(t.getAttribute('data-page-list-target'),10);\n${pad}        c.querySelectorAll('[data-page-list-page]').forEach(function(r){r.style.display=parseInt(r.getAttribute('data-page-list-page'),10)===p?'':'none';});\n${pad}        c.querySelectorAll('.page-item').forEach(function(li,i){li.classList.toggle('active',i===p);});\n${pad}      });\n${pad}    })();\n${pad}  <\/script>` : ''
+
+    const classAttr = classes ? ` class="${classes}"` : ''
+    return `${pad}<div id="${pageListId}"${classAttr}${styleAttr} ${dataAttr}>\n${groupsHtml}${paginationHtml}${script}\n${pad}</div>`
   }
 
   // Special handling for Input/Textarea/Select (Form controls with labels)

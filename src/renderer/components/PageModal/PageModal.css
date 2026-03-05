@@ -29,7 +29,10 @@
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     width: 100%;
-    max-width: 420px;
+    max-width: 520px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
     animation: pmSlideIn 0.2s ease-out;
 }
 
@@ -50,6 +53,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 20px 24px 0;
+    flex-shrink: 0;
 }
 
 .page-modal-header h3 {
@@ -84,6 +88,8 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .page-modal-field {
@@ -115,9 +121,96 @@
     border-color: var(--color-accent);
 }
 
+.page-modal-textarea {
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 14px;
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    min-height: 60px;
+}
+
+.page-modal-textarea:focus {
+    border-color: var(--color-accent);
+}
+
 .page-modal-field .field-hint {
     font-size: 11px;
     color: var(--color-text-muted);
+}
+
+/* Meta tag editor */
+.meta-tag-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.meta-tag-row input {
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.meta-tag-row input:focus {
+    border-color: var(--color-accent);
+}
+
+.meta-tag-key {
+    flex: 0 0 120px;
+}
+
+.meta-tag-value {
+    flex: 1;
+}
+
+.meta-tag-remove {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.meta-tag-remove:hover {
+    background: var(--color-danger, #dc3545);
+    color: white;
+}
+
+.meta-tag-add-btn {
+    padding: 6px 12px;
+    border: 1px dashed var(--color-border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 2px;
+}
+
+.meta-tag-add-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: var(--color-bg-hover);
 }
 
 .page-modal-footer {
@@ -125,6 +218,7 @@
     justify-content: flex-end;
     gap: 8px;
     padding: 0 24px 20px;
+    flex-shrink: 0;
 }
 
 .page-modal-btn {

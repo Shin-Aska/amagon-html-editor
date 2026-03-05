@@ -76,7 +76,10 @@ function createDefaultPage(title = 'Home', slug = 'index'): Page {
     meta: {
       description: '',
       charset: 'UTF-8',
-      viewport: 'width=device-width, initial-scale=1.0'
+      viewport: 'width=device-width, initial-scale=1.0',
+      author: '',
+      keywords: '',
+      robots: 'index, follow'
     }
   }
 }

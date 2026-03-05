@@ -579,6 +579,34 @@ export function registerBlocks(): void {
     }
   })
 
+  componentRegistry.register({
+    type: 'page-list',
+    label: 'Page List',
+    category: 'Components',
+    icon: '📰',
+    defaultClasses: [],
+    defaultProps: {
+      filterTag: '',
+      itemsPerPage: 6,
+      columns: 3,
+      showDescription: true
+    },
+    propsSchema: {
+      filterTag: { type: 'combobox', label: 'Filter by Tag', default: '', dataSource: 'tags' },
+      itemsPerPage: { type: 'number', label: 'Items per Page', default: 6, min: 1, max: 50 },
+      columns: {
+        type: 'select',
+        label: 'Columns',
+        options: [
+          { label: '1 Column', value: 1 },
+          { label: '2 Columns', value: 2 },
+          { label: '3 Columns', value: 3 }
+        ]
+      },
+      showDescription: { type: 'boolean', label: 'Show Description', default: true }
+    }
+  })
+
   // ─── Embed ───────────────────────────────────────────────────────────────────
   componentRegistry.register({
     type: 'raw-html',
