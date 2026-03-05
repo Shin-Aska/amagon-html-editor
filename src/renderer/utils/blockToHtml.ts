@@ -89,6 +89,8 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
         // Heading level is handled via tag, not attribute
         continue
       default:
+        // Skip 'type' prop for buttons rendered as <a> (when they have href)
+        if (type === 'button' && key === 'type') continue
         attrs.push(`${escapeAttrName(key)}="${escapeAttrValue(String(value))}"`)
     }
   }
@@ -300,6 +302,11 @@ function resolveTag(block: Block): string {
   // Container with isForm renders as <form>
   if (block.type === 'container' && block.props.isForm) {
     return 'form'
+  }
+
+  // Button with href renders as <a> (Bootstrap link-button pattern)
+  if (block.type === 'button' && block.props.href) {
+    return 'a'
   }
 
   return DEFAULT_TAGS[block.type] ?? 'div'

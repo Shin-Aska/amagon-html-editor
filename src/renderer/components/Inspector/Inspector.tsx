@@ -5,6 +5,7 @@ import { TypographyEditor, BackgroundEditor, BorderEditor, LayoutEditor } from '
 import CssClassesEditor from './CssClassesEditor'
 import BlockActions from './BlockActions'
 import EventActionsEditor from './EventActionsEditor'
+import UrlField from './UrlField'
 import ResponsiveOverrides from './ResponsiveOverrides'
 import BlockIcon from '../BlockIcon/BlockIcon'
 import ImageField from './ImageField'
@@ -169,6 +170,13 @@ function Inspector(): JSX.Element {
           />
         )
       }
+      case 'url':
+        return (
+          <UrlField
+            value={val || ''}
+            onChange={(v) => handlePropChange(key, v)}
+          />
+        )
       default:
         return <span className="unsupported-prop">Unsupported type: {schema.type}</span>
     }

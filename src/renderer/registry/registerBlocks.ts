@@ -205,6 +205,16 @@ export function registerBlocks(): void {
     defaultClasses: ['btn', 'btn-primary', 'mt-3'],
     propsSchema: {
       text: { type: 'text', label: 'Label', default: 'Button' },
+      href: { type: 'url', label: 'Link URL', default: '', group: 'Link' },
+      target: {
+        type: 'select',
+        label: 'Target',
+        options: [
+          { label: 'Same Tab', value: '_self' },
+          { label: 'New Tab', value: '_blank' }
+        ],
+        group: 'Link'
+      },
       variant: {
         type: 'select',
         label: 'Variant',
@@ -240,7 +250,7 @@ export function registerBlocks(): void {
     defaultProps: { text: 'Link', href: '#' },
     propsSchema: {
       text: { type: 'text', label: 'Text', default: 'Link' },
-      href: { type: 'text', label: 'URL', default: '#' },
+      href: { type: 'url', label: 'URL', default: '#' },
       target: {
         type: 'select',
         label: 'Target',

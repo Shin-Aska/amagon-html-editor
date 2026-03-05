@@ -12,6 +12,7 @@ export type PropType =
   | 'measurement' // e.g. "10px", "1rem"
   | 'array' // for lists
   | 'combobox' // editable dropdown with suggestions
+  | 'url' // URL input with page suggestions
 
 export interface PropSchema {
   type: PropType
