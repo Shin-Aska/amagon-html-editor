@@ -11,7 +11,18 @@ export function registerBlocks(): void {
     icon: '▢',
     defaultClasses: ['container', 'py-4'],
     propsSchema: {
-      fluid: { type: 'boolean', label: 'Fluid Width', default: false }
+      fluid: { type: 'boolean', label: 'Fluid Width', default: false },
+      isForm: { type: 'boolean', label: 'Treat as Form', default: false, group: 'Form' },
+      action: { type: 'text', label: 'Action URL', default: '', group: 'Form' },
+      method: {
+        type: 'select',
+        label: 'Method',
+        options: [
+          { label: 'GET', value: 'get' },
+          { label: 'POST', value: 'post' }
+        ],
+        group: 'Form'
+      }
     }
   })
 

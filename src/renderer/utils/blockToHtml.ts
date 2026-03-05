@@ -82,6 +82,7 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
       case 'itemsPerPage': // blog-list
       case 'showDescription': // blog-list
       case 'filterTag': // blog-list / navbar
+      case 'isForm': // container form flag (handled via tag resolution)
         // These are content props, not attributes
         continue
       case 'level':
@@ -294,6 +295,11 @@ function resolveTag(block: Block): string {
   if (block.type === 'heading') {
     const level = Number(block.props.level) || 1
     return `h${Math.max(1, Math.min(6, level))}`
+  }
+
+  // Container with isForm renders as <form>
+  if (block.type === 'container' && block.props.isForm) {
+    return 'form'
   }
 
   return DEFAULT_TAGS[block.type] ?? 'div'
@@ -584,9 +590,29 @@ ${pad}</div>`
 
   const attrString = parts.length > 0 ? ' ' + parts.join(' ') : ''
 
+  // Event attributes (e.g. onclick="...")
+  let eventStr = ''
+  if (block.events && Object.keys(block.events).length > 0) {
+    eventStr = ' ' + Object.entries(block.events)
+      .filter(([, v]) => v && v.trim().length > 0)
+      .map(([name, code]) => `${escapeAttrName(name)}="${escapeAttrValue(code)}"`)
+      .join(' ')
+  }
+
+  // Form-specific attributes for container with isForm
+  let formAttrs = ''
+  if (block.type === 'container' && block.props.isForm) {
+    const action = block.props.action ? String(block.props.action) : ''
+    const method = block.props.method ? String(block.props.method) : ''
+    if (action) formAttrs += ` action="${escapeAttrValue(action)}"`
+    if (method) formAttrs += ` method="${escapeAttrValue(method)}"`
+  }
+
+  const fullAttrString = attrString + formAttrs + eventStr
+
   // Void element (self-closing)
   if (isVoid) {
-    return `${pad}<${tag}${attrString} />`
+    return `${pad}<${tag}${fullAttrString} />`
   }
 
   // Determine inner content
@@ -596,12 +622,12 @@ ${pad}</div>`
 
   // Simple inline content (no children)
   if (!hasChildren && hasContent && !textContent.includes('\n')) {
-    return `${pad}<${tag}${attrString}>${textContent}</${tag}>`
+    return `${pad}<${tag}${fullAttrString}>${textContent}</${tag}>`
   }
 
   // Multiline or children
   const lines: string[] = []
-  lines.push(`${pad}<${tag}${attrString}>`)
+  lines.push(`${pad}<${tag}${fullAttrString}>`)
 
   if (hasContent) {
     const contentLines = textContent.split('\n')

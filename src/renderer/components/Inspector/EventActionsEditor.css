@@ -1,0 +1,237 @@
+/* ─── Event Actions Editor ─────────────────────────────────────────────────── */
+
+.event-actions-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.event-actions-empty {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin: 0;
+    font-style: italic;
+}
+
+/* Event list */
+.event-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.event-actions-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.event-actions-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.event-actions-name {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.78rem;
+}
+
+.event-actions-code-preview {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.event-actions-item-buttons {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.event-actions-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9rem;
+    line-height: 1;
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+}
+
+.event-actions-btn:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.event-actions-btn.remove:hover {
+    color: var(--danger, #dc3545);
+}
+
+/* Add event button & dropdown */
+.event-actions-add-wrapper {
+    position: relative;
+}
+
+.event-actions-add-btn {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.event-actions-add-btn:hover:not(:disabled) {
+    border-color: var(--primary, #1e66f5);
+    color: var(--primary, #1e66f5);
+}
+
+.event-actions-add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.event-actions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 100;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-top: 2px;
+}
+
+.event-actions-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: background 0.1s;
+}
+
+.event-actions-dropdown-item:hover {
+    background: var(--primary, #1e66f5);
+    color: #fff;
+}
+
+/* ─── Monaco Editor Modal ──────────────────────────────────────────────────── */
+
+.event-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.event-editor-modal {
+    background: var(--surface, #1e1e2e);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 600px;
+    max-width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.event-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.event-editor-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.event-editor-event-name {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--border);
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.event-editor-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.event-editor-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.event-editor-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.15s, color 0.15s;
+}
+
+.event-editor-btn.cancel {
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.event-editor-btn.cancel:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.event-editor-btn.save {
+    background: var(--primary, #1e66f5);
+    color: #fff;
+    border-color: var(--primary, #1e66f5);
+}
+
+.event-editor-btn.save:hover {
+    opacity: 0.9;
+}

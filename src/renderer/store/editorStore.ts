@@ -94,6 +94,31 @@ function isDescendantOf(blocks: Block[], ancestorId: string, descendantId: strin
   return findBlockById(ancestor.children, descendantId) !== null
 }
 
+// ─── Form nesting prevention helpers ─────────────────────────────────────────
+
+function isFormBlock(block: Block): boolean {
+  return block.type === 'form' || (block.type === 'container' && block.props.isForm === true)
+}
+
+function isInsideForm(blocks: Block[], parentId: string | null): boolean {
+  if (!parentId) return false
+  const path = findBlockPath(blocks, parentId)
+  if (!path) return false
+  for (const id of path) {
+    const b = findBlockById(blocks, id)
+    if (b && isFormBlock(b)) return true
+  }
+  return false
+}
+
+function containsForm(block: Block): boolean {
+  if (isFormBlock(block)) return true
+  for (const child of block.children) {
+    if (containsForm(child)) return true
+  }
+  return false
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 type EditorStore = EditorState & EditorActions
@@ -161,6 +186,22 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     addBlock: (block, parentId = null, index = -1) => {
       set((state) => {
+        // Prevent form-inside-form nesting
+        if (isFormBlock(block) && isInsideForm(state.blocks, parentId)) {
+          return state
+        }
+        // Prevent adding a block that contains a form inside a form
+        if (containsForm(block) && parentId && isInsideForm(state.blocks, parentId)) {
+          return state
+        }
+        // Prevent adding any block inside a form if it contains a nested form
+        if (parentId) {
+          const parent = findBlockById(state.blocks, parentId)
+          if (parent && isFormBlock(parent) && containsForm(block)) {
+            return state
+          }
+        }
+
         const idx = index < 0 ? (parentId ? (findBlockById(state.blocks, parentId)?.children.length ?? 0) : state.blocks.length) : index
         const newBlocks = insertBlockInTree(state.blocks, block, parentId, idx)
         return {
@@ -187,6 +228,23 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         // Prevent moving a block into its own descendant
         if (newParentId && isDescendantOf(state.blocks, id, newParentId)) {
           return state
+        }
+
+        // Prevent form-inside-form nesting on move
+        const movingBlock = findBlockById(state.blocks, id)
+        if (movingBlock) {
+          if (isFormBlock(movingBlock) && isInsideForm(state.blocks, newParentId)) {
+            return state
+          }
+          if (containsForm(movingBlock) && newParentId && isInsideForm(state.blocks, newParentId)) {
+            return state
+          }
+          if (newParentId) {
+            const parent = findBlockById(state.blocks, newParentId)
+            if (parent && isFormBlock(parent) && containsForm(movingBlock)) {
+              return state
+            }
+          }
         }
 
         const { tree, removed } = removeBlockFromTree(state.blocks, id)

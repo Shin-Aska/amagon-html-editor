@@ -280,3 +280,80 @@ describe('page-list block', () => {
     expect(html).not.toContain('card-title')
   })
 })
+
+describe('container as form', () => {
+  it('renders container with isForm as <form> tag', () => {
+    const block = createBlock('container', {
+      props: { isForm: true },
+      classes: ['container']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('<form')
+    expect(html).toContain('</form>')
+    expect(html).not.toContain('<div')
+  })
+
+  it('renders form action and method attributes', () => {
+    const block = createBlock('container', {
+      props: { isForm: true, action: '/submit', method: 'post' },
+      classes: ['container']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('action="/submit"')
+    expect(html).toContain('method="post"')
+    expect(html).toContain('<form')
+  })
+
+  it('renders container without isForm as normal div', () => {
+    const block = createBlock('container', {
+      classes: ['container']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('<div')
+    expect(html).not.toContain('<form')
+  })
+})
+
+describe('event actions', () => {
+  it('renders events as inline attributes', () => {
+    const block = createBlock('button', {
+      props: { text: 'Click' },
+      classes: ['btn'],
+      events: { onclick: "alert('hello')" }
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('onclick=')
+    expect(html).toContain('Click')
+  })
+
+  it('renders multiple events', () => {
+    const block = createBlock('container', {
+      events: { onclick: 'handleClick()', onmouseover: 'highlight()' }
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('onclick="handleClick()"')
+    expect(html).toContain('onmouseover="highlight()"')
+  })
+
+  it('does not render events when empty', () => {
+    const block = createBlock('button', {
+      props: { text: 'Click' },
+      classes: ['btn'],
+      events: {}
+    })
+    const html = blockToHtml([block])
+    expect(html).not.toContain('onclick')
+    expect(html).not.toContain('onchange')
+  })
+
+  it('skips events with empty string values', () => {
+    const block = createBlock('button', {
+      props: { text: 'Click' },
+      classes: ['btn'],
+      events: { onclick: '', onchange: '  ' }
+    })
+    const html = blockToHtml([block])
+    expect(html).not.toContain('onclick=')
+    expect(html).not.toContain('onchange=')
+  })
+})

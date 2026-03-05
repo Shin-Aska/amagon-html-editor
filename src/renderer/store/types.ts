@@ -7,6 +7,7 @@ export interface Block {
   props: Record<string, unknown>
   styles: Record<string, string>
   classes: string[]
+  events?: Record<string, string>  // JS event handlers, e.g. { onclick: "alert('hi')" }
   content?: string       // Raw HTML escape hatch
   children: Block[]
   locked?: boolean
@@ -298,6 +299,7 @@ export function createBlock(
     props: {},
     styles: {},
     classes: [],
+    events: {},
     children: [],
     ...overrides
   }
