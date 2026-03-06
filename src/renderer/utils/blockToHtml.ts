@@ -81,6 +81,15 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
       case 'code': // code-block content
       case 'itemsPerPage': // blog-list
       case 'showDescription': // blog-list
+      case 'detailsMode': // page-list
+      case 'metaKeys': // page-list
+      case 'showSearch': // page-list
+      case 'showSort': // page-list
+      case 'sortLayout': // page-list
+      case 'sortPriority': // page-list
+      case 'sortKeys': // page-list
+      case 'sortDefaultKey': // page-list
+      case 'sortDefaultDir': // page-list
       case 'filterTag': // blog-list / navbar
       case 'isForm': // container form flag (handled via tag resolution)
         // These are content props, not attributes
@@ -416,7 +425,48 @@ ${pad}</nav>`
     const filterTag = String(block.props.filterTag || '').trim()
     const itemsPerPage = Math.max(1, Number(block.props.itemsPerPage) || 6)
     const cols = Number(block.props.columns) || 3
-    const showDesc = block.props.showDescription !== false
+    const showSearch = block.props.showSearch === true
+    const showSort = block.props.showSort === true
+    const sortLayout = block.props.sortLayout === 'new-row' ? 'new-row' : 'inline'
+    const rawSortPriority = Array.isArray(block.props.sortPriority)
+      ? (block.props.sortPriority as unknown[])
+        .map((k) => String(k).trim())
+        .filter(Boolean)
+      : typeof block.props.sortPriority === 'string'
+        ? block.props.sortPriority
+          .split(/[,\n]+/)
+          .map((k) => k.trim())
+          .filter(Boolean)
+        : []
+    const legacySortKeys = Array.isArray(block.props.sortKeys)
+      ? (block.props.sortKeys as unknown[])
+        .map((k) => String(k).trim())
+        .filter(Boolean)
+      : typeof block.props.sortKeys === 'string'
+        ? block.props.sortKeys
+          .split(/[,\n]+/)
+          .map((k) => k.trim())
+          .filter(Boolean)
+        : []
+    const legacyDefaultSortKey = typeof block.props.sortDefaultKey === 'string' ? block.props.sortDefaultKey : ''
+    const sortDefaultDir = block.props.sortDefaultDir === 'desc' ? 'desc' : 'asc'
+    const detailsMode = typeof block.props.detailsMode === 'string' ? block.props.detailsMode : ''
+    const legacyShowDesc = block.props.showDescription !== false
+    const showDesc = detailsMode
+      ? (detailsMode === 'description' || detailsMode === 'description+meta')
+      : legacyShowDesc
+
+    const showMeta = detailsMode === 'meta' || detailsMode === 'description+meta'
+    const metaKeys = Array.isArray(block.props.metaKeys)
+      ? (block.props.metaKeys as unknown[])
+        .map((k) => String(k).trim())
+        .filter(Boolean)
+      : typeof block.props.metaKeys === 'string'
+        ? block.props.metaKeys
+          .split(/[,\n]+/)
+          .map((k) => k.trim())
+          .filter(Boolean)
+        : []
     const pageListId = `page-list-${block.id.replace(/[^a-zA-Z0-9]/g, '')}`
 
     // Resolve effective tags (own + folder inherited) — same pattern as navbar
@@ -439,9 +489,238 @@ ${pad}</nav>`
     const cards = filteredPages.map((p) => {
       const href = p.slug === 'index' ? 'index.html' : `${p.slug}.html`
       const title = escapeAttrValue(p.title)
+      const rawTitle = String(p.title || '')
+      const rawMeta = (p.meta || {}) as Record<string, string>
+      const rawDesc = rawMeta.description ? String(rawMeta.description) : ''
+      const searchText = `${rawTitle}\n${rawDesc}\n${Object.entries(rawMeta).map(([k, v]) => `${k}: ${v}`).join('\n')}`
+      const metaJson = JSON.stringify(rawMeta)
+      const meta = showMeta && metaKeys.length > 0
+        ? metaKeys
+          .map((k) => {
+            const v = p.meta?.[k]
+            if (!v) return ''
+            const label = k
+              .replace(/[-_]+/g, ' ')
+              .replace(/^\w/, (c) => c.toUpperCase())
+            return `<div class="small text-muted">${escapeAttrValue(label)}: ${escapeAttrValue(String(v))}</div>`
+          })
+          .filter(Boolean)
+          .join('')
+        : ''
       const desc = showDesc && p.meta?.description ? `<p class="card-text text-muted">${escapeAttrValue(p.meta.description)}</p>` : ''
-      return `<div class="${colClass} mb-4"><div class="card h-100"><div class="card-body d-flex flex-column"><h5 class="card-title">${title}</h5>${desc}<a href="${href}" class="btn btn-primary mt-auto">Read more</a></div></div></div>`
+      return `<div class="${colClass} mb-4" data-page-list-card data-title="${escapeAttrValue(rawTitle)}" data-meta="${escapeAttrValue(metaJson)}" data-search="${escapeAttrValue(searchText)}"><div class="card h-100"><div class="card-body d-flex flex-column"><h5 class="card-title">${title}</h5>${meta}${desc}<a href="${href}" class="btn btn-primary mt-auto">Read more</a></div></div></div>`
     })
+
+    const classAttr = classes ? ` class="${classes}"` : ''
+
+    if (showSearch || showSort) {
+      const availableKeysRaw = (metaKeys.length > 0 ? metaKeys : legacySortKeys)
+        .map((k) => String(k || '').trim())
+        .filter(Boolean)
+        .filter((k) => k !== 'title')
+
+      const availableKeys: string[] = []
+      const seenAvailable = new Set<string>()
+      const pushAvailable = (k: string) => {
+        const key = String(k || '').trim()
+        if (!key) return
+        if (seenAvailable.has(key)) return
+        seenAvailable.add(key)
+        availableKeys.push(key)
+      }
+
+      pushAvailable('title')
+      availableKeysRaw.forEach(pushAvailable)
+
+      const inAvailable = new Set<string>(availableKeys)
+      const sortKeys: string[] = []
+      const seen = new Set<string>()
+
+      const pushKey = (k: string) => {
+        const key = String(k || '').trim()
+        if (!key) return
+        if (!inAvailable.has(key)) return
+        if (seen.has(key)) return
+        seen.add(key)
+        sortKeys.push(key)
+      }
+
+      rawSortPriority.forEach(pushKey)
+
+      if (sortKeys.length === 0 && legacyDefaultSortKey) pushKey(legacyDefaultSortKey)
+
+      availableKeys.forEach(pushKey)
+
+      const sortDefaultKey = sortKeys[0] || 'title'
+
+      const labelForKey = (k: string) =>
+        k === 'title'
+          ? 'Title'
+          : k === 'datePublished'
+            ? 'Date Published'
+            : k
+              .replace(/[-_]+/g, ' ')
+              .replace(/^\w/, (c) => c.toUpperCase())
+
+      const searchControl = showSearch
+        ? `<input type="search" class="form-control" placeholder="Search..." data-page-list-search>`
+        : ''
+
+      const sortOptionsHtml = sortKeys
+        .map((k) => `${pad}      <option value="${escapeAttrValue(k)}"${k === sortDefaultKey ? ' selected' : ''}>${escapeAttrValue(labelForKey(k))}</option>`)
+        .join('\n')
+
+      const sortControl = showSort
+        ? sortLayout === 'new-row'
+          ? `<select class="form-select" style="flex: 1 1 260px; min-width: 200px" data-page-list-sort>
+${sortOptionsHtml}
+${pad}    </select>
+${pad}    <select class="form-select" style="flex: 0 0 160px; max-width: 160px" data-page-list-dir>
+${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
+${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
+${pad}    </select>`
+          : `<select class="form-select" style="width: 220px; max-width: 220px" data-page-list-sort>
+${sortOptionsHtml}
+${pad}    </select>
+${pad}    <select class="form-select" style="width: 160px; max-width: 160px" data-page-list-dir>
+${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
+${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
+${pad}    </select>`
+        : ''
+
+      const controlsHtml = sortLayout === 'new-row'
+        ? `${pad}  <div class="mb-3">
+${showSearch ? `${pad}    <div class="mb-2">${searchControl}</div>` : ''}
+${showSort ? `${pad}    <div class="d-flex gap-2 align-items-center" style="width: 100%; flex-wrap: wrap">${sortControl}</div>` : ''}
+${pad}  </div>`
+        : `${pad}  <div class="mb-3 d-flex gap-2 align-items-center" style="flex-wrap: wrap">
+${showSearch ? `${pad}    <div style="flex: 1 1 260px; min-width: 200px">${searchControl}</div>` : ''}
+${showSort ? `${pad}    <div style="flex: 0 0 auto; margin-left: auto">
+${pad}      <div class="d-flex gap-2 align-items-center" style="flex-wrap: nowrap">${sortControl}</div>
+${pad}    </div>` : ''}
+${pad}  </div>`
+
+      const cardsHtml = `${pad}  <div class="row" data-page-list-cards>\n${cards.map((c) => `${pad}    ${c}`).join('\n')}\n${pad}  </div>`
+
+      const paginationShell = `${pad}  <nav aria-label="Page list pagination" data-page-list-pagination style="display:none">\n${pad}    <ul class="pagination justify-content-center mt-4" data-page-list-pagination-items></ul>\n${pad}  </nav>`
+
+      const script = `
+${pad}  <script>
+${pad}    (function(){
+${pad}      var root=document.getElementById('${pageListId}');
+${pad}      if(!root)return;
+${pad}      var allCards=Array.prototype.slice.call(root.querySelectorAll('[data-page-list-card]'));
+${pad}      var cardsContainer=root.querySelector('[data-page-list-cards]');
+${pad}      var searchInput=root.querySelector('[data-page-list-search]');
+${pad}      var sortSelect=root.querySelector('[data-page-list-sort]');
+${pad}      var dirSelect=root.querySelector('[data-page-list-dir]');
+${pad}      var paginationNav=root.querySelector('[data-page-list-pagination]');
+${pad}      var paginationItems=root.querySelector('[data-page-list-pagination-items]');
+${pad}      var itemsPerPage=${itemsPerPage};
+${pad}      var currentPage=0;
+
+${pad}      function looksLikeISODate(v){return /^\d{4}-\d{2}-\d{2}/.test(v||'');}
+${pad}      function coerce(v){
+${pad}        if(v===null||v===undefined)return '';
+${pad}        v=String(v);
+${pad}        if(looksLikeISODate(v)){
+${pad}          var t=Date.parse(v);
+${pad}          return isNaN(t)?v.toLowerCase():t;
+${pad}        }
+${pad}        if(/^\s*-?\d+(\.\d+)?\s*$/.test(v)){
+${pad}          var n=Number(v);
+${pad}          return isNaN(n)?v.toLowerCase():n;
+${pad}        }
+${pad}        return v.toLowerCase();
+${pad}      }
+
+${pad}      function getMeta(card){
+${pad}        try { return JSON.parse(card.getAttribute('data-meta')||'{}')||{}; } catch(e) { return {}; }
+${pad}      }
+
+${pad}      function getSortValue(card,key){
+${pad}        if(key==='title') return card.getAttribute('data-title')||'';
+${pad}        var meta=getMeta(card);
+${pad}        return meta && meta[key] ? meta[key] : '';
+${pad}      }
+
+${pad}      function buildPagination(total){
+${pad}        if(!paginationNav||!paginationItems) return;
+${pad}        paginationItems.innerHTML='';
+${pad}        if(total<=1){ paginationNav.style.display='none'; return; }
+${pad}        paginationNav.style.display='';
+${pad}        for(var i=0;i<total;i++){
+${pad}          var li=document.createElement('li');
+${pad}          li.className='page-item'+(i===currentPage?' active':'');
+${pad}          var a=document.createElement('a');
+${pad}          a.className='page-link';
+${pad}          a.href='#';
+${pad}          a.setAttribute('data-page-list-target',String(i));
+${pad}          a.textContent=String(i+1);
+${pad}          li.appendChild(a);
+${pad}          paginationItems.appendChild(li);
+${pad}        }
+${pad}      }
+
+${pad}      function render(){
+${pad}        var q=searchInput?String(searchInput.value||'').toLowerCase().trim():'';
+${pad}        var visible=allCards.filter(function(card){
+${pad}          if(!q) return true;
+${pad}          var hay=String(card.getAttribute('data-search')||'').toLowerCase();
+${pad}          return hay.indexOf(q)!==-1;
+${pad}        });
+
+${pad}        if(sortSelect){
+${pad}          var key=String(sortSelect.value||'title');
+${pad}          var dir=dirSelect?String(dirSelect.value||'asc'):'asc';
+${pad}          visible.sort(function(a,b){
+${pad}            var av=coerce(getSortValue(a,key));
+${pad}            var bv=coerce(getSortValue(b,key));
+${pad}            if(typeof av==='number' && typeof bv==='number') return dir==='desc'?(bv-av):(av-bv);
+${pad}            var as=String(av); var bs=String(bv);
+${pad}            var cmp=as.localeCompare(bs, undefined, { numeric: true, sensitivity: 'base' });
+${pad}            return dir==='desc'?-cmp:cmp;
+${pad}          });
+${pad}        }
+
+${pad}        var totalPages=Math.ceil(visible.length/itemsPerPage)||1;
+${pad}        if(currentPage>=totalPages) currentPage=0;
+${pad}        buildPagination(totalPages);
+
+${pad}        if(!cardsContainer) return;
+${pad}        cardsContainer.innerHTML='';
+${pad}        var start=currentPage*itemsPerPage;
+${pad}        var end=start+itemsPerPage;
+${pad}        visible.slice(start,end).forEach(function(card){
+${pad}          cardsContainer.appendChild(card);
+${pad}        });
+${pad}      }
+
+${pad}      if(searchInput){
+${pad}        searchInput.addEventListener('input',function(){currentPage=0;render();});
+${pad}      }
+${pad}      if(sortSelect){
+${pad}        sortSelect.addEventListener('change',function(){currentPage=0;render();});
+${pad}      }
+${pad}      if(dirSelect){
+${pad}        dirSelect.addEventListener('change',function(){currentPage=0;render();});
+${pad}      }
+${pad}      if(paginationNav){
+${pad}        paginationNav.addEventListener('click',function(e){
+${pad}          var t=e.target.closest('[data-page-list-target]');
+${pad}          if(!t) return;
+${pad}          e.preventDefault();
+${pad}          currentPage=parseInt(t.getAttribute('data-page-list-target')||'0',10)||0;
+${pad}          render();
+${pad}        });
+${pad}      }
+
+${pad}      render();
+${pad}    })();
+${pad}  <\/script>`
+
+      return `${pad}<div id="${pageListId}"${classAttr}${styleAttr} ${dataAttr}>\n${controlsHtml}${cardsHtml}\n${paginationShell}${script}\n${pad}</div>`
+    }
 
     // Group cards into pages
     const pageGroups: string[][] = []
@@ -469,7 +748,6 @@ ${pad}</nav>`
     // Inline script for pagination
     const script = totalPages > 1 ? `\n${pad}  <script>\n${pad}    (function(){\n${pad}      var c=document.getElementById('${pageListId}');\n${pad}      if(!c)return;\n${pad}      c.addEventListener('click',function(e){\n${pad}        var t=e.target.closest('[data-page-list-target]');\n${pad}        if(!t)return;\n${pad}        e.preventDefault();\n${pad}        var p=parseInt(t.getAttribute('data-page-list-target'),10);\n${pad}        c.querySelectorAll('[data-page-list-page]').forEach(function(r){r.style.display=parseInt(r.getAttribute('data-page-list-page'),10)===p?'':'none';});\n${pad}        c.querySelectorAll('.page-item').forEach(function(li,i){li.classList.toggle('active',i===p);});\n${pad}      });\n${pad}    })();\n${pad}  <\/script>` : ''
 
-    const classAttr = classes ? ` class="${classes}"` : ''
     return `${pad}<div id="${pageListId}"${classAttr}${styleAttr} ${dataAttr}>\n${groupsHtml}${paginationHtml}${script}\n${pad}</div>`
   }
 

@@ -186,3 +186,151 @@ textarea.inspector-input {
   background: var(--color-bg-hover);
   color: var(--color-accent);
 }
+
+/* Multi combobox */
+.multi-combobox-wrapper {
+  position: relative;
+}
+
+.multi-combobox-input {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.multi-combobox-placeholder {
+  color: var(--color-text-secondary);
+}
+
+.multi-combobox-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.multi-combobox-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-text-primary);
+}
+
+.multi-combobox-tag:hover {
+  border-color: var(--color-accent);
+}
+
+.multi-combobox-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  z-index: 30;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.multi-combobox-search {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  outline: none;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.multi-combobox-options {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.multi-combobox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+.multi-combobox-option:hover {
+  background: var(--color-bg-hover);
+}
+
+.multi-combobox-option.selected {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
+
+.multi-combobox-option input[type='checkbox'] {
+  accent-color: var(--color-accent);
+}
+
+.multi-combobox-empty {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.sortable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sortable-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.sortable-list-label {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sortable-list-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.sortable-list-button {
+  width: 28px;
+  height: 26px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.sortable-list-button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.sortable-list-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

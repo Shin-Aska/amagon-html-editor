@@ -610,21 +610,87 @@ export function registerBlocks(): void {
       filterTag: '',
       itemsPerPage: 6,
       columns: 3,
-      showDescription: true
+      showSearch: false,
+      showSort: false,
+      sortLayout: 'inline',
+      sortPriority: ['title', 'datePublished'],
+      sortDefaultDir: 'asc',
+      detailsMode: 'description',
+      metaKeys: ['datePublished']
     },
     propsSchema: {
-      filterTag: { type: 'combobox', label: 'Filter by Tag', default: '', dataSource: 'tags' },
-      itemsPerPage: { type: 'number', label: 'Items per Page', default: 6, min: 1, max: 50 },
+      filterTag: { type: 'combobox', label: 'Filter by Tag', default: '', dataSource: 'tags', group: 'Filter' },
+      itemsPerPage: { type: 'number', label: 'Items per Page', default: 6, min: 1, max: 50, group: 'Layout' },
       columns: {
         type: 'select',
         label: 'Columns',
+        group: 'Layout',
         options: [
           { label: '1 Column', value: 1 },
           { label: '2 Columns', value: 2 },
           { label: '3 Columns', value: 3 }
         ]
       },
-      showDescription: { type: 'boolean', label: 'Show Description', default: true }
+      showSearch: {
+        type: 'boolean',
+        label: 'Show Search',
+        group: 'Controls',
+        default: false
+      },
+      showSort: {
+        type: 'boolean',
+        label: 'Show Sort',
+        group: 'Controls',
+        default: false
+      },
+      sortLayout: {
+        type: 'select',
+        label: 'Sort Layout',
+        group: 'Controls',
+        default: 'inline',
+        options: [
+          { label: 'Inline with Search (wrap)', value: 'inline' },
+          { label: 'New Row (centered)', value: 'new-row' }
+        ]
+      },
+      sortPriority: {
+        type: 'sortable-list',
+        label: 'Sort Priority',
+        group: 'Controls',
+        default: ['title', 'datePublished'],
+        description: 'Reorder sort keys. The first item is the default sort key. Sort options come from Meta fields + Title.',
+        dataSource: 'pageListSortPriority'
+      },
+      sortDefaultDir: {
+        type: 'select',
+        label: 'Default Sort Direction',
+        group: 'Controls',
+        default: 'asc',
+        options: [
+          { label: 'Ascending', value: 'asc' },
+          { label: 'Descending', value: 'desc' }
+        ]
+      },
+      detailsMode: {
+        type: 'select',
+        label: 'Details',
+        group: 'Content',
+        options: [
+          { label: 'Title only', value: 'none' },
+          { label: 'Description', value: 'description' },
+          { label: 'Meta fields', value: 'meta' },
+          { label: 'Meta fields + Description', value: 'description+meta' }
+        ],
+        default: 'description'
+      },
+      metaKeys: {
+        type: 'multi-combobox',
+        label: 'Meta fields',
+        group: 'Content',
+        description: 'Select meta keys to display, e.g. author, keywords, robots.',
+        default: ['datePublished'],
+        dataSource: 'metaKeys'
+      }
     }
   })
 

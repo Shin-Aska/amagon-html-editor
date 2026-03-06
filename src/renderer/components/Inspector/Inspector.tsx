@@ -10,6 +10,8 @@ import ResponsiveOverrides from './ResponsiveOverrides'
 import BlockIcon from '../BlockIcon/BlockIcon'
 import ImageField from './ImageField'
 import ComboboxField from './ComboboxField'
+import MultiComboboxField from './MultiComboboxField'
+import SortableListField from './SortableListField'
 import { useProjectStore } from '../../store/projectStore'
 import './Inspector.css'
 
@@ -17,6 +19,8 @@ function Inspector(): JSX.Element {
   const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
   const getBlockById = useEditorStore((s) => s.getBlockById)
   const updateBlock = useEditorStore((s) => s.updateBlock)
+
+  const uniqueMetaKeys = useProjectStore((s) => s.uniqueMetaKeys)
 
   const block = selectedBlockId ? getBlockById(selectedBlockId) : null
   const definition = block ? componentRegistry.get(block.type) : null
@@ -158,6 +162,10 @@ function Inspector(): JSX.Element {
           pages.forEach((p) => p.tags?.forEach((t) => tagSet.add(t)))
           folders.forEach((f) => f.tags?.forEach((t) => tagSet.add(t)))
           comboOptions = Array.from(tagSet).sort()
+        } else if (schema.dataSource === 'metaKeys') {
+          comboOptions = uniqueMetaKeys
+        } else if (schema.dataSource === 'pageListSortKeys') {
+          comboOptions = ['title', ...uniqueMetaKeys.filter((k) => k !== 'title')]
         } else if (schema.options) {
           comboOptions = schema.options.map((o) => String(o.value))
         }
@@ -170,6 +178,31 @@ function Inspector(): JSX.Element {
           />
         )
       }
+      case 'multi-combobox': {
+        let multiOptions: string[] = []
+        if (schema.dataSource === 'metaKeys') {
+          multiOptions = uniqueMetaKeys
+        } else if (schema.dataSource === 'pageListSortKeys') {
+          multiOptions = ['title', ...uniqueMetaKeys.filter((k) => k !== 'title')]
+        } else if (schema.options) {
+          multiOptions = schema.options.map((o) => String(o.value))
+        }
+
+        const selected = Array.isArray(val)
+          ? val.map((v) => String(v)).filter(Boolean)
+          : typeof val === 'string'
+            ? val.split(/[,\n]+/).map((k) => k.trim()).filter(Boolean)
+            : []
+
+        return (
+          <MultiComboboxField
+            value={selected}
+            options={multiOptions}
+            onChange={(v) => handlePropChange(key, v)}
+            placeholder={schema.default !== undefined ? String(schema.default) : ''}
+          />
+        )
+      }
       case 'url':
         return (
           <UrlField
@@ -177,6 +210,62 @@ function Inspector(): JSX.Element {
             onChange={(v) => handlePropChange(key, v)}
           />
         )
+      case 'sortable-list': {
+        const normalizeList = (v: any): string[] =>
+          Array.isArray(v)
+            ? v.map((x) => String(x).trim()).filter(Boolean)
+            : typeof v === 'string'
+              ? v.split(/[,\n]+/).map((x) => x.trim()).filter(Boolean)
+              : []
+
+        const labelForKey = (k: string) =>
+          k === 'title'
+            ? 'Title'
+            : k === 'datePublished'
+              ? 'Date Published'
+              : k
+                .replace(/[-_]+/g, ' ')
+                .replace(/^\w/, (c) => c.toUpperCase())
+
+        if (schema.dataSource === 'pageListSortPriority') {
+          const selectedMetaKeys = normalizeList(block.props.metaKeys)
+          const available = ['title', ...selectedMetaKeys.filter((k) => k !== 'title')]
+
+          const current = normalizeList(val)
+          const inAvailable = new Set(available)
+          const next: string[] = []
+          const seen = new Set<string>()
+
+          const push = (k: string) => {
+            const keyStr = String(k || '').trim()
+            if (!keyStr) return
+            if (seen.has(keyStr)) return
+            if (!inAvailable.has(keyStr)) return
+            seen.add(keyStr)
+            next.push(keyStr)
+          }
+
+          current.forEach(push)
+
+          available.forEach(push)
+
+          return (
+            <SortableListField
+              items={next}
+              onChange={(items) => handlePropChange(key, items)}
+              labelForItem={(item) => labelForKey(String(item))}
+            />
+          )
+        }
+
+        const items = normalizeList(val)
+        return (
+          <SortableListField
+            items={items}
+            onChange={(items) => handlePropChange(key, items)}
+          />
+        )
+      }
       default:
         return <span className="unsupported-prop">Unsupported type: {schema.type}</span>
     }

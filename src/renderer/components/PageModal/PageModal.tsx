@@ -14,7 +14,11 @@ interface PageModalProps {
     onCancel: () => void
 }
 
-const DEFAULT_META_KEYS = ['description', 'charset', 'viewport', 'author', 'keywords', 'robots']
+const DEFAULT_META_KEYS = ['description', 'charset', 'viewport', 'author', 'keywords', 'robots', 'datePublished']
+
+function formatDateYYYYMMDD(d: Date): string {
+    return d.toISOString().slice(0, 10)
+}
 
 export default function PageModal({
     mode,
@@ -34,7 +38,14 @@ export default function PageModal({
         const entries = Object.entries(initialMeta)
             .filter(([k]) => k !== 'description') // description has its own field
             .map(([key, value]) => ({ key, value }))
-        return entries.length > 0 ? entries : []
+
+        if (entries.length > 0) return entries
+
+        if (mode === 'create') {
+            return [{ key: 'datePublished', value: formatDateYYYYMMDD(new Date()) }]
+        }
+
+        return []
     })
     const nameRef = useRef<HTMLInputElement>(null)
 

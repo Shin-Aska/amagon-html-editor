@@ -11,6 +11,8 @@ interface ProjectState {
   folders: PageFolder[]
   userBlocks: UserBlock[]
   customPresets: ProjectTheme[]  // user-created custom theme presets
+  metaKeyCounts: Record<string, number>
+  uniqueMetaKeys: string[]
   currentPageId: string | null
   filePath: string | null
   isProjectLoaded: boolean
@@ -80,6 +82,10 @@ function createDefaultSettings(): ProjectSettings {
   }
 }
 
+function formatDateYYYYMMDD(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
 function createDefaultPage(title = 'Home', slug = 'index'): Page {
   return {
     id: generateBlockId(),
@@ -92,7 +98,8 @@ function createDefaultPage(title = 'Home', slug = 'index'): Page {
       viewport: 'width=device-width, initial-scale=1.0',
       author: '',
       keywords: '',
-      robots: 'index, follow'
+      robots: 'index, follow',
+      datePublished: formatDateYYYYMMDD(new Date())
     }
   }
 }
@@ -113,10 +120,37 @@ function ensureUniqueSlug(baseSlug: string, pages: Page[]): string {
   return `${baseSlug}-${i}`
 }
 
+function addMetaKeysToCounts(counts: Record<string, number>, meta: Record<string, string> | undefined): void {
+  if (!meta) return
+  for (const k of Object.keys(meta)) {
+    counts[k] = (counts[k] || 0) + 1
+  }
+}
+
+function removeMetaKeysFromCounts(counts: Record<string, number>, meta: Record<string, string> | undefined): void {
+  if (!meta) return
+  for (const k of Object.keys(meta)) {
+    const next = (counts[k] || 0) - 1
+    if (next <= 0) delete counts[k]
+    else counts[k] = next
+  }
+}
+
+function buildMetaKeyCounts(pages: Page[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const p of pages) addMetaKeysToCounts(counts, p.meta)
+  return counts
+}
+
+function sortedMetaKeysFromCounts(counts: Record<string, number>): string[] {
+  return Object.keys(counts).sort()
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
   const defaultPage = createDefaultPage()
+  const initialMetaCounts = buildMetaKeyCounts([defaultPage])
 
   return {
     settings: createDefaultSettings(),
@@ -124,6 +158,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     folders: [],
     userBlocks: [],
     customPresets: [],
+    metaKeyCounts: initialMetaCounts,
+    uniqueMetaKeys: sortedMetaKeysFromCounts(initialMetaCounts),
     currentPageId: defaultPage.id,
     filePath: null,
     isProjectLoaded: false,
@@ -157,12 +193,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         }
       }
 
+      const nextPages = data.pages.length > 0 ? data.pages : [createDefaultPage()]
+      const counts = buildMetaKeyCounts(nextPages)
+
       set({
         settings: migratedSettings,
-        pages: data.pages.length > 0 ? data.pages : [createDefaultPage()],
+        pages: nextPages,
         folders: data.folders || [],
         userBlocks: data.userBlocks || [],
         customPresets: data.customPresets || [],
+        metaKeyCounts: counts,
+        uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
         filePath: filePath ?? null,
         isProjectLoaded: true
@@ -171,12 +212,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     closeProject: () => {
       const newDefault = createDefaultPage()
+      const counts = buildMetaKeyCounts([newDefault])
       set({
         settings: createDefaultSettings(),
         pages: [newDefault],
         folders: [],
         userBlocks: [],
         customPresets: [],
+        metaKeyCounts: counts,
+        uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
         currentPageId: newDefault.id,
         filePath: null,
         isProjectLoaded: false
@@ -381,9 +425,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       const created = createDefaultPage(title, unique)
       created.blocks = createPageHeaderBlock(title) as any
 
-      set({
-        pages: [...state.pages, created],
-        currentPageId: created.id
+      set((s) => {
+        const counts = { ...s.metaKeyCounts }
+        addMetaKeysToCounts(counts, created.meta)
+        return {
+          pages: [...s.pages, created],
+          currentPageId: created.id,
+          metaKeyCounts: counts,
+          uniqueMetaKeys: sortedMetaKeysFromCounts(counts)
+        }
       })
 
       return created
@@ -391,20 +441,53 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     removePage: (id) => {
       set((state) => {
+        const removed = state.pages.find((p) => p.id === id)
         const filtered = state.pages.filter((p) => p.id !== id)
         if (filtered.length === 0) {
           const newPage = createDefaultPage()
-          return { pages: [newPage], currentPageId: newPage.id }
+          const counts = buildMetaKeyCounts([newPage])
+          return {
+            pages: [newPage],
+            currentPageId: newPage.id,
+            metaKeyCounts: counts,
+            uniqueMetaKeys: sortedMetaKeysFromCounts(counts)
+          }
         }
         const newCurrentId = state.currentPageId === id ? filtered[0].id : state.currentPageId
-        return { pages: filtered, currentPageId: newCurrentId }
+        const counts = { ...state.metaKeyCounts }
+        if (removed) removeMetaKeysFromCounts(counts, removed.meta)
+        return {
+          pages: filtered,
+          currentPageId: newCurrentId,
+          metaKeyCounts: counts,
+          uniqueMetaKeys: sortedMetaKeysFromCounts(counts)
+        }
       })
     },
 
     updatePage: (id, patch) => {
-      set((state) => ({
-        pages: state.pages.map((p) => (p.id === id ? { ...p, ...patch } : p))
-      }))
+      set((state) => {
+        if (!patch.meta) {
+          return {
+            pages: state.pages.map((p) => (p.id === id ? { ...p, ...patch } : p))
+          }
+        }
+
+        const counts = { ...state.metaKeyCounts }
+
+        const pages = state.pages.map((p) => {
+          if (p.id !== id) return p
+          removeMetaKeysFromCounts(counts, p.meta)
+          addMetaKeysToCounts(counts, patch.meta)
+          return { ...p, ...patch }
+        })
+
+        return {
+          pages,
+          metaKeyCounts: counts,
+          uniqueMetaKeys: sortedMetaKeysFromCounts(counts)
+        }
+      })
     },
 
     setCurrentPage: (id) => {

@@ -231,7 +231,7 @@ function Sidebar(): JSX.Element {
       // Remove old custom entries not in the new meta (but keep default ones)
       const newKeys = new Set(Object.keys(meta))
       for (const k of Object.keys(existingMeta)) {
-        if (k !== 'description' && k !== 'charset' && k !== 'viewport' && !newKeys.has(k)) {
+        if (k !== 'description' && k !== 'charset' && k !== 'viewport' && k !== 'datePublished' && !newKeys.has(k)) {
           delete existingMeta[k]
         }
       }
