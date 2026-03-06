@@ -221,6 +221,7 @@ export interface ProjectData {
   pages: Page[]
   folders?: PageFolder[]
   userBlocks: UserBlock[]
+  customPresets?: ProjectTheme[]
   isProjectLoaded?: boolean
 }
 

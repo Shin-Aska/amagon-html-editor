@@ -162,7 +162,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         pages: data.pages.length > 0 ? data.pages : [createDefaultPage()],
         folders: data.folders || [],
         userBlocks: data.userBlocks || [],
-        customPresets: (data as any).customPresets || [],
+        customPresets: data.customPresets || [],
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
         filePath: filePath ?? null,
         isProjectLoaded: true
@@ -272,9 +272,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     // ─── Custom preset management ────────────────────────────────────
 
     addCustomPreset: (preset) => {
-      set((state) => ({
-        customPresets: [...state.customPresets, { ...preset, isCustom: true }]
-      }))
+      set((state) => {
+        const index = state.customPresets.findIndex((p) => p.name === preset.name)
+        if (index >= 0) {
+          const next = [...state.customPresets]
+          next[index] = { ...next[index], ...preset, isCustom: true }
+          return { customPresets: next }
+        }
+        return { customPresets: [...state.customPresets, { ...preset, isCustom: true }] }
+      })
     },
 
     updateCustomPreset: (name, patch) => {

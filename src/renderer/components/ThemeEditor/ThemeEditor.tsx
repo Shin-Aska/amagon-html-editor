@@ -456,6 +456,14 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   const updateThemeBorders = useProjectStore((s) => s.updateThemeBorders)
   const showToast = useToastStore((s) => s.showToast)
 
+  const getUniquePresetName = useCallback((baseName: string) => {
+    const reserved = new Set<string>([...themePresets.map((p) => p.name), ...customPresets.map((p) => p.name)])
+    if (!reserved.has(baseName)) return baseName
+    let i = 2
+    while (reserved.has(`${baseName} (${i})`)) i++
+    return `${baseName} (${i})`
+  }, [customPresets])
+
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return
@@ -472,7 +480,8 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   }, [setProjectTheme, showToast])
 
   const handleExportTheme = useCallback(() => {
-    const json = JSON.stringify(theme, null, 2)
+    const exportTheme: ProjectTheme = { ...theme, isCustom: true }
+    const json = JSON.stringify(exportTheme, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -502,8 +511,10 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
 
         // Merge with defaults to fill any missing fields
         const defaultTheme = createDefaultTheme()
+        const rawName = parsed.name || file.name.replace(/\..*$/, '')
         const imported: ProjectTheme = {
-          name: parsed.name || file.name.replace(/\..*$/, ''),
+          name: getUniquePresetName(rawName),
+          isCustom: true,
           colors: { ...defaultTheme.colors, ...parsed.colors },
           typography: { ...defaultTheme.typography, ...parsed.typography },
           spacing: { ...defaultTheme.spacing, ...parsed.spacing },
@@ -512,14 +523,15 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
           customCssFiles: Array.isArray(parsed.customCssFiles) ? parsed.customCssFiles : []
         }
 
+        addCustomPreset(imported)
         setProjectTheme(imported)
-        showToast(`Theme "${imported.name}" imported`, 'success')
+        showToast(`Theme "${imported.name}" imported as custom preset`, 'success')
       } catch (err) {
         showToast('Failed to parse theme file', 'error')
       }
     }
     input.click()
-  }, [setProjectTheme, showToast])
+  }, [setProjectTheme, showToast, addCustomPreset, getUniquePresetName])
 
   const handleApplyPreset = useCallback((preset: ProjectTheme) => {
     setProjectTheme({ ...preset })
@@ -527,11 +539,11 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   }, [setProjectTheme, showToast])
 
   const handleCreatePreset = useCallback((name: string) => {
-    // Save current theme as a custom preset
-    const presetToSave: ProjectTheme = { ...theme, name, isCustom: true }
+    const finalName = getUniquePresetName(name)
+    const presetToSave: ProjectTheme = { ...theme, name: finalName, isCustom: true }
     addCustomPreset(presetToSave)
-    showToast(`Created preset "${name}"`, 'success')
-  }, [theme, addCustomPreset, showToast])
+    showToast(`Created preset "${finalName}"`, 'success')
+  }, [theme, addCustomPreset, showToast, getUniquePresetName])
 
   const handleUpdatePreset = useCallback((name: string, preset: ProjectTheme) => {
     updateCustomPreset(name, preset)
