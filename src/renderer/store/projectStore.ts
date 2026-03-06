@@ -10,6 +10,7 @@ interface ProjectState {
   pages: Page[]
   folders: PageFolder[]
   userBlocks: UserBlock[]
+  customPresets: ProjectTheme[]  // user-created custom theme presets
   currentPageId: string | null
   filePath: string | null
   isProjectLoaded: boolean
@@ -32,6 +33,11 @@ interface ProjectActions {
   updateThemeSpacing: (patch: Partial<ProjectTheme['spacing']>) => void
   updateThemeBorders: (patch: Partial<ProjectTheme['borders']>) => void
   setThemeCustomCss: (css: string) => void
+
+  // Custom preset management
+  addCustomPreset: (preset: ProjectTheme) => void
+  updateCustomPreset: (name: string, patch: Partial<ProjectTheme>) => void
+  deleteCustomPreset: (name: string) => void
 
   // CSS file management
   addCssFile: (name: string) => CssFile
@@ -117,6 +123,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     pages: [defaultPage],
     folders: [],
     userBlocks: [],
+    customPresets: [],
     currentPageId: defaultPage.id,
     filePath: null,
     isProjectLoaded: false,
@@ -155,6 +162,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         pages: data.pages.length > 0 ? data.pages : [createDefaultPage()],
         folders: data.folders || [],
         userBlocks: data.userBlocks || [],
+        customPresets: (data as any).customPresets || [],
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
         filePath: filePath ?? null,
         isProjectLoaded: true
@@ -168,6 +176,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         pages: [newDefault],
         folders: [],
         userBlocks: [],
+        customPresets: [],
         currentPageId: newDefault.id,
         filePath: null,
         isProjectLoaded: false
@@ -196,7 +205,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         projectSettings: state.settings,
         pages: state.pages,
         folders: state.folders,
-        userBlocks: state.userBlocks
+        userBlocks: state.userBlocks,
+        customPresets: state.customPresets
       }
     },
 
@@ -256,6 +266,28 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           ...state.settings,
           theme: { ...state.settings.theme, customCss: css }
         }
+      }))
+    },
+
+    // ─── Custom preset management ────────────────────────────────────
+
+    addCustomPreset: (preset) => {
+      set((state) => ({
+        customPresets: [...state.customPresets, { ...preset, isCustom: true }]
+      }))
+    },
+
+    updateCustomPreset: (name, patch) => {
+      set((state) => ({
+        customPresets: state.customPresets.map((p) =>
+          p.name === name ? { ...p, ...patch, isCustom: true } : p
+        )
+      }))
+    },
+
+    deleteCustomPreset: (name) => {
+      set((state) => ({
+        customPresets: state.customPresets.filter((p) => p.name !== name)
       }))
     },
 

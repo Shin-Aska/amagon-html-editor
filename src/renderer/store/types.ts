@@ -85,6 +85,7 @@ export interface CssFile {
 
 export interface ProjectTheme {
   name: string
+  isCustom?: boolean           // true for user-created custom presets
   colors: ThemeColors
   typography: ThemeTypography
   spacing: ThemeSpacing

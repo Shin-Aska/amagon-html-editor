@@ -336,3 +336,118 @@
   opacity: 0.6;
   transition: width 0.2s ease;
 }
+
+/* Section header with actions */
+.theme-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+/* Small button variant */
+.theme-btn-small {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Create preset form */
+.theme-preset-create-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-preset-create-form .theme-field-input {
+  width: 160px;
+}
+
+/* Preset card header and actions */
+.theme-preset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  min-height: 24px;
+}
+
+.theme-preset-name {
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Custom badge */
+.theme-preset-badge {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: white;
+}
+
+/* Preset actions */
+.theme-preset-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-preset-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+
+.theme-preset-action-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.theme-preset-action-btn-danger:hover {
+  background: var(--color-danger-bg, rgba(220, 53, 69, 0.1));
+  color: var(--color-danger, #dc3545);
+}
+
+/* Edit form inline */
+.theme-preset-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.theme-field-input-small {
+  padding: 4px 6px;
+  font-size: 12px;
+  width: 100px;
+}
+
+/* Custom preset card styling */
+.theme-preset-card.custom {
+  border-color: var(--color-accent);
+  background: linear-gradient(135deg, var(--color-bg-surface) 0%, rgba(124, 58, 237, 0.05) 100%);
+}
+
+.theme-preset-card.custom:hover {
+  border-color: var(--color-accent-hover);
+  background: linear-gradient(135deg, var(--color-bg-hover) 0%, rgba(124, 58, 237, 0.08) 100%);
+}
+
+.theme-preset-card.custom.active {
+  border-color: var(--color-accent);
+  background: linear-gradient(135deg, var(--color-accent-bg, rgba(124, 58, 237, 0.15)) 0%, rgba(124, 58, 237, 0.1) 100%);
+}

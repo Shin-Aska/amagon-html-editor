@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { X, Palette, Download, Upload, RotateCcw } from 'lucide-react'
+import { X, Palette, Download, Upload, RotateCcw, Plus, Pencil, Trash2, Check, XIcon } from 'lucide-react'
 import { useProjectStore } from '../../store/projectStore'
 import { useToastStore } from '../../store/toastStore'
 import { createDefaultTheme, themeToCSS } from '../../store/types'
@@ -278,32 +278,163 @@ function BordersTab({
 // ─── Presets Tab ──────────────────────────────────────────────────────────────
 
 function PresetsTab({
-  currentThemeName,
-  onApplyPreset
+  currentTheme,
+  customPresets,
+  onApplyPreset,
+  onCreatePreset,
+  onUpdatePreset,
+  onDeletePreset
 }: {
-  currentThemeName: string
+  currentTheme: ProjectTheme
+  customPresets: ProjectTheme[]
   onApplyPreset: (preset: ProjectTheme) => void
+  onCreatePreset: (name: string) => void
+  onUpdatePreset: (name: string, preset: ProjectTheme) => void
+  onDeletePreset: (name: string) => void
 }): JSX.Element {
+  const [isCreating, setIsCreating] = useState(false)
+  const [newPresetName, setNewPresetName] = useState('')
+  const [editingPreset, setEditingPreset] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+
+  const handleCreate = () => {
+    if (newPresetName.trim()) {
+      onCreatePreset(newPresetName.trim())
+      setNewPresetName('')
+      setIsCreating(false)
+    }
+  }
+
+  const handleEditStart = (preset: ProjectTheme) => {
+    setEditingPreset(preset.name)
+    setEditName(preset.name)
+  }
+
+  const handleEditSave = (originalName: string) => {
+    if (editName.trim() && editName.trim() !== originalName) {
+      const preset = customPresets.find(p => p.name === originalName)
+      if (preset) {
+        onUpdatePreset(originalName, { ...preset, name: editName.trim() })
+      }
+    }
+    setEditingPreset(null)
+    setEditName('')
+  }
+
+  const handleEditCancel = () => {
+    setEditingPreset(null)
+    setEditName('')
+  }
+
+  const allPresets = [...themePresets, ...customPresets]
+
   return (
     <div className="theme-section">
-      <div className="theme-section-title">Theme Presets</div>
-      <div className="theme-preset-grid">
-        {themePresets.map((preset) => (
-          <div
-            key={preset.name}
-            className={`theme-preset-card ${currentThemeName === preset.name ? 'active' : ''}`}
-            onClick={() => onApplyPreset(preset)}
+      <div className="theme-section-header">
+        <div className="theme-section-title">Theme Presets</div>
+        {!isCreating ? (
+          <button
+            className="theme-btn theme-btn-small"
+            onClick={() => setIsCreating(true)}
+            title="Save current theme as preset"
           >
-            <div className="theme-preset-name">{preset.name}</div>
-            <div className="theme-preset-swatches">
-              <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.primary }} />
-              <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.secondary }} />
-              <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.accent }} />
-              <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.background }} />
-              <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.text }} />
-            </div>
+            <Plus size={14} /> Create Preset
+          </button>
+        ) : (
+          <div className="theme-preset-create-form">
+            <input
+              className="theme-field-input"
+              placeholder="Preset name..."
+              value={newPresetName}
+              onChange={(e) => setNewPresetName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreate()
+                if (e.key === 'Escape') setIsCreating(false)
+              }}
+              autoFocus
+            />
+            <button className="theme-btn theme-btn-primary" onClick={handleCreate}>
+              <Check size={14} />
+            </button>
+            <button className="theme-btn" onClick={() => setIsCreating(false)}>
+              <XIcon size={14} />
+            </button>
           </div>
-        ))}
+        )}
+      </div>
+
+      <div className="theme-preset-grid">
+        {allPresets.map((preset) => {
+          const isCustom = preset.isCustom ?? false
+          const isActive = currentTheme.name === preset.name
+          const isEditing = editingPreset === preset.name
+
+          return (
+            <div
+              key={`${isCustom ? 'custom' : 'built-in'}-${preset.name}`}
+              className={`theme-preset-card ${isActive ? 'active' : ''} ${isCustom ? 'custom' : ''}`}
+              onClick={() => !isEditing && onApplyPreset(preset)}
+            >
+              <div className="theme-preset-header">
+                {isEditing ? (
+                  <div className="theme-preset-edit-form" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="theme-field-input theme-field-input-small"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleEditSave(preset.name)
+                        if (e.key === 'Escape') handleEditCancel()
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      className="theme-btn theme-btn-small theme-btn-primary"
+                      onClick={() => handleEditSave(preset.name)}
+                    >
+                      <Check size={12} />
+                    </button>
+                    <button className="theme-btn theme-btn-small" onClick={handleEditCancel}>
+                      <XIcon size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="theme-preset-name">
+                      {preset.name}
+                      {isCustom && <span className="theme-preset-badge">Custom</span>}
+                    </div>
+                    {isCustom && (
+                      <div className="theme-preset-actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="theme-preset-action-btn"
+                          onClick={() => handleEditStart(preset)}
+                          title="Edit preset name"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          className="theme-preset-action-btn theme-preset-action-btn-danger"
+                          onClick={() => onDeletePreset(preset.name)}
+                          title="Delete preset"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="theme-preset-swatches">
+                <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.primary }} />
+                <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.secondary }} />
+                <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.accent }} />
+                <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.background }} />
+                <div className="theme-preset-swatch" style={{ backgroundColor: preset.colors.text }} />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -314,7 +445,11 @@ function PresetsTab({
 export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.Element | null {
   const [activeTab, setActiveTab] = useState<ThemeTab>('colors')
   const theme = useProjectStore((s) => s.settings.theme)
+  const customPresets = useProjectStore((s) => s.customPresets)
   const setProjectTheme = useProjectStore((s) => s.setProjectTheme)
+  const addCustomPreset = useProjectStore((s) => s.addCustomPreset)
+  const updateCustomPreset = useProjectStore((s) => s.updateCustomPreset)
+  const deleteCustomPreset = useProjectStore((s) => s.deleteCustomPreset)
   const updateThemeColors = useProjectStore((s) => s.updateThemeColors)
   const updateThemeTypography = useProjectStore((s) => s.updateThemeTypography)
   const updateThemeSpacing = useProjectStore((s) => s.updateThemeSpacing)
@@ -391,6 +526,23 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
     showToast(`Applied "${preset.name}" theme`, 'success')
   }, [setProjectTheme, showToast])
 
+  const handleCreatePreset = useCallback((name: string) => {
+    // Save current theme as a custom preset
+    const presetToSave: ProjectTheme = { ...theme, name, isCustom: true }
+    addCustomPreset(presetToSave)
+    showToast(`Created preset "${name}"`, 'success')
+  }, [theme, addCustomPreset, showToast])
+
+  const handleUpdatePreset = useCallback((name: string, preset: ProjectTheme) => {
+    updateCustomPreset(name, preset)
+    showToast(`Updated preset "${preset.name}"`, 'success')
+  }, [updateCustomPreset, showToast])
+
+  const handleDeletePreset = useCallback((name: string) => {
+    deleteCustomPreset(name)
+    showToast(`Deleted preset "${name}"`, 'success')
+  }, [deleteCustomPreset, showToast])
+
   if (!isOpen) return null
 
   const tabs: { id: ThemeTab; label: string }[] = [
@@ -427,8 +579,12 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
         <div className="theme-editor-content">
           {activeTab === 'presets' && (
             <PresetsTab
-              currentThemeName={theme.name}
+              currentTheme={theme}
+              customPresets={customPresets}
               onApplyPreset={handleApplyPreset}
+              onCreatePreset={handleCreatePreset}
+              onUpdatePreset={handleUpdatePreset}
+              onDeletePreset={handleDeletePreset}
             />
           )}
           {activeTab === 'colors' && (
