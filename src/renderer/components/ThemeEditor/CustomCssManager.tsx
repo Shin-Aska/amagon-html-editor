@@ -1,0 +1,186 @@
+import { useState, useCallback } from 'react'
+import Editor from '@monaco-editor/react'
+import { useProjectStore } from '../../store/projectStore'
+import type { CssFile } from '../../store/types'
+import './CustomCssManager.css'
+
+export default function CustomCssManager(): JSX.Element {
+    const theme = useProjectStore((s) => s.settings.theme)
+    const addCssFile = useProjectStore((s) => s.addCssFile)
+    const removeCssFile = useProjectStore((s) => s.removeCssFile)
+    const updateCssFile = useProjectStore((s) => s.updateCssFile)
+    const reorderCssFiles = useProjectStore((s) => s.reorderCssFiles)
+    const toggleCssFile = useProjectStore((s) => s.toggleCssFile)
+
+    const files = theme.customCssFiles || []
+    const [selectedFileId, setSelectedFileId] = useState<string | null>(
+        files.length > 0 ? files[0].id : null
+    )
+    const [renamingId, setRenamingId] = useState<string | null>(null)
+    const [renameValue, setRenameValue] = useState('')
+
+    const selectedFile = files.find((f) => f.id === selectedFileId) || null
+
+    const handleAddFile = useCallback(() => {
+        const name = `stylesheet-${files.length + 1}.css`
+        const file = addCssFile(name)
+        setSelectedFileId(file.id)
+    }, [files.length, addCssFile])
+
+    const handleRemoveFile = useCallback((id: string) => {
+        removeCssFile(id)
+        if (selectedFileId === id) {
+            const remaining = files.filter((f) => f.id !== id)
+            setSelectedFileId(remaining.length > 0 ? remaining[0].id : null)
+        }
+    }, [files, selectedFileId, removeCssFile])
+
+    const handleCssChange = useCallback((value: string | undefined) => {
+        if (selectedFileId) {
+            updateCssFile(selectedFileId, { css: value || '' })
+        }
+    }, [selectedFileId, updateCssFile])
+
+    const handleStartRename = useCallback((file: CssFile) => {
+        setRenamingId(file.id)
+        setRenameValue(file.name)
+    }, [])
+
+    const handleFinishRename = useCallback(() => {
+        if (renamingId && renameValue.trim()) {
+            updateCssFile(renamingId, { name: renameValue.trim() })
+        }
+        setRenamingId(null)
+        setRenameValue('')
+    }, [renamingId, renameValue, updateCssFile])
+
+    const handleMoveUp = useCallback((index: number) => {
+        if (index > 0) reorderCssFiles(index, index - 1)
+    }, [reorderCssFiles])
+
+    const handleMoveDown = useCallback((index: number) => {
+        if (index < files.length - 1) reorderCssFiles(index, index + 1)
+    }, [files.length, reorderCssFiles])
+
+    return (
+        <div className="css-manager">
+            <div className="css-manager-sidebar">
+                <div className="css-manager-sidebar-header">
+                    <span className="css-manager-sidebar-title">CSS Files</span>
+                    <button className="css-manager-add-btn" onClick={handleAddFile} title="Add CSS file">
+                        +
+                    </button>
+                </div>
+
+                {files.length === 0 && (
+                    <p className="css-manager-empty">No CSS files. Click + to add one.</p>
+                )}
+
+                <div className="css-manager-file-list">
+                    {files.map((file, index) => (
+                        <div
+                            key={file.id}
+                            className={`css-manager-file-item ${file.id === selectedFileId ? 'active' : ''} ${!file.enabled ? 'disabled' : ''}`}
+                            onClick={() => setSelectedFileId(file.id)}
+                        >
+                            <span className="css-manager-file-order">{index + 1}</span>
+
+                            {renamingId === file.id ? (
+                                <input
+                                    className="css-manager-rename-input"
+                                    value={renameValue}
+                                    onChange={(e) => setRenameValue(e.target.value)}
+                                    onBlur={handleFinishRename}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleFinishRename()
+                                        if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+                                    }}
+                                    autoFocus
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            ) : (
+                                <span
+                                    className="css-manager-file-name"
+                                    onDoubleClick={(e) => { e.stopPropagation(); handleStartRename(file) }}
+                                    title="Double-click to rename"
+                                >
+                                    {file.name}
+                                </span>
+                            )}
+
+                            <div className="css-manager-file-actions" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    className="css-manager-icon-btn"
+                                    onClick={() => handleMoveUp(index)}
+                                    disabled={index === 0}
+                                    title="Move up"
+                                >
+                                    ↑
+                                </button>
+                                <button
+                                    className="css-manager-icon-btn"
+                                    onClick={() => handleMoveDown(index)}
+                                    disabled={index === files.length - 1}
+                                    title="Move down"
+                                >
+                                    ↓
+                                </button>
+                                <button
+                                    className={`css-manager-icon-btn toggle ${file.enabled ? 'on' : 'off'}`}
+                                    onClick={() => toggleCssFile(file.id)}
+                                    title={file.enabled ? 'Disable' : 'Enable'}
+                                >
+                                    {file.enabled ? '●' : '○'}
+                                </button>
+                                <button
+                                    className="css-manager-icon-btn delete"
+                                    onClick={() => handleRemoveFile(file.id)}
+                                    title="Delete"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="css-manager-editor">
+                {selectedFile ? (
+                    <>
+                        <div className="css-manager-editor-header">
+                            <span className="css-manager-editor-filename">{selectedFile.name}</span>
+                            {!selectedFile.enabled && (
+                                <span className="css-manager-editor-disabled-badge">Disabled</span>
+                            )}
+                        </div>
+                        <div className="css-manager-editor-body">
+                            <Editor
+                                key={selectedFile.id}
+                                height="100%"
+                                defaultLanguage="css"
+                                value={selectedFile.css}
+                                onChange={handleCssChange}
+                                theme="vs-dark"
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 13,
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    wordWrap: 'on',
+                                    tabSize: 2,
+                                    automaticLayout: true,
+                                    padding: { top: 8 }
+                                }}
+                            />
+                        </div>
+                    </>
+                ) : (
+                    <div className="css-manager-no-selection">
+                        <p>Select a CSS file from the sidebar or create a new one.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}

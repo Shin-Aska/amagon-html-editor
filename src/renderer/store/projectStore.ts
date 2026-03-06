@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Page, PageFolder, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme } from './types'
+import type { Page, PageFolder, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme, CssFile } from './types'
 import { generateBlockId, createDefaultTheme } from './types'
 import { createPageHeaderBlock } from '../../shared/welcomeBlocks'
 
@@ -32,6 +32,13 @@ interface ProjectActions {
   updateThemeSpacing: (patch: Partial<ProjectTheme['spacing']>) => void
   updateThemeBorders: (patch: Partial<ProjectTheme['borders']>) => void
   setThemeCustomCss: (css: string) => void
+
+  // CSS file management
+  addCssFile: (name: string) => CssFile
+  removeCssFile: (id: string) => void
+  updateCssFile: (id: string, patch: Partial<Omit<CssFile, 'id'>>) => void
+  reorderCssFiles: (fromIndex: number, toIndex: number) => void
+  toggleCssFile: (id: string) => void
 
   // Page management
   addPage: (title: string, slug?: string) => Page
@@ -126,6 +133,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           incoming?.theme && typeof incoming.theme === 'object' && (incoming.theme as ProjectTheme).colors
             ? (incoming.theme as ProjectTheme)
             : createDefaultTheme()
+      }
+
+      // Migrate legacy customCss string to customCssFiles
+      const theme = migratedSettings.theme
+      if (!theme.customCssFiles || theme.customCssFiles.length === 0) {
+        if (theme.customCss && theme.customCss.trim().length > 0) {
+          theme.customCssFiles = [{
+            id: generateBlockId(),
+            name: 'Custom Styles',
+            css: theme.customCss,
+            enabled: true
+          }]
+        } else {
+          theme.customCssFiles = []
+        }
       }
 
       set({
@@ -233,6 +255,81 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         settings: {
           ...state.settings,
           theme: { ...state.settings.theme, customCss: css }
+        }
+      }))
+    },
+
+    // ─── CSS file management ─────────────────────────────────────────
+
+    addCssFile: (name) => {
+      const file: CssFile = {
+        id: generateBlockId(),
+        name,
+        css: '',
+        enabled: true
+      }
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: {
+            ...state.settings.theme,
+            customCssFiles: [...(state.settings.theme.customCssFiles || []), file]
+          }
+        }
+      }))
+      return file
+    },
+
+    removeCssFile: (id) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: {
+            ...state.settings.theme,
+            customCssFiles: (state.settings.theme.customCssFiles || []).filter((f) => f.id !== id)
+          }
+        }
+      }))
+    },
+
+    updateCssFile: (id, patch) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: {
+            ...state.settings.theme,
+            customCssFiles: (state.settings.theme.customCssFiles || []).map((f) =>
+              f.id === id ? { ...f, ...patch } : f
+            )
+          }
+        }
+      }))
+    },
+
+    reorderCssFiles: (fromIndex, toIndex) => {
+      set((state) => {
+        const files = [...(state.settings.theme.customCssFiles || [])]
+        const [moved] = files.splice(fromIndex, 1)
+        files.splice(toIndex, 0, moved)
+        return {
+          settings: {
+            ...state.settings,
+            theme: { ...state.settings.theme, customCssFiles: files }
+          }
+        }
+      })
+    },
+
+    toggleCssFile: (id) => {
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          theme: {
+            ...state.settings.theme,
+            customCssFiles: (state.settings.theme.customCssFiles || []).map((f) =>
+              f.id === id ? { ...f, enabled: !f.enabled } : f
+            )
+          }
         }
       }))
     },

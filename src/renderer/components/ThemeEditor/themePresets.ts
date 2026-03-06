@@ -30,7 +30,8 @@ export const themePresets: ProjectTheme[] = [
     },
     spacing: { ...defaultSpacing },
     borders: { radius: '6px', width: '1px', color: '#dee2e6' },
-    customCss: ''
+    customCss: '',
+    customCssFiles: []
   },
   {
     name: 'Midnight',
@@ -56,7 +57,8 @@ export const themePresets: ProjectTheme[] = [
     },
     spacing: { ...defaultSpacing },
     borders: { radius: '8px', width: '1px', color: '#334155' },
-    customCss: ''
+    customCss: '',
+    customCssFiles: []
   },
   {
     name: 'Forest',
@@ -82,7 +84,8 @@ export const themePresets: ProjectTheme[] = [
     },
     spacing: { ...defaultSpacing },
     borders: { radius: '4px', width: '1px', color: '#d1d5db' },
-    customCss: ''
+    customCss: '',
+    customCssFiles: []
   },
   {
     name: 'Ocean',
@@ -108,7 +111,8 @@ export const themePresets: ProjectTheme[] = [
     },
     spacing: { ...defaultSpacing },
     borders: { radius: '8px', width: '1px', color: '#bae6fd' },
-    customCss: ''
+    customCss: '',
+    customCssFiles: []
   },
   {
     name: 'Warm Minimal',
@@ -134,6 +138,7 @@ export const themePresets: ProjectTheme[] = [
     },
     spacing: { ...defaultSpacing },
     borders: { radius: '2px', width: '1px', color: '#d6d3d1' },
-    customCss: ''
+    customCss: '',
+    customCssFiles: []
   }
 ]

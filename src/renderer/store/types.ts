@@ -76,13 +76,21 @@ export interface ThemeBorders {
   color: string               // e.g. '#dee2e6'
 }
 
+export interface CssFile {
+  id: string
+  name: string
+  css: string
+  enabled: boolean
+}
+
 export interface ProjectTheme {
   name: string
   colors: ThemeColors
   typography: ThemeTypography
   spacing: ThemeSpacing
   borders: ThemeBorders
-  customCss: string           // raw CSS appended after variables
+  customCss: string              // legacy: raw CSS appended after variables
+  customCssFiles?: CssFile[]     // multi-file custom CSS (takes precedence over customCss)
 }
 
 export function createDefaultTheme(): ProjectTheme {
@@ -117,7 +125,8 @@ export function createDefaultTheme(): ProjectTheme {
       width: '1px',
       color: '#dee2e6'
     },
-    customCss: ''
+    customCss: '',
+    customCssFiles: []
   }
 }
 
@@ -175,8 +184,21 @@ export function themeToCSS(theme: ProjectTheme): string {
   lines.push('  line-height: var(--theme-heading-line-height);')
   lines.push('}')
 
-  // Append custom CSS
-  if (theme.customCss.trim()) {
+  // Append custom CSS (multi-file takes precedence over legacy single string)
+  const cssFiles = theme.customCssFiles && theme.customCssFiles.length > 0
+    ? theme.customCssFiles
+    : null
+
+  if (cssFiles) {
+    for (const file of cssFiles) {
+      if (file.enabled && file.css.trim()) {
+        lines.push('')
+        lines.push(`/* --- ${file.name} --- */`)
+        lines.push(file.css.trim())
+      }
+    }
+  } else if (theme.customCss.trim()) {
+    // Legacy fallback: single customCss string
     lines.push('')
     lines.push(theme.customCss.trim())
   }

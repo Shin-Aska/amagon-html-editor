@@ -1,0 +1,223 @@
+/* ─── Custom CSS Manager ───────────────────────────────────────────────────── */
+
+.css-manager {
+    display: flex;
+    height: 400px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.css-manager-sidebar {
+    width: 220px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.css-manager-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.css-manager-sidebar-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.css-manager-add-btn {
+    border: none;
+    background: var(--primary, #1e66f5);
+    color: #fff;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s;
+}
+
+.css-manager-add-btn:hover {
+    opacity: 0.85;
+}
+
+.css-manager-empty {
+    padding: 12px 10px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin: 0;
+}
+
+/* File list */
+.css-manager-file-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.css-manager-file-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.css-manager-file-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.css-manager-file-item.active {
+    background: rgba(30, 102, 245, 0.15);
+    border-left: 3px solid var(--primary, #1e66f5);
+    padding-left: 5px;
+}
+
+.css-manager-file-item.disabled .css-manager-file-name {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+.css-manager-file-order {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.08);
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.css-manager-file-name {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.css-manager-rename-input {
+    flex: 1;
+    font-size: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--primary, #1e66f5);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 1px 4px;
+    outline: none;
+}
+
+.css-manager-file-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.css-manager-file-item:hover .css-manager-file-actions,
+.css-manager-file-item.active .css-manager-file-actions {
+    opacity: 1;
+}
+
+.css-manager-icon-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 1px 3px;
+    font-size: 0.75rem;
+    line-height: 1;
+    border-radius: 2px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.css-manager-icon-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+.css-manager-icon-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.css-manager-icon-btn.toggle.on {
+    color: var(--success, #198754);
+}
+
+.css-manager-icon-btn.toggle.off {
+    color: var(--text-muted);
+}
+
+.css-manager-icon-btn.delete:hover:not(:disabled) {
+    color: var(--danger, #dc3545);
+}
+
+/* Editor panel */
+.css-manager-editor {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.css-manager-editor-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.css-manager-editor-filename {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text);
+    font-family: monospace;
+}
+
+.css-manager-editor-disabled-badge {
+    font-size: 0.65rem;
+    background: var(--danger, #dc3545);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.css-manager-editor-body {
+    flex: 1;
+    min-height: 0;
+}
+
+.css-manager-no-selection {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-style: italic;
+}

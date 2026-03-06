@@ -21,6 +21,76 @@ const AVAILABLE_EVENTS = [
     { value: 'onerror', label: 'On Error' }
 ]
 
+// Prepopulated code templates for each event type
+const EVENT_TEMPLATES: Record<string, string> = {
+    onclick: `(function(event) {
+  // Runs when this element is clicked
+  // 'this' refers to the element, 'event' is the click event
+  
+}).call(this, event)`,
+    ondblclick: `(function(event) {
+  // Runs when this element is double-clicked
+  
+}).call(this, event)`,
+    onchange: `(function(event) {
+  // Runs when the value of this element changes
+  // For inputs/selects: var value = this.value;
+  
+}).call(this, event)`,
+    oninput: `(function(event) {
+  // Runs on every keystroke/input change
+  // var value = this.value;
+  
+}).call(this, event)`,
+    onsubmit: `(function(event) {
+  // Runs when this form is submitted
+  // event.preventDefault(); // Uncomment to prevent default submission
+  
+}).call(this, event)`,
+    onfocus: `(function(event) {
+  // Runs when this element receives focus
+  
+}).call(this, event)`,
+    onblur: `(function(event) {
+  // Runs when this element loses focus
+  
+}).call(this, event)`,
+    onkeydown: `(function(event) {
+  // Runs when a key is pressed down
+  // var key = event.key;
+  
+}).call(this, event)`,
+    onkeyup: `(function(event) {
+  // Runs when a key is released
+  // var key = event.key;
+  
+}).call(this, event)`,
+    onmouseover: `(function(event) {
+  // Runs when the mouse enters this element (bubbles)
+  
+}).call(this, event)`,
+    onmouseout: `(function(event) {
+  // Runs when the mouse leaves this element (bubbles)
+  
+}).call(this, event)`,
+    onmouseenter: `(function(event) {
+  // Runs when the mouse enters this element (no bubbling)
+  
+}).call(this, event)`,
+    onmouseleave: `(function(event) {
+  // Runs when the mouse leaves this element (no bubbling)
+  
+}).call(this, event)`,
+    onload: `(function(event) {
+  // Runs when this element has finished loading
+  
+}).call(this, event)`,
+    onerror: `(function(event) {
+  // Runs when an error occurs on this element
+  
+}).call(this, event)`
+}
+
 interface EventActionsEditorProps {
     blockId: string
     events: Record<string, string>
@@ -49,12 +119,16 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     }, [showAddDropdown])
 
     const handleAddEvent = useCallback((eventName: string) => {
-        const newEvents = { ...currentEvents, [eventName]: '' }
+        const template = EVENT_TEMPLATES[eventName] || `(function(event) {
+  // Your code here
+  
+}).call(this, event)`
+        const newEvents = { ...currentEvents, [eventName]: template }
         updateBlock(blockId, { events: newEvents })
         setShowAddDropdown(false)
         // Immediately open editor for new event
         setEditingEvent(eventName)
-        setEditorCode('')
+        setEditorCode(template)
     }, [blockId, currentEvents, updateBlock])
 
     const handleRemoveEvent = useCallback((eventName: string) => {

@@ -5,6 +5,7 @@ import { useToastStore } from '../../store/toastStore'
 import { createDefaultTheme, themeToCSS } from '../../store/types'
 import type { ProjectTheme, ThemeColors, ThemeTypography, ThemeSpacing, ThemeBorders } from '../../store/types'
 import { themePresets } from './themePresets'
+import CustomCssManager from './CustomCssManager'
 import './ThemeEditor.css'
 
 type ThemeTab = 'colors' | 'typography' | 'spacing' | 'borders' | 'customCss' | 'presets'
@@ -271,30 +272,8 @@ function BordersTab({
   )
 }
 
-// ─── Custom CSS Tab ───────────────────────────────────────────────────────────
+// CustomCssTab removed — now using CustomCssManager component
 
-function CustomCssTab({
-  css,
-  onChange
-}: {
-  css: string
-  onChange: (css: string) => void
-}): JSX.Element {
-  return (
-    <div className="theme-section theme-custom-css">
-      <div className="theme-section-title">Custom CSS</div>
-      <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>
-        Additional CSS appended after theme variables. Use <code>var(--theme-*)</code> to reference theme values.
-      </p>
-      <textarea
-        value={css}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={`/* Example */\na { color: var(--theme-primary); }\n.card { border-radius: var(--theme-border-radius); }`}
-        spellCheck={false}
-      />
-    </div>
-  )
-}
 
 // ─── Presets Tab ──────────────────────────────────────────────────────────────
 
@@ -340,7 +319,6 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   const updateThemeTypography = useProjectStore((s) => s.updateThemeTypography)
   const updateThemeSpacing = useProjectStore((s) => s.updateThemeSpacing)
   const updateThemeBorders = useProjectStore((s) => s.updateThemeBorders)
-  const setThemeCustomCss = useProjectStore((s) => s.setThemeCustomCss)
   const showToast = useToastStore((s) => s.showToast)
 
   // Close on Escape
@@ -395,7 +373,8 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
           typography: { ...defaultTheme.typography, ...parsed.typography },
           spacing: { ...defaultTheme.spacing, ...parsed.spacing },
           borders: { ...defaultTheme.borders, ...parsed.borders },
-          customCss: typeof parsed.customCss === 'string' ? parsed.customCss : ''
+          customCss: typeof parsed.customCss === 'string' ? parsed.customCss : '',
+          customCssFiles: Array.isArray(parsed.customCssFiles) ? parsed.customCssFiles : []
         }
 
         setProjectTheme(imported)
@@ -465,7 +444,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
             <BordersTab borders={theme.borders} onChange={updateThemeBorders} />
           )}
           {activeTab === 'customCss' && (
-            <CustomCssTab css={theme.customCss} onChange={setThemeCustomCss} />
+            <CustomCssManager />
           )}
         </div>
 
