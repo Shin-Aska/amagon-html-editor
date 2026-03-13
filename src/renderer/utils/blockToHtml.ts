@@ -190,6 +190,15 @@ function getBlockContent(block: Block): string {
       const id = String(props.id || 'carousel-' + Math.random().toString(36).substr(2, 9))
       const slides = (props.slides as Array<{ src: string; alt: string; caption?: string }>) ?? []
 
+      if (slides.length === 0) {
+        return `<div class="carousel-inner d-flex align-items-center justify-content-center text-muted" style="min-height:200px;background:#f8f9fa;border:2px dashed #dee2e6;border-radius:0.375rem;">
+          <div class="text-center p-4">
+            <div style="font-size:2rem;margin-bottom:0.5rem;">🎠</div>
+            <p class="mb-0">No slides — select this block and add slides in the inspector.</p>
+          </div>
+        </div>`
+      }
+
       const indicators = slides.map((_, i) =>
         `<button type="button" data-bs-target="#${id}" data-bs-slide-to="${i}" class="${i === 0 ? 'active' : ''}" aria-current="${i === 0 ? 'true' : 'false'}" aria-label="Slide ${i + 1}"></button>`
       ).join('\n')

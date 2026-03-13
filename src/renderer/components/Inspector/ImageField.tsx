@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
+import AssetPicker from '../AssetManager/AssetPicker'
 import { getApi } from '../../utils/api'
 import './ImageField.css'
 
@@ -12,29 +13,25 @@ function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sizeWarning, setSizeWarning] = useState<string | null>(null)
+  const [showPicker, setShowPicker] = useState(false)
 
   const isBase64 = value.startsWith('data:')
   const isSvgPlaceholder = value.startsWith('data:image/svg+xml')
   const hasPreviewableImage = value && (value.startsWith('data:') || value.startsWith('http') || value.startsWith('blob:') || value.startsWith('app-media://'))
 
-  const handleBrowse = useCallback(async () => {
-    setError(null)
-    setSizeWarning(null)
-    setLoading(true)
+  const handleBrowse = useCallback(() => {
+    setShowPicker(true)
+  }, [])
 
-    try {
-      const api = getApi()
-      const result = await api.assets.selectSingleImage()
-
-      if (!result.success || result.canceled) {
-        setLoading(false)
-        return
-      }
-
-      const filePath = result.filePath as string
-      const fileName = result.data as string
-
-      if (embedAsBase64) {
+  const handleSelectAsset = async (urls: string[]) => {
+    setShowPicker(false)
+    if (!urls.length) return
+    const filePath = urls[0]
+    
+    if (embedAsBase64) {
+      setLoading(true)
+      try {
+        const api = getApi()
         const base64Result = await api.assets.readFileAsBase64(filePath)
         if (!base64Result.success) {
           setError(base64Result.error || 'Failed to read file')
@@ -49,16 +46,15 @@ function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
         }
 
         onChange(dataUri)
-      } else {
-        onChange(filePath)
+      } catch (err) {
+        setError(String(err))
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
-    } catch (err) {
-      setError(String(err))
-      setLoading(false)
+    } else {
+      onChange(filePath)
     }
-  }, [embedAsBase64, onChange])
+  }
 
   const handleToggleBase64 = useCallback(async (checked: boolean) => {
     setEmbedAsBase64(checked)
@@ -131,6 +127,14 @@ function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
             onLoad={(e) => { (e.target as HTMLImageElement).style.display = 'block' }}
           />
         </div>
+      )}
+
+      {showPicker && (
+        <AssetPicker
+          mode="single-image"
+          onSelect={handleSelectAsset}
+          onCancel={() => setShowPicker(false)}
+        />
       )}
     </div>
   )

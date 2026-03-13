@@ -18,6 +18,7 @@ interface ElectronApi {
   assets: {
     selectImage: () => Promise<any>
     selectSingleImage: () => Promise<any>
+    selectVideo: () => Promise<any>
     list: () => Promise<any>
     delete: (relativePath: string) => Promise<any>
     readAsset: (assetPath: string) => Promise<any>
@@ -44,6 +45,12 @@ interface ElectronApi {
     setConfig: (config: any) => Promise<any>
     getModels: () => Promise<any>
     fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) => Promise<any>
+  }
+  mediaSearch: {
+    getConfig: () => Promise<any>
+    setConfig: (config: any) => Promise<any>
+    search: (options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }) => Promise<any>
+    downloadAndImport: (url: string) => Promise<any>
   }
 }
 

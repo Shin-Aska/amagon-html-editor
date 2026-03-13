@@ -8,6 +8,8 @@ export type PropType =
   | 'select'
   | 'color'
   | 'image'
+  | 'video'
+  | 'carousel'
   | 'icon'
   | 'measurement' // e.g. "10px", "1rem"
   | 'array' // for lists
