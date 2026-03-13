@@ -1,5 +1,8 @@
-import { IMAGE_PLACEHOLDER, ICON_PLACEHOLDER } from './placeholders'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { IMAGE_PLACEHOLDER } from './placeholders'
 import hljs from 'highlight.js'
+import { getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon } from './iconCatalog'
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 
@@ -119,6 +122,23 @@ function escapeAttrValue(value: string): string {
     .replace(/>/g, '&gt;')
 }
 
+function stripLegacyBootstrapIconClasses(classes: string[]): string[] {
+  return classes.filter((cls) => cls !== 'bi' && !/^bi-/i.test(cls))
+}
+
+function renderLucideIconMarkup(name: string): string {
+  const IconComponent = getLucideIconComponent(name)
+  if (!IconComponent) return ''
+  return renderToStaticMarkup(
+    createElement(IconComponent, {
+      size: '1em',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      strokeWidth: 2.25
+    })
+  )
+}
+
 // ─── Style serialization ─────────────────────────────────────────────────────
 
 function stylesToString(styles: Record<string, string>): string {
@@ -184,7 +204,7 @@ function getBlockContent(block: Block): string {
     }
 
     case 'icon':
-      return `<img src="${ICON_PLACEHOLDER}" alt="icon" width="100%" height="100%" />`
+      return ''
 
     case 'carousel': {
       const id = String(props.id || 'carousel-' + Math.random().toString(36).substr(2, 9))
@@ -838,19 +858,61 @@ ${pad}</div>`
 
   // Special handling for Icon
   if (block.type === 'icon') {
-    const iconClass = escapeAttrValue(String(block.props.iconClass ?? 'bi-star'))
-    const classes = [...block.classes, iconClass].filter(Boolean).join(' ')
+    const rawIconValue = String(block.props.iconClass ?? '').trim()
+    const legacyBootstrapClass = rawIconValue.startsWith('bi-')
+      ? rawIconValue
+      : block.classes.find((cls) => /^bi-/i.test(cls)) || ''
+    const mappedLegacyLucide = mapLegacyBootstrapIcon(legacyBootstrapClass)
+    const resolvedLucideName = rawIconValue.startsWith('lucide:')
+      ? rawIconValue.replace(/^lucide:/, '')
+      : mappedLegacyLucide || ''
+    const resolvedGlyph = !resolvedLucideName && isRenderableGlyph(rawIconValue) ? rawIconValue : ''
+    const classes = stripLegacyBootstrapIconClasses(block.classes)
 
-    // Merge styles with props like size/color if they exist and aren't in styles
     const styles = { ...block.styles }
     if (block.props.size && !styles.fontSize) styles.fontSize = String(block.props.size)
     if (block.props.color && !styles.color) styles.color = String(block.props.color)
+    if (!styles.display) styles.display = 'inline-flex'
+    if (!styles.alignItems) styles.alignItems = 'center'
+    if (!styles.justifyContent) styles.justifyContent = 'center'
+    if (!styles.lineHeight) styles.lineHeight = '1'
+    if (!styles.minWidth) styles.minWidth = '1em'
+    if (!styles.minHeight) styles.minHeight = '1em'
 
     const styleStr = stylesToString(styles)
-    const styleAttr = styleStr ? `style="${styleStr}"` : ''
-    const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
+    const attrs = [
+      classes.length > 0 ? `class="${classes.join(' ')}"` : '',
+      styleStr ? `style="${styleStr}"` : '',
+      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : ''
+    ].filter(Boolean).join(' ')
 
-    return `${pad}<i class="${classes}" ${styleAttr} ${dataAttr}></i>`
+    if (resolvedLucideName) {
+      const svgMarkup = renderLucideIconMarkup(resolvedLucideName)
+      if (svgMarkup) {
+        return `${pad}<span ${attrs}>${svgMarkup}</span>`
+      }
+    }
+
+    if (resolvedGlyph) {
+      return `${pad}<span ${attrs}>${escapeAttrValue(resolvedGlyph)}</span>`
+    }
+
+    const placeholderStyles = {
+      ...styles,
+      minWidth: '2rem',
+      minHeight: '2rem',
+      border: '2px dashed #dee2e6',
+      borderRadius: '0.375rem',
+      color: styles.color || '#6c757d'
+    }
+    const placeholderAttrs = [
+      classes.length > 0 ? `class="${classes.join(' ')}"` : '',
+      `style="${stylesToString(placeholderStyles)}"`,
+      legacyBootstrapClass ? `title="${escapeAttrValue(legacyBootstrapClass)}"` : 'title="No icon selected"',
+      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : ''
+    ].filter(Boolean).join(' ')
+
+    return `${pad}<span ${placeholderAttrs}>☆</span>`
   }
 
   const tag = resolveTag(block)

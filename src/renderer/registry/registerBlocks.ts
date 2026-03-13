@@ -163,9 +163,8 @@ export function registerBlocks(): void {
     label: 'Icon',
     category: 'Media',
     icon: '★',
-    defaultClasses: ['bi', 'bi-star'],
     propsSchema: {
-      iconClass: { type: 'text', label: 'Bootstrap Icon Class', default: 'bi-star' },
+      iconClass: { type: 'icon', label: 'Icon', default: 'lucide:star' },
       size: { type: 'measurement', label: 'Font Size', default: '2rem' },
       color: { type: 'color', label: 'Color', default: 'currentColor' }
     }

@@ -121,6 +121,34 @@ describe('blockToHtml', () => {
     expect(html).toContain('Visit')
   })
 
+  it('renders lucide icons inline for icon blocks', () => {
+    const blocks: Block[] = [
+      createBlock('icon', { props: { iconClass: 'lucide:star', size: '2rem', color: 'red' } })
+    ]
+    const html = blockToHtml(blocks)
+    expect(html).toContain('<svg')
+    expect(html).toContain('stroke="currentColor"')
+    expect(html).toContain('font-size: 2rem')
+    expect(html).toContain('color: red')
+  })
+
+  it('renders a visible placeholder for empty icon blocks', () => {
+    const block = createBlock('icon', { props: { iconClass: '' } })
+    const html = blockToHtml([block], { includeDataAttributes: true })
+    expect(html).toContain('No icon selected')
+    expect(html).toContain(`data-block-id="${block.id}"`)
+    expect(html).toContain('☆')
+  })
+
+  it('maps legacy bootstrap icon classes to a visible icon', () => {
+    const blocks: Block[] = [
+      createBlock('icon', { props: { iconClass: 'bi-star' }, classes: ['bi', 'bi-star'] })
+    ]
+    const html = blockToHtml(blocks)
+    expect(html).toContain('<svg')
+    expect(html).not.toContain('No icon selected')
+  })
+
   it('includes data-block-id when includeDataAttributes is true', () => {
     const block = createBlock('paragraph', { props: { text: 'Test' } })
     const html = blockToHtml([block], { includeDataAttributes: true })

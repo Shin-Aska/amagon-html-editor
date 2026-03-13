@@ -14,6 +14,7 @@ import MultiComboboxField from './MultiComboboxField'
 import SortableListField from './SortableListField'
 import VideoField from './VideoField'
 import CarouselField from './CarouselField'
+import IconField from './IconField'
 import { useProjectStore } from '../../store/projectStore'
 import './Inspector.css'
 
@@ -149,6 +150,8 @@ function Inspector(): JSX.Element {
         return <VideoField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
       case 'carousel':
         return <CarouselField value={val || []} onChange={(v) => handlePropChange(key, v)} />
+      case 'icon':
+        return <IconField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
       case 'measurement':
         return (
           <input
