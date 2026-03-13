@@ -15,11 +15,41 @@ export interface IpcResult {
   data?: string
   mimeType?: string
   projects?: string[]
-  assets?: { name: string; path: string; relativePath: string }[]
+  assets?: { name: string; path: string; relativePath: string; type?: 'image' | 'video' }[]
   directory?: string | null
   previewPath?: string
   path?: string
   relativePath?: string
+}
+
+type MockAsset = { name: string; path: string; relativePath: string; type: 'image' | 'video' }
+
+const MOCK_ASSETS_KEY = 'mock-assets'
+
+function loadMockAssets(): MockAsset[] {
+  try {
+    const raw = localStorage.getItem(MOCK_ASSETS_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveMockAssets(assets: MockAsset[]): void {
+  try {
+    localStorage.setItem(MOCK_ASSETS_KEY, JSON.stringify(assets))
+  } catch {
+    // ignore
+  }
+}
+
+function upsertMockAssets(newAssets: MockAsset[]): void {
+  const existing = loadMockAssets()
+  const byPath = new Map<string, MockAsset>()
+  existing.forEach((a) => byPath.set(a.path, a))
+  newAssets.forEach((a) => byPath.set(a.path, a))
+  saveMockAssets(Array.from(byPath.values()))
 }
 
 const mockApi: ElectronApi = {
@@ -220,7 +250,17 @@ const mockApi: ElectronApi = {
               resolve({ success: false, canceled: true })
               return
             }
-            const filePaths = Array.from(files).map((f) => URL.createObjectURL(f))
+            const selected = Array.from(files).map((f) => {
+              const url = URL.createObjectURL(f)
+              return {
+                name: f.name,
+                path: url,
+                relativePath: `assets/${f.name}`,
+                type: 'image' as const
+              }
+            })
+            upsertMockAssets(selected)
+            const filePaths = selected.map((s) => s.path)
             resolve({ success: true, filePaths })
           }
           input.oncancel = () => resolve({ success: false, canceled: true })
@@ -235,7 +275,7 @@ const mockApi: ElectronApi = {
       try {
         const input = document.createElement('input')
         input.type = 'file'
-        input.accept = 'image/png,image/jpeg,image/jpg,image/gif,image/svg+xml,image/webp'
+        input.accept = 'image/*'
 
         return new Promise((resolve) => {
           input.onchange = () => {
@@ -245,6 +285,51 @@ const mockApi: ElectronApi = {
               return
             }
             const blobUrl = URL.createObjectURL(file)
+            upsertMockAssets([
+              {
+                name: file.name,
+                path: blobUrl,
+                relativePath: `assets/${file.name}`,
+                type: 'image'
+              }
+            ])
+            resolve({
+              success: true,
+              filePath: blobUrl,
+              data: file.name,
+              mimeType: file.type
+            })
+          }
+          input.oncancel = () => resolve({ success: false, canceled: true })
+          input.click()
+        })
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
+    },
+
+    selectVideo: async (): Promise<IpcResult> => {
+      try {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'video/*'
+
+        return new Promise((resolve) => {
+          input.onchange = () => {
+            const file = input.files?.[0]
+            if (!file) {
+              resolve({ success: false, canceled: true })
+              return
+            }
+            const blobUrl = URL.createObjectURL(file)
+            upsertMockAssets([
+              {
+                name: file.name,
+                path: blobUrl,
+                relativePath: `assets/${file.name}`,
+                type: 'video'
+              }
+            ])
             resolve({
               success: true,
               filePath: blobUrl,
@@ -288,12 +373,18 @@ const mockApi: ElectronApi = {
     },
 
     list: async (): Promise<IpcResult> => {
-      // In browser mode, we can't list files on disk
-      return { success: true, assets: [] }
+      return { success: true, assets: loadMockAssets() }
     },
 
-    delete: async (_relativePath: string): Promise<IpcResult> => {
-      return { success: false, error: 'Not supported in browser mode' }
+    delete: async (relativePath: string): Promise<IpcResult> => {
+      try {
+        const existing = loadMockAssets()
+        const next = existing.filter((a) => a.relativePath !== relativePath)
+        saveMockAssets(next)
+        return { success: true }
+      } catch (error) {
+        return { success: false, error: String(error) }
+      }
     },
 
     readAsset: async (assetPath: string): Promise<IpcResult> => {
@@ -405,6 +496,37 @@ const mockApi: ElectronApi = {
         return { success: true, models: [] }
       }
       return { success: true, models: fallback[data.provider] || [] }
+    }
+  },
+
+  mediaSearch: {
+    getConfig: async (): Promise<any> => {
+      return {
+        success: true,
+        config: {
+          enabled: false,
+          provider: 'unsplash',
+          apiKey: ''
+        }
+      }
+    },
+
+    setConfig: async (_config: any): Promise<any> => {
+      return { success: true, config: { ..._config, apiKey: '' } }
+    },
+
+    search: async (_options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }): Promise<any> => {
+      return {
+        results: [],
+        error: 'Web search is only available in Electron mode. Please configure your API key in the application settings.'
+      }
+    },
+
+    downloadAndImport: async (_url: string): Promise<any> => {
+      return {
+        success: false,
+        error: 'Download and import is only available in Electron mode.'
+      }
     }
   }
 }

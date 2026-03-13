@@ -151,7 +151,7 @@ export function registerBlocks(): void {
     defaultProps: { src: '', controls: true },
     defaultClasses: ['w-100'],
     propsSchema: {
-      src: { type: 'text', label: 'Video URL', default: '' },
+      src: { type: 'video', label: 'Video URL', default: '' },
       controls: { type: 'boolean', label: 'Show Controls', default: true },
       autoplay: { type: 'boolean', label: 'Autoplay', default: false },
       loop: { type: 'boolean', label: 'Loop', default: false }
@@ -163,9 +163,8 @@ export function registerBlocks(): void {
     label: 'Icon',
     category: 'Media',
     icon: '★',
-    defaultClasses: ['bi', 'bi-star'],
     propsSchema: {
-      iconClass: { type: 'text', label: 'Bootstrap Icon Class', default: 'bi-star' },
+      iconClass: { type: 'icon', label: 'Icon', default: 'lucide:star' },
       size: { type: 'measurement', label: 'Font Size', default: '2rem' },
       color: { type: 'color', label: 'Color', default: 'currentColor' }
     }
@@ -187,10 +186,9 @@ export function registerBlocks(): void {
     },
     propsSchema: {
       slides: {
-        type: 'array',
+        type: 'carousel',
         label: 'Slides',
         default: []
-        // In a real implementation, we'd need a sub-schema for array items
       }
     }
   })

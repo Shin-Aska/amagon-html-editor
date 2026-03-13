@@ -5,6 +5,7 @@ import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
 import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
+import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
 import { buildAppMenu } from './menu'
 import { createWelcomeBlocks } from '../shared/welcomeBlocks'
 
@@ -36,8 +37,11 @@ const MIME_MAP: Record<string, string> = {
   '.gif': 'image/gif',
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
+  '.avif': 'image/avif',
+  '.apng': 'image/apng',
   '.ico': 'image/x-icon',
   '.bmp': 'image/bmp',
+  '.tif': 'image/tiff',
   '.tiff': 'image/tiff',
   '.css': 'text/css',
   '.js': 'application/javascript',
@@ -51,6 +55,9 @@ const MIME_MAP: Record<string, string> = {
   '.eot': 'application/vnd.ms-fontobject',
   '.mp4': 'video/mp4',
   '.webm': 'video/webm',
+  '.ogv': 'video/ogg',
+  '.mov': 'video/quicktime',
+  '.m4v': 'video/x-m4v',
   '.ogg': 'audio/ogg',
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
@@ -525,7 +532,7 @@ function registerIpcHandlers(): void {
         filters: [
           {
             name: 'Images',
-            extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico']
+            extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'apng', 'tif', 'tiff']
           }
         ],
         properties: ['openFile', 'multiSelections']
@@ -574,6 +581,116 @@ function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle('assets:selectSingleImage', async () => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+        title: 'Select Image',
+        filters: [
+          {
+            name: 'Images',
+            extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'apng', 'tif', 'tiff']
+          }
+        ],
+        properties: ['openFile']
+      })
+
+      if (canceled || filePaths.length === 0) {
+        return { success: false, canceled: true }
+      }
+
+      const srcPath = filePaths[0]
+      const fileName = path.basename(srcPath)
+      const mimeType = getMimeType(srcPath)
+
+      if (currentProjectDir) {
+        const assetsDir = path.join(currentProjectDir, 'assets')
+        await fs.mkdir(assetsDir, { recursive: true })
+
+        let destPath = path.join(assetsDir, fileName)
+        let counter = 1
+        while (existsSync(destPath)) {
+          const ext = path.extname(fileName)
+          const base = path.basename(fileName, ext)
+          destPath = path.join(assetsDir, `${base}-${counter}${ext}`)
+          counter++
+        }
+
+        await fs.copyFile(srcPath, destPath)
+        const relativePath = path.relative(currentProjectDir, destPath)
+        return {
+          success: true,
+          filePath: `app-media://project-asset/${relativePath}`,
+          data: path.basename(destPath),
+          mimeType
+        }
+      }
+
+      return {
+        success: true,
+        filePath: `app-media://absolute/${srcPath}`,
+        data: fileName,
+        mimeType
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('assets:selectVideo', async () => {
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+        title: 'Select Video',
+        filters: [
+          {
+            name: 'Videos',
+            extensions: ['mp4', 'webm', 'ogv', 'ogg', 'mov', 'm4v']
+          }
+        ],
+        properties: ['openFile']
+      })
+
+      if (canceled || filePaths.length === 0) {
+        return { success: false, canceled: true }
+      }
+
+      const srcPath = filePaths[0]
+      const fileName = path.basename(srcPath)
+      const mimeType = getMimeType(srcPath)
+
+      if (currentProjectDir) {
+        const assetsDir = path.join(currentProjectDir, 'assets')
+        await fs.mkdir(assetsDir, { recursive: true })
+
+        let destPath = path.join(assetsDir, fileName)
+        let counter = 1
+        while (existsSync(destPath)) {
+          const ext = path.extname(fileName)
+          const base = path.basename(fileName, ext)
+          destPath = path.join(assetsDir, `${base}-${counter}${ext}`)
+          counter++
+        }
+
+        await fs.copyFile(srcPath, destPath)
+        const relativePath = path.relative(currentProjectDir, destPath)
+        return {
+          success: true,
+          filePath: `app-media://project-asset/${relativePath}`,
+          data: path.basename(destPath),
+          mimeType
+        }
+      }
+
+      return {
+        success: true,
+        filePath: `app-media://absolute/${srcPath}`,
+        data: fileName,
+        mimeType
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   // ── List project assets ───────────────────────────────────────────────
 
   ipcMain.handle('assets:list', async () => {
@@ -588,25 +705,126 @@ function registerIpcHandlers(): void {
       }
 
       const entries = await fs.readdir(assetsDir, { withFileTypes: true })
-      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico']
+      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.avif', '.apng', '.tif', '.tiff']
+      const videoExts = ['.mp4', '.webm', '.ogv', '.ogg', '.mov', '.m4v']
       const assets = entries
         .filter(
           (e) =>
             e.isFile() &&
-            imageExts.includes(path.extname(e.name).toLowerCase())
+            (imageExts.includes(path.extname(e.name).toLowerCase()) ||
+              videoExts.includes(path.extname(e.name).toLowerCase()))
         )
         .map((e) => {
+          const ext = path.extname(e.name).toLowerCase()
+          const type = imageExts.includes(ext) ? 'image' : 'video'
           const relativePath = `assets/${e.name}`
           return {
             name: e.name,
             path: `app-media://project-asset/${relativePath}`,
-            relativePath
+            relativePath,
+            type
           }
         })
 
       return { success: true, assets }
     } catch (error: any) {
       return { success: false, error: error.message, assets: [] }
+    }
+  })
+
+  ipcMain.handle('assets:readFileAsBase64', async (_, assetPath: string) => {
+    try {
+      const input = String(assetPath || '')
+      if (!input) return { success: false, error: 'No file path provided' }
+
+      const maxBytes = 5 * 1024 * 1024
+
+      if (/^https?:\/\//i.test(input)) {
+        return await new Promise((resolve) => {
+          const request = net.request(input)
+          request.on('response', (response) => {
+            const chunks: Buffer[] = []
+            let total = 0
+
+            const contentTypeHeader = response.headers['content-type']
+            const mimeFromHeader = Array.isArray(contentTypeHeader)
+              ? contentTypeHeader[0]
+              : (contentTypeHeader as string | undefined)
+
+            response.on('data', (chunk) => {
+              const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+              total += buf.length
+              if (total > maxBytes) {
+                resolve({
+                  success: false,
+                  error: `File is too large (${(total / (1024 * 1024)).toFixed(1)}MB). Max 5MB for base64 embedding.`
+                })
+                try {
+                  request.abort()
+                } catch {
+                  // ignore
+                }
+                return
+              }
+              chunks.push(buf)
+            })
+
+            response.on('end', () => {
+              const data = Buffer.concat(chunks)
+              const mimeType = (mimeFromHeader || 'application/octet-stream').split(';')[0]
+              resolve({
+                success: true,
+                data: `data:${mimeType};base64,${data.toString('base64')}`,
+                mimeType
+              })
+            })
+
+            response.on('error', (err) => {
+              resolve({ success: false, error: err.message })
+            })
+          })
+
+          request.on('error', (err) => {
+            resolve({ success: false, error: err.message })
+          })
+
+          request.end()
+        })
+      }
+
+      if (input.startsWith('blob:')) {
+        return { success: false, error: 'Blob URLs are not supported for base64 embedding in Electron mode. Please re-browse the file.' }
+      }
+
+      let filePath: string
+
+      if (input.startsWith('app-media://project-asset/')) {
+        if (!currentProjectDir) {
+          return { success: false, error: 'No project directory' }
+        }
+        const rel = input.replace('app-media://project-asset/', '')
+        filePath = path.join(currentProjectDir, decodeURIComponent(rel))
+      } else if (input.startsWith('app-media://absolute/')) {
+        filePath = decodeURIComponent(input.replace('app-media://absolute/', ''))
+      } else {
+        filePath = input
+      }
+
+      const data = await fs.readFile(filePath)
+      const sizeMB = data.byteLength / (1024 * 1024)
+      if (data.byteLength > maxBytes) {
+        return { success: false, error: `File is too large (${sizeMB.toFixed(1)}MB). Max 5MB for base64 embedding.` }
+      }
+
+      const mime = getMimeType(filePath)
+      const base64 = data.toString('base64')
+      return {
+        success: true,
+        data: `data:${mime};base64,${base64}`,
+        mimeType: mime
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   })
 
@@ -904,6 +1122,66 @@ function registerIpcHandlers(): void {
       return { success: true, models }
     } catch (error: any) {
       return { success: false, error: error.message, models: [] }
+    }
+  })
+
+  // ── Media Search ───────────────────────────────────────────────────────
+
+  ipcMain.handle('mediaSearch:getConfig', async () => {
+    try {
+      const config = await mediaSearchLoadConfig()
+      return {
+        success: true,
+        config: {
+          ...config,
+          apiKey: maskMediaApiKey(config.apiKey)
+        }
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('mediaSearch:setConfig', async (_, config: Partial<MediaSearchConfig>) => {
+    try {
+      const configToSave = { ...config }
+      // If the renderer sent back a masked key, the user didn't change it
+      if (configToSave.apiKey && configToSave.apiKey.startsWith(MEDIA_MASKED_PREFIX)) {
+        delete configToSave.apiKey
+      }
+      const saved = await mediaSearchSaveConfig(configToSave)
+      return {
+        success: true,
+        config: {
+          ...saved,
+          apiKey: maskMediaApiKey(saved.apiKey)
+        }
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('mediaSearch:search', async (_, options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }) => {
+    try {
+      const config = await mediaSearchLoadConfig()
+      const result = await searchMedia(options, config)
+      return result
+    } catch (error: any) {
+      return { results: [], error: error.message }
+    }
+  })
+
+  ipcMain.handle('mediaSearch:downloadAndImport', async (_, url: string) => {
+    try {
+      if (!currentProjectDir) {
+        return { success: false, error: 'No project directory' }
+      }
+
+      const result = await downloadAndImportMedia(url, currentProjectDir)
+      return result
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   })
 }

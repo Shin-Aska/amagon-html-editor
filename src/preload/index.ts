@@ -54,6 +54,10 @@ const api = {
   assets: {
     selectImage: () => ipcRenderer.invoke('assets:selectImage'),
 
+    selectSingleImage: () => ipcRenderer.invoke('assets:selectSingleImage'),
+
+    selectVideo: () => ipcRenderer.invoke('assets:selectVideo'),
+
     list: () => ipcRenderer.invoke('assets:list'),
 
     delete: (relativePath: string) =>
@@ -61,6 +65,9 @@ const api = {
 
     readAsset: (assetPath: string) =>
       ipcRenderer.invoke('assets:readAsset', assetPath),
+
+    readFileAsBase64: (filePath: string) =>
+      ipcRenderer.invoke('assets:readFileAsBase64', filePath),
 
     import: (srcPath: string) =>
       ipcRenderer.invoke('assets:import', srcPath)
@@ -107,6 +114,17 @@ const api = {
 
     fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) =>
       ipcRenderer.invoke('ai:fetchModelsForProvider', data)
+  },
+
+  mediaSearch: {
+    getConfig: () => ipcRenderer.invoke('mediaSearch:getConfig'),
+
+    setConfig: (config: any) => ipcRenderer.invoke('mediaSearch:setConfig', config),
+
+    search: (options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }) =>
+      ipcRenderer.invoke('mediaSearch:search', options),
+
+    downloadAndImport: (url: string) => ipcRenderer.invoke('mediaSearch:downloadAndImport', url)
   }
 }
 

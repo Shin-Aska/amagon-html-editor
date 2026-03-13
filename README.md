@@ -6,6 +6,8 @@
 
 An offline, AI-powered visual HTML editor — a Pingendo/Mobirise/Bootstrap Studio alternative for Linux.
 
+[amagon.app](https://amagon.app)
+
 ![App Preview](docs/images/app.jpg)
 
 ## Why "Amagon"?
