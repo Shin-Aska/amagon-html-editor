@@ -14,12 +14,13 @@ Use this skill whenever you need to publish a new build and the version tag must
 2. Get the most recent tag (falls back to `v0.0.0` if none exist):
    - `git describe --tags --abbrev=0`
 3. Strip the leading `v` and parse the remainder into `MAJOR.MINOR.PATCH` numbers.
-4. Depending on `bumpType`, update the numbers:
+4. Update the `version` field in `package.json` to match the new `MAJOR.MINOR.PATCH` value.
+5. Depending on `bumpType`, update the numbers:
    - `patch` (or unspecified): increment PATCH only, e.g. `1.0.10 -> 1.0.11`.
    - `minor`: increment MINOR, reset PATCH to `0`, e.g. `1.2.5 -> 1.3.0`.
    - `major`: increment MAJOR, reset MINOR and PATCH to `0`, e.g. `1.2.5 -> 2.0.0`.
-5. Create the new tag locally (always format as `vMAJOR.MINOR.PATCH`):
+6. Create the new tag locally (always format as `vMAJOR.MINOR.PATCH`):
    - `git tag v<newVersion>`
-6. Push the tag:
+7. Push the tag:
    - `git push origin v<newVersion>`
-7. Announce the new version or run any follow-up publish steps that depend on the bumped tag.
+8. Announce the new version or run any follow-up publish steps that depend on the bumped tag.
