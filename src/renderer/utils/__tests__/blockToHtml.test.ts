@@ -110,6 +110,112 @@ describe('blockToHtml', () => {
     expect(html).toContain('<button class="btn btn-primary">Click Me</button>')
   })
 
+  it('renders prop-driven Tailwind classes without leaking inspector props as attributes', () => {
+    const blocks: Block[] = [
+      createBlock('heading', {
+        props: { text: 'Hero', level: 1, alignment: 'text-center' },
+        classes: ['display-3', 'fw-bold']
+      }),
+      createBlock('paragraph', {
+        props: { text: 'Body', alignment: 'text-center', lead: true },
+        classes: ['mb-4']
+      }),
+      createBlock('button', {
+        props: { text: 'CTA', variant: 'btn-secondary', size: 'btn-lg' },
+        classes: ['btn']
+      }),
+      createBlock('column', {
+        props: { width: 'col-lg-6' },
+        classes: ['col']
+      })
+    ]
+
+    const html = blockToHtml(blocks, { framework: 'tailwind' })
+    expect(html).toContain('text-center')
+    expect(html).toContain('md:text-5xl')
+    expect(html).toContain('leading-8')
+    expect(html).toContain('bg-[var(--theme-secondary)]')
+    expect(html).toContain('lg:w-6/12')
+    expect(html).not.toContain('alignment=')
+    expect(html).not.toContain('lead ')
+    expect(html).not.toContain('width=')
+  })
+
+  it('keeps Tailwind rows with non-column children as normal block containers', () => {
+    const blocks: Block[] = [
+      createBlock('row', {
+        classes: ['row', 'g-4'],
+        children: [
+          createBlock('container', { classes: ['container'] }),
+          createBlock('section', { classes: ['py-5'] })
+        ]
+      })
+    ]
+
+    const html = blockToHtml(blocks, { framework: 'tailwind', includeDataAttributes: true })
+    expect(html).toMatch(/data-block-type="row"[^>]*class="[^"]*\bw-full\b[^"]*"/)
+    expect(html).not.toMatch(/data-block-type="row"[^>]*class="[^"]*\bflex\b[^"]*"/)
+  })
+
+  it('renders Tailwind rows with column children as horizontal layouts', () => {
+    const blocks: Block[] = [
+      createBlock('row', {
+        classes: ['row'],
+        children: [
+          createBlock('column', { classes: ['col'] }),
+          createBlock('column', { classes: ['col'] })
+        ]
+      })
+    ]
+
+    const html = blockToHtml(blocks, { framework: 'tailwind', includeDataAttributes: true })
+    expect(html).toMatch(/data-block-type="row"[^>]*class="[^"]*\bflex\b[^"]*\bflex-wrap\b[^"]*"/)
+    expect(html).toMatch(/data-block-type="column"[^>]*class="[^"]*\bw-full\b[^"]*\bmd:flex-1\b[^"]*"/)
+  })
+
+  it('maps Tailwind containers to full-width constrained wrappers', () => {
+    const blocks: Block[] = [
+      createBlock('container', { classes: ['container'] })
+    ]
+
+    const html = blockToHtml(blocks, { framework: 'tailwind', includeDataAttributes: true })
+    expect(html).toMatch(/data-block-type="container"[^>]*class="[^"]*\bw-full\b[^"]*\bmax-w-6xl\b[^"]*\bmx-auto\b[^"]*"/)
+  })
+
+  it('elides empty wrapper divs in Tailwind export so flex sections do not get shrinking children', () => {
+    const blocks: Block[] = [
+      createBlock('section', {
+        classes: ['py-12', 'd-flex', 'align-items-center'],
+        children: [
+          createBlock('container', {
+            classes: [],
+            children: [
+              createBlock('row', {
+                classes: ['row', 'justify-content-center', 'text-center'],
+                children: [
+                  createBlock('column', {
+                    classes: ['col-lg-8', 'col-10'],
+                    children: [
+                      createBlock('heading', {
+                        props: { text: 'Hero', level: 1 },
+                        classes: ['text-center']
+                      })
+                    ]
+                  })
+                ]
+              })
+            ]
+          })
+        ]
+      })
+    ]
+
+    const html = blockToHtml(blocks, { framework: 'tailwind' })
+    expect(html).toContain('<section class="py-12 flex items-center">')
+    expect(html).toContain('<div class="flex w-full justify-center text-center flex-wrap -mx-2">')
+    expect(html).not.toContain('<section class="py-12 flex items-center">\n  <div>\n')
+  })
+
   it('renders a link with href', () => {
     const blocks: Block[] = [
       createBlock('link', { props: { text: 'Visit', href: 'https://example.com', target: '_blank' } })
@@ -221,6 +327,8 @@ describe('pageToHtml', () => {
   it('includes Tailwind CDN for tailwind framework', () => {
     const html = pageToHtml([], { framework: 'tailwind' })
     expect(html).toContain('tailwindcss.com')
+    expect(html).not.toContain('bootstrap.min.css')
+    expect(html).not.toContain('bootstrap.bundle.min.js')
   })
 
   it('includes no framework CSS for vanilla', () => {

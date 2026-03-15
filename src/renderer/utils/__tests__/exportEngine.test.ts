@@ -212,6 +212,84 @@ describe('exportEngine', () => {
     expect(htmlText).not.toContain('bootstrap.bundle.min.js')
   })
 
+  it('tailwind export includes only tailwind resources', async () => {
+    const project: ProjectData = {
+      projectSettings: {
+        name: 'Test',
+        framework: 'tailwind',
+        theme: createDefaultTheme(),
+        globalStyles: {}
+      },
+      pages: [
+        {
+          id: 'p1',
+          title: 'Index',
+          slug: 'index',
+          meta: {},
+          blocks: []
+        }
+      ],
+      userBlocks: []
+    }
+
+    const files = await exportProject(project, {
+      resolveAsset: async () => null
+    })
+
+    const html = files.find((f) => f.path === 'index.html')
+    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    expect(htmlText).toContain('tailwindcss.com')
+    expect(htmlText).not.toContain('bootstrap.min.css')
+    expect(htmlText).not.toContain('bootstrap.bundle.min.js')
+  })
+
+  it('tailwind export renders tailwind-native markup for framework-sensitive blocks', async () => {
+    const project: ProjectData = {
+      projectSettings: {
+        name: 'Test',
+        framework: 'tailwind',
+        theme: createDefaultTheme(),
+        globalStyles: {}
+      },
+      pages: [
+        {
+          id: 'p1',
+          title: 'Index',
+          slug: 'index',
+          meta: {},
+          blocks: [
+            createBlock('navbar', {
+              props: { usePages: true, brandText: 'Brand', theme: 'navbar-theme-light' },
+              classes: ['navbar', 'navbar-expand-lg']
+            }),
+            createBlock('button', {
+              props: { text: 'CTA', variant: 'btn-primary', size: 'btn-lg' },
+              classes: ['btn']
+            }),
+            createBlock('heading', {
+              props: { text: 'Hero', level: 1, alignment: 'text-center' },
+              classes: ['display-3', 'fw-bold']
+            })
+          ]
+        }
+      ],
+      userBlocks: []
+    }
+
+    const files = await exportProject(project, {
+      resolveAsset: async () => null
+    })
+
+    const html = files.find((f) => f.path === 'index.html')
+    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    expect(htmlText).toContain('max-w-6xl')
+    expect(htmlText).toContain('inline-flex items-center justify-center rounded-md')
+    expect(htmlText).toContain('md:text-5xl')
+    expect(htmlText).not.toContain('navbar-expand-lg')
+    expect(htmlText).not.toContain('data-bs-toggle=')
+    expect(htmlText).not.toContain('class="btn btn-primary"')
+  })
+
   it('minifies HTML when minify=true', async () => {
     const project: ProjectData = {
       projectSettings: {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { type OnChange, type OnMount } from '@monaco-editor/react'
 import './CodeEditor.css'
 import { useEditorStore } from '../../store/editorStore'
+import { useProjectStore } from '../../store/projectStore'
 import { pageToHtml } from '../../utils/blockToHtml'
 import { htmlToBlocks, type HtmlDiagnostic } from '../../utils/htmlToBlocks'
 import type * as MonacoType from 'monaco-editor'
@@ -29,6 +30,7 @@ function CodeEditor(): JSX.Element {
   const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode)
   const customCss = useEditorStore((s) => s.customCss)
   const setCustomCss = useEditorStore((s) => s.setCustomCss)
+  const framework = useProjectStore((s) => s.settings.framework)
 
   const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<typeof MonacoType | null>(null)
@@ -45,8 +47,8 @@ function CodeEditor(): JSX.Element {
   const cssDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const visualHtml = useMemo(() => {
-    return pageToHtml(blocks, { framework: 'bootstrap-5', customCss })
-  }, [blocks, customCss])
+    return pageToHtml(blocks, { framework, customCss })
+  }, [blocks, customCss, framework])
 
   const getHtmlModel = (): MonacoType.editor.ITextModel | null => {
     return htmlModelRef.current
