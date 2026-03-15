@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import Editor from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import { useEditorStore } from '../../store/editorStore'
 import './EventActionsEditor.css'
+import type * as MonacoType from 'monaco-editor'
 
 const AVAILABLE_EVENTS = [
     { value: 'onclick', label: 'On Click' },
@@ -98,10 +99,12 @@ interface EventActionsEditorProps {
 
 export default function EventActionsEditor({ blockId, events }: EventActionsEditorProps): JSX.Element {
     const updateBlock = useEditorStore((s) => s.updateBlock)
+    const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode)
     const [editingEvent, setEditingEvent] = useState<string | null>(null)
     const [editorCode, setEditorCode] = useState('')
     const [showAddDropdown, setShowAddDropdown] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null)
 
     const currentEvents = events || {}
     const eventEntries = Object.entries(currentEvents).filter(([, v]) => v !== undefined)
@@ -150,12 +153,32 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         setEditorCode('')
     }, [blockId, editingEvent, editorCode, currentEvents, updateBlock])
 
+    const handleSaveAndClose = useCallback(() => {
+        handleSaveCode()
+        setIsTypingCode(false)
+    }, [handleSaveCode, setIsTypingCode])
+
     const handleCancelEdit = useCallback(() => {
         setEditingEvent(null)
         setEditorCode('')
-    }, [])
+        setIsTypingCode(false)
+    }, [setIsTypingCode])
 
-    // Filter out events already added
+    // Set isTypingCode when editor opens/closes
+    useEffect(() => {
+        if (editingEvent) {
+            setIsTypingCode(true)
+        } else {
+            setIsTypingCode(false)
+        }
+    }, [editingEvent, setIsTypingCode])
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            setIsTypingCode(false)
+        }
+    }, [setIsTypingCode])
     const availableToAdd = AVAILABLE_EVENTS.filter(
         (e) => !Object.prototype.hasOwnProperty.call(currentEvents, e.value)
     )
@@ -163,6 +186,28 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     const getEventLabel = (eventName: string): string => {
         const found = AVAILABLE_EVENTS.find((e) => e.value === eventName)
         return found ? found.label : eventName
+    }
+
+    const handleEditorMount: OnMount = (editor) => {
+        editorRef.current = editor
+        
+        // Focus the editor when it mounts
+        editor.focus()
+        
+        // Listen for blur/focus to update isTypingCode
+        const disposableBlur = editor.onDidBlurEditorWidget(() => {
+            // We keep isTypingCode true while the modal is open
+            // even if the editor loses focus, to prevent accidental block operations
+        })
+        
+        const disposableFocus = editor.onDidFocusEditorWidget(() => {
+            setIsTypingCode(true)
+        })
+        
+        return () => {
+            disposableBlur.dispose()
+            disposableFocus.dispose()
+        }
     }
 
     return (
@@ -240,6 +285,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                 value={editorCode}
                                 onChange={(value) => setEditorCode(value || '')}
                                 theme="vs-dark"
+                                onMount={handleEditorMount}
                                 options={{
                                     minimap: { enabled: false },
                                     fontSize: 13,
@@ -256,7 +302,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                             <button className="event-editor-btn cancel" onClick={handleCancelEdit}>
                                 Cancel
                             </button>
-                            <button className="event-editor-btn save" onClick={handleSaveCode}>
+                            <button className="event-editor-btn save" onClick={handleSaveAndClose}>
                                 Save
                             </button>
                         </div>

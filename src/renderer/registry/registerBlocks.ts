@@ -350,7 +350,7 @@ export function registerBlocks(): void {
     label: 'Navbar',
     category: 'Components',
     icon: '≡',
-    defaultClasses: ['navbar', 'navbar-expand-lg', 'bg-body-tertiary'],
+    defaultClasses: ['navbar', 'navbar-expand-lg', 'navbar-theme-light'],
     defaultProps: {
       brandText: 'Brand',
       brandImage: '',
@@ -375,9 +375,9 @@ export function registerBlocks(): void {
         type: 'select',
         label: 'Theme',
         options: [
-          { label: 'Light', value: 'bg-body-tertiary' },
-          { label: 'Dark', value: 'navbar-dark bg-dark' },
-          { label: 'Primary', value: 'navbar-dark bg-primary' }
+          { label: 'Light', value: 'navbar-theme-light' },
+          { label: 'Dark', value: 'navbar-theme-dark' },
+          { label: 'Primary', value: 'navbar-theme-primary' }
         ]
       }
     }
@@ -583,7 +583,10 @@ export function registerBlocks(): void {
     defaultProps: {
       id: 'modal-' + Math.random().toString(36).substr(2, 9),
       buttonText: 'Launch Modal',
-      title: 'Modal Title'
+      title: 'Modal Title',
+      closeButton: true,
+      footerButtons: true,
+      size: 'default'
     },
     defaultChildren: [
       {
@@ -593,8 +596,22 @@ export function registerBlocks(): void {
       }
     ],
     propsSchema: {
+      id: { type: 'text', label: 'Modal ID', default: 'modal-example', description: 'To trigger programmatically: bootstrap.Modal.getOrCreateInstance(document.getElementById("your-modal-id")).show()' },
       buttonText: { type: 'text', label: 'Button Text', default: 'Launch Modal' },
-      title: { type: 'text', label: 'Title', default: 'Modal Title' }
+      title: { type: 'text', label: 'Title', default: 'Modal Title' },
+      closeButton: { type: 'boolean', label: 'Show Close Button', default: true },
+      footerButtons: { type: 'boolean', label: 'Show Footer Buttons', default: true },
+      size: {
+        type: 'select',
+        label: 'Size',
+        default: 'default',
+        options: [
+          { label: 'Small', value: 'modal-sm' },
+          { label: 'Default', value: 'default' },
+          { label: 'Large', value: 'modal-lg' },
+          { label: 'Extra Large', value: 'modal-xl' }
+        ]
+      }
     }
   })
 

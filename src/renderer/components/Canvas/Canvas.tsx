@@ -109,6 +109,7 @@ function Canvas(): JSX.Element {
   const theme = useEditorStore((s) => s.theme)
   const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
   const projectTheme = useProjectStore((s) => s.settings.theme)
+  const framework = useProjectStore((s) => s.settings.framework)
   const pages = useProjectStore((s) => s.pages)
   const folders = useProjectStore((s) => s.folders)
 
@@ -278,10 +279,19 @@ function Canvas(): JSX.Element {
   }
 
   useEffect(() => {
+    setRuntimeReady(false)
+  }, [framework])
+
+  useEffect(() => {
     if (!runtimeReady) return
-    const html = blockToHtml(blocks, { includeDataAttributes: true, pages, folders })
+    postToIframe({ type: 'setFramework', framework })
+  }, [runtimeReady, framework])
+
+  useEffect(() => {
+    if (!runtimeReady) return
+    const html = blockToHtml(blocks, { includeDataAttributes: true, pages, folders, framework })
     postToIframe({ type: 'render', html })
-  }, [blocks, runtimeReady, pages, folders])
+  }, [blocks, runtimeReady, pages, folders, framework])
 
   useEffect(() => {
     if (!runtimeReady) return
@@ -314,8 +324,9 @@ function Canvas(): JSX.Element {
     postToIframe({ type: 'setUiTheme', isDark: theme === 'dark' })
   }, [runtimeReady, theme])
 
-  const viewportMaxWidth =
-    viewportMode === 'desktop' ? '100%' : viewportMode === 'tablet' ? '820px' : '390px'
+  const scale = zoom / 100
+  const viewportWidth = viewportMode === 'desktop' ? `${100 / scale}%` : viewportMode === 'tablet' ? '820px' : '390px'
+  const viewportHeight = `${100 / scale}%`
 
   return (
     <div className="canvas-wrapper">
@@ -328,13 +339,16 @@ function Canvas(): JSX.Element {
       <div
         className="canvas-viewport"
         style={{
-          maxWidth: viewportMaxWidth,
-          transform: `scale(${zoom / 100})`,
+          width: viewportWidth,
+          maxWidth: viewportWidth,
+          height: viewportHeight,
+          transform: `scale(${scale})`,
           transformOrigin: 'top center',
-          transition: 'max-width 0.3s ease, transform 0.2s ease'
+          transition: 'width 0.3s ease, max-width 0.3s ease, height 0.3s ease, transform 0.2s ease'
         }}
       >
         <iframe
+          key={framework}
           ref={iframeRef}
           className="canvas-iframe"
           src="./canvas.html"

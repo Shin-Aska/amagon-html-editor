@@ -6,7 +6,7 @@ import { getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon } fro
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 
-import type { Block, Page, PageFolder } from '../store/types'
+import type { Block, Page, PageFolder, FrameworkChoice } from '../store/types'
 
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
 
@@ -57,9 +57,44 @@ const VOID_ELEMENTS = new Set([
 
 function propsToAttributes(tag: string, type: string, props: Record<string, unknown>): string {
   const attrs: string[] = []
+  const nonAttributeProps = new Set([
+    'text',
+    'items',
+    'slides',
+    'plans',
+    'columns',
+    'tabs',
+    'options',
+    'label',
+    'code',
+    'itemsPerPage',
+    'showDescription',
+    'detailsMode',
+    'metaKeys',
+    'showSearch',
+    'showSort',
+    'sortLayout',
+    'sortPriority',
+    'sortKeys',
+    'sortDefaultKey',
+    'sortDefaultDir',
+    'filterTag',
+    'isForm',
+    'fluid',
+    'gutters',
+    'width',
+    'alignment',
+    'lead',
+    'variant',
+    'size',
+    'usePages',
+    'theme'
+  ])
 
   for (const [key, value] of Object.entries(props)) {
     if (value === undefined || value === null) continue
+
+    if (nonAttributeProps.has(key)) continue
 
     // Handle boolean attributes
     if (value === false) continue
@@ -73,30 +108,6 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
 
     // Special handling for common props
     switch (key) {
-      case 'text':
-      case 'items':
-      case 'slides':
-      case 'plans':
-      case 'columns':
-      case 'tabs':
-      case 'options': // select options
-      case 'label': // checkbox label
-      case 'code': // code-block content
-      case 'itemsPerPage': // blog-list
-      case 'showDescription': // blog-list
-      case 'detailsMode': // page-list
-      case 'metaKeys': // page-list
-      case 'showSearch': // page-list
-      case 'showSort': // page-list
-      case 'sortLayout': // page-list
-      case 'sortPriority': // page-list
-      case 'sortKeys': // page-list
-      case 'sortDefaultKey': // page-list
-      case 'sortDefaultDir': // page-list
-      case 'filterTag': // blog-list / navbar
-      case 'isForm': // container form flag (handled via tag resolution)
-        // These are content props, not attributes
-        continue
       case 'level':
         // Heading level is handled via tag, not attribute
         continue
@@ -120,6 +131,17 @@ function escapeAttrValue(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function sanitizeElementId(value: string, fallback: string): string {
+  const sanitized = value
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Za-z0-9\-_:.]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return sanitized || fallback
 }
 
 function stripLegacyBootstrapIconClasses(classes: string[]): string[] {
@@ -152,9 +174,513 @@ function camelToKebab(str: string): string {
   return str.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
 }
 
+function dedupeClasses(classes: string[]): string[] {
+  const seen = new Set<string>()
+  const next: string[] = []
+  for (const cls of classes) {
+    const value = String(cls || '').trim()
+    if (!value || seen.has(value)) continue
+    seen.add(value)
+    next.push(value)
+  }
+  return next
+}
+
+function normalizeNavbarThemeClasses(classes: string[]): string[] {
+  let classesArray = [...classes]
+  if (classesArray.includes('bg-body-tertiary')) {
+    classesArray = classesArray.filter(c => c !== 'bg-body-tertiary')
+    if (!classesArray.some(c => c.startsWith('navbar-theme-'))) {
+      classesArray.push('navbar-theme-light')
+    }
+  }
+  if (classesArray.includes('navbar-dark')) {
+    classesArray = classesArray.filter(c => c !== 'navbar-dark')
+  }
+  if (classesArray.includes('bg-dark')) {
+    classesArray = classesArray.filter(c => c !== 'bg-dark')
+    if (!classesArray.some(c => c.startsWith('navbar-theme-'))) {
+      classesArray.push('navbar-theme-dark')
+    }
+  }
+  if (classesArray.includes('bg-primary')) {
+    classesArray = classesArray.filter(c => c !== 'bg-primary')
+    if (!classesArray.some(c => c.startsWith('navbar-theme-'))) {
+      classesArray.push('navbar-theme-primary')
+    }
+  }
+  return classesArray
+}
+
+function mapBootstrapClassToTailwind(cls: string): string[] {
+  const value = String(cls || '').trim()
+  if (!value) return []
+
+  const displaySizeMatch = value.match(/^display-([1-6])$/)
+  if (displaySizeMatch) {
+    const sizeMap: Record<string, string[]> = {
+      '1': ['text-6xl', 'md:text-7xl'],
+      '2': ['text-5xl', 'md:text-6xl'],
+      '3': ['text-4xl', 'md:text-5xl'],
+      '4': ['text-3xl', 'md:text-4xl'],
+      '5': ['text-2xl', 'md:text-3xl'],
+      '6': ['text-xl', 'md:text-2xl']
+    }
+    return sizeMap[displaySizeMatch[1]] || ['text-4xl']
+  }
+
+  const spacingMatch = value.match(/^(m|mt|mb|ms|me|mx|my|p|pt|pb|ps|pe|px|py)(?:-(sm|md|lg|xl))?-([0-5]|auto)$/)
+  if (spacingMatch) {
+    const axis = spacingMatch[1]
+    const breakpoint = spacingMatch[2]
+    const amount = spacingMatch[3]
+    const axisMap: Record<string, string> = {
+      m: 'm',
+      mt: 'mt',
+      mb: 'mb',
+      ms: 'ml',
+      me: 'mr',
+      mx: 'mx',
+      my: 'my',
+      p: 'p',
+      pt: 'pt',
+      pb: 'pb',
+      ps: 'pl',
+      pe: 'pr',
+      px: 'px',
+      py: 'py'
+    }
+    const spacingMap: Record<string, string> = {
+      '0': '0',
+      '1': '1',
+      '2': '2',
+      '3': '4',
+      '4': '6',
+      '5': '12',
+      auto: 'auto'
+    }
+    const mapped = `${axisMap[axis]}-${spacingMap[amount]}`
+    return [breakpoint ? `${breakpoint}:${mapped}` : mapped]
+  }
+
+  const gapMatch = value.match(/^g(?:ap)?-(\d)$/)
+  if (gapMatch) {
+    const gapMap: Record<string, string> = { '0': 'gap-0', '1': 'gap-1', '2': 'gap-2', '3': 'gap-4', '4': 'gap-6', '5': 'gap-12' }
+    return [gapMap[gapMatch[1]] || 'gap-4']
+  }
+
+  const colMatch = value.match(/^col-(\d{1,2})$/)
+  if (colMatch) {
+    const n = Math.min(12, Math.max(1, Number(colMatch[1])))
+    const fractions: Record<number, string> = { 1: 'w-1/12', 2: 'w-2/12', 3: 'w-3/12', 4: 'w-4/12', 5: 'w-5/12', 6: 'w-6/12', 7: 'w-7/12', 8: 'w-8/12', 9: 'w-9/12', 10: 'w-10/12', 11: 'w-11/12', 12: 'w-full' }
+    return [fractions[n] || 'w-full']
+  }
+
+  const responsiveColMatch = value.match(/^col-(sm|md|lg|xl)-(\d{1,2})$/)
+  if (responsiveColMatch) {
+    const bp = responsiveColMatch[1]
+    const n = Math.min(12, Math.max(1, Number(responsiveColMatch[2])))
+    const fractions: Record<number, string> = { 1: 'w-1/12', 2: 'w-2/12', 3: 'w-3/12', 4: 'w-4/12', 5: 'w-5/12', 6: 'w-6/12', 7: 'w-7/12', 8: 'w-8/12', 9: 'w-9/12', 10: 'w-10/12', 11: 'w-11/12', 12: 'w-full' }
+    return [`${bp}:${fractions[n] || 'w-full'}`]
+  }
+
+  const rowColsMatch = value.match(/^row-cols-(\d{1,2})$/)
+  if (rowColsMatch) return [`grid-cols-${Math.min(12, Math.max(1, Number(rowColsMatch[1])))} `].map((s) => s.trim())
+
+  const responsiveRowColsMatch = value.match(/^row-cols-(sm|md|lg|xl)-(\d{1,2})$/)
+  if (responsiveRowColsMatch) return [`${responsiveRowColsMatch[1]}:grid-cols-${Math.min(12, Math.max(1, Number(responsiveRowColsMatch[2])))} `].map((s) => s.trim())
+
+  const displayMatch = value.match(/^d-(sm|md|lg|xl)-(block|flex|grid|none)$/)
+  if (displayMatch) {
+    const displayMap: Record<string, string> = { block: 'block', flex: 'flex', grid: 'grid', none: 'hidden' }
+    return [`${displayMatch[1]}:${displayMap[displayMatch[2]]}`]
+  }
+
+  switch (value) {
+    case 'container':
+      return ['w-full', 'max-w-6xl', 'mx-auto', 'px-4']
+    case 'container-fluid':
+      return ['w-full', 'px-4']
+    case 'row':
+      return ['w-full']
+    case 'col':
+      return ['min-w-0', 'px-2']
+    case 'd-block':
+      return ['block']
+    case 'd-flex':
+      return ['flex']
+    case 'd-grid':
+      return ['grid']
+    case 'd-none':
+      return ['hidden']
+    case 'd-inline':
+      return ['inline']
+    case 'd-inline-block':
+      return ['inline-block']
+    case 'd-inline-flex':
+      return ['inline-flex']
+    case 'flex-column':
+      return ['flex-col']
+    case 'flex-row':
+      return ['flex-row']
+    case 'flex-wrap':
+      return ['flex-wrap']
+    case 'flex-nowrap':
+      return ['flex-nowrap']
+    case 'flex-grow-1':
+      return ['grow']
+    case 'flex-shrink-0':
+      return ['shrink-0']
+    case 'w-100':
+      return ['w-full']
+    case 'h-100':
+      return ['h-full']
+    case 'text-center':
+      return ['text-center']
+    case 'text-start':
+      return ['text-left']
+    case 'text-end':
+      return ['text-right']
+    case 'fw-bold':
+      return ['font-bold']
+    case 'fw-normal':
+      return ['font-normal']
+    case 'lead':
+      return ['text-lg', 'leading-8']
+    case 'display-5':
+      return ['text-4xl', 'md:text-5xl']
+    case 'img-fluid':
+      return ['max-w-full', 'h-auto']
+    case 'text-muted':
+      return ['text-[var(--theme-text-muted)]']
+    case 'text-body-emphasis':
+      return ['text-[var(--theme-text)]']
+    case 'rounded-3':
+      return ['rounded-xl']
+    case 'shadow-sm':
+      return ['shadow-sm']
+    case 'shadow':
+      return ['shadow']
+    case 'shadow-lg':
+      return ['shadow-lg']
+    case 'bg-light':
+      return ['bg-[var(--theme-surface)]']
+    case 'bg-dark':
+      return ['bg-slate-900', 'text-white']
+    case 'bg-primary':
+      return ['bg-[var(--theme-primary)]', 'text-white']
+    case 'bg-secondary':
+      return ['bg-[var(--theme-secondary)]', 'text-white']
+    case 'bg-success':
+      return ['bg-[var(--theme-success)]', 'text-white']
+    case 'bg-danger':
+      return ['bg-[var(--theme-danger)]', 'text-white']
+    case 'bg-warning':
+      return ['bg-[var(--theme-warning)]']
+    case 'bg-white':
+      return ['bg-white']
+    case 'bg-transparent':
+      return ['bg-transparent']
+    case 'text-light':
+      return ['text-white']
+    case 'text-dark':
+      return ['text-slate-900']
+    case 'text-white':
+      return ['text-white']
+    case 'text-primary':
+      return ['text-[var(--theme-primary)]']
+    case 'text-secondary':
+      return ['text-[var(--theme-secondary)]']
+    case 'text-success':
+      return ['text-[var(--theme-success)]']
+    case 'text-danger':
+      return ['text-[var(--theme-danger)]']
+    case 'text-warning':
+      return ['text-[var(--theme-warning)]']
+    case 'text-uppercase':
+      return ['uppercase']
+    case 'text-lowercase':
+      return ['lowercase']
+    case 'text-capitalize':
+      return ['capitalize']
+    case 'text-nowrap':
+      return ['whitespace-nowrap']
+    case 'text-truncate':
+      return ['truncate']
+    case 'text-decoration-none':
+      return ['no-underline']
+    case 'font-monospace':
+      return ['font-mono']
+    case 'overflow-hidden':
+      return ['overflow-hidden']
+    case 'overflow-auto':
+      return ['overflow-auto']
+    case 'min-vh-100':
+      return ['min-h-screen']
+    case 'vh-100':
+      return ['h-screen']
+    case 'vw-100':
+      return ['w-screen']
+    case 'rounded':
+      return ['rounded']
+    case 'rounded-circle':
+      return ['rounded-full']
+    case 'rounded-pill':
+      return ['rounded-full']
+    case 'rounded-0':
+      return ['rounded-none']
+    case 'opacity-0':
+      return ['opacity-0']
+    case 'opacity-25':
+      return ['opacity-25']
+    case 'opacity-50':
+      return ['opacity-50']
+    case 'opacity-75':
+      return ['opacity-75']
+    case 'opacity-100':
+      return ['opacity-100']
+    case 'mt-auto':
+      return ['mt-auto']
+    case 'mb-auto':
+      return ['mb-auto']
+    case 'ms-auto':
+      return ['ml-auto']
+    case 'me-auto':
+      return ['mr-auto']
+    case 'list-unstyled':
+      return ['list-none', 'p-0']
+    case 'border-top':
+      return ['border-t']
+    case 'border':
+      return ['border']
+    case 'small':
+      return ['text-sm']
+    case 'align-items-center':
+      return ['items-center']
+    case 'align-items-start':
+      return ['items-start']
+    case 'align-items-end':
+      return ['items-end']
+    case 'align-self-center':
+      return ['self-center']
+    case 'align-self-start':
+      return ['self-start']
+    case 'align-self-end':
+      return ['self-end']
+    case 'justify-content-center':
+      return ['justify-center']
+    case 'justify-content-between':
+      return ['justify-between']
+    case 'justify-content-end':
+      return ['justify-end']
+    case 'justify-content-start':
+      return ['justify-start']
+    case 'justify-content-around':
+      return ['justify-around']
+    case 'justify-content-evenly':
+      return ['justify-evenly']
+    case 'justify-content-sm-center':
+      return ['sm:justify-center']
+    case 'position-relative':
+      return ['relative']
+    case 'position-absolute':
+      return ['absolute']
+    case 'top-0':
+      return ['top-0']
+    case 'end-0':
+      return ['right-0']
+    case 'card':
+      return ['rounded-xl', 'border', 'shadow-sm', 'bg-[var(--theme-surface)]']
+    case 'card-body':
+      return ['p-6']
+    case 'card-header':
+      return ['px-6', 'py-4', 'border-b']
+    case 'card-footer':
+      return ['px-6', 'py-4', 'border-t']
+    case 'card-title':
+      return ['text-lg', 'font-semibold']
+    case 'card-text':
+      return ['text-[var(--theme-text)]']
+    case 'card-img-top':
+      return ['w-full', 'rounded-t-xl', 'object-cover']
+    case 'btn':
+      return ['inline-flex', 'items-center', 'justify-center', 'rounded-md', 'border', 'px-4', 'py-2', 'font-medium', 'transition-colors', 'no-underline']
+    case 'btn-lg':
+      return ['px-5', 'py-3', 'text-lg']
+    case 'btn-sm':
+      return ['px-3', 'py-1.5', 'text-sm']
+    case 'btn-primary':
+      return ['bg-[var(--theme-primary)]', 'border-[var(--theme-primary)]', 'text-white']
+    case 'btn-secondary':
+      return ['bg-[var(--theme-secondary)]', 'border-[var(--theme-secondary)]', 'text-white']
+    case 'btn-success':
+      return ['bg-[var(--theme-success)]', 'border-[var(--theme-success)]', 'text-white']
+    case 'btn-danger':
+      return ['bg-[var(--theme-danger)]', 'border-[var(--theme-danger)]', 'text-white']
+    case 'btn-warning':
+      return ['bg-[var(--theme-warning)]', 'border-[var(--theme-warning)]', 'text-slate-950']
+    case 'btn-info':
+      return ['bg-sky-500', 'border-sky-500', 'text-white']
+    case 'btn-light':
+      return ['bg-white', 'border-white', 'text-slate-900']
+    case 'btn-dark':
+      return ['bg-slate-900', 'border-slate-900', 'text-white']
+    case 'btn-link':
+      return ['border-transparent', 'bg-transparent', 'p-0', 'text-[var(--theme-primary)]', 'underline-offset-4', 'hover:underline']
+    case 'btn-outline-primary':
+      return ['border-[var(--theme-primary)]', 'text-[var(--theme-primary)]', 'bg-transparent', 'hover:bg-[var(--theme-primary)]', 'hover:text-white']
+    case 'btn-outline-secondary':
+      return ['border-[var(--theme-secondary)]', 'text-[var(--theme-secondary)]', 'bg-transparent', 'hover:bg-[var(--theme-secondary)]', 'hover:text-white']
+    case 'form-control':
+      return ['w-full', 'rounded-md', 'border', 'px-3', 'py-2', 'bg-[var(--theme-surface)]', 'text-[var(--theme-text)]']
+    case 'form-select':
+      return ['w-full', 'rounded-md', 'border', 'px-3', 'py-2', 'bg-[var(--theme-surface)]', 'text-[var(--theme-text)]']
+    case 'form-check-input':
+      return ['h-4', 'w-4', 'accent-[var(--theme-primary)]']
+    case 'blockquote':
+      return ['border-l-4', 'pl-4', 'italic']
+    case 'blockquote-footer':
+      return ['mt-2', 'text-sm', 'text-[var(--theme-text-muted)]']
+    case 'navbar':
+      return ['w-full']
+    case 'navbar-expand-lg':
+      return []
+    case 'navbar-brand':
+      return ['text-lg', 'font-semibold', 'no-underline']
+    case 'navbar-nav':
+      return ['flex', 'flex-col', 'gap-4', 'lg:flex-row', 'lg:items-center']
+    case 'nav-item':
+      return ['list-none']
+    case 'nav-link':
+      return ['no-underline', 'text-[var(--theme-text)]', 'hover:text-[var(--theme-primary)]']
+    case 'navbar-theme-light':
+    case 'navbar-theme-dark':
+    case 'navbar-theme-primary':
+      return [value]
+    case 'g-0':
+      return ['gap-0']
+    case 'd-sm-flex':
+      return ['sm:flex']
+    case 'd-md-flex':
+      return ['md:flex']
+    case 'd-lg-flex':
+      return ['lg:flex']
+    case 'd-sm-block':
+      return ['sm:block']
+    case 'd-md-block':
+      return ['md:block']
+    case 'd-lg-block':
+      return ['lg:block']
+    case 'd-sm-none':
+      return ['sm:hidden']
+    case 'd-md-none':
+      return ['md:hidden']
+    case 'd-lg-none':
+      return ['lg:hidden']
+    default:
+      return [value]
+  }
+}
+
+function getPropDrivenClasses(block: Block): string[] {
+  const classes: string[] = []
+
+  if (typeof block.props.alignment === 'string' && block.props.alignment.trim()) {
+    classes.push(String(block.props.alignment).trim())
+  }
+
+  if (block.type === 'paragraph' && block.props.lead) {
+    classes.push('lead')
+  }
+
+  if (block.type === 'column' && typeof block.props.width === 'string' && block.props.width.trim()) {
+    classes.push(String(block.props.width).trim())
+  }
+
+  if (block.type === 'button') {
+    if (typeof block.props.variant === 'string' && block.props.variant.trim()) {
+      classes.push(String(block.props.variant).trim())
+    }
+    if (typeof block.props.size === 'string' && block.props.size.trim()) {
+      classes.push(String(block.props.size).trim())
+    }
+  }
+
+  if (block.type === 'navbar' && typeof block.props.theme === 'string' && block.props.theme.trim()) {
+    classes.push(String(block.props.theme).trim())
+  }
+
+  if (block.type === 'row' && block.props.gutters === false) {
+    classes.push('g-0')
+  }
+
+  if (block.type === 'container' && block.props.fluid) {
+    classes.push('container-fluid')
+  }
+
+  return classes
+}
+
+function resolveFrameworkClasses(block: Block, framework: FrameworkChoice): string[] {
+  let baseClasses = [...block.classes]
+  if (block.type === 'container' && block.props.fluid) {
+    baseClasses = baseClasses.filter((cls) => cls !== 'container')
+  }
+
+  const merged = [...baseClasses, ...getPropDrivenClasses(block)]
+  const normalized = block.type === 'navbar'
+    ? normalizeNavbarThemeClasses(merged)
+    : merged
+
+  if (framework !== 'tailwind') return dedupeClasses(normalized)
+
+  let mapped = normalized.flatMap((cls) => mapBootstrapClassToTailwind(cls))
+  const hasGridCols = mapped.some((cls) => /^(grid-cols-|\w+:grid-cols-)/.test(cls))
+
+  if (block.type === 'row') {
+    const hasColumnChildren = block.children.some((child) => child.type === 'column')
+    const hasZeroGutters = normalized.includes('g-0')
+
+    if (hasGridCols) {
+      mapped = mapped.filter((cls) => cls !== 'flex' && cls !== 'flex-wrap' && cls !== '-mx-2')
+      if (!mapped.includes('grid')) mapped.unshift('grid')
+      if (!mapped.includes('w-full')) mapped.unshift('w-full')
+    } else if (hasColumnChildren) {
+      mapped = mapped.filter((cls) => !/^gap-/.test(cls) && cls !== 'grid')
+      if (!mapped.includes('flex')) mapped.unshift('flex')
+      if (!mapped.includes('w-full')) mapped.unshift('w-full')
+      if (!mapped.includes('flex-wrap')) mapped.push('flex-wrap')
+      if (!hasZeroGutters && !mapped.includes('-mx-2')) mapped.push('-mx-2')
+    } else {
+      mapped = mapped.filter((cls) => cls !== 'flex' && cls !== 'flex-wrap' && cls !== '-mx-2' && cls !== 'grid' && !/^gap-/.test(cls))
+      if (!mapped.includes('w-full')) mapped.unshift('w-full')
+    }
+  }
+
+  if (block.type === 'column') {
+    const hasExplicitWidth = normalized.some((cls) => /^(?:col-\d{1,2}|col-(?:sm|md|lg|xl)-\d{1,2})$/.test(cls))
+    if (!hasExplicitWidth) {
+      if (!mapped.includes('w-full')) mapped.unshift('w-full')
+      if (!mapped.includes('md:flex-1')) mapped.push('md:flex-1')
+    }
+  }
+
+  if (block.type === 'container' && block.props.fluid) {
+    return dedupeClasses(mapped.filter((cls) => cls !== 'max-w-6xl').concat(['w-full']))
+  }
+
+  // Catch AI-generated or custom rows that might not have block.type === 'row'
+  // but act as rows (flex-wrap and -mx-2 for negative margins)
+  if (mapped.includes('flex-wrap') && mapped.includes('-mx-2') && !mapped.includes('w-full')) {
+    mapped.unshift('w-full')
+  }
+
+  return dedupeClasses(mapped)
+}
+
 // ─── Content generation for specific block types ─────────────────────────────
 
-function getBlockContent(block: Block): string {
+function getBlockContent(block: Block, isExportMode?: boolean, framework: FrameworkChoice = 'bootstrap-5'): string {
   const { type, props } = block
 
   switch (type) {
@@ -195,12 +721,15 @@ function getBlockContent(block: Block): string {
         console.warn('Failed to highlight code block string', e)
       }
 
+      const isTw = framework === 'tailwind'
       const badgeHtml = language
-        ? `<div class="position-absolute top-0 end-0 mt-2 me-2 px-2 py-1 bg-secondary text-white rounded font-monospace" style="font-size: 0.75rem; opacity: 0.8; z-index: 5;">${language}</div>`
+        ? isTw
+          ? `<div class="absolute top-0 right-0 mt-2 mr-2 px-2 py-1 bg-[var(--theme-secondary)] text-white rounded font-mono" style="font-size: 0.75rem; opacity: 0.8; z-index: 5;">${language}</div>`
+          : `<div class="position-absolute top-0 end-0 mt-2 me-2 px-2 py-1 bg-secondary text-white rounded font-monospace" style="font-size: 0.75rem; opacity: 0.8; z-index: 5;">${language}</div>`
         : ''
 
       // Return just the inner generated html. The parent engine assigns external padding arrays to `tag`!
-      return `<div class="position-relative">${badgeHtml}<pre class="m-0" style="background: transparent; padding: 0;"><code class="hljs ${language ? `language-${language}` : ''}" style="background: transparent; padding: 0;">${highlighted}</code></pre></div>`
+      return `<div class="${isTw ? 'relative' : 'position-relative'}">${badgeHtml}<pre class="m-0" style="background: transparent; padding: 0;"><code class="hljs ${language ? `language-${language}` : ''}" style="background: transparent; padding: 0;">${highlighted}</code></pre></div>`
     }
 
     case 'icon':
@@ -211,12 +740,33 @@ function getBlockContent(block: Block): string {
       const slides = (props.slides as Array<{ src: string; alt: string; caption?: string }>) ?? []
 
       if (slides.length === 0) {
-        return `<div class="carousel-inner d-flex align-items-center justify-content-center text-muted" style="min-height:200px;background:#f8f9fa;border:2px dashed #dee2e6;border-radius:0.375rem;">
+        if (isExportMode) {
+          return `<div class="carousel-inner"></div>`
+        }
+        return `<div class="carousel-inner editor-placeholder">
           <div class="text-center p-4">
             <div style="font-size:2rem;margin-bottom:0.5rem;">🎠</div>
             <p class="mb-0">No slides — select this block and add slides in the inspector.</p>
           </div>
         </div>`
+      }
+
+      if (framework === 'tailwind') {
+        const items = slides.map((slide, i) => `
+        <div class="${i === 0 ? 'block' : 'hidden'}" data-tw-carousel-slide="${i}">
+          <img src="${escapeAttrValue(slide.src)}" class="block w-full rounded-xl" alt="${escapeAttrValue(slide.alt)}">
+          ${slide.caption ? `<div class="mt-3 text-center text-sm text-[var(--theme-text-muted)]">${escapeAttrValue(slide.caption)}</div>` : ''}
+        </div>`).join('\n')
+
+        const controls = slides.length > 1
+          ? `
+        <div class="mt-4 flex items-center justify-between gap-4">
+          <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="(function(){var root=this.closest('[data-tw-carousel]');if(!root)return;var slides=Array.prototype.slice.call(root.querySelectorAll('[data-tw-carousel-slide]'));var index=slides.findIndex(function(slide){return !slide.classList.contains('hidden');});if(index<0)index=0;slides[index].classList.add('hidden');var next=(index-1+slides.length)%slides.length;slides[next].classList.remove('hidden');}).call(this)">Previous</button>
+          <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="(function(){var root=this.closest('[data-tw-carousel]');if(!root)return;var slides=Array.prototype.slice.call(root.querySelectorAll('[data-tw-carousel-slide]'));var index=slides.findIndex(function(slide){return !slide.classList.contains('hidden');});if(index<0)index=0;slides[index].classList.add('hidden');var next=(index+1)%slides.length;slides[next].classList.remove('hidden');}).call(this)">Next</button>
+        </div>`
+          : ''
+
+        return `<div data-tw-carousel="${id}">${items}${controls}</div>`
       }
 
       const indicators = slides.map((_, i) =>
@@ -250,6 +800,21 @@ function getBlockContent(block: Block): string {
       const id = String(props.id || 'accordion-' + Math.random().toString(36).substr(2, 9))
       const items = (props.items as Array<{ title: string; content: string }>) ?? []
 
+      if (framework === 'tailwind') {
+        return `<div class="divide-y divide-[var(--theme-border)] rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)]">${
+          items.map((item, i) => `
+        <details class="group"${i === 0 ? ' open' : ''}>
+          <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-medium text-[var(--theme-text)]">
+            <span>${escapeAttrValue(item.title)}</span>
+            <span class="text-[var(--theme-text-muted)] group-open:rotate-45 transition-transform">+</span>
+          </summary>
+          <div class="px-4 pb-4 text-sm text-[var(--theme-text-muted)]">
+            ${escapeAttrValue(item.content)}
+          </div>
+        </details>`).join('\n')
+        }</div>`
+      }
+
       return items.map((item, i) => {
         const itemId = `${id}-item-${i}`
         const collapseId = `${id}-collapse-${i}`
@@ -276,6 +841,26 @@ function getBlockContent(block: Block): string {
     case 'tabs': {
       const id = String(props.id || 'tabs-' + Math.random().toString(36).substr(2, 9))
       const tabs = (props.tabs as Array<{ label: string; content: string }>) ?? []
+
+      if (framework === 'tailwind') {
+        const navItems = tabs.map((tab, i) => `
+        <button class="${i === 0 ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll('[data-tw-tab-button=\\"${id}\\"]').forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n')
+
+        const contentItems = tabs.map((tab, i) => `
+        <div class="${i === 0 ? '' : 'hidden ' }rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
+          ${escapeAttrValue(tab.content)}
+        </div>`).join('\n')
+
+        return `
+        <div data-tw-tabs="${id}">
+          <div class="mb-4 flex flex-wrap gap-2">
+            ${navItems}
+          </div>
+          <div class="space-y-3">
+            ${contentItems}
+          </div>
+        </div>`
+      }
 
       const navItems = tabs.map((tab, i) => {
         const tabId = `${id}-tab-${i}`
@@ -318,8 +903,21 @@ function getBlockContent(block: Block): string {
     // Let's assume empty for now as value attribute works too, or if we want defaults:
     // return escapeAttrValue(String(props.value ?? '')) 
 
-    case 'raw-html':
-      return block.content ?? String(props.content ?? '')
+    case 'raw-html': {
+      const rawHtml = typeof block.content === 'string'
+        ? block.content
+        : String(props.content ?? '')
+      if (rawHtml.trim().length === 0) {
+        if (isExportMode) return ''
+        return `<div class="editor-placeholder">
+          <div class="text-center p-4">
+            <div style="font-size:1.5rem;margin-bottom:0.5rem;">&lt;/&gt;</div>
+            <p class="mb-0">Raw HTML — add content in the Inspector</p>
+          </div>
+        </div>`
+      }
+      return rawHtml
+    }
 
     default:
       return block.content ?? ''
@@ -358,11 +956,19 @@ export interface BlockToHtmlOptions {
   includeDataAttributes?: boolean  // Include data-block-id for editor use
   pages?: Page[]           // Page list for components that use pages as datasource (e.g. navbar)
   folders?: PageFolder[]   // Folder list for effective tag resolution
+  framework?: FrameworkChoice
 }
 
 export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): string {
-  const { indent = 0, indentSize = 2, includeDataAttributes = false, pages, folders } = options
-  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, pages, folders)).join('\n')
+  const {
+    indent = 0,
+    indentSize = 2,
+    includeDataAttributes = false,
+    pages,
+    folders,
+    framework = 'bootstrap-5'
+  } = options
+  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, pages, folders, framework)).join('\n')
 }
 
 function renderBlock(
@@ -371,9 +977,108 @@ function renderBlock(
   indentSize: number,
   includeDataAttributes: boolean,
   pages?: Page[],
-  folders?: PageFolder[]
+  folders?: PageFolder[],
+  framework: FrameworkChoice = 'bootstrap-5'
 ): string {
   const pad = ' '.repeat(indent * indentSize)
+
+  // Special handling for Modal
+  if (block.type === 'modal') {
+    const fallbackId = 'modal-' + Math.random().toString(36).substr(2, 9)
+    const id = sanitizeElementId(String(block.props.id || fallbackId), fallbackId)
+    const buttonText = String(block.props.buttonText || 'Launch Modal')
+    const title = String(block.props.title || 'Modal Title')
+    const showClose = block.props.closeButton !== false
+    const showFooter = block.props.footerButtons !== false
+    const sizeClass = block.props.size && block.props.size !== 'default' ? ` ${block.props.size}` : ''
+    const themeSurface = 'var(--theme-surface)'
+    const themeText = 'var(--theme-text)'
+    const themeBorder = 'var(--theme-border)'
+    const isExportMode = !includeDataAttributes
+    
+    const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders, framework)).join('\n')
+    const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="modal"` : ''
+
+    if (!isExportMode) {
+      // Editor preview mode
+      if (framework === 'tailwind') {
+        return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${dataAttr}>
+${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom: 1px solid ${themeBorder};">
+${pad}    <div class="flex items-center gap-2 font-bold">
+${pad}      <span>🔲</span> ${escapeAttrValue(title)}
+${pad}    </div>
+${pad}    <span class="rounded bg-[var(--theme-secondary)] px-2 py-1 text-xs text-white">Modal Preview</span>
+${pad}  </div>
+${pad}  <div class="p-6">
+${childrenHtml}
+${pad}  </div>
+${pad}</div>`
+      }
+      return `${pad}<div class="card mb-3 editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${dataAttr}>
+${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom: 1px solid ${themeBorder};">
+${pad}    <div class="fw-bold d-flex align-items-center gap-2">
+${pad}      <span>🔲</span> ${escapeAttrValue(title)}
+${pad}    </div>
+${pad}    <span class="badge bg-secondary">Modal Preview</span>
+${pad}  </div>
+${pad}  <div class="card-body">
+${childrenHtml}
+${pad}  </div>
+${pad}</div>`
+    } else {
+      if (framework === 'tailwind') {
+        const closeAction = `document.getElementById('${id}')?.classList.add('hidden');document.body.classList.remove('overflow-hidden');`
+        const openAction = `document.getElementById('${id}')?.classList.remove('hidden');document.body.classList.add('overflow-hidden');`
+        return `${pad}<button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-primary)] bg-[var(--theme-primary)] px-4 py-2 font-medium text-white" onclick="${openAction}">
+${pad}  ${escapeAttrValue(buttonText)}
+${pad}</button>
+
+${pad}<div class="fixed inset-0 z-50 hidden" id="${id}" aria-labelledby="${id}Label" aria-hidden="true">
+${pad}  <div class="absolute inset-0 bg-black/50" onclick="${closeAction}"></div>
+${pad}  <div class="relative flex min-h-full items-center justify-center p-4">
+${pad}    <div class="w-full max-w-2xl rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-xl">
+${pad}      <div class="flex items-center justify-between border-b border-[var(--theme-border)] px-6 py-4">
+${pad}        <h2 class="text-xl font-semibold text-[var(--theme-text)]" id="${id}Label">${escapeAttrValue(title)}</h2>
+${pad}        ${showClose ? `<button type="button" class="rounded-md px-3 py-2 text-[var(--theme-text-muted)]" onclick="${closeAction}" aria-label="Close">✕</button>` : ''}
+${pad}      </div>
+${pad}      <div class="px-6 py-5 text-[var(--theme-text)]">
+${childrenHtml}
+${pad}      </div>
+${pad}      ${showFooter ? `<div class="flex justify-end gap-3 border-t border-[var(--theme-border)] px-6 py-4">
+${pad}        <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="${closeAction}">Close</button>
+${pad}        <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-primary)] bg-[var(--theme-primary)] px-4 py-2 text-sm font-medium text-white">Save changes</button>
+${pad}      </div>` : ''}
+${pad}    </div>
+${pad}  </div>
+${pad}</div>`
+      }
+
+      // Export mode
+      return `${pad}<!-- Button trigger modal -->
+${pad}<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#${id}">
+${pad}  ${escapeAttrValue(buttonText)}
+${pad}</button>
+
+${pad}<!-- Modal -->
+${pad}<div class="modal fade" id="${id}" tabindex="-1" aria-labelledby="${id}Label" aria-hidden="true">
+${pad}  <div class="modal-dialog${sizeClass}">
+${pad}    <div class="modal-content" style="background-color: ${themeSurface}; color: ${themeText}; border-color: ${themeBorder};">
+${pad}      <div class="modal-header" style="border-bottom-color: ${themeBorder};">
+${pad}        <h1 class="modal-title fs-5" id="${id}Label">${escapeAttrValue(title)}</h1>
+${pad}        ${showClose ? `<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--theme-close-filter, none);"></button>` : ''}
+${pad}      </div>
+${pad}      <div class="modal-body">
+${childrenHtml}
+${pad}      </div>
+${pad}      ${showFooter ? `<div class="modal-footer" style="border-top-color: ${themeBorder};">
+${pad}        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+${pad}        <button type="button" class="btn btn-primary">Save changes</button>
+${pad}      </div>` : ''}
+${pad}    </div>
+${pad}  </div>
+${pad}</div>`
+    }
+  }
 
   // Special handling for Checkbox (composite component)
   if (block.type === 'checkbox') {
@@ -382,7 +1087,14 @@ function renderBlock(
     const checked = block.props.checked ? 'checked' : ''
     const id = block.id
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
-    const classes = block.classes.join(' ')
+    const classes = resolveFrameworkClasses(block, framework).join(' ')
+
+    if (framework === 'tailwind') {
+      return `${pad}<label class="mb-4 inline-flex items-center gap-3 text-[var(--theme-text)]" ${dataAttr}>
+${pad}  <input class="${classes}" type="checkbox" id="${id}" ${name} ${checked}>
+${pad}  <span>${label}</span>
+${pad}</label>`
+    }
 
     return `${pad}<div class="form-check" ${dataAttr}>
 ${pad}  <input class="${classes}" type="checkbox" id="${id}" ${name} ${checked}>
@@ -395,7 +1107,8 @@ ${pad}</div>`
   // Special handling for Navbar with pages datasource
   if (block.type === 'navbar' && block.props.usePages && pages && pages.length > 0) {
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : ''
-    const classes = block.classes.join(' ')
+    const classesArray = normalizeNavbarThemeClasses([...block.classes, ...getPropDrivenClasses(block)])
+    const classes = classesArray.join(' ')
     const styleStr = stylesToString(block.styles)
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'))
@@ -425,9 +1138,28 @@ ${pad}</div>`
     // Brand: image + text, image only, or text only
     let brandHtml: string
     if (brandImage) {
-      brandHtml = `<img src="${escapeAttrValue(brandImage)}" alt="${brandText}" height="30" class="d-inline-block align-text-top me-2">${brandText}`
+      brandHtml = framework === 'tailwind'
+        ? `<img src="${escapeAttrValue(brandImage)}" alt="${brandText}" class="h-8 w-auto">${brandText}`
+        : `<img src="${escapeAttrValue(brandImage)}" alt="${brandText}" height="30" class="d-inline-block align-text-top me-2">${brandText}`
     } else {
       brandHtml = brandText
+    }
+
+    if (framework === 'tailwind') {
+      const themeClass = classesArray.find((c) => c.startsWith('navbar-theme-')) || 'navbar-theme-light'
+      const toneClasses = themeClass === 'navbar-theme-dark'
+        ? 'bg-slate-900 text-white'
+        : themeClass === 'navbar-theme-primary'
+          ? 'bg-[var(--theme-primary)] text-white'
+          : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]'
+      return `${pad}<nav class="${toneClasses} w-full"${styleAttr} ${dataAttr}>
+${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#">${brandHtml}</a>
+${pad}    <ul class="flex list-none flex-col gap-3 p-0 lg:flex-row lg:items-center">
+${navLinks.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100')}
+${pad}    </ul>
+${pad}  </div>
+${pad}</nav>`
     }
 
     return `${pad}<nav class="${classes}"${styleAttr} ${dataAttr}>
@@ -448,7 +1180,7 @@ ${pad}</nav>`
   // Special handling for Page List with pagination
   if (block.type === 'page-list' && pages && pages.length > 0) {
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="page-list"` : ''
-    const classes = block.classes.length > 0 ? block.classes.join(' ') : ''
+    const classes = resolveFrameworkClasses(block, framework).join(' ')
     const styleStr = stylesToString(block.styles)
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const filterTag = String(block.props.filterTag || '').trim()
@@ -512,7 +1244,9 @@ ${pad}</nav>`
       : pages
 
     const totalPages = Math.ceil(filteredPages.length / itemsPerPage)
-    const colClass = cols === 1 ? 'col-12' : cols === 2 ? 'col-md-6' : 'col-md-6 col-lg-4'
+    const colClass = framework === 'tailwind'
+      ? cols === 1 ? 'w-full' : cols === 2 ? 'w-full md:w-6/12' : 'w-full md:w-6/12 lg:w-4/12'
+      : cols === 1 ? 'col-12' : cols === 2 ? 'col-md-6' : 'col-md-6 col-lg-4'
 
     // Build card HTML for each page
     const cards = filteredPages.map((p) => {
@@ -531,12 +1265,15 @@ ${pad}</nav>`
             const label = k
               .replace(/[-_]+/g, ' ')
               .replace(/^\w/, (c) => c.toUpperCase())
-            return `<div class="small text-muted">${escapeAttrValue(label)}: ${escapeAttrValue(String(v))}</div>`
+            return `<div class="${framework === 'tailwind' ? 'text-sm text-[var(--theme-text-muted)]' : 'small text-muted'}">${escapeAttrValue(label)}: ${escapeAttrValue(String(v))}</div>`
           })
           .filter(Boolean)
           .join('')
         : ''
-      const desc = showDesc && p.meta?.description ? `<p class="card-text text-muted">${escapeAttrValue(p.meta.description)}</p>` : ''
+      const desc = showDesc && p.meta?.description ? `<p class="${framework === 'tailwind' ? 'text-sm text-[var(--theme-text-muted)]' : 'card-text text-muted'}">${escapeAttrValue(p.meta.description)}</p>` : ''
+      if (framework === 'tailwind') {
+        return `<div class="${colClass} mb-4" data-page-list-card data-title="${escapeAttrValue(rawTitle)}" data-meta="${escapeAttrValue(metaJson)}" data-search="${escapeAttrValue(searchText)}"><div class="flex h-full flex-col rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-6 shadow-sm"><h5 class="text-lg font-semibold text-[var(--theme-text)]">${title}</h5>${meta}${desc}<a href="${href}" class="mt-auto inline-flex items-center justify-center rounded-md border border-[var(--theme-primary)] bg-[var(--theme-primary)] px-4 py-2 text-sm font-medium text-white no-underline">Read more</a></div></div>`
+      }
       return `<div class="${colClass} mb-4" data-page-list-card data-title="${escapeAttrValue(rawTitle)}" data-meta="${escapeAttrValue(metaJson)}" data-search="${escapeAttrValue(searchText)}"><div class="card h-100"><div class="card-body d-flex flex-column"><h5 class="card-title">${title}</h5>${meta}${desc}<a href="${href}" class="btn btn-primary mt-auto">Read more</a></div></div></div>`
     })
 
@@ -592,7 +1329,7 @@ ${pad}</nav>`
               .replace(/^\w/, (c) => c.toUpperCase())
 
       const searchControl = showSearch
-        ? `<input type="search" class="form-control" placeholder="Search..." data-page-list-search>`
+        ? `<input type="search" class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-control'}" placeholder="Search..." data-page-list-search>`
         : ''
 
       const sortOptionsHtml = sortKeys
@@ -601,17 +1338,17 @@ ${pad}</nav>`
 
       const sortControl = showSort
         ? sortLayout === 'new-row'
-          ? `<select class="form-select" style="flex: 1 1 260px; min-width: 200px" data-page-list-sort>
+          ? `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 1 1 260px; min-width: 200px" data-page-list-sort>
 ${sortOptionsHtml}
 ${pad}    </select>
-${pad}    <select class="form-select" style="flex: 0 0 160px; max-width: 160px" data-page-list-dir>
+${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 0 0 160px; max-width: 160px" data-page-list-dir>
 ${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
 ${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
 ${pad}    </select>`
-          : `<select class="form-select" style="width: 220px; max-width: 220px" data-page-list-sort>
+          : `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 220px; max-width: 220px" data-page-list-sort>
 ${sortOptionsHtml}
 ${pad}    </select>
-${pad}    <select class="form-select" style="width: 160px; max-width: 160px" data-page-list-dir>
+${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 160px; max-width: 160px" data-page-list-dir>
 ${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
 ${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
 ${pad}    </select>`
@@ -629,9 +1366,9 @@ ${pad}      <div class="d-flex gap-2 align-items-center" style="flex-wrap: nowra
 ${pad}    </div>` : ''}
 ${pad}  </div>`
 
-      const cardsHtml = `${pad}  <div class="row" data-page-list-cards>\n${cards.map((c) => `${pad}    ${c}`).join('\n')}\n${pad}  </div>`
+      const cardsHtml = `${pad}  <div class="${framework === 'tailwind' ? 'flex flex-wrap gap-4' : 'row'}" data-page-list-cards>\n${cards.map((c) => `${pad}    ${c}`).join('\n')}\n${pad}  </div>`
 
-      const paginationShell = `${pad}  <nav aria-label="Page list pagination" data-page-list-pagination style="display:none">\n${pad}    <ul class="pagination justify-content-center mt-4" data-page-list-pagination-items></ul>\n${pad}  </nav>`
+      const paginationShell = `${pad}  <nav aria-label="Page list pagination" data-page-list-pagination style="display:none">\n${pad}    <ul class="${framework === 'tailwind' ? 'mt-4 flex items-center justify-center gap-2' : 'pagination justify-content-center mt-4'}" data-page-list-pagination-items></ul>\n${pad}  </nav>`
 
       const script = `
 ${pad}  <script>
@@ -680,9 +1417,9 @@ ${pad}        if(total<=1){ paginationNav.style.display='none'; return; }
 ${pad}        paginationNav.style.display='';
 ${pad}        for(var i=0;i<total;i++){
 ${pad}          var li=document.createElement('li');
-${pad}          li.className='page-item'+(i===currentPage?' active':'');
+${pad}          li.className=${framework === 'tailwind' ? `'${'inline-flex'}'+(i===currentPage?' active':'')` : `'page-item'+(i===currentPage?' active':'')`};
 ${pad}          var a=document.createElement('a');
-${pad}          a.className='page-link';
+${pad}          a.className=${framework === 'tailwind' ? `'inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[var(--theme-border)] px-3 text-sm text-[var(--theme-text)] no-underline'` : `'page-link'`};
 ${pad}          a.href='#';
 ${pad}          a.setAttribute('data-page-list-target',String(i));
 ${pad}          a.textContent=String(i+1);
@@ -760,7 +1497,7 @@ ${pad}  <\/script>`
     // Render each page group as a row with data-page attribute
     const groupsHtml = pageGroups.map((group, idx) => {
       const display = idx === 0 ? '' : ' style="display:none"'
-      return `${pad}  <div class="row" data-page-list-page="${idx}"${display}>\n${group.map(c => `${pad}    ${c}`).join('\n')}\n${pad}  </div>`
+      return `${pad}  <div class="${framework === 'tailwind' ? 'flex flex-wrap gap-4' : 'row'}" data-page-list-page="${idx}"${display}>\n${group.map(c => `${pad}    ${c}`).join('\n')}\n${pad}  </div>`
     }).join('\n')
 
     // Pagination nav
@@ -768,10 +1505,12 @@ ${pad}  <\/script>`
     if (totalPages > 1) {
       const pageItems = Array.from({ length: totalPages }, (_, i) => {
         const activeClass = i === 0 ? ' active' : ''
-        return `${pad}      <li class="page-item${activeClass}"><a class="page-link" href="#" data-page-list-target="${i}">${i + 1}</a></li>`
+        return framework === 'tailwind'
+          ? `${pad}      <li class="inline-flex${activeClass}"><a class="inline-flex h-10 min-w-10 items-center justify-center rounded-md border border-[var(--theme-border)] px-3 text-sm text-[var(--theme-text)] no-underline" href="#" data-page-list-target="${i}">${i + 1}</a></li>`
+          : `${pad}      <li class="page-item${activeClass}"><a class="page-link" href="#" data-page-list-target="${i}">${i + 1}</a></li>`
       }).join('\n')
 
-      paginationHtml = `\n${pad}  <nav aria-label="Page list pagination">\n${pad}    <ul class="pagination justify-content-center mt-4">\n${pageItems}\n${pad}    </ul>\n${pad}  </nav>`
+      paginationHtml = `\n${pad}  <nav aria-label="Page list pagination">\n${pad}    <ul class="${framework === 'tailwind' ? 'mt-4 flex items-center justify-center gap-2' : 'pagination justify-content-center mt-4'}">\n${pageItems}\n${pad}    </ul>\n${pad}  </nav>`
     }
 
     // Inline script for pagination
@@ -833,8 +1572,8 @@ ${pad}  <\/script>`
     }
 
     if (label) {
-      return `${pad}<div class="mb-3" ${dataAttr}>
-${pad}  <label for="${id}" class="form-label">${label}</label>
+      return `${pad}<div class="${framework === 'tailwind' ? 'mb-4' : 'mb-3'}" ${dataAttr}>
+${pad}  <label for="${id}" class="${framework === 'tailwind' ? 'mb-2 block text-sm font-medium text-[var(--theme-text)]' : 'form-label'}">${label}</label>
 ${pad}  ${inner}
 ${pad}</div>`
     } else {
@@ -848,7 +1587,7 @@ ${pad}</div>`
         // We constructed inner without data-block-id. Let's inject it.
         // Hacky string injection? Or just rebuild.
         // Let's just use the wrapper for consistency? "mb-3" is good default.
-        return `${pad}<div class="mb-3" ${dataAttr}>
+        return `${pad}<div class="${framework === 'tailwind' ? 'mb-4' : 'mb-3'}" ${dataAttr}>
 ${pad}  ${inner}
 ${pad}</div>`
       }
@@ -927,9 +1666,10 @@ ${pad}</div>`
     parts.push(`data-block-type="${block.type}"`)
   }
 
-  // Classes
-  if (block.classes.length > 0) {
-    parts.push(`class="${block.classes.join(' ')}"`)
+  // Classes (with legacy navbar class migration for generic path)
+  const finalClasses = resolveFrameworkClasses(block, framework)
+  if (finalClasses.length > 0) {
+    parts.push(`class="${finalClasses.join(' ')}"`)
   }
 
   // Inline styles
@@ -972,9 +1712,22 @@ ${pad}</div>`
   }
 
   // Determine inner content
-  const textContent = getBlockContent(block)
+  const isExportMode = !includeDataAttributes
+  const textContent = getBlockContent(block, isExportMode, framework)
   const hasChildren = block.children.length > 0
   const hasContent = textContent.length > 0
+
+  if (
+    isExportMode &&
+    tag === 'div' &&
+    !hasContent &&
+    hasChildren &&
+    fullAttrString.trim().length === 0
+  ) {
+    return block.children
+      .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, pages, folders, framework))
+      .join('\n')
+  }
 
   // Simple inline content (no children)
   if (!hasChildren && hasContent && !textContent.includes('\n')) {
@@ -994,7 +1747,7 @@ ${pad}</div>`
 
   if (hasChildren) {
     for (const child of block.children) {
-      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders))
+      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders, framework))
     }
   }
 
@@ -1022,7 +1775,7 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
     ...blockOptions
   } = options
 
-  const bodyHtml = blockToHtml(blocks, { ...blockOptions, indent: 1, pages: options.pages, folders: options.folders })
+  const bodyHtml = blockToHtml(blocks, { ...blockOptions, indent: 1, pages: options.pages, folders: options.folders, framework })
 
   const metaTags = Object.entries(meta)
     .map(([name, content]) => `    <meta name="${escapeAttrValue(name)}" content="${escapeAttrValue(content)}">`)

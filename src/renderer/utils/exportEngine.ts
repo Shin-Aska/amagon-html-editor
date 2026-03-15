@@ -634,7 +634,8 @@ function buildPageHtml(params: {
     indentSize: 2,
     includeDataAttributes: false,
     pages: params.pages,
-    folders: params.folders
+    folders: params.folders,
+    framework: params.framework
   })
 
   const headParts: string[] = []

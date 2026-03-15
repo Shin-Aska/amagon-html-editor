@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useEditorStore } from '../../store/editorStore'
 import { componentRegistry, type PropSchema } from '../../registry/ComponentRegistry'
 import SpacingEditor from './SpacingEditor'
@@ -16,12 +17,15 @@ import VideoField from './VideoField'
 import CarouselField from './CarouselField'
 import IconField from './IconField'
 import { useProjectStore } from '../../store/projectStore'
+import ArrayField from './ArrayField'
 import './Inspector.css'
 
 function Inspector(): JSX.Element {
   const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
   const getBlockById = useEditorStore((s) => s.getBlockById)
   const updateBlock = useEditorStore((s) => s.updateBlock)
+
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
   const uniqueMetaKeys = useProjectStore((s) => s.uniqueMetaKeys)
 
@@ -275,6 +279,35 @@ function Inspector(): JSX.Element {
           />
         )
       }
+      case 'array': {
+        // Determine the item type based on the current value or block type
+        const determineItemType = (): 'string' | 'tab' | 'accordion' => {
+          // Check if we have existing items to infer the type
+          if (Array.isArray(val) && val.length > 0) {
+            const firstItem = val[0]
+            if (typeof firstItem === 'object' && firstItem !== null) {
+              if ('label' in firstItem && 'content' in firstItem) {
+                return 'tab'
+              }
+              if ('title' in firstItem && 'content' in firstItem) {
+                return 'accordion'
+              }
+            }
+          }
+          // Infer from the prop key name as fallback
+          if (key === 'tabs') return 'tab'
+          if (key === 'items' && block?.type === 'accordion') return 'accordion'
+          return 'string'
+        }
+
+        return (
+          <ArrayField
+            value={val || []}
+            onChange={(v) => handlePropChange(key, v)}
+            itemType={determineItemType()}
+          />
+        )
+      }
       default:
         return <span className="unsupported-prop">Unsupported type: {schema.type}</span>
     }
@@ -309,7 +342,32 @@ function Inspector(): JSX.Element {
                 <div className="inspector-field-header">
                   <label className="inspector-label">{schema.label}</label>
                   {schema.description && (
-                    <span className="inspector-help-tooltip" title={schema.description}>?</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span className="inspector-help-tooltip" title={schema.description}>?</span>
+                      {schema.description.includes('bootstrap.Modal') && (
+                        <button 
+                          className="inspector-action-btn"
+                          title="Copy trigger code"
+                          onClick={() => {
+                            const code = `bootstrap.Modal.getOrCreateInstance(document.getElementById("${block.props[key] || schema.default}")).show()`;
+                            navigator.clipboard.writeText(code);
+                            setCopiedKey(key);
+                            setTimeout(() => setCopiedKey(null), 2000);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            padding: '0 4px',
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s'
+                          }}
+                        >
+                          {copiedKey === key ? '✅' : '📋'}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="inspector-control">

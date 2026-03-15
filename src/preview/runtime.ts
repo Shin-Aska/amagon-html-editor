@@ -4,6 +4,7 @@
 
 type EditorMessage =
   | { type: 'render'; html?: string }
+  | { type: 'setFramework'; framework?: 'bootstrap-5' | 'tailwind' | 'vanilla' }
   | { type: 'select'; blockId?: string | null }
   | { type: 'highlight'; blockId?: string | null }
   | { type: 'clearSelection' }
@@ -53,6 +54,86 @@ function ensureOverlayRoot(): HTMLDivElement {
 }
 
 let layoutOutlinesEnabled = false
+let frameworkReadyPromise: Promise<void> = Promise.resolve()
+let latestRenderRequestId = 0
+
+function upsertFrameworkLink(id: string, href: string): Promise<void> {
+  const existing = document.querySelector<HTMLLinkElement>(`#${id}`)
+  if (existing) {
+    if (existing.href === href) {
+      if ((existing as HTMLLinkElement).dataset.loaded === 'true') return Promise.resolve()
+      return new Promise((resolve) => {
+        existing.addEventListener('load', () => resolve(), { once: true })
+        existing.addEventListener('error', () => resolve(), { once: true })
+      })
+    }
+    existing.remove()
+  }
+
+  return new Promise((resolve) => {
+    const link = document.createElement('link')
+    link.id = id
+    link.rel = 'stylesheet'
+    link.href = href
+    link.addEventListener('load', () => {
+      link.dataset.loaded = 'true'
+      resolve()
+    }, { once: true })
+    link.addEventListener('error', () => resolve(), { once: true })
+    document.head.appendChild(link)
+  })
+}
+
+function upsertFrameworkScript(id: string, src: string, defer = false): Promise<void> {
+  const existing = document.querySelector<HTMLScriptElement>(`#${id}`)
+  if (existing) {
+    if (existing.src === src) {
+      if (existing.dataset.loaded === 'true') return Promise.resolve()
+      return new Promise((resolve) => {
+        existing.addEventListener('load', () => resolve(), { once: true })
+        existing.addEventListener('error', () => resolve(), { once: true })
+      })
+    }
+    existing.remove()
+  }
+
+  return new Promise((resolve) => {
+    const script = document.createElement('script')
+    script.id = id
+    script.src = src
+    if (defer) script.defer = true
+    script.addEventListener('load', () => {
+      script.dataset.loaded = 'true'
+      resolve()
+    }, { once: true })
+    script.addEventListener('error', () => resolve(), { once: true })
+    document.head.appendChild(script)
+  })
+}
+
+function removeFrameworkAsset(id: string): void {
+  document.getElementById(id)?.remove()
+}
+
+async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): Promise<void> {
+  removeFrameworkAsset('editor-framework-bootstrap-css')
+  removeFrameworkAsset('editor-framework-bootstrap-icons-css')
+  removeFrameworkAsset('editor-framework-bootstrap-js')
+  removeFrameworkAsset('editor-framework-tailwind-js')
+
+  if (framework === 'bootstrap-5') {
+    await Promise.all([
+      upsertFrameworkLink('editor-framework-bootstrap-css', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'),
+      upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'),
+      upsertFrameworkScript('editor-framework-bootstrap-js', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js', true)
+    ])
+    return
+  }
+
+  if (framework === 'tailwind') {
+    await upsertFrameworkScript('editor-framework-tailwind-js', 'https://cdn.tailwindcss.com')
+  }
+}
 
 function setLayoutOutlines(show: boolean): void {
   layoutOutlinesEnabled = show
@@ -182,6 +263,32 @@ function injectLayoutOutlinesCss(): void {
       border-top: none;
       border-left: none;
     }
+
+    .editor-placeholder {
+      display: none !important;
+    }
+
+    body.show-layout-outlines .editor-placeholder {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      border: 2px dashed rgba(137, 180, 250, 0.6);
+      border-radius: 0.375rem;
+      color: rgba(137, 180, 250, 0.9);
+      font-size: 0.85rem;
+      gap: 0.5rem;
+      background: rgba(137, 180, 250, 0.06);
+      text-align: center;
+    }
+
+    .editor-outline-gated {
+      display: none !important;
+    }
+
+    body.show-layout-outlines .editor-outline-gated {
+      display: block !important;
+    }
   `
   document.head.appendChild(style)
 }
@@ -250,12 +357,20 @@ function initRuntime(): void {
     switch (type) {
       case 'render':
         if (typeof data.html === 'string') {
-          endExistingDrag(true)
-          document.body.innerHTML = data.html
-          ensureOverlayRoot()
-          attachBlockListeners()
-          refreshOverlays()
+          const html = data.html
+          const renderRequestId = ++latestRenderRequestId
+          void frameworkReadyPromise.finally(() => {
+            if (renderRequestId !== latestRenderRequestId) return
+            endExistingDrag(true)
+            document.body.innerHTML = html
+            ensureOverlayRoot()
+            attachBlockListeners()
+            refreshOverlays()
+          })
         }
+        break
+      case 'setFramework':
+        frameworkReadyPromise = setFramework((data as { framework?: 'bootstrap-5' | 'tailwind' | 'vanilla' }).framework ?? 'bootstrap-5')
         break
       case 'setCustomCss':
         setCustomCss((data as { css?: string }).css ?? '')
