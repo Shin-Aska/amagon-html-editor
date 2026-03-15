@@ -445,9 +445,28 @@ let draggedPointerEventsBefore: string | null = null
 
 const DRAG_START_DISTANCE = 6
 
+function shouldBlockNavigationFromTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest('a[href], area[href]'))
+}
+
 function attachBlockListeners(): void {
   if (!listenersInstalled) {
     listenersInstalled = true
+    document.addEventListener('click', (e) => {
+      if (!shouldBlockNavigationFromTarget(e.target)) return
+      e.preventDefault()
+    }, true)
+
+    document.addEventListener('auxclick', (e) => {
+      if (!shouldBlockNavigationFromTarget(e.target)) return
+      e.preventDefault()
+    }, true)
+
+    document.addEventListener('submit', (e) => {
+      e.preventDefault()
+    }, true)
+
     document.body.addEventListener('click', () => {
       sendToParent({ type: 'clicked' })
     })
