@@ -230,6 +230,61 @@
   background-color: var(--bg-tertiary, #3c3c3c);
 }
 
+.msp-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 0;
+}
+
+.msp-pagination-summary {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+}
+
+.msp-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.msp-page-status {
+  font-size: 12px;
+  color: var(--text-primary, #ccc);
+}
+
+.msp-page-btn {
+  padding: 6px 12px;
+  background-color: var(--bg-primary, #1e1e1e);
+  border: 1px solid var(--border-color, #3c3c3c);
+  color: var(--text-primary, #ccc);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.msp-page-btn:hover:not(:disabled) {
+  background-color: var(--bg-tertiary, #2d2d2d);
+}
+
+.msp-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .msp-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .msp-pagination-controls {
+    justify-content: space-between;
+  }
+}
+
 .msp-selection-bar {
   position: sticky;
   bottom: 0;

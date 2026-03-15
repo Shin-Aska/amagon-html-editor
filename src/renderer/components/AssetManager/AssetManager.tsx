@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { getApi } from '../../utils/api'
 import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
 import './AssetManager.css'
@@ -15,6 +15,8 @@ interface AssetManagerProps {
   onSelect?: (url: string) => void
 }
 
+const PROJECT_ASSETS_PER_PAGE = 8
+
 export default function AssetManager({ onClose, onSelect }: AssetManagerProps): JSX.Element {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(false)
@@ -22,6 +24,7 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
   const [activeTab, setActiveTab] = useState<'project' | 'web'>('project')
   const [filterType, setFilterType] = useState<'all' | 'images' | 'videos'>('all')
   const [downloading, setDownloading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
   const api = getApi()
 
   const refreshAssets = useCallback(async () => {
@@ -117,14 +120,40 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
     }
   }
 
-  const filteredAssets = assets.filter((asset) => {
-    if (filterType === 'all') return true
-    if (filterType === 'images') return asset.type === 'image' || !asset.type
-    if (filterType === 'videos') return asset.type === 'video'
-    return true
-  })
+  const filteredAssets = useMemo(() => {
+    return assets.filter((asset) => {
+      if (filterType === 'all') return true
+      if (filterType === 'images') return asset.type === 'image' || !asset.type
+      if (filterType === 'videos') return asset.type === 'video'
+      return true
+    })
+  }, [assets, filterType])
+
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PROJECT_ASSETS_PER_PAGE))
+  const pageStartIndex = (currentPage - 1) * PROJECT_ASSETS_PER_PAGE
+  const paginatedAssets = filteredAssets.slice(pageStartIndex, pageStartIndex + PROJECT_ASSETS_PER_PAGE)
+  const visibleStart = filteredAssets.length === 0 ? 0 : pageStartIndex + 1
+  const visibleEnd = Math.min(pageStartIndex + PROJECT_ASSETS_PER_PAGE, filteredAssets.length)
 
   const webSearchMode: 'image' | 'video' = filterType === 'videos' ? 'video' : 'image'
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterType])
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
+
+  useEffect(() => {
+    if (!selectedAsset) return
+    const selectedIndex = filteredAssets.findIndex((asset) => asset.path === selectedAsset)
+    if (selectedIndex < 0) return
+    const nextPage = Math.floor(selectedIndex / PROJECT_ASSETS_PER_PAGE) + 1
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage)
+    }
+  }, [selectedAsset, filteredAssets, currentPage])
 
   const openWebTab = () => {
     if (filterType === 'all') {
@@ -209,47 +238,75 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
 
         <div className="asset-manager-content">
           {activeTab === 'project' ? (
-            <div className="asset-manager-grid">
-              {filteredAssets.length === 0 && !loading ? (
-                <div className="am-empty-state">
-                  <div className="am-empty-icon">&#128444;</div>
-                  <p>No assets in this project yet.</p>
-                  <p className="am-empty-hint">Click "Add Media" to import files, or drag images directly onto the canvas.</p>
-                </div>
-              ) : (
-                filteredAssets.map(asset => (
-                  <div
-                    key={asset.path}
-                    className={`am-asset-item ${selectedAsset === asset.path ? 'selected' : ''}`}
-                    onClick={() => handleAssetClick(asset)}
-                    onDoubleClick={() => handleAssetDoubleClick(asset)}
-                  >
-                    <div className="am-asset-thumbnail">
-                      {asset.type === 'video' ? (
-                        <div className="am-video-thumbnail">
-                          <video src={asset.path} preload="metadata" />
-                          <div className="am-play-icon">▶</div>
-                        </div>
-                      ) : (
-                        <img src={asset.path} alt={asset.name} loading="lazy" />
-                      )}
-                    </div>
-                    <div className="am-asset-info">
-                      <span className="am-asset-name" title={asset.name}>{asset.name}</span>
-                      <button
-                        className="am-asset-delete-btn"
-                        onClick={(e) => handleDeleteAsset(asset, e)}
-                        title="Delete asset"
-                      >
-                        &times;
-                      </button>
-                    </div>
+            <div className="asset-manager-project-panel">
+              <div className="asset-manager-grid">
+                {filteredAssets.length === 0 && !loading ? (
+                  <div className="am-empty-state">
+                    <div className="am-empty-icon">&#128444;</div>
+                    <p>No assets in this project yet.</p>
+                    <p className="am-empty-hint">Click "Add Media" to import files, or drag images directly onto the canvas.</p>
                   </div>
-                ))
-              )}
-              {loading && assets.length === 0 && (
-                <div className="am-empty-state">
-                  <p>Loading assets...</p>
+                ) : (
+                  paginatedAssets.map(asset => (
+                    <div
+                      key={asset.path}
+                      className={`am-asset-item ${selectedAsset === asset.path ? 'selected' : ''}`}
+                      onClick={() => handleAssetClick(asset)}
+                      onDoubleClick={() => handleAssetDoubleClick(asset)}
+                    >
+                      <div className="am-asset-thumbnail">
+                        {asset.type === 'video' ? (
+                          <div className="am-video-thumbnail">
+                            <video src={asset.path} preload="metadata" />
+                            <div className="am-play-icon">▶</div>
+                          </div>
+                        ) : (
+                          <img src={asset.path} alt={asset.name} loading="lazy" />
+                        )}
+                      </div>
+                      <div className="am-asset-info">
+                        <span className="am-asset-name" title={asset.name}>{asset.name}</span>
+                        <button
+                          className="am-asset-delete-btn"
+                          onClick={(e) => handleDeleteAsset(asset, e)}
+                          title="Delete asset"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+                {loading && assets.length === 0 && (
+                  <div className="am-empty-state">
+                    <p>Loading assets...</p>
+                  </div>
+                )}
+              </div>
+              {filteredAssets.length > 0 && (
+                <div className="am-pagination">
+                  <span className="am-pagination-summary">
+                    Showing {visibleStart}-{visibleEnd} of {filteredAssets.length}
+                  </span>
+                  <div className="am-pagination-controls">
+                    <button
+                      className="am-page-btn"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <span className="am-page-status">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      className="am-page-btn"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -27,6 +27,22 @@ const PROVIDER_LABELS: Record<string, string> = {
   pixabay: 'Pixabay'
 }
 
+const SEARCH_RESULTS_PER_PAGE = 20
+const VISIBLE_RESULTS_PER_PAGE = 8
+
+function mergeResults(existing: MediaSearchResult[], incoming: MediaSearchResult[]): MediaSearchResult[] {
+  const merged = [...existing]
+  const seen = new Set(existing.map((result) => result.id))
+
+  for (const result of incoming) {
+    if (seen.has(result.id)) continue
+    seen.add(result.id)
+    merged.push(result)
+  }
+
+  return merged
+}
+
 export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect = false }: MediaSearchPanelProps): JSX.Element {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<MediaSearchResult[]>([])
@@ -35,11 +51,17 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
   const [config, setConfig] = useState<{ enabled: boolean; provider: string; apiKey: string } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
+  const [currentVisiblePage, setCurrentVisiblePage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [showConfig, setShowConfig] = useState(false)
   const [configForm, setConfigForm] = useState({ enabled: false, provider: 'unsplash', apiKey: '' })
   const searchInputRef = useRef<HTMLInputElement>(null)
   const api = getApi()
+  const totalVisiblePages = Math.max(1, Math.ceil(results.length / VISIBLE_RESULTS_PER_PAGE))
+  const visibleStartIndex = (currentVisiblePage - 1) * VISIBLE_RESULTS_PER_PAGE
+  const visibleResults = results.slice(visibleStartIndex, visibleStartIndex + VISIBLE_RESULTS_PER_PAGE)
+  const visibleStart = results.length === 0 ? 0 : visibleStartIndex + 1
+  const visibleEnd = Math.min(visibleStartIndex + VISIBLE_RESULTS_PER_PAGE, results.length)
 
   // Load config on mount
   useEffect(() => {
@@ -74,22 +96,24 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
     try {
       const result = await api.mediaSearch.search({
         query: searchQuery,
-        perPage: 20,
+        perPage: SEARCH_RESULTS_PER_PAGE,
         page: pageNum,
         type: mode
       })
 
       if (result.error) {
         setError(result.error)
-        setResults([])
+        if (!append) {
+          setResults([])
+        }
       } else {
         const newResults = result.results || []
         if (append) {
-          setResults(prev => [...prev, ...newResults])
+          setResults(prev => mergeResults(prev, newResults))
         } else {
           setResults(newResults)
         }
-        setHasMore(newResults.length === 20)
+        setHasMore(newResults.length === SEARCH_RESULTS_PER_PAGE)
       }
     } catch (err) {
       setError('Search failed. Please try again.')
@@ -101,6 +125,8 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setPage(1)
+    setCurrentVisiblePage(1)
+    setSelectedIds(new Set())
     handleSearch(query, 1, false)
   }
 
@@ -109,6 +135,19 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
     setPage(nextPage)
     handleSearch(query, nextPage, true)
   }
+
+  useEffect(() => {
+    setResults([])
+    setSelectedIds(new Set())
+    setPage(1)
+    setCurrentVisiblePage(1)
+    setHasMore(true)
+    setError(null)
+  }, [mode])
+
+  useEffect(() => {
+    setCurrentVisiblePage((prev) => Math.min(prev, totalVisiblePages))
+  }, [totalVisiblePages])
 
   const handleResultClick = (result: MediaSearchResult) => {
     if (multiSelect) {
@@ -275,7 +314,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
       )}
 
       <div className="msp-results-grid">
-        {results.map((result) => {
+        {visibleResults.map((result) => {
           const isSelected = selectedIds.has(result.id)
           return (
             <div
@@ -316,6 +355,33 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
       </div>
 
       {loading && <div className="msp-loading">Searching...</div>}
+
+      {results.length > 0 && (
+        <div className="msp-pagination">
+          <span className="msp-pagination-summary">
+            Showing {visibleStart}-{visibleEnd} of {results.length}
+          </span>
+          <div className="msp-pagination-controls">
+            <button
+              className="msp-page-btn"
+              onClick={() => setCurrentVisiblePage((prev) => Math.max(1, prev - 1))}
+              disabled={currentVisiblePage === 1}
+            >
+              Previous
+            </button>
+            <span className="msp-page-status">
+              Page {currentVisiblePage} of {totalVisiblePages}
+            </span>
+            <button
+              className="msp-page-btn"
+              onClick={() => setCurrentVisiblePage((prev) => Math.min(totalVisiblePages, prev + 1))}
+              disabled={currentVisiblePage === totalVisiblePages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {hasMore && results.length > 0 && !loading && (
         <button className="msp-load-more" onClick={loadMore}>
