@@ -395,7 +395,32 @@ ${pad}</div>`
   // Special handling for Navbar with pages datasource
   if (block.type === 'navbar' && block.props.usePages && pages && pages.length > 0) {
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : ''
-    const classes = block.classes.join(' ')
+    
+    // Handle migration of legacy Bootstrap utility classes to theme classes
+    let classesArray = [...block.classes]
+    if (classesArray.includes('bg-body-tertiary')) {
+      classesArray = classesArray.filter(c => c !== 'bg-body-tertiary')
+      if (!classesArray.some(c => c.startsWith('navbar-theme-'))) {
+        classesArray.push('navbar-theme-light')
+      }
+    }
+    if (classesArray.includes('navbar-dark')) {
+      classesArray = classesArray.filter(c => c !== 'navbar-dark')
+    }
+    if (classesArray.includes('bg-dark')) {
+      classesArray = classesArray.filter(c => c !== 'bg-dark')
+      if (!classesArray.some(c => c.startsWith('navbar-theme-'))) {
+        classesArray.push('navbar-theme-dark')
+      }
+    }
+    if (classesArray.includes('bg-primary')) {
+      classesArray = classesArray.filter(c => c !== 'bg-primary')
+      if (!classesArray.some(c => c.startsWith('navbar-theme-'))) {
+        classesArray.push('navbar-theme-primary')
+      }
+    }
+    
+    const classes = classesArray.join(' ')
     const styleStr = stylesToString(block.styles)
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'))
@@ -927,9 +952,34 @@ ${pad}</div>`
     parts.push(`data-block-type="${block.type}"`)
   }
 
-  // Classes
-  if (block.classes.length > 0) {
-    parts.push(`class="${block.classes.join(' ')}"`)
+  // Classes (with legacy navbar class migration for generic path)
+  let finalClasses = block.classes
+  if (block.type === 'navbar') {
+    finalClasses = [...block.classes]
+    if (finalClasses.includes('bg-body-tertiary')) {
+      finalClasses = finalClasses.filter(c => c !== 'bg-body-tertiary')
+      if (!finalClasses.some(c => c.startsWith('navbar-theme-'))) {
+        finalClasses.push('navbar-theme-light')
+      }
+    }
+    if (finalClasses.includes('navbar-dark')) {
+      finalClasses = finalClasses.filter(c => c !== 'navbar-dark')
+    }
+    if (finalClasses.includes('bg-dark')) {
+      finalClasses = finalClasses.filter(c => c !== 'bg-dark')
+      if (!finalClasses.some(c => c.startsWith('navbar-theme-'))) {
+        finalClasses.push('navbar-theme-dark')
+      }
+    }
+    if (finalClasses.includes('bg-primary')) {
+      finalClasses = finalClasses.filter(c => c !== 'bg-primary')
+      if (!finalClasses.some(c => c.startsWith('navbar-theme-'))) {
+        finalClasses.push('navbar-theme-primary')
+      }
+    }
+  }
+  if (finalClasses.length > 0) {
+    parts.push(`class="${finalClasses.join(' ')}"`)
   }
 
   // Inline styles

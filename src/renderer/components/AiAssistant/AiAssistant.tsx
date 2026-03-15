@@ -439,26 +439,24 @@ function AiMessageBubble({
             </div>
 
             {/* Action buttons */}
-            {msg.role === 'assistant' && !msg.isError && (
-                <div className="ai-message-actions">
-                    {hasBlocks && parsed?.blocks && (
-                        <button
-                            className="ai-action-btn ai-action-insert"
-                            onClick={() => onInsertBlocks(parsed.blocks!)}
-                            title={`Insert into ${insertTargetLabel}`}
-                        >
-                            <ArrowDownToLine size={12} /> Insert into {insertTargetLabel}
-                        </button>
-                    )}
+            <div className="ai-message-actions">
+                {msg.role === 'assistant' && !msg.isError && hasBlocks && parsed?.blocks && (
                     <button
-                        className="ai-action-btn"
-                        onClick={() => onCopy(msg.content)}
-                        title="Copy response"
+                        className="ai-action-btn ai-action-insert"
+                        onClick={() => onInsertBlocks(parsed.blocks!)}
+                        title={`Insert into ${insertTargetLabel}`}
                     >
-                        <Copy size={12} /> Copy
+                        <ArrowDownToLine size={12} /> Insert into {insertTargetLabel}
                     </button>
-                </div>
-            )}
+                )}
+                <button
+                    className="ai-action-btn"
+                    onClick={() => onCopy(msg.content)}
+                    title={msg.role === 'user' ? 'Copy message' : 'Copy response'}
+                >
+                    <Copy size={12} /> Copy
+                </button>
+            </div>
         </div>
     )
 }
@@ -482,6 +480,19 @@ export default function AiAssistant(): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
+    // Auto-resize textarea based on content
+    const adjustTextareaHeight = useCallback(() => {
+        const textarea = inputRef.current
+        if (!textarea) return
+        
+        // Reset to auto to get correct scrollHeight
+        textarea.style.height = 'auto'
+        
+        // Set new height (clamped to max-height in CSS: 100px)
+        const newHeight = Math.min(textarea.scrollHeight, 100)
+        textarea.style.height = `${newHeight}px`
+    }, [])
+
     // Load config on mount
     useEffect(() => {
         if (!configLoaded) {
@@ -498,6 +509,10 @@ export default function AiAssistant(): JSX.Element {
         const text = input.trim()
         if (!text || isLoading) return
         setInput('')
+        // Reset textarea height after sending
+        if (inputRef.current) {
+            inputRef.current.style.height = 'auto'
+        }
         sendMessage(text)
         inputRef.current?.focus()
     }
@@ -623,7 +638,11 @@ export default function AiAssistant(): JSX.Element {
                     ref={inputRef}
                     className="ai-input"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => {
+                        setInput(e.target.value)
+                        // Adjust height on next tick to get correct scrollHeight
+                        requestAnimationFrame(adjustTextareaHeight)
+                    }}
                     onKeyDown={handleKeyDown}
                     placeholder={hasApiKey ? 'Ask the AI to build something...' : 'Configure API key in settings first...'}
                     rows={1}

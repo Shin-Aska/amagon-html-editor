@@ -350,7 +350,7 @@ export function registerBlocks(): void {
     label: 'Navbar',
     category: 'Components',
     icon: '≡',
-    defaultClasses: ['navbar', 'navbar-expand-lg', 'bg-body-tertiary'],
+    defaultClasses: ['navbar', 'navbar-expand-lg', 'navbar-theme-light'],
     defaultProps: {
       brandText: 'Brand',
       brandImage: '',
@@ -375,9 +375,9 @@ export function registerBlocks(): void {
         type: 'select',
         label: 'Theme',
         options: [
-          { label: 'Light', value: 'bg-body-tertiary' },
-          { label: 'Dark', value: 'navbar-dark bg-dark' },
-          { label: 'Primary', value: 'navbar-dark bg-primary' }
+          { label: 'Light', value: 'navbar-theme-light' },
+          { label: 'Dark', value: 'navbar-theme-dark' },
+          { label: 'Primary', value: 'navbar-theme-primary' }
         ]
       }
     }

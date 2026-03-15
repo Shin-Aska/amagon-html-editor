@@ -284,15 +284,17 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
   // Main keyboard handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Ignore if typing in an input, textarea, or contenteditable
+    // Ignore if typing in an input, textarea, contenteditable, or Monaco editor
     const target = e.target as HTMLElement
     // If e.target is the Window (e.g. from artificial window.dispatchEvent bubbling from Canvas), these properties will be undefined
     const closestContentEditable = target?.closest?.('[contenteditable="true"]') ?? null
+    const closestMonacoEditor = target?.closest?.('.monaco-editor') ?? null
     const isInputElement =
       target?.tagName === 'INPUT' ||
       target?.tagName === 'TEXTAREA' ||
       target?.contentEditable === 'true' ||
-      closestContentEditable !== null
+      closestContentEditable !== null ||
+      closestMonacoEditor !== null
 
     const isCtrl = e.ctrlKey || e.metaKey
 
@@ -376,16 +378,22 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
           return
 
         case 'c':
+          // Don't intercept copy if focused in an editor (let native clipboard work)
+          if (isInputElement) return
           e.preventDefault()
           handleCopy()
           return
 
         case 'x':
+          // Don't intercept cut if focused in an editor
+          if (isInputElement) return
           e.preventDefault()
           handleCut()
           return
 
         case 'v':
+          // Don't intercept paste if focused in an editor
+          if (isInputElement) return
           e.preventDefault()
           handlePaste()
           return
