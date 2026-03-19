@@ -25,7 +25,8 @@ import {
   Layout,
   PanelLeft,
   PanelRight,
-  Palette
+  Palette,
+  KeyRound
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
@@ -34,6 +35,7 @@ import { useToastStore } from '../../store/toastStore'
 import { createBlock } from '../../store/types'
 import type { Block, EditorLayout } from '../../store/types'
 import AssetManager from '../AssetManager/AssetManager'
+import CredentialManager from '../CredentialManager/CredentialManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
 import './Toolbar.css'
@@ -99,6 +101,7 @@ export default function Toolbar({
 
   // Local State
   const [showAssetManager, setShowAssetManager] = useState(false)
+  const [showCredentialManager, setShowCredentialManager] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -461,6 +464,22 @@ export default function Toolbar({
           <button className="toolbar-btn" onClick={() => setShowAssetManager(true)} title="Asset Manager" aria-label="Open asset manager">
             <ImageIcon size={16} aria-hidden="true" />
           </button>
+
+          <div className="cred-manager-wrapper">
+            <button
+              className={`toolbar-btn ${showCredentialManager ? 'active' : ''}`}
+              onClick={() => setShowCredentialManager((prev) => !prev)}
+              title="Credential Manager"
+              aria-label="Open credential manager"
+              aria-pressed={showCredentialManager}
+            >
+              <KeyRound size={16} aria-hidden="true" />
+            </button>
+            <CredentialManager
+              open={showCredentialManager}
+              onClose={() => setShowCredentialManager(false)}
+            />
+          </div>
           
           <div className="toolbar-divider" />
 
