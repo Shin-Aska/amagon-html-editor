@@ -98,6 +98,12 @@ const api = {
     }
   },
 
+  app: {
+    isEncryptionSecure: () => ipcRenderer.invoke('app:isEncryptionSecure'),
+    getCredentials: () => ipcRenderer.invoke('app:getCredentials'),
+    deleteCredential: (id: string) => ipcRenderer.invoke('app:deleteCredential', id)
+  },
+
   ai: {
     chat: (data: {
       messages: { role: string; content: string }[]
