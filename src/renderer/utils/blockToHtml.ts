@@ -1656,43 +1656,34 @@ ${pad}</div>`
 
   const tag = resolveTag(block)
   const isVoid = VOID_ELEMENTS.has(tag)
+  const isExportMode = !includeDataAttributes
+  const textContent = getBlockContent(block, isExportMode, framework)
+  const hasChildren = block.children.length > 0
+  const hasContent = textContent.length > 0
 
   // Build attribute string
   const parts: string[] = []
 
-  // data-block-id (editor mode only)
-  if (includeDataAttributes) {
-    parts.push(`data-block-id="${block.id}"`)
-    parts.push(`data-block-type="${block.type}"`)
-  }
-
   // Classes (with legacy navbar class migration for generic path)
   const finalClasses = resolveFrameworkClasses(block, framework)
-  if (finalClasses.length > 0) {
-    parts.push(`class="${finalClasses.join(' ')}"`)
-  }
 
   // Inline styles
   const styleStr = stylesToString(block.styles)
-  if (styleStr) {
-    parts.push(`style="${styleStr}"`)
-  }
 
   // Props → attributes
   const attrStr = propsToAttributes(tag, block.type, block.props)
-  if (attrStr) {
-    parts.push(attrStr)
-  }
-
-  const attrString = parts.length > 0 ? ' ' + parts.join(' ') : ''
 
   // Event attributes (e.g. onclick="...")
+  let hasEventAttributes = false
   let eventStr = ''
   if (block.events && Object.keys(block.events).length > 0) {
-    eventStr = ' ' + Object.entries(block.events)
+    const eventAttributes = Object.entries(block.events)
       .filter(([, v]) => v && v.trim().length > 0)
       .map(([name, code]) => `${escapeAttrName(name)}="${escapeAttrValue(code)}"`)
-      .join(' ')
+    if (eventAttributes.length > 0) {
+      hasEventAttributes = true
+      eventStr = ' ' + eventAttributes.join(' ')
+    }
   }
 
   // Form-specific attributes for container with isForm
@@ -1704,18 +1695,46 @@ ${pad}</div>`
     if (method) formAttrs += ` method="${escapeAttrValue(method)}"`
   }
 
+  const shouldUseLayoutNeutralWrapper =
+    includeDataAttributes &&
+    tag === 'div' &&
+    !hasContent &&
+    hasChildren &&
+    finalClasses.length === 0 &&
+    !styleStr &&
+    !attrStr &&
+    !hasEventAttributes &&
+    formAttrs.trim().length === 0
+
+  // data-block-id (editor mode only)
+  if (includeDataAttributes) {
+    parts.push(`data-block-id="${block.id}"`)
+    parts.push(`data-block-type="${block.type}"`)
+    if (shouldUseLayoutNeutralWrapper) {
+      parts.push('data-editor-layout-neutral="true"')
+    }
+  }
+
+  if (finalClasses.length > 0) {
+    parts.push(`class="${finalClasses.join(' ')}"`)
+  }
+
+  if (styleStr) {
+    parts.push(`style="${styleStr}"`)
+  }
+
+  if (attrStr) {
+    parts.push(attrStr)
+  }
+
+  const attrString = parts.length > 0 ? ' ' + parts.join(' ') : ''
+
   const fullAttrString = attrString + formAttrs + eventStr
 
   // Void element (self-closing)
   if (isVoid) {
     return `${pad}<${tag}${fullAttrString} />`
   }
-
-  // Determine inner content
-  const isExportMode = !includeDataAttributes
-  const textContent = getBlockContent(block, isExportMode, framework)
-  const hasChildren = block.children.length > 0
-  const hasContent = textContent.length > 0
 
   if (
     isExportMode &&

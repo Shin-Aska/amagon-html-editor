@@ -57,6 +57,99 @@ let layoutOutlinesEnabled = false
 let frameworkReadyPromise: Promise<void> = Promise.resolve()
 let latestRenderRequestId = 0
 
+interface VisualRect {
+  top: number
+  left: number
+  width: number
+  height: number
+  right: number
+  bottom: number
+}
+
+function toVisualRect(rect: Pick<DOMRectReadOnly, 'top' | 'left' | 'width' | 'height' | 'right' | 'bottom'>): VisualRect {
+  return {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height,
+    right: rect.right,
+    bottom: rect.bottom
+  }
+}
+
+function isLayoutNeutralBlock(el: HTMLElement): boolean {
+  return el.dataset.editorLayoutNeutral === 'true'
+}
+
+function mergeVisualRects(rects: VisualRect[]): VisualRect {
+  const top = Math.min(...rects.map((rect) => rect.top))
+  const left = Math.min(...rects.map((rect) => rect.left))
+  const right = Math.max(...rects.map((rect) => rect.right))
+  const bottom = Math.max(...rects.map((rect) => rect.bottom))
+
+  return {
+    top,
+    left,
+    right,
+    bottom,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top)
+  }
+}
+
+function getElementVisualRect(el: HTMLElement, visited = new Set<HTMLElement>()): VisualRect | null {
+  if (visited.has(el)) return null
+  visited.add(el)
+
+  const rect = el.getBoundingClientRect()
+  if (!isLayoutNeutralBlock(el) && rect.width > 0 && rect.height > 0) {
+    return toVisualRect(rect)
+  }
+
+  const childRects = Array.from(el.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .map((child) => getElementVisualRect(child, visited))
+    .filter((childRect): childRect is VisualRect => childRect !== null)
+
+  if (childRects.length > 0) {
+    return mergeVisualRects(childRects)
+  }
+
+  if (rect.width > 0 || rect.height > 0) {
+    return toVisualRect(rect)
+  }
+
+  return null
+}
+
+function getScrollTargetElement(el: HTMLElement, visited = new Set<HTMLElement>()): HTMLElement {
+  if (visited.has(el)) return el
+  visited.add(el)
+
+  if (!isLayoutNeutralBlock(el)) return el
+
+  for (const child of Array.from(el.children)) {
+    if (!(child instanceof HTMLElement)) continue
+    const target = getScrollTargetElement(child, visited)
+    if (target) return target
+  }
+
+  return el
+}
+
+function getObservedElements(el: HTMLElement, visited = new Set<HTMLElement>()): HTMLElement[] {
+  if (visited.has(el)) return []
+  visited.add(el)
+
+  if (!isLayoutNeutralBlock(el)) return [el]
+
+  const observedChildren = Array.from(el.children)
+    .filter((child): child is HTMLElement => child instanceof HTMLElement)
+    .flatMap((child) => getObservedElements(child, visited))
+
+  return observedChildren.length > 0 ? observedChildren : [el]
+}
+
 function upsertFrameworkLink(id: string, href: string): Promise<void> {
   const existing = document.querySelector<HTMLLinkElement>(`#${id}`)
   if (existing) {
@@ -151,6 +244,10 @@ function injectLayoutOutlinesCss(): void {
   const style = document.createElement('style')
   style.id = 'editor-layout-outlines-css'
   style.textContent = `
+    body [data-editor-layout-neutral="true"] {
+      display: contents !important;
+    }
+
     body.show-layout-outlines :is(
       [data-block-type="container"],
       [data-block-type="row"],
@@ -404,8 +501,9 @@ function initRuntime(): void {
       case 'scrollToElement':
         if ((data as { blockId?: string | null }).blockId) {
           const id = (data as { blockId: string }).blockId
-          const el = document.querySelector(`[data-block-id="${id}"]`)
-          el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          const el = document.querySelector<HTMLElement>(`[data-block-id="${id}"]`)
+          const scrollTarget = el ? getScrollTargetElement(el) : null
+          scrollTarget?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
         break
       case 'dragMove': {
@@ -561,7 +659,7 @@ function attachBlockListeners(): void {
       e.stopPropagation()
       const blockId = el.dataset.blockId
       if (blockId) {
-        const rect = el.getBoundingClientRect()
+        const rect = getElementVisualRect(el) ?? toVisualRect(el.getBoundingClientRect())
         sendToParent({
           type: 'clicked',
           blockId,
@@ -599,7 +697,7 @@ function attachBlockListeners(): void {
       e.preventDefault()
       const blockId = el.dataset.blockId
       if (blockId) {
-        const rect = el.getBoundingClientRect()
+        const rect = getElementVisualRect(el) ?? toVisualRect(el.getBoundingClientRect())
         sendToParent({
           type: 'contextMenu',
           blockId,
@@ -806,7 +904,7 @@ function isContainerElement(el: HTMLElement): boolean {
 }
 
 function computeDropHint(target: HTMLElement, x: number, y: number): DropTargetHint {
-  const rect = target.getBoundingClientRect()
+  const rect = getElementVisualRect(target) ?? toVisualRect(target.getBoundingClientRect())
   const yRel = y - rect.top
   const container = isContainerElement(target)
 
@@ -833,7 +931,7 @@ function findClosestChildBlock(container: HTMLElement, y: number, excludeBlockId
   let bestDist = Infinity
 
   for (const el of candidates) {
-    const rect = el.getBoundingClientRect()
+    const rect = getElementVisualRect(el) ?? toVisualRect(el.getBoundingClientRect())
     const centerY = rect.top + rect.height / 2
     const dist = Math.abs(y - centerY)
     if (dist < bestDist) {
@@ -883,7 +981,7 @@ function handleDragMove(x: number, y: number): void {
     const closestChild = findClosestChildBlock(target, y, draggingExistingBlockId)
     const childId = closestChild?.dataset.blockId
     if (closestChild && childId) {
-      const rect = closestChild.getBoundingClientRect()
+      const rect = getElementVisualRect(closestChild) ?? toVisualRect(closestChild.getBoundingClientRect())
       const centerY = rect.top + rect.height / 2
       hint = { targetBlockId: childId, mode: y < centerY ? 'before' : 'after' }
       indicatorTarget = closestChild
@@ -914,7 +1012,7 @@ function renderContainerHoverIndicator(target: HTMLElement): void {
     return
   }
 
-  const rect = target.getBoundingClientRect()
+  const rect = getElementVisualRect(target) ?? toVisualRect(target.getBoundingClientRect())
   const indicator = containerHoverIndicatorEl ?? document.createElement('div')
   indicator.className = 'dnd-container-hover-indicator'
   indicator.style.pointerEvents = 'none'
@@ -952,7 +1050,7 @@ function refreshDropIndicator(): void {
 }
 
 function renderDropIndicator(target: HTMLElement, mode: 'inside' | 'before' | 'after'): void {
-  const rect = target.getBoundingClientRect()
+  const rect = getElementVisualRect(target) ?? toVisualRect(target.getBoundingClientRect())
   const indicator = dropIndicatorEl ?? document.createElement('div')
   indicator.className = 'dnd-drop-indicator'
   indicator.style.pointerEvents = 'none'
@@ -999,7 +1097,11 @@ function renderOverlay(blockId: string | null, mode: 'selected' | 'hovered'): vo
     return
   }
 
-  const rect = el.getBoundingClientRect()
+  const rect = getElementVisualRect(el)
+  if (!rect) {
+    existing?.remove()
+    return
+  }
   const overlay = existing ?? document.createElement('div')
   overlay.className = className
   overlay.style.cssText = `
@@ -1127,7 +1229,9 @@ function installResizeObserver(mode: 'selected' | 'hovered'): void {
   }
 
   const ro = new ResizeObserver(() => refreshOverlays())
-  ro.observe(el)
+  for (const target of getObservedElements(el)) {
+    ro.observe(target)
+  }
 
   if (mode === 'selected') selectedResizeObserver = ro
   else hoveredResizeObserver = ro
