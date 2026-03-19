@@ -4,7 +4,7 @@
   <img src="docs/images/logo.png" alt="Amagon Logo" width="200" />
 </p>
 
-An offline, AI-powered visual HTML editor — a Pingendo/Mobirise/Bootstrap Studio alternative for Linux.
+An offline, AI-powered visual HTML editor. A Pingendo/Mobirise/Bootstrap Studio alternative for Linux.
 
 [amagon.app](https://amagon.app)
 
@@ -18,21 +18,21 @@ An offline, AI-powered visual HTML editor — a Pingendo/Mobirise/Bootstrap Stud
 
 ## Features
 
-### 🤖 AI Assistant
+### AI Assistant
 
 ![AI Assistant](docs/images/ai.jpg)
 
-Amagon ships with a built-in AI assistant that understands your project's block structure, theme, and design system — so you can build pages with natural language.
+Amagon ships with a built-in AI assistant that understands your project's block structure, theme, and design system so you can build pages with natural language.
 
-- **Multi-Provider Support**: Connect to **OpenAI** (GPT-4o, o3-mini, …), **Anthropic** (Claude Sonnet/Opus/Haiku), **Google** (Gemini 2.5 Flash/Pro, …), or **Ollama** for fully offline, local LLM inference
+- **Multi-Provider Support**: Connect to **OpenAI** (GPT-4o, o3-mini, etc.), **Anthropic** (Claude Sonnet/Opus/Haiku), **Google** (Gemini 2.5 Flash/Pro, etc.), or **Ollama** for fully offline local LLM inference
 - **Generate UI Components**: Describe what you want ("Build a pricing table with 3 tiers") and the AI produces ready-to-insert blocks that follow your project's block schema
 - **Theme-Aware Generation**: The AI automatically receives your project's theme variables (colors, typography, spacing) so generated components stay visually consistent
-- **Conversational Chat**: Ask questions, get design advice, or request modifications to existing blocks — all from a sidebar chat panel
+- **Conversational Chat**: Ask questions, get design advice, or request modifications to existing blocks from a sidebar chat panel
 - **One-Click Insert**: AI-generated blocks include a live preview and can be inserted into the canvas with a single click
-- **Secure Key Storage**: API keys are encrypted via the OS keychain (`safeStorage`) and never leave the main process
-- **Dynamic Model Discovery**: Available models are fetched live from each provider's API; Ollama models are auto-detected from your local server
+- **Secure Key Storage**: API keys are encrypted via the OS keyring (`safeStorage`) and never leave the main process. On Linux systems without a supported keyring, keys are encrypted using a machine-derived AES key as a fallback
+- **Dynamic Model Discovery**: Available models are fetched live from each provider's API. Ollama models are auto-detected from your local server
 
-### 🎨 Visual Editing
+### Visual Editing
 
 ![Visual Editing](docs/images/visual-editing.jpg)
 
@@ -42,18 +42,18 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **Responsive Preview**: Switch between desktop, tablet, and mobile viewports
 - **Block Library**: 50+ pre-built blocks including headers, heroes, grids, forms, navbars, footers, code blocks, and more
 - **Custom Components**: Save your own reusable block templates
-- **Floating Toolbar**: Context-aware toolbar appears on hover, offering quick edit, duplicate, delete, and move actions
+- **Floating Toolbar**: Context-aware toolbar appears on hover with quick edit, duplicate, delete, and move actions
 
-### 🖥️ Code Integration
+### Code Integration
 
 ![Code Integration](docs/images/code-editor.jpg)
 
-- **Monaco Editor**: Full-featured code editor (the same engine behind VS Code) with syntax highlighting and IntelliSense
+- **Monaco Editor**: Full-featured code editor (same engine behind VS Code) with syntax highlighting and IntelliSense
 - **Bidirectional Sync**: Changes in code reflect in the visual editor and vice versa
 - **Code Syntax Highlighting**: Code blocks in the canvas are rendered with highlight.js syntax coloring
 - **Clean Export**: Export to standalone HTML with no editor artifacts
 
-### 🎭 Theme System
+### Theme System
 
 ![Theme System](docs/images/theme-editor.jpg)
 
@@ -62,24 +62,31 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **CSS Variables Pipeline**: Theme changes compile to CSS custom properties (`--theme-primary`, `--theme-bg`, `--theme-font-family`, etc.) that cascade through all blocks
 - **Import/Export Themes**: Save and load theme JSON files for reuse across projects
 
-### 🔍 Inspector Panel
+### Inspector Panel
 
 - **Property Editor**: Edit every block's props through auto-generated forms (text, number, boolean, select, color picker, image, measurement)
 - **Style Editors**: Dedicated sub-panels for layout (display/flexbox), spacing (margin/padding), typography, background, and border
 - **Responsive Overrides**: Add responsive CSS class overrides per breakpoint
 - **CSS Class Editor**: Fine-tune Bootstrap or custom CSS classes on any block
-- **Block Actions**: Duplicate, delete, move up/down, wrap in container, or save as a user component — all from the inspector
+- **Block Actions**: Duplicate, delete, move up/down, wrap in container, or save as a user component from the inspector
 
-### 📂 Project Management
+### Credential Manager
+
+- **Centralized Key Overview**: View all stored API keys from a single popover accessible in the toolbar, with masked values and per-service labels
+- **Encryption Status**: A banner shows whether your keys are protected by the OS keyring or by machine-derived AES encryption (fallback for Linux systems without a keyring)
+- **Security Info Modal**: When running in fallback mode, a detailed modal explains what the machine-derived encryption does, its limitations, and how to set up a proper keyring for stronger protection
+- **Per-Key Deletion**: Remove individual API keys directly from the credential manager
+
+### Project Management
 
 - **New Project Wizard**: Choose a name and CSS framework (Bootstrap 5, Tailwind CSS, or Vanilla HTML/CSS) to scaffold a new project
 - **Multi-Page Projects**: Create and manage multiple pages in a single project
 - **Save/Load**: Native project files (.json) with all assets
-- **Asset Manager**: Built-in image and asset management
+- **Asset Manager**: Built-in image and asset management with integrated media search (Pexels, Pixabay)
 - **Auto-Save**: Automatic background saving
 - **Recent Projects**: Welcome screen shows recently opened projects for quick access
 
-### ⚡ Advanced Features
+### Advanced Features
 
 - **Undo/Redo**: Full history with 50-step rollback
 - **Keyboard Shortcuts**: Power-user shortcuts for all operations (Ctrl+K for command palette)
@@ -89,8 +96,8 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **Custom CSS**: Add global styles that apply to all blocks
 - **Dark/Light Themes**: Choose your preferred editor UI theme
 - **Flexible Layouts**: Switch between standard, no-sidebar, no-inspector, canvas-only, code-focus, and zen modes
-- **Export Options**: Multi-file (all pages) or single self-contained HTML export, with optional minification and JS inclusion
-- **Preview in Browser**: one-click preview of exported pages in your default browser
+- **Export Options**: Multi-file (all pages) or single self-contained HTML export with optional minification and JS inclusion
+- **Preview in Browser**: One-click preview of exported pages in your default browser
 - **Lazy Loading**: Heavy components (code editor, dialogs) are code-split and lazy-loaded for fast startup
 
 ## Getting Started
@@ -133,7 +140,7 @@ According to the ReviOS documentation, the playbook can:
 - Strip additional system packages via WinSxS removal (telemetry, error reporting, targeted content, Defender, and more)
 - Prevent Windows Update from reinstalling the removed packages (from the 23.12 playbook onward)
 
-These changes mean a ReviOS system is **not equivalent** to a stock Windows installation. Electron/Chromium‑based desktop apps like Amagon expect a relatively complete and up‑to‑date Windows environment; when core components or services are missing or altered, this can show up as:
+These changes mean a ReviOS system is **not equivalent** to a stock Windows installation. Electron/Chromium based desktop apps like Amagon expect a relatively complete and up to date Windows environment. When core components or services are missing or altered, this can show up as:
 
 - Buttons or controls that don’t respond to clicks
 - Layout, fonts, or theming that look broken or incomplete
@@ -141,11 +148,11 @@ These changes mean a ReviOS system is **not equivalent** to a stock Windows inst
 
 If Amagon’s UI appears broken on ReviOS but works correctly on a standard Windows install, the most likely cause is missing or modified OS components rather than an Amagon bug.
 
-**Recommendations**
+Recommendations
 
 - Prefer a standard, fully supported Windows 10/11 installation (or Linux) for running Amagon.
-- On ReviOS, try restoring removed components (especially Microsoft Edge / WebView runtime, system fonts, and related packages) using the Revision Tool, and ensure GPU drivers are up to date.
-- When reporting issues, please verify that the problem reproduces on a stock Windows or Linux environment. ReviOS‑specific problems are currently outside the project’s official support scope.
+- On ReviOS, try restoring removed components (especially Microsoft Edge / WebView runtime, system fonts, and related packages) using the Revision Tool. Also make sure GPU drivers are up to date.
+- When reporting issues, please verify that the problem reproduces on a stock Windows or Linux environment. ReviOS specific problems are currently outside the project's official support scope.
 
 ## AI Setup
 
@@ -156,9 +163,9 @@ Amagon's AI assistant works with any of the following providers:
 | **OpenAI** | Enter your API key in the AI settings panel |
 | **Anthropic** | Enter your API key in the AI settings panel |
 | **Google (Gemini)** | Enter your API key in the AI settings panel |
-| **Ollama** (local) | Install [Ollama](https://ollama.com/), pull a model, and it auto-connects at `localhost:11434` — no API key needed |
+| **Ollama** (local) | Install [Ollama](https://ollama.com/), pull a model, and it auto-connects at `localhost:11434`. No API key needed |
 
-Open the AI panel from the sidebar, click the ⚙️ settings icon, select your provider, and enter your API key (or just select Ollama for local inference). The AI will automatically discover available models.
+Open the AI panel from the sidebar, click the settings icon, select your provider, and enter your API key. For Ollama, just select it for local inference. The AI will automatically discover available models.
 
 ## Keyboard Shortcuts
 
@@ -207,18 +214,18 @@ src/
 
 ## Tech Stack
 
-- **Electron** — Cross-platform desktop app framework
-- **Vite** — Fast development and building
-- **React** — UI component library
-- **TypeScript** — Type-safe JavaScript
-- **Zustand** — Lightweight state management
-- **Monaco Editor** — VS Code's editor component
-- **highlight.js** — Syntax highlighting for code blocks
-- **dnd-kit** — Modern drag and drop primitives
-- **Lucide React** — Icon library
-- **react-resizable-panels** — Resizable split panes
-- **parse5** — HTML parsing for bidirectional code sync
-- **Bootstrap 5** — Default CSS framework for generated pages
+- **Electron**: Cross-platform desktop app framework
+- **Vite**: Fast development and building
+- **React**: UI component library
+- **TypeScript**: Type-safe JavaScript
+- **Zustand**: Lightweight state management
+- **Monaco Editor**: VS Code's editor component
+- **highlight.js**: Syntax highlighting for code blocks
+- **dnd-kit**: Modern drag and drop primitives
+- **Lucide React**: Icon library
+- **react-resizable-panels**: Resizable split panes
+- **parse5**: HTML parsing for bidirectional code sync
+- **Bootstrap 5**: Default CSS framework for generated pages
 
 ## Architecture
 
@@ -250,7 +257,7 @@ Projects export to clean HTML:
 
 ## The Story of "Hoarses"
 
-During the initial scaffolding phase, the developer wanted a name that sounded fast but was unique enough to avoid conflicts with existing npm packages. **"Hoarses"** was chosen because it sounded like a heavy, breathing engine, but the extra "a" and "e" were added to ensure the internal directory names remained unique in the terminal.
+During the initial scaffolding phase, the developer wanted a name that sounded fast but was unique enough to avoid conflicts with existing npm packages. **"Hoarses"** was chosen because it sounded like a heavy, breathing engine. The extra "a" and "e" were added to ensure the internal directory names stayed unique in the terminal.
 
 Over time, it became a badge of honor among the contributors: **"Amagon is what the world sees, but Hoarses is the engine that screams"**.
 
