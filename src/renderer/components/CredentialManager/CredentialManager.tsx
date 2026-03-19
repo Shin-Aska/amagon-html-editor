@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { KeyRound, X, Trash2, ShieldCheck, ShieldAlert, Sparkles, Image as ImageIcon } from 'lucide-react'
+import { KeyRound, X, Trash2, ShieldCheck, ShieldAlert, Sparkles, Image as ImageIcon, Info, CheckCircle, AlertTriangle } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import './CredentialManager.css'
 
@@ -21,6 +21,7 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
   const [credentials, setCredentials] = useState<Credential[]>([])
   const [secure, setSecure] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [showSecurityInfo, setShowSecurityInfo] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
 
   const fetchCredentials = useCallback(async () => {
@@ -105,9 +106,59 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
         <span>
           {secure
             ? 'Keys encrypted via OS keyring'
-            : 'Keys encrypted with machine-derived key (no OS keyring)'}
+            : <>
+                Keys encrypted with machine-derived key (no OS keyring).
+                {' '}<a className="cred-security-info-link" onClick={() => setShowSecurityInfo(true)}>Click here for more info</a>
+              </>}
         </span>
       </div>
+
+      {showSecurityInfo && (
+        <div className="cred-security-modal-overlay" onClick={() => setShowSecurityInfo(false)}>
+          <div className="cred-security-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cred-security-modal-header">
+              <h4><Info size={14} /> Encryption Without OS Keyring</h4>
+              <button className="cred-manager-close" onClick={() => setShowSecurityInfo(false)} title="Close">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="cred-security-modal-body">
+              <p>
+                Your system does not have a supported OS keyring (such as GNOME Keyring or KWallet).
+                Instead, your API keys are encrypted using a key derived from machine-specific identifiers
+                (e.g. machine ID and hostname).
+              </p>
+
+              <div className="cred-security-section good">
+                <h5><CheckCircle size={13} /> What&apos;s good</h5>
+                <ul>
+                  <li>Your keys are <strong>never stored in plain text</strong> &mdash; they are always encrypted at rest.</li>
+                  <li>The encryption key is derived automatically, so there is <strong>no extra setup</strong> required.</li>
+                  <li>Keys are <strong>tied to this machine</strong>, making them non-portable and harder to leak accidentally.</li>
+                </ul>
+              </div>
+
+              <div className="cred-security-section caution">
+                <h5><AlertTriangle size={13} /> What to be aware of</h5>
+                <ul>
+                  <li>Machine-derived keys are <strong>less secure</strong> than an OS keyring backed by a user password or hardware TPM.</li>
+                  <li>Any process running as your user on this machine could <strong>potentially derive the same key</strong>.</li>
+                  <li>If your machine ID or hostname changes, stored credentials <strong>may become unreadable</strong> and need to be re-entered.</li>
+                </ul>
+              </div>
+
+              <div className="cred-security-section recommendation">
+                <h5>Recommendation</h5>
+                <p>
+                  For stronger protection, consider installing a supported keyring service
+                  (e.g. <code>gnome-keyring</code> or <code>kwallet</code>) and restarting the application.
+                  The app will automatically use it when available.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="cred-manager-list">
         {loading && credentials.length === 0 && (
