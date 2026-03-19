@@ -414,6 +414,30 @@
   cursor: not-allowed;
 }
 
+.msp-config-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-primary, #ccc);
+}
+
+.msp-config-warning-icon {
+  flex-shrink: 0;
+}
+
+.msp-config-warning code {
+  background: color-mix(in srgb, #f59e0b 15%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
 .msp-config-note {
   font-size: 11px;
   color: var(--text-secondary, #999);

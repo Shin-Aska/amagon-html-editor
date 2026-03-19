@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye, Loader2 } from 'lucide-react'
+import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye, Loader2, ShieldAlert } from 'lucide-react'
 import { useAiStore, type AiProvider } from '../../store/aiStore'
+import { getApi } from '../../utils/api'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
 import { createBlock, type Block } from '../../store/types'
@@ -157,7 +158,15 @@ function AiSettingsModal(): JSX.Element {
     const [isLoadingModels, setIsLoadingModels] = useState(false)
     const [fetchedModels, setFetchedModels] = useState<string[]>([])
     const [modelsFetched, setModelsFetched] = useState(false)
+    const [encryptionSecure, setEncryptionSecure] = useState(true)
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    // Check whether OS-level keyring encryption is available
+    useEffect(() => {
+        getApi().app.isEncryptionSecure().then((res: any) => {
+            if (res && typeof res.secure === 'boolean') setEncryptionSecure(res.secure)
+        }).catch(() => { /* ignore */ })
+    }, [])
 
     const hasStoredKeyForProvider = hasExistingKey && localConfig.provider === config.provider
     const hasUsableKey = localConfig.provider === 'ollama' || !!localConfig.apiKey || hasStoredKeyForProvider
@@ -261,6 +270,16 @@ function AiSettingsModal(): JSX.Element {
                         </select>
                     </div>
 
+                    {!encryptionSecure && localConfig.provider !== 'ollama' && (
+                        <div className="ai-settings-warning">
+                            <ShieldAlert size={14} />
+                            <span>
+                                OS keyring is unavailable. Your API key will be encrypted with a machine-derived key instead.
+                                For stronger protection, install a keyring service (e.g. <code>gnome-keyring</code> or <code>seahorse</code>).
+                            </span>
+                        </div>
+                    )}
+
                     {localConfig.provider !== 'ollama' ? (
                         <div className="ai-settings-field">
                             <label>API Key</label>
@@ -276,8 +295,12 @@ function AiSettingsModal(): JSX.Element {
                             />
                             <span className="ai-settings-hint">
                                 {hasStoredKeyForProvider
-                                    ? 'Your API key is encrypted and stored securely. Leave empty to keep the current key.'
-                                    : 'Your API key is encrypted and stored securely on your machine.'}
+                                    ? encryptionSecure
+                                        ? 'Your API key is encrypted and stored securely. Leave empty to keep the current key.'
+                                        : 'Your API key is encrypted with a machine-derived key. Leave empty to keep the current key.'
+                                    : encryptionSecure
+                                        ? 'Your API key is encrypted and stored securely on your machine.'
+                                        : 'Your API key will be encrypted with a machine-derived key on your machine.'}
                             </span>
                         </div>
                     ) : (

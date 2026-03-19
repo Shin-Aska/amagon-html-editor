@@ -6,6 +6,7 @@ import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
 import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
 import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
+import { isEncryptionSecure } from './cryptoHelpers'
 import { buildAppMenu } from './menu'
 import { createWelcomeBlocks } from '../shared/welcomeBlocks'
 
@@ -1021,6 +1022,59 @@ function registerIpcHandlers(): void {
         path: `app-media://project-asset/${relativePath}`,
         relativePath
       }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // ── Encryption status ────────────────────────────────────────────────
+
+  ipcMain.handle('app:isEncryptionSecure', () => {
+    return { secure: isEncryptionSecure() }
+  })
+
+  // ── Credential Manager ──────────────────────────────────────────────
+
+  ipcMain.handle('app:getCredentials', async () => {
+    try {
+      const aiConfig = await aiLoadConfig()
+      const mediaConfig = await mediaSearchLoadConfig()
+      const credentials: { id: string; label: string; source: string; provider: string; maskedKey: string; hasKey: boolean }[] = []
+
+      credentials.push({
+        id: 'ai',
+        label: 'AI Assistant',
+        source: 'ai',
+        provider: aiConfig.provider,
+        maskedKey: maskApiKey(aiConfig.apiKey),
+        hasKey: !!aiConfig.apiKey
+      })
+
+      credentials.push({
+        id: 'media-search',
+        label: 'Media Search',
+        source: 'media-search',
+        provider: mediaConfig.provider,
+        maskedKey: maskMediaApiKey(mediaConfig.apiKey),
+        hasKey: !!mediaConfig.apiKey
+      })
+
+      return { success: true, credentials, secure: isEncryptionSecure() }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('app:deleteCredential', async (_, id: string) => {
+    try {
+      if (id === 'ai') {
+        await aiSaveConfig({ apiKey: '' })
+      } else if (id === 'media-search') {
+        await mediaSearchSaveConfig({ apiKey: '' })
+      } else {
+        return { success: false, error: `Unknown credential: ${id}` }
+      }
+      return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

@@ -325,8 +325,10 @@ function Canvas(): JSX.Element {
   }, [runtimeReady, theme])
 
   const scale = zoom / 100
-  const viewportWidth = viewportMode === 'desktop' ? `${100 / scale}%` : viewportMode === 'tablet' ? '820px' : '390px'
-  const viewportHeight = `${100 / scale}%`
+  const viewportWidth = viewportMode === 'desktop' ? '100%' : viewportMode === 'tablet' ? '820px' : '390px'
+  const viewportHeight = '100%'
+  const scaledContentWidth = `${100 / scale}%`
+  const scaledContentHeight = `${100 / scale}%`
 
   return (
     <div className="canvas-wrapper">
@@ -342,19 +344,28 @@ function Canvas(): JSX.Element {
           width: viewportWidth,
           maxWidth: viewportWidth,
           height: viewportHeight,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top center',
-          transition: 'width 0.3s ease, max-width 0.3s ease, height 0.3s ease, transform 0.2s ease'
+          alignSelf: viewportMode === 'desktop' ? 'flex-start' : undefined,
+          transition: 'width 0.3s ease, max-width 0.3s ease, height 0.3s ease'
         }}
       >
-        <iframe
-          key={framework}
-          ref={iframeRef}
-          className="canvas-iframe"
-          src="./canvas.html"
-          title="Page Preview"
-          sandbox="allow-scripts allow-same-origin"
-        />
+        <div
+          style={{
+            width: scaledContentWidth,
+            height: scaledContentHeight,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            transition: 'width 0.3s ease, height 0.3s ease, transform 0.2s ease'
+          }}
+        >
+          <iframe
+            key={framework}
+            ref={iframeRef}
+            className="canvas-iframe"
+            src="./canvas.html"
+            title="Page Preview"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
       </div>
       {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
     </div>

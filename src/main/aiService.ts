@@ -5,7 +5,8 @@
 
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import { app, net, safeStorage } from 'electron'
+import { app, net } from 'electron'
+import { encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX } from './cryptoHelpers'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,46 +51,8 @@ const DEFAULT_CONFIG: AiConfig = {
     ollamaUrl: 'http://localhost:11434'
 }
 
-// ---------------------------------------------------------------------------
-// Secure key storage helpers
-// ---------------------------------------------------------------------------
-
-export const MASKED_KEY_PREFIX = '\u2022\u2022\u2022\u2022'
-
-function encryptApiKey(plaintext: string): string {
-    if (!plaintext) return ''
-    if (safeStorage.isEncryptionAvailable()) {
-        return safeStorage.encryptString(plaintext).toString('base64')
-    }
-    // Fallback: base64-obfuscate (not truly secure, but better than plaintext)
-    console.warn('[AI Service] OS-level encryption unavailable. API key stored with basic obfuscation only.')
-    return Buffer.from(`__PLAIN__${plaintext}`).toString('base64')
-}
-
-function decryptApiKey(encoded: string): string {
-    if (!encoded) return ''
-    const buffer = Buffer.from(encoded, 'base64')
-    if (safeStorage.isEncryptionAvailable()) {
-        try {
-            return safeStorage.decryptString(buffer)
-        } catch {
-            // May have been stored with the fallback encoder
-            const text = buffer.toString('utf-8')
-            if (text.startsWith('__PLAIN__')) return text.slice(9)
-            return ''
-        }
-    }
-    // Fallback decode
-    const text = buffer.toString('utf-8')
-    if (text.startsWith('__PLAIN__')) return text.slice(9)
-    return ''
-}
-
-export function maskApiKey(apiKey: string): string {
-    if (!apiKey) return ''
-    if (apiKey.length <= 4) return MASKED_KEY_PREFIX
-    return MASKED_KEY_PREFIX + apiKey.slice(-4)
-}
+// Re-export crypto helpers so existing imports from aiService still work
+export { encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX } from './cryptoHelpers'
 
 // Fallback model lists — used when dynamic fetching is unavailable
 const FALLBACK_MODELS: Record<AiProvider, string[]> = {

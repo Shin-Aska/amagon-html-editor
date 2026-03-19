@@ -34,6 +34,11 @@ interface ElectronApi {
     setProjectLoaded: (isLoaded: boolean) => Promise<any>
     onAction: (callback: (action: string) => void) => () => void
   }
+  app: {
+    isEncryptionSecure: () => Promise<any>
+    getCredentials: () => Promise<any>
+    deleteCredential: (id: string) => Promise<any>
+  }
   ai: {
     chat: (data: {
       messages: { role: string; content: string }[]

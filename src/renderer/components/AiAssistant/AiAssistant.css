@@ -490,6 +490,33 @@
   line-height: 1.4;
 }
 
+.ai-settings-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0 0 4px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text, #ccc);
+}
+
+.ai-settings-warning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #f59e0b;
+}
+
+.ai-settings-warning code {
+  background: color-mix(in srgb, #f59e0b 15%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
 .ai-settings-footer {
   padding: 12px 20px;
   border-top: 1px solid var(--color-border);

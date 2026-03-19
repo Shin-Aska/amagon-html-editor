@@ -439,6 +439,26 @@ const mockApi: ElectronApi = {
     }
   },
 
+  app: {
+    isEncryptionSecure: async (): Promise<any> => {
+      // In browser mode, report as secure (no real keys stored anyway)
+      return { secure: true }
+    },
+    getCredentials: async (): Promise<any> => {
+      return {
+        success: true,
+        secure: true,
+        credentials: [
+          { id: 'ai', label: 'AI Assistant', source: 'ai', provider: 'openai', maskedKey: '', hasKey: false },
+          { id: 'media-search', label: 'Media Search', source: 'media-search', provider: 'unsplash', maskedKey: '', hasKey: false }
+        ]
+      }
+    },
+    deleteCredential: async (_id: string): Promise<any> => {
+      return { success: true }
+    }
+  },
+
   ai: {
     chat: async (_data: {
       messages: { role: string; content: string }[]

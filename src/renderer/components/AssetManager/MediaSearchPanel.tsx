@@ -55,6 +55,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
   const [hasMore, setHasMore] = useState(true)
   const [showConfig, setShowConfig] = useState(false)
   const [configForm, setConfigForm] = useState({ enabled: false, provider: 'unsplash', apiKey: '' })
+  const [encryptionSecure, setEncryptionSecure] = useState(true)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const api = getApi()
   const totalVisiblePages = Math.max(1, Math.ceil(results.length / VISIBLE_RESULTS_PER_PAGE))
@@ -63,9 +64,12 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
   const visibleStart = results.length === 0 ? 0 : visibleStartIndex + 1
   const visibleEnd = Math.min(visibleStartIndex + VISIBLE_RESULTS_PER_PAGE, results.length)
 
-  // Load config on mount
+  // Load config on mount + check encryption status
   useEffect(() => {
     loadConfig()
+    api.app.isEncryptionSecure().then((res: any) => {
+      if (res && typeof res.secure === 'boolean') setEncryptionSecure(res.secure)
+    }).catch(() => { /* ignore */ })
   }, [])
 
   // Focus search input when enabled
@@ -237,6 +241,16 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
               disabled={!configForm.enabled}
             />
           </label>
+
+          {!encryptionSecure && (
+            <div className="msp-config-warning">
+              <span className="msp-config-warning-icon">⚠️</span>
+              <span>
+                OS keyring is unavailable. Your API key will be encrypted with a machine-derived key.
+                For stronger protection, install a keyring service (e.g. <code>gnome-keyring</code> or <code>seahorse</code>).
+              </span>
+            </div>
+          )}
 
           <div className="msp-config-note">
             You need an API key from your chosen provider. Images/videos downloaded from web sources will be imported into your project assets.
