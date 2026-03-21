@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import './ArrayField.css'
+import { useEditorStore } from '../../store/editorStore'
 
 export interface TabItem {
   label: string
@@ -14,12 +15,13 @@ export interface AccordionItem {
 export type ArrayItem = string | TabItem | AccordionItem
 
 interface ArrayFieldProps {
+  blockId?: string
   value: ArrayItem[]
   onChange: (value: ArrayItem[]) => void
   itemType?: 'string' | 'tab' | 'accordion'
 }
 
-function ArrayField({ value = [], onChange, itemType = 'string' }: ArrayFieldProps): JSX.Element {
+function ArrayField({ blockId, value = [], onChange, itemType = 'string' }: ArrayFieldProps): JSX.Element {
   const [newItemText, setNewItemText] = useState('')
 
   const normalizeValue = useCallback((): ArrayItem[] => {
@@ -147,6 +149,25 @@ function ArrayField({ value = [], onChange, itemType = 'string' }: ArrayFieldPro
                         onChange={(e) => updateItem(index, { content: e.target.value })}
                         rows={2}
                       />
+                      {blockId && (
+                        <button
+                          className="array-action-btn edit-canvas"
+                          style={{
+                            width: '100%',
+                            marginTop: '4px',
+                            background: 'var(--theme-primary)',
+                            color: 'white',
+                            border: 'none',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => useEditorStore.getState().enterTabEditMode(blockId, index)}
+                          title="Edit tab content visually in the canvas"
+                        >
+                          Edit in Canvas
+                        </button>
+                      )}
                     </>
                   )}
                   {isAccordionArray && (

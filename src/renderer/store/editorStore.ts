@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import { useAppSettingsStore } from './appSettingsStore'
 import type { Block, EditorState, EditorActions, HistoryEntry } from './types'
 
+// Callback registered by projectStore to sync blocks on tab exit (avoids circular import)
+let _onExitTabEditMode: ((blocks: Block[]) => void) | null = null
+export function setOnExitTabEditModeCallback(cb: (blocks: Block[]) => void) {
+  _onExitTabEditMode = cb
+}
+
 const MAX_HISTORY = 50
 
 // ─── Deep clone helper ───────────────────────────────────────────────────────
@@ -174,6 +180,10 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     showLayoutOutlines: true,
     editorLayout: 'standard',
     clipboard: null,
+
+    activeTabEditBlockId: null,
+    activeTabIndex: null,
+    pageBlocksBackup: null,
 
     // ─── Block Mutations ───────────────────────────────────────────────
 
@@ -384,6 +394,92 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     getBlockPath: (id) => {
       return findBlockPath(get().blocks, id) ?? []
+    },
+
+    getFullBlocks: () => {
+      const state = get()
+      if (!state.activeTabEditBlockId || !state.pageBlocksBackup || state.activeTabIndex === null) {
+        return state.blocks
+      }
+      
+      // We are in tab edit mode, merge current blocks back into the backup tree
+      const fullTree = cloneBlocks(state.pageBlocksBackup)
+      const tabBlock = findBlockById(fullTree, state.activeTabEditBlockId)
+      if (tabBlock && Array.isArray(tabBlock.props.tabs)) {
+        const tabs = tabBlock.props.tabs as any[]
+        if (tabs[state.activeTabIndex]) {
+          tabs[state.activeTabIndex] = {
+            ...tabs[state.activeTabIndex],
+            blocks: cloneBlocks(state.blocks)
+          }
+        }
+      }
+      return fullTree
+    },
+
+    enterTabEditMode: (blockId, tabIndex) => {
+      set((state) => {
+        if (state.activeTabEditBlockId) return state // Already in edit mode
+        
+        const tabBlock = findBlockById(state.blocks, blockId)
+        if (!tabBlock || !Array.isArray(tabBlock.props.tabs)) return state
+        
+        const tabs = tabBlock.props.tabs as any[]
+        const targetTab = tabs[tabIndex]
+        if (!targetTab) return state
+
+        // Initialize blocks if they don't exist
+        let tabBlocks: Block[] = targetTab.blocks || []
+        if (tabBlocks.length === 0 && targetTab.content) {
+          tabBlocks = [
+            {
+              id: `${blockId}-tab-${tabIndex}-p`,
+              type: 'paragraph',
+              props: { text: targetTab.content, editable: true },
+              styles: {},
+              classes: [],
+              children: []
+            }
+          ]
+        }
+
+        return {
+          pageBlocksBackup: cloneBlocks(state.blocks),
+          activeTabEditBlockId: blockId,
+          activeTabIndex: tabIndex,
+          blocks: cloneBlocks(tabBlocks),
+          selectedBlockId: null,
+          hoveredBlockId: null,
+          history: [createHistoryEntry(tabBlocks)],
+          historyIndex: 0
+        }
+      })
+    },
+
+    exitTabEditMode: () => {
+      // Compute the merged full tree BEFORE clearing state
+      const currentState = get()
+      if (!currentState.activeTabEditBlockId || !currentState.pageBlocksBackup || currentState.activeTabIndex === null) {
+        return
+      }
+
+      const fullTree = currentState.getFullBlocks()
+
+      // Immediately push merged tree to projectStore via callback so any
+      // subsequent loadPageBlocks call reads the correct blocks, not a stale snapshot
+      _onExitTabEditMode?.(fullTree)
+
+      set({
+        blocks: fullTree,
+        pageBlocksBackup: null,
+        activeTabEditBlockId: null,
+        activeTabIndex: null,
+        selectedBlockId: null,
+        hoveredBlockId: null,
+        isDirty: true,
+        history: [createHistoryEntry(fullTree)],
+        historyIndex: 0
+      })
     }
   }
 })

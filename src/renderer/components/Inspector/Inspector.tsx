@@ -303,6 +303,7 @@ function Inspector(): JSX.Element {
 
         return (
           <ArrayField
+            blockId={block.id}
             value={val || []}
             onChange={(v) => handlePropChange(key, v)}
             itemType={determineItemType()}

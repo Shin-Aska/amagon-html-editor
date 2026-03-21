@@ -112,6 +112,9 @@ function Canvas(): JSX.Element {
   const framework = useProjectStore((s) => s.settings.framework)
   const pages = useProjectStore((s) => s.pages)
   const folders = useProjectStore((s) => s.folders)
+  const activeTabEditBlockId = useEditorStore((s) => s.activeTabEditBlockId)
+  const activeTabIndex = useEditorStore((s) => s.activeTabIndex)
+  const exitTabEditMode = useEditorStore((s) => s.exitTabEditMode)
 
   const blocksRef = useRef(blocks)
   useEffect(() => {
@@ -331,7 +334,38 @@ function Canvas(): JSX.Element {
   const scaledContentHeight = `${100 / scale}%`
 
   return (
-    <div className="canvas-wrapper">
+    <div className="canvas-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
+      {activeTabEditBlockId && activeTabIndex !== null && (
+        <div className="tab-edit-toolbar" style={{
+          padding: '8px 16px',
+          background: 'var(--theme-surface)',
+          borderBottom: '2px solid var(--theme-primary)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          color: 'var(--theme-text)',
+          flexShrink: 0,
+          zIndex: 10
+        }}>
+          <div>
+            <strong>📑 Editing Tab Content</strong>
+          </div>
+          <button 
+            onClick={() => exitTabEditMode()}
+            style={{
+              padding: '6px 12px',
+              background: 'var(--theme-primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 500
+            }}
+          >
+            ← Back to Main Page
+          </button>
+        </div>
+      )}
       {!runtimeReady && (
         <div className="canvas-loading">
           <div className="canvas-spinner" />
@@ -344,6 +378,8 @@ function Canvas(): JSX.Element {
           width: viewportWidth,
           maxWidth: viewportWidth,
           height: viewportHeight,
+          flex: 1,
+          minHeight: 0,
           alignSelf: viewportMode === 'desktop' ? 'flex-start' : undefined,
           transition: 'width 0.3s ease, max-width 0.3s ease, height 0.3s ease'
         }}

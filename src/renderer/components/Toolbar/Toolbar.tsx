@@ -164,7 +164,7 @@ export default function Toolbar({
       const pageId = projectState.currentPageId
 
       const pages = projectState.pages.map((p) =>
-        pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+        pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
       )
 
       const content = JSON.stringify(
@@ -180,7 +180,7 @@ export default function Toolbar({
       )
 
       if (pageId) {
-        projectState.updatePage(pageId, { blocks: editorState.blocks })
+        projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
       }
 
       const result = await api.project.save({
@@ -228,7 +228,7 @@ export default function Toolbar({
     const ok = await ensureBackendReadyAndFlushEdits()
     if (!ok) return
     if (currentPageId) {
-      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+      updatePage(currentPageId, { blocks: useEditorStore.getState().getFullBlocks() })
     }
     setShowExport(true)
   }
@@ -238,7 +238,7 @@ export default function Toolbar({
       const ok = await ensureBackendReadyAndFlushEdits()
       if (!ok) return
       if (currentPageId) {
-        updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+        updatePage(currentPageId, { blocks: useEditorStore.getState().getFullBlocks() })
       }
       const projectData = getProjectData()
       const { exportProject } = await import('../../utils/exportEngine')
