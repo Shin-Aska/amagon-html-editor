@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useAppSettingsStore } from './appSettingsStore'
 import type { Block, EditorState, EditorActions, HistoryEntry } from './types'
 
 const MAX_HISTORY = 50
@@ -149,17 +150,9 @@ export const useEditorStore = create<EditorStore>((set, get) => {
   }
 
   // ─── Restore persisted theme preference ──────────────────────────────
-  const savedTheme = (typeof window !== 'undefined' && localStorage.getItem('hoarses-theme')) as 'light' | 'dark' | null
-  const initialTheme: 'light' | 'dark' = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark'
-
-  // Apply the initial theme class to <body> immediately
-  if (typeof document !== 'undefined') {
-    if (initialTheme === 'dark') {
-      document.body.classList.add('dark')
-    } else {
-      document.body.classList.remove('dark')
-    }
-  }
+  // The initial theme is now managed by appSettingsStore.
+  // We default to 'dark' here; appSettingsStore will update it on load if needed.
+  const initialTheme: 'light' | 'dark' = 'dark'
 
   return {
     // ─── Initial State ─────────────────────────────────────────────────
@@ -294,13 +287,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     setTheme: (theme) => {
       set({ theme })
-      if (theme === 'dark') {
-        document.body.classList.add('dark')
-      } else {
-        document.body.classList.remove('dark')
-      }
-      // Persist the preference so it survives reloads
-      try { localStorage.setItem('hoarses-theme', theme) } catch { /* quota or SSR */ }
+      useAppSettingsStore.getState().setTheme(theme)
     },
 
     setLayoutOutlines: (show) => {
@@ -309,6 +296,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     setEditorLayout: (layout) => {
       set({ editorLayout: layout })
+      useAppSettingsStore.getState().setDefaultLayout(layout)
     },
 
     setClipboard: (block) => {

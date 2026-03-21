@@ -116,6 +116,13 @@ function App(): JSX.Element {
     }
   }, [isProjectLoaded, api])
 
+  // Auto-open code editor if switching to code-focus layout
+  useEffect(() => {
+    if (editorLayout === 'code-focus') {
+      setCodeEditorOpen(true)
+    }
+  }, [editorLayout])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 }
