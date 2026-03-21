@@ -4,7 +4,7 @@
   <img src="docs/images/logo.png" alt="Amagon Logo" width="200" />
 </p>
 
-An offline, AI-powered visual HTML editor. A Pingendo/Mobirise/Bootstrap Studio alternative for Linux.
+An offline, AI-powered visual HTML editor. A multiplatform Pingendo/Mobirise/Bootstrap Studio alternative.
 
 [amagon.app](https://amagon.app)
 
