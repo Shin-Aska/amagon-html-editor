@@ -135,9 +135,10 @@ export async function exportProject(
 
   for (const page of exportPages) {
     const rawHtml = buildPageHtml({
-      title: page.title,
+      title: page.pageTitle || page.title,
       framework: project.projectSettings.framework,
       meta: page.meta,
+      fullWidthFormControls: page.fullWidthFormControls,
       bodyBlocks: page.blocks,
       includeStylesheet: hasCss && !options.inlineCss,
       inlineCssText: hasCss && options.inlineCss ? css : null,
@@ -628,6 +629,7 @@ function buildPageHtml(params: {
   includeJs: boolean
   pages?: Page[]
   folders?: PageFolder[]
+  fullWidthFormControls?: boolean
 }): string {
   const bodyHtml = blockToHtml(params.bodyBlocks, {
     indent: 1,
@@ -635,7 +637,8 @@ function buildPageHtml(params: {
     includeDataAttributes: false,
     pages: params.pages,
     folders: params.folders,
-    framework: params.framework
+    framework: params.framework,
+    fullWidthFormControls: params.fullWidthFormControls
   })
 
   const headParts: string[] = []

@@ -116,10 +116,12 @@ function Sidebar(): JSX.Element {
     pageId?: string
     folderId?: string
     initialName?: string
+    initialPageTitle?: string
     initialTags?: string[]
     initialPath?: string
     initialDescription?: string
     initialMeta?: Record<string, string>
+    initialFullWidthFormControls?: boolean
     targetFolderId?: string // folder to place new page into
   } | null>(null)
 
@@ -202,9 +204,11 @@ function Sidebar(): JSX.Element {
     })
   }
 
-  const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
+  const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
     const created = addPage(name, path || undefined)
     const patch: Record<string, unknown> = {}
+    if (pageTitle) patch.pageTitle = pageTitle
+    if (fullWidth !== undefined) patch.fullWidthFormControls = fullWidth
     if (tags.length > 0) patch.tags = tags
     if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId
     // Merge provided meta with the defaults already on the page
@@ -219,10 +223,10 @@ function Sidebar(): JSX.Element {
     setPageModal(null)
   }
 
-  const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
+  const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
     if (!pageModal?.pageId) return
     const page = pages.find((p) => p.id === pageModal.pageId)
-    const patch: Record<string, unknown> = { title: name, tags }
+    const patch: Record<string, unknown> = { title: name, tags, pageTitle, fullWidthFormControls: fullWidth }
     if (path) patch.slug = path
     // Build final meta: start from existing, update description, merge custom meta
     const existingMeta = { ...(page?.meta || {}) }
@@ -500,11 +504,11 @@ function Sidebar(): JSX.Element {
 
   // ── Main render ──────────────────────────────────────────────────────
 
-  const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
+  const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string) => {
     if (!pageModal) return
     switch (pageModal.mode) {
-      case 'create': handleCreatePage(name, tags, path, description, meta); break
-      case 'edit': handleEditPage(name, tags, path, description, meta); break
+      case 'create': handleCreatePage(name, tags, path, description, meta, pageTitle); break
+      case 'edit': handleEditPage(name, tags, path, description, meta, pageTitle); break
       case 'create-folder': handleCreateFolder(name, tags); break
       case 'edit-folder': handleEditFolder(name, tags); break
     }
@@ -782,10 +786,12 @@ function Sidebar(): JSX.Element {
                         mode: 'edit',
                         pageId: page.id,
                         initialName: page.title,
+                        initialPageTitle: page.pageTitle,
                         initialTags: page.tags || [],
                         initialPath: page.slug,
                         initialDescription: page.meta?.description || '',
-                        initialMeta: page.meta || {}
+                        initialMeta: page.meta || {},
+                        initialFullWidthFormControls: page.fullWidthFormControls
                       })
                     }
                   }
@@ -815,10 +821,12 @@ function Sidebar(): JSX.Element {
         <PageModal
           mode={pageModal.mode}
           initialName={pageModal.initialName}
+          initialPageTitle={pageModal.initialPageTitle}
           initialTags={pageModal.initialTags}
           initialPath={pageModal.initialPath}
           initialDescription={pageModal.initialDescription}
           initialMeta={pageModal.initialMeta}
+          initialFullWidthFormControls={pageModal.initialFullWidthFormControls}
           onSave={handleModalSave}
           onCancel={() => setPageModal(null)}
         />

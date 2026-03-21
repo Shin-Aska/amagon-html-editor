@@ -54,9 +54,16 @@ function CodeEditor(): JSX.Element {
   const htmlParseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cssDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const currentPage = useProjectStore((s) => s.getCurrentPage())
   const visualHtml = useMemo(() => {
-    return pageToHtml(blocks, { framework, customCss })
-  }, [blocks, customCss, framework])
+    return pageToHtml(blocks, { 
+      framework, 
+      customCss, 
+      title: currentPage?.title || 'index', 
+      pageTitle: currentPage?.pageTitle,
+      fullWidthFormControls: currentPage?.fullWidthFormControls
+    })
+  }, [blocks, customCss, framework, currentPage])
 
   const getHtmlModel = (): MonacoType.editor.ITextModel | null => {
     return htmlModelRef.current
