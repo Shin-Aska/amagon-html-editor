@@ -21,7 +21,7 @@ import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
   }
 }
 
-type ActiveTab = 'html' | 'css'
+type ActiveTab = 'html' | 'css' | string
 
 function CodeEditor(): JSX.Element {
   const blocks = useEditorStore((s) => s.blocks)
@@ -32,10 +32,18 @@ function CodeEditor(): JSX.Element {
   const setCustomCss = useEditorStore((s) => s.setCustomCss)
   const framework = useProjectStore((s) => s.settings.framework)
 
+  const customCssFiles = useProjectStore((s) => s.settings.theme.customCssFiles) || []
+  const updateCssFile = useProjectStore((s) => s.updateCssFile)
+
   const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<typeof MonacoType | null>(null)
   const htmlModelRef = useRef<MonacoType.editor.ITextModel | null>(null)
   const cssModelRef = useRef<MonacoType.editor.ITextModel | null>(null)
+  
+  // Dynamic refs for custom CSS files
+  const customCssModelsRef = useRef<Record<string, MonacoType.editor.ITextModel>>({})
+  const lastUserCustomCssEditAtRef = useRef<Record<string, number>>({})
+  const customCssTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('html')
 
@@ -184,6 +192,7 @@ function CodeEditor(): JSX.Element {
 
     const htmlModel = monaco.editor.createModel('', 'html', htmlUri)
     const cssModel = monaco.editor.createModel('', 'css', cssUri)
+    
     htmlModelRef.current = htmlModel
     cssModelRef.current = cssModel
 
@@ -201,6 +210,13 @@ function CodeEditor(): JSX.Element {
 
     applyTextToModel(htmlModel, visualHtml)
     cssModel.setValue(customCss)
+
+    // Seed initial dynamic models
+    customCssFiles.forEach(file => {
+      const uri = monaco.Uri.parse(`inmemory://model/${file.id}.css`)
+      const model = monaco.editor.createModel(file.css, 'css', uri)
+      customCssModelsRef.current[file.id] = model
+    })
   }
 
   const onChange: OnChange = (value) => {
@@ -255,6 +271,24 @@ function CodeEditor(): JSX.Element {
         setCustomCss(nextValue)
         setIsTypingCode(false)
       }, 500)
+      return
+    }
+
+    // Dynamic Custom CSS File
+    const fileId = Object.keys(customCssModelsRef.current).find(
+      id => customCssModelsRef.current[id] === currentModel
+    )
+    if (fileId) {
+      lastUserCustomCssEditAtRef.current[fileId] = Date.now()
+
+      if (customCssTimersRef.current[fileId]) {
+        clearTimeout(customCssTimersRef.current[fileId])
+      }
+
+      customCssTimersRef.current[fileId] = setTimeout(() => {
+        updateCssFile(fileId, { css: nextValue })
+        setIsTypingCode(false)
+      }, 500)
     }
   }
 
@@ -286,11 +320,48 @@ function CodeEditor(): JSX.Element {
     }
   }, [customCss])
 
+  // Sync Dynamic Models
+  useEffect(() => {
+    const monaco = monacoRef.current
+    if (!monaco) return
+    const currentIds = new Set(customCssFiles.map(f => f.id))
+    
+    // add missing models or sync existing
+    customCssFiles.forEach(file => {
+       if (!customCssModelsRef.current[file.id]) {
+         const uri = monaco.Uri.parse(`inmemory://model/${file.id}.css`)
+         const model = monaco.editor.createModel(file.css, 'css', uri)
+         customCssModelsRef.current[file.id] = model
+       } else {
+         const model = customCssModelsRef.current[file.id]
+         const msSinceType = Date.now() - (lastUserCustomCssEditAtRef.current[file.id] || 0)
+         if (msSinceType > 1200 && model.getValue() !== file.css) {
+           model.setValue(file.css)
+         }
+       }
+    })
+
+    // remove deleted models
+    Object.keys(customCssModelsRef.current).forEach(id => {
+       if (!currentIds.has(id)) {
+          customCssModelsRef.current[id].dispose()
+          delete customCssModelsRef.current[id]
+          if (activeTab === id) setActiveTab('html')
+       }
+    })
+  }, [customCssFiles, activeTab])
+
+  // Determine which model to attach
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
 
-    const nextModel = activeTab === 'css' ? getCssModel() : getHtmlModel()
+    let nextModel = getHtmlModel()
+    if (activeTab === 'css') nextModel = getCssModel()
+    else if (activeTab !== 'html' && customCssModelsRef.current[activeTab]) {
+      nextModel = customCssModelsRef.current[activeTab]
+    }
+
     if (!nextModel) return
     if (editor.getModel() === nextModel) return
     editor.setModel(nextModel)
@@ -306,11 +377,23 @@ function CodeEditor(): JSX.Element {
         clearTimeout(cssDebounceTimerRef.current)
         cssDebounceTimerRef.current = null
       }
+      
+      Object.keys(customCssTimersRef.current).forEach(id => {
+        clearTimeout(customCssTimersRef.current[id])
+      })
+      customCssTimersRef.current = {}
 
       const htmlModel = getHtmlModel()
       const cssModel = getCssModel()
+      
+      Object.keys(customCssModelsRef.current).forEach(id => {
+        customCssModelsRef.current[id].dispose()
+      })
+      customCssModelsRef.current = {}
+      
       htmlModelRef.current = null
       cssModelRef.current = null
+
       htmlModel?.dispose()
       cssModel?.dispose()
       setIsTypingCode(false)
@@ -326,6 +409,16 @@ function CodeEditor(): JSX.Element {
         <span className={`code-editor-tab ${activeTab === 'css' ? 'active' : ''}`} onClick={() => setActiveTab('css')}>
           styles.css
         </span>
+        {customCssFiles.map(file => (
+          <span 
+            key={file.id} 
+            className={`code-editor-tab ${activeTab === file.id ? 'active' : ''}`} 
+            onClick={() => setActiveTab(file.id)}
+            title={file.name}
+          >
+            {file.name}
+          </span>
+        ))}
         <div className="code-editor-header-spacer" />
         {activeTab === 'html' && (
           <button type="button" className="code-editor-action" onClick={() => void formatHtml()}>
@@ -335,7 +428,7 @@ function CodeEditor(): JSX.Element {
       </div>
       <div className="code-editor-body">
         <Editor
-          defaultLanguage={activeTab === 'css' ? 'css' : 'html'}
+          defaultLanguage={activeTab === 'html' ? 'html' : 'css'}
           theme="vs-dark"
           onMount={onMount}
           onChange={onChange}
