@@ -17,13 +17,13 @@ This workflow is **plan-only**: it must end after writing the plan to `plan.md`.
 2. **Open a planning session with Claude Opus 4.6**
    - Feed the context above plus the agent roster below.
    - Use the **copy/paste prompt template** below.
-   - Do not accept Claude’s answer unless it matches the required checkbox format.
+   - Do not accept Claude's answer unless it matches the required checkbox format.
 3. **Review and finalize the plan**
    - Sanity-check scope, ordering, and dependencies.
    - If adjustments are needed, iterate with Claude until the plan is actionable.
    - Lock the plan before delegating work.
 4. **Write the plan to `plan.md` (repo root)**
-   - Save Claude’s output verbatim into `plan.md`.
+   - Save Claude's output verbatim into `plan.md`.
    - Ensure the plan is Markdown with checkboxes.
 5. **Stop**
    - Do not execute any phases in this workflow.
