@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
 import type { FrameworkChoice } from '../../store/types'
 import './NewProjectWizard.css'
 
@@ -23,6 +24,7 @@ export default function NewProjectWizard({ onClose }: NewProjectWizardProps): JS
 
   const setProject = useProjectStore((s) => s.setProject)
   const setPageBlocks = useEditorStore((s) => s.setPageBlocks)
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
   const api = getApi()
 
   const handleCreate = async () => {
@@ -48,6 +50,9 @@ export default function NewProjectWizard({ onClose }: NewProjectWizardProps): JS
         if (data.pages && data.pages.length > 0) {
           setPageBlocks(data.pages[0].blocks)
         }
+
+        const defaultLayout = useAppSettingsStore.getState().defaultLayout
+        setEditorLayout(defaultLayout)
 
         onClose()
       } else if (!result.canceled) {

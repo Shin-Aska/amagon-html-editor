@@ -40,6 +40,7 @@ import AssetManager from '../AssetManager/AssetManager'
 import CredentialManager from '../CredentialManager/CredentialManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
+import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './Toolbar.css'
 
 interface ToolbarProps {
@@ -101,9 +102,9 @@ export default function Toolbar({
   const redo = useEditorStore((s) => s.redo)
   const getBlockById = useEditorStore((s) => s.getBlockById)
 
-  // Local State
   const [showAssetManager, setShowAssetManager] = useState(false)
   const [showCredentialManager, setShowCredentialManager] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -661,11 +662,11 @@ export default function Toolbar({
           </button>
 
           <button
-            className={`toolbar-btn ${rightPanelOpen ? 'active' : ''}`}
-            onClick={onToggleRightPanel}
-            title="Toggle Inspector"
-            aria-label="Toggle right inspector panel"
-            aria-pressed={rightPanelOpen}
+            className={`toolbar-btn ${showSettings ? 'active' : ''}`}
+            onClick={() => setShowSettings(true)}
+            title="Global Settings"
+            aria-label="Open global settings"
+            aria-pressed={showSettings}
           >
             <Settings size={16} aria-hidden="true" />
           </button>
@@ -684,6 +685,10 @@ export default function Toolbar({
 
       {showExport && (
         <ExportDialog onClose={() => setShowExport(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       )}
     </>
   )

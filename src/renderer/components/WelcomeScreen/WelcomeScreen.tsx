@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity, X } from 'lucide-react'
+import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity, X, Settings } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
+import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './WelcomeScreen.css'
 
 export default function WelcomeScreen(): JSX.Element {
@@ -12,9 +14,11 @@ export default function WelcomeScreen(): JSX.Element {
   const setCustomCss = useEditorStore((s) => s.setCustomCss)
   const markSaved = useEditorStore((s) => s.markSaved)
   const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
 
   const [recentProjects, setRecentProjects] = useState<string[]>([])
   const [showNewProject, setShowNewProject] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     async function loadRecent() {
@@ -37,6 +41,9 @@ export default function WelcomeScreen(): JSX.Element {
       }
       setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
       markSaved()
+
+      const defaultLayout = useAppSettingsStore.getState().defaultLayout
+      setEditorLayout(defaultLayout)
     }
   }
 
@@ -51,6 +58,9 @@ export default function WelcomeScreen(): JSX.Element {
       }
       setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
       markSaved()
+
+      const defaultLayout = useAppSettingsStore.getState().defaultLayout
+      setEditorLayout(defaultLayout)
     } else {
       console.error('Failed to load recent project:', result.error)
       alert(`Failed to load project: ${result.error}`)
@@ -103,6 +113,17 @@ export default function WelcomeScreen(): JSX.Element {
               </div>
               <ChevronRight className="btn-arrow" size={20} />
             </button>
+
+            <button className="welcome-btn secondary-action" onClick={() => setShowSettings(true)}>
+              <div className="btn-icon-wrapper">
+                <Settings size={24} />
+              </div>
+              <div className="btn-text">
+                <div className="btn-title">Settings</div>
+                <div className="btn-desc">Global preferences & API keys</div>
+              </div>
+              <ChevronRight className="btn-arrow" size={20} />
+            </button>
           </div>
 
           <div className="welcome-recent">
@@ -145,6 +166,10 @@ export default function WelcomeScreen(): JSX.Element {
 
       {showNewProject && (
         <NewProjectWizard onClose={() => setShowNewProject(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       )}
     </div>
   )
