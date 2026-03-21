@@ -26,7 +26,9 @@ import {
   PanelLeft,
   PanelRight,
   Palette,
-  KeyRound
+  KeyRound,
+  Menu as MenuIcon,
+  ChevronDown
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
@@ -108,6 +110,9 @@ export default function Toolbar({
   const [tempName, setTempName] = useState(projectName)
   const [isSaving, setIsSaving] = useState(false)
   const [showLayoutMenu, setShowLayoutMenu] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [editingZoom, setEditingZoom] = useState(false)
+  const [tempZoom, setTempZoom] = useState(String(zoom))
 
   // Store access for pages (read-only for display)
   const currentPage = useProjectStore((s) => s.getCurrentPage())
@@ -330,10 +335,32 @@ export default function Toolbar({
     }
   }
 
+  // Zoom editing handlers
+  const commitZoom = () => {
+    const parsed = parseInt(tempZoom, 10)
+    if (!isNaN(parsed)) {
+      setZoom(parsed)
+    }
+    setEditingZoom(false)
+  }
+
+  const handleZoomKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') commitZoom()
+    if (e.key === 'Escape') {
+      setTempZoom(String(zoom))
+      setEditingZoom(false)
+    }
+  }
+
+  // Keep tempZoom in sync when zoom changes externally
+  useEffect(() => {
+    if (!editingZoom) setTempZoom(String(zoom))
+  }, [zoom, editingZoom])
+
   return (
     <>
       <div className="toolbar">
-        {/* LEFT: Menu, Name */}
+        {/* LEFT: Menu, Name + Mobile Hamburger */}
         <div className="toolbar-section toolbar-left">
           <button
             className={`toolbar-btn ${leftPanelOpen ? 'active' : ''}`}
@@ -365,7 +392,20 @@ export default function Toolbar({
               {projectName || 'Untitled Project'}
             </span>
           )}
+
+          <button
+            className="toolbar-btn toolbar-hamburger"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            title="Toggle menu"
+            aria-label="Toggle toolbar menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <ChevronDown size={16} aria-hidden="true" style={{ transform: mobileMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
         </div>
+
+        {/* Collapsible sections (hidden on mobile unless hamburger is open) */}
+        <div className={`toolbar-collapsible ${mobileMenuOpen ? 'open' : ''}`}>
 
         {/* LEFT-CENTER: File & Edit Operations */}
         <div className="toolbar-section">
@@ -452,7 +492,49 @@ export default function Toolbar({
             <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out" aria-label="Zoom out">
               <ZoomOut size={16} aria-hidden="true" />
             </button>
-            <span className="toolbar-text" aria-live="polite">{zoom}%</span>
+            {editingZoom ? (
+              <div
+                className="toolbar-zoom-controls"
+                style={{ display: 'flex', alignItems: 'center' }}
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    commitZoom()
+                  }
+                }}
+              >
+                <input
+                  className="toolbar-zoom-input"
+                  type="text"
+                  value={tempZoom}
+                  onChange={(e) => setTempZoom(e.target.value.replace(/[^0-9]/g, ''))}
+                  onKeyDown={handleZoomKeyDown}
+                  autoFocus
+                  aria-label="Zoom percentage"
+                />
+                <input
+                  type="range"
+                  className="toolbar-zoom-slider"
+                  min={25}
+                  max={200}
+                  step={5}
+                  value={zoom}
+                  onChange={(e) => { setZoom(Number(e.target.value)); setTempZoom(e.target.value) }}
+                  title={`Zoom: ${zoom}%`}
+                  aria-label="Zoom slider"
+                />
+              </div>
+            ) : (
+              <span
+                className="toolbar-text toolbar-zoom-text"
+                onClick={() => { setTempZoom(String(zoom)); setEditingZoom(true) }}
+                title="Click to edit zoom"
+                aria-live="polite"
+                role="button"
+                tabIndex={0}
+              >
+                {zoom}%
+              </span>
+            )}
             <button className="toolbar-btn" onClick={() => setZoom(zoom + 10)} title="Zoom In" aria-label="Zoom in">
               <ZoomIn size={16} aria-hidden="true" />
             </button>
@@ -588,6 +670,8 @@ export default function Toolbar({
             <Settings size={16} aria-hidden="true" />
           </button>
         </div>
+
+        </div>{/* end toolbar-collapsible */}
       </div>
 
       {showAssetManager && (
