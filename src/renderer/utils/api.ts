@@ -456,6 +456,21 @@ const mockApi: ElectronApi = {
     },
     deleteCredential: async (_id: string): Promise<any> => {
       return { success: true }
+    },
+    getSettings: async (): Promise<any> => {
+      try {
+        const raw = localStorage.getItem('app-settings')
+        if (raw) return { success: true, settings: JSON.parse(raw) }
+      } catch {}
+      return { success: true, settings: null }
+    },
+    saveSettings: async (settings: any): Promise<any> => {
+      try {
+        localStorage.setItem('app-settings', JSON.stringify(settings))
+        return { success: true }
+      } catch (err: any) {
+        return { success: false, error: String(err) }
+      }
     }
   },
 

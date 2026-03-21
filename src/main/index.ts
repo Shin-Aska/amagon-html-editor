@@ -1027,6 +1027,37 @@ function registerIpcHandlers(): void {
     }
   })
 
+  // ── App Settings ───────────────────────────────────────────────────────
+
+  ipcMain.handle('app:getSettings', async () => {
+    try {
+      const filePath = path.join(app.getPath('userData'), 'app-settings.json')
+      const raw = await fs.readFile(filePath, 'utf-8')
+      const settings = JSON.parse(raw)
+      return { success: true, settings }
+    } catch {
+      return { success: true, settings: null }
+    }
+  })
+
+  ipcMain.handle('app:saveSettings', async (_, patch: any) => {
+    try {
+      const filePath = path.join(app.getPath('userData'), 'app-settings.json')
+      let existing = {}
+      try {
+        const raw = await fs.readFile(filePath, 'utf-8')
+        existing = JSON.parse(raw)
+      } catch {
+        // file doesn't exist yet, ignore
+      }
+      const updated = { ...existing, ...patch }
+      await fs.writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8')
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   // ── Encryption status ────────────────────────────────────────────────
 
   ipcMain.handle('app:isEncryptionSecure', () => {
