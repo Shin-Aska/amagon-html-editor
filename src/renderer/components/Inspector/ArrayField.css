@@ -152,3 +152,25 @@
   border-color: var(--color-danger, #dc3545);
   background-color: rgba(220, 53, 69, 0.1);
 }
+
+.array-edit-canvas-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.array-edit-canvas-btn:hover {
+  opacity: 0.9;
+}

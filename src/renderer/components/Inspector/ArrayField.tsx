@@ -142,30 +142,13 @@ function ArrayField({ blockId, value = [], onChange, itemType = 'string' }: Arra
                         value={(item as TabItem).label || ''}
                         onChange={(e) => updateItem(index, { label: e.target.value })}
                       />
-                      <textarea
-                        className="array-textarea"
-                        placeholder="Tab content"
-                        value={(item as TabItem).content || ''}
-                        onChange={(e) => updateItem(index, { content: e.target.value })}
-                        rows={2}
-                      />
                       {blockId && (
                         <button
-                          className="array-action-btn edit-canvas"
-                          style={{
-                            width: '100%',
-                            marginTop: '4px',
-                            background: 'var(--theme-primary)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
+                          className="array-edit-canvas-btn"
                           onClick={() => useEditorStore.getState().enterTabEditMode(blockId, index)}
                           title="Edit tab content visually in the canvas"
                         >
-                          Edit in Canvas
+                          🎨 Edit tab content in Canvas
                         </button>
                       )}
                     </>
