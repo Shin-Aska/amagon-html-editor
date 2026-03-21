@@ -57,18 +57,20 @@ Project context:
 
 Agent roster (choose from these):
 - Claude Opus 4.6 (Planner & QA only)
-- GPT 5.2 High Thinking (algorithms, complex architecture, iframe/canvas/monaco/dnd)
-- Gemini 3 Pro (UI generation, component volume, styling)
-- Kimi K2 (UX polish, shortcuts/clipboard/accessibility, well-scoped implementation)
+- Claude Sonnet 4.6 (complex architecture, algorithms, critical code paths)
+- Gemini 3.1 Pro High (deep reasoning, large-scale refactoring, thorough analysis)
+- Gemini 3.1 Pro Low (UI generation, component volume, styling, well-scoped implementation)
+- Gemini 3.1 Flash (quick tasks, boilerplate, simple fixes, documentation)
 
 Now produce the plan.
 ```
 
 ## Agent roster & expertise
 - **Claude Opus 4.6 (Planner & QA only)**: High-level strategy, risk analysis, coordination, and final review.
-- **GPT 5.2 High Thinking**: Complex architecture, algorithm design, and critical code paths.
-- **Gemini 3 Pro**: UI/UX component generation, widget libraries, styling/theming.
-- **Kimi K2.5**: UX polish, shortcuts/clipboard flows, accessibility, well-scoped implementation.
+- **Claude Sonnet 4.6**: Complex architecture, algorithm design, critical code paths, and nuanced implementation.
+- **Gemini 3.1 Pro High**: Deep reasoning, large-scale refactoring, thorough code analysis, and complex problem-solving.
+- **Gemini 3.1 Pro Low**: UI/UX component generation, widget libraries, styling/theming, and well-scoped implementation.
+- **Gemini 3.1 Flash**: Quick tasks, boilerplate generation, simple bug fixes, and documentation.
 
 ## Handoff tips
 - Keep a running checklist of completed subtasks and outstanding ones.
