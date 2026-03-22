@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Page, PageFolder, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme, CssFile } from './types'
 import { generateBlockId, createDefaultTheme } from './types'
 import { createPageHeaderBlock } from '../../shared/welcomeBlocks'
+import { setOnExitTabEditModeCallback } from './editorStore'
 
 // ─── Project State ───────────────────────────────────────────────────────────
 
@@ -100,7 +101,8 @@ function createDefaultPage(title = 'Home', slug = 'index'): Page {
       keywords: '',
       robots: 'index, follow',
       datePublished: formatDateYYYYMMDD(new Date())
-    }
+    },
+    fullWidthFormControls: true
   }
 }
 
@@ -563,5 +565,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         userBlocks: state.userBlocks.filter((b) => b.id !== id)
       }))
     }
+  }
+})
+
+// When the user exits tab edit mode in the editor, immediately flush the merged
+// block tree back into projectStore so App.tsx cannot reload a stale snapshot.
+setOnExitTabEditModeCallback((mergedBlocks) => {
+  const ps = useProjectStore.getState()
+  if (ps.currentPageId) {
+    ps.updatePage(ps.currentPageId, { blocks: mergedBlocks })
   }
 })

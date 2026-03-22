@@ -355,7 +355,8 @@ export function registerBlocks(): void {
       brandText: 'Brand',
       brandImage: '',
       usePages: true,
-      filterTag: ''
+      filterTag: '',
+      hamburgerMenu: true
     },
     defaultChildren: [
       {
@@ -371,6 +372,7 @@ export function registerBlocks(): void {
       brandImage: { type: 'text', label: 'Brand Image URL (optional)', default: '' },
       usePages: { type: 'boolean', label: 'Use Pages as Links', default: true },
       filterTag: { type: 'combobox', label: 'Filter by Tag (optional)', default: '', dataSource: 'tags' },
+      hamburgerMenu: { type: 'boolean', label: 'Hamburger Menu (Mobile)', default: true },
       theme: {
         type: 'select',
         label: 'Theme',
@@ -474,10 +476,11 @@ export function registerBlocks(): void {
     defaultClasses: [],
     defaultProps: {
       id: 'tabs-' + Math.random().toString(36).substr(2, 9),
+      defaultTab: 0,
       tabs: [
-        { label: 'Home', content: 'Home tab content.' },
-        { label: 'Profile', content: 'Profile tab content.' },
-        { label: 'Contact', content: 'Contact tab content.' }
+        { label: 'Home', content: 'Home tab content.', blocks: [] },
+        { label: 'Profile', content: 'Profile tab content.', blocks: [] },
+        { label: 'Contact', content: 'Contact tab content.', blocks: [] }
       ]
     },
     propsSchema: {

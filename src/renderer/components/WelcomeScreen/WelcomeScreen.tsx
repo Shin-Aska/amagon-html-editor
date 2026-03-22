@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
-import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity, X } from 'lucide-react'
+import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, X, Settings } from 'lucide-react'
+import appLogo from '../../../../assets/app.png'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
+import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './WelcomeScreen.css'
 
 export default function WelcomeScreen(): JSX.Element {
@@ -12,9 +15,11 @@ export default function WelcomeScreen(): JSX.Element {
   const setCustomCss = useEditorStore((s) => s.setCustomCss)
   const markSaved = useEditorStore((s) => s.markSaved)
   const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
 
-  const [recentProjects, setRecentProjects] = useState<string[]>([])
+  const [recentProjects, setRecentProjects] = useState<{ path: string; name: string }[]>([])
   const [showNewProject, setShowNewProject] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     async function loadRecent() {
@@ -37,6 +42,9 @@ export default function WelcomeScreen(): JSX.Element {
       }
       setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
       markSaved()
+
+      const defaultLayout = useAppSettingsStore.getState().defaultLayout
+      setEditorLayout(defaultLayout)
     }
   }
 
@@ -51,19 +59,22 @@ export default function WelcomeScreen(): JSX.Element {
       }
       setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
       markSaved()
+
+      const defaultLayout = useAppSettingsStore.getState().defaultLayout
+      setEditorLayout(defaultLayout)
     } else {
       console.error('Failed to load recent project:', result.error)
       alert(`Failed to load project: ${result.error}`)
     }
   }
 
-  const handleRemoveRecent = async (e: React.MouseEvent, path: string) => {
+  const handleRemoveRecent = async (e: React.MouseEvent, projectPath: string) => {
     e.stopPropagation()
-    const result = await api.project.removeRecent(path)
+    const result = await api.project.removeRecent(projectPath)
     if (result.success && result.projects) {
       setRecentProjects(result.projects)
     } else {
-      setRecentProjects((prev) => prev.filter((p) => p !== path))
+      setRecentProjects((prev) => prev.filter((p) => p.path !== projectPath))
     }
   }
 
@@ -72,12 +83,13 @@ export default function WelcomeScreen(): JSX.Element {
       <div className="welcome-content">
         <div className="welcome-header">
           <div className="logo-container">
-            <Activity className="logo-icon" size={32} />
+            <img src={appLogo} className="logo-icon" width={40} height={40} />
             <div className="welcome-logo">Amagon</div>
           </div>
           <div className="welcome-subtitle">
             Visual Website Builder. <span className="highlight">Build websites within minutes.</span>
           </div>
+          <div className="welcome-version">v1.5.0</div>
         </div>
 
         <div className="welcome-body">
@@ -103,6 +115,17 @@ export default function WelcomeScreen(): JSX.Element {
               </div>
               <ChevronRight className="btn-arrow" size={20} />
             </button>
+
+            <button className="welcome-btn secondary-action" onClick={() => setShowSettings(true)}>
+              <div className="btn-icon-wrapper">
+                <Settings size={24} />
+              </div>
+              <div className="btn-text">
+                <div className="btn-title">Settings</div>
+                <div className="btn-desc">Global preferences & API keys</div>
+              </div>
+              <ChevronRight className="btn-arrow" size={20} />
+            </button>
           </div>
 
           <div className="welcome-recent">
@@ -116,20 +139,19 @@ export default function WelcomeScreen(): JSX.Element {
                   No recent projects found
                 </div>
               ) : (
-                recentProjects.map((path) => {
-                  const name = path.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'
+                recentProjects.map((project) => {
                   return (
-                    <div key={path} className="recent-item" onClick={() => handleOpenRecent(path)}>
+                    <div key={project.path} className="recent-item" onClick={() => handleOpenRecent(project.path)}>
                       <div className="recent-item-icon">
                         <Zap size={14} />
                       </div>
                       <div className="recent-item-info">
-                        <div className="recent-name">{name}</div>
-                        <div className="recent-path">{path}</div>
+                        <div className="recent-name">{project.name}</div>
+                        <div className="recent-path">{project.path}</div>
                       </div>
                       <button
                         className="recent-item-remove"
-                        onClick={(e) => handleRemoveRecent(e, path)}
+                        onClick={(e) => handleRemoveRecent(e, project.path)}
                         title="Remove from recent projects"
                       >
                         <X size={14} />
@@ -145,6 +167,10 @@ export default function WelcomeScreen(): JSX.Element {
 
       {showNewProject && (
         <NewProjectWizard onClose={() => setShowNewProject(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       )}
     </div>
   )

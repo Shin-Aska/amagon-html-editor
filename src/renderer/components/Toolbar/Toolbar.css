@@ -191,6 +191,49 @@
   text-align: center;
 }
 
+.toolbar-zoom-text {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 2px 4px;
+  transition: background 0.15s ease;
+}
+
+.toolbar-zoom-text:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.toolbar-zoom-input {
+  width: 44px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  text-align: center;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-family: inherit;
+}
+
+.toolbar-zoom-slider {
+  width: 60px;
+  height: 4px;
+  margin-left: 4px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Hamburger button - hidden on desktop */
+.toolbar-hamburger {
+  display: none;
+}
+
+/* Collapsible wrapper - visible on desktop */
+.toolbar-collapsible {
+  display: contents;
+}
+
 /* Layout Switcher Menu */
 .toolbar-layout-switcher {
   position: relative;
@@ -227,4 +270,56 @@
   background: var(--color-accent);
   color: white;
   font-weight: 500;
+}
+
+/* ─── Mobile Responsive Toolbar ──────────────────────────────────── */
+@media (max-width: 840px) {
+  .toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--toolbar-height);
+  }
+
+  .toolbar-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toolbar-hamburger {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .toolbar-collapsible {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px 8px 8px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+  }
+
+  .toolbar-collapsible.open {
+    display: flex;
+  }
+
+  .toolbar-collapsible .toolbar-section {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .toolbar-collapsible .toolbar-center {
+    justify-content: flex-start;
+  }
+
+  .toolbar-collapsible .toolbar-right {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .toolbar-zoom-slider {
+    width: 80px;
+  }
 }

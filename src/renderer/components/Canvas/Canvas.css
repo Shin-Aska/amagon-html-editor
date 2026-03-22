@@ -3,6 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
   align-items: center;
   padding: 16px;
   overflow: auto;
@@ -52,6 +53,7 @@
   width: 100%;
   height: 100%;
   max-width: 100%;
+  position: relative;
   background: #ffffff;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -87,6 +89,52 @@
   border-top-color: var(--color-accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+.canvas-warning-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(560px, calc(100% - 32px));
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.canvas-warning-message {
+  line-height: 1.45;
+  text-align: center;
+}
+
+.canvas-warning-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.canvas-warning-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.canvas-warning-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
 }
 
 @keyframes spin {

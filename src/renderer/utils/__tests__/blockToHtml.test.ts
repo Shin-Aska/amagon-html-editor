@@ -246,6 +246,15 @@ describe('blockToHtml', () => {
     expect(html).toContain('☆')
   })
 
+  it('includes editor metadata for icon blocks when requested', () => {
+    const html = pageToHtml([
+      createBlock('icon', { props: { iconClass: 'lucide:star', size: '2rem', color: 'orange' } })
+    ], { includeEditorMetadata: true })
+
+    expect(html).toContain('data-amagon-component="icon"')
+    expect(html).toContain('data-amagon-icon-class="lucide:star"')
+  })
+
   it('maps legacy bootstrap icon classes to a visible icon', () => {
     const blocks: Block[] = [
       createBlock('icon', { props: { iconClass: 'bi-star' }, classes: ['bi', 'bi-star'] })
@@ -447,6 +456,30 @@ describe('container as form', () => {
     const html = blockToHtml([block])
     expect(html).toContain('<div')
     expect(html).not.toContain('<form')
+  })
+
+  it('renders a placeholder for empty forms in editor mode', () => {
+    const block = createBlock('form')
+    const html = blockToHtml([block], { includeDataAttributes: true })
+    expect(html).toContain('editor-placeholder')
+    expect(html).toContain('Form — drop elements here')
+    expect(html).toContain('📝')
+  })
+
+  it('does not render placeholder for empty forms in export mode', () => {
+    const block = createBlock('form')
+    const html = blockToHtml([block], { includeDataAttributes: false })
+    expect(html).not.toContain('editor-placeholder')
+    expect(html).not.toContain('Form — drop elements here')
+  })
+
+  it('does not render placeholder for forms with children', () => {
+    const block = createBlock('form', {
+      children: [createBlock('paragraph', { props: { text: 'Input' } })]
+    })
+    const html = blockToHtml([block], { includeDataAttributes: true })
+    expect(html).not.toContain('editor-placeholder')
+    expect(html).toContain('Input')
   })
 })
 

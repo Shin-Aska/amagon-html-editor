@@ -386,9 +386,22 @@ function registerIpcHandlers(): void {
   ipcMain.handle('project:getRecent', async () => {
     try {
       const recents = await loadRecentProjects()
-      // Filter out projects whose files no longer exist
-      const valid = recents.filter((p) => existsSync(p))
-      return { success: true, projects: valid }
+      // Filter out projects whose files no longer exist and read project names
+      const projects = []
+      for (const projectPath of recents) {
+        if (!existsSync(projectPath)) continue
+        try {
+          const content = await fs.readFile(projectPath, 'utf-8')
+          const data = JSON.parse(content)
+          const name = data.projectSettings?.name || 'Untitled Project'
+          projects.push({ path: projectPath, name })
+        } catch {
+          // If we can't read/parse the file, still show it with filename
+          const name = projectPath.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'
+          projects.push({ path: projectPath, name })
+        }
+      }
+      return { success: true, projects }
     } catch (error: any) {
       return { success: false, error: error.message, projects: [] }
     }
@@ -1022,6 +1035,37 @@ function registerIpcHandlers(): void {
         path: `app-media://project-asset/${relativePath}`,
         relativePath
       }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // ── App Settings ───────────────────────────────────────────────────────
+
+  ipcMain.handle('app:getSettings', async () => {
+    try {
+      const filePath = path.join(app.getPath('userData'), 'app-settings.json')
+      const raw = await fs.readFile(filePath, 'utf-8')
+      const settings = JSON.parse(raw)
+      return { success: true, settings }
+    } catch {
+      return { success: true, settings: null }
+    }
+  })
+
+  ipcMain.handle('app:saveSettings', async (_, patch: any) => {
+    try {
+      const filePath = path.join(app.getPath('userData'), 'app-settings.json')
+      let existing = {}
+      try {
+        const raw = await fs.readFile(filePath, 'utf-8')
+        existing = JSON.parse(raw)
+      } catch {
+        // file doesn't exist yet, ignore
+      }
+      const updated = { ...existing, ...patch }
+      await fs.writeFile(filePath, JSON.stringify(updated, null, 2), 'utf-8')
+      return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

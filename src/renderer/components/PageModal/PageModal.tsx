@@ -6,11 +6,13 @@ type PageModalMode = 'create' | 'edit' | 'create-folder' | 'edit-folder'
 interface PageModalProps {
     mode: PageModalMode
     initialName?: string
+    initialPageTitle?: string
     initialTags?: string[]
     initialPath?: string
     initialDescription?: string
     initialMeta?: Record<string, string>
-    onSave: (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => void
+    initialFullWidthFormControls?: boolean
+    onSave: (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => void
     onCancel: () => void
 }
 
@@ -23,17 +25,21 @@ function formatDateYYYYMMDD(d: Date): string {
 export default function PageModal({
     mode,
     initialName = '',
+    initialPageTitle = '',
     initialTags = [],
     initialPath = '',
     initialDescription = '',
     initialMeta = {},
+    initialFullWidthFormControls = true,
     onSave,
     onCancel
 }: PageModalProps): JSX.Element {
     const [name, setName] = useState(initialName)
+    const [pageTitleInput, setPageTitleInput] = useState(initialPageTitle)
     const [tagsInput, setTagsInput] = useState(initialTags.join(', '))
     const [pathInput, setPathInput] = useState(initialPath)
     const [description, setDescription] = useState(initialDescription)
+    const [fullWidthFormControls, setFullWidthFormControls] = useState(initialFullWidthFormControls !== false)
     const [metaEntries, setMetaEntries] = useState<Array<{ key: string; value: string }>>(() => {
         const entries = Object.entries(initialMeta)
             .filter(([k]) => k !== 'description') // description has its own field
@@ -80,7 +86,7 @@ export default function PageModal({
             if (k && v) meta[k] = v
         }
 
-        onSave(trimmed, parseTags(tagsInput), trimmedPath || undefined, description.trim() || undefined, Object.keys(meta).length > 0 ? meta : undefined)
+        onSave(trimmed, parseTags(tagsInput), trimmedPath || undefined, description.trim() || undefined, Object.keys(meta).length > 0 ? meta : undefined, pageTitleInput.trim() || undefined, fullWidthFormControls)
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -175,6 +181,39 @@ export default function PageModal({
                                 placeholder="A short description of this page for SEO and page lists."
                                 rows={3}
                             />
+                        </div>
+                    )}
+
+                    {!isFolder && (
+                        <div className="page-modal-field">
+                            <label>Page Title (Doc Title)</label>
+                            <input
+                                type="text"
+                                value={pageTitleInput}
+                                onChange={(e) => setPageTitleInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="e.g. Welcome to Our Website"
+                            />
+                            <span className="field-hint">
+                                The HTML &lt;title&gt; tag. If empty, it defaults to the Page Name.
+                            </span>
+                        </div>
+                    )}
+
+                    {!isFolder && (
+                        <div className="page-modal-field">
+                            <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={fullWidthFormControls}
+                                    onChange={(e) => setFullWidthFormControls(e.target.checked)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
+                                />
+                                Full-Width Form Controls
+                            </label>
+                            <span className="field-hint" style={{ marginTop: 4, display: 'block' }}>
+                                Stretches inputs, textareas, and selects to 100% width by default.
+                            </span>
                         </div>
                     )}
 

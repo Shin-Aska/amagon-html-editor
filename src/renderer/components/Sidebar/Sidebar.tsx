@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronDown, ChevronRight, FilePlus, FileText, FolderPlus, Folder, FolderOpen } from 'lucide-react'
+import { ChevronDown, ChevronRight, FilePlus, FileText, FolderPlus, Folder, FolderOpen, Search, X } from 'lucide-react'
 import './Sidebar.css'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -8,7 +8,7 @@ import { componentRegistry, type BlockDefinition } from '../../registry/Componen
 import BlockIcon from '../BlockIcon/BlockIcon'
 import BlockTree from '../BlockTree/BlockTree'
 import AiAssistant from '../AiAssistant/AiAssistant'
-import { useRef, useState, type MouseEvent } from 'react'
+import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import ContextMenu from '../ContextMenu/ContextMenu'
 import { useToastStore } from '../../store/toastStore'
 import { getApi } from '../../utils/api'
@@ -93,6 +93,7 @@ function Sidebar(): JSX.Element {
   const showToast = useToastStore((s) => s.showToast)
   const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null)
+  const [widgetSearch, setWidgetSearch] = useState('')
 
   // Page management
   const pages = useProjectStore((s) => s.pages)
@@ -116,10 +117,12 @@ function Sidebar(): JSX.Element {
     pageId?: string
     folderId?: string
     initialName?: string
+    initialPageTitle?: string
     initialTags?: string[]
     initialPath?: string
     initialDescription?: string
     initialMeta?: Record<string, string>
+    initialFullWidthFormControls?: boolean
     targetFolderId?: string // folder to place new page into
   } | null>(null)
 
@@ -160,6 +163,29 @@ function Sidebar(): JSX.Element {
   const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)))
   const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c))
   const allCategories = [...allRegistryCategories, ...customOnlyCategories]
+
+  // Filter widgets by search query
+  const filteredWidgetsByCategory = useMemo(() => {
+    const q = widgetSearch.trim().toLowerCase()
+    const result: Record<string, BlockDefinition[]> = {}
+    for (const category of allCategories) {
+      const widgets = [
+        ...componentRegistry.getByCategory(category),
+        ...userBlockDefinitions.filter((w) => w.category === category)
+      ]
+      if (!q) {
+        result[category] = widgets
+      } else {
+        result[category] = widgets.filter(
+          (w) =>
+            w.label.toLowerCase().includes(q) ||
+            w.type.toLowerCase().includes(q) ||
+            category.toLowerCase().includes(q)
+        )
+      }
+    }
+    return result
+  }, [widgetSearch, allCategories, userBlockDefinitions])
 
   const handleWidgetContextMenu = (e: MouseEvent, widget: BlockDefinition) => {
     if (!widget.type.startsWith('user:')) return
@@ -202,9 +228,11 @@ function Sidebar(): JSX.Element {
     })
   }
 
-  const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
+  const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
     const created = addPage(name, path || undefined)
     const patch: Record<string, unknown> = {}
+    if (pageTitle) patch.pageTitle = pageTitle
+    if (fullWidth !== undefined) patch.fullWidthFormControls = fullWidth
     if (tags.length > 0) patch.tags = tags
     if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId
     // Merge provided meta with the defaults already on the page
@@ -219,10 +247,10 @@ function Sidebar(): JSX.Element {
     setPageModal(null)
   }
 
-  const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
+  const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
     if (!pageModal?.pageId) return
     const page = pages.find((p) => p.id === pageModal.pageId)
-    const patch: Record<string, unknown> = { title: name, tags }
+    const patch: Record<string, unknown> = { title: name, tags, pageTitle, fullWidthFormControls: fullWidth }
     if (path) patch.slug = path
     // Build final meta: start from existing, update description, merge custom meta
     const existingMeta = { ...(page?.meta || {}) }
@@ -500,11 +528,11 @@ function Sidebar(): JSX.Element {
 
   // ── Main render ──────────────────────────────────────────────────────
 
-  const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>) => {
+  const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string) => {
     if (!pageModal) return
     switch (pageModal.mode) {
-      case 'create': handleCreatePage(name, tags, path, description, meta); break
-      case 'edit': handleEditPage(name, tags, path, description, meta); break
+      case 'create': handleCreatePage(name, tags, path, description, meta, pageTitle); break
+      case 'edit': handleEditPage(name, tags, path, description, meta, pageTitle); break
       case 'create-folder': handleCreateFolder(name, tags); break
       case 'edit-folder': handleEditFolder(name, tags); break
     }
@@ -649,17 +677,32 @@ function Sidebar(): JSX.Element {
         )}
         {activeTab === 'widgets' && (
           <>
+            <div className="widget-search">
+              <Search size={14} className="widget-search-icon" />
+              <input
+                type="text"
+                className="widget-search-input"
+                placeholder="Search widgets..."
+                value={widgetSearch}
+                onChange={(e) => setWidgetSearch(e.target.value)}
+              />
+              {widgetSearch && (
+                <button className="widget-search-clear" onClick={() => setWidgetSearch('')}>
+                  <X size={12} />
+                </button>
+              )}
+            </div>
             {allCategories.map((category) => (
               <WidgetCategory
                 key={category}
                 title={category}
-                widgets={[
-                  ...componentRegistry.getByCategory(category),
-                  ...userBlockDefinitions.filter((w) => w.category === category)
-                ]}
+                widgets={filteredWidgetsByCategory[category] || []}
                 onWidgetContextMenu={handleWidgetContextMenu}
               />
             ))}
+            {widgetSearch && allCategories.every((c) => (filteredWidgetsByCategory[c] || []).length === 0) && (
+              <div className="widget-search-empty">No widgets match "{widgetSearch}"</div>
+            )}
           </>
         )}
         {activeTab === 'layers' && <BlockTree />}
@@ -691,11 +734,11 @@ function Sidebar(): JSX.Element {
                       if (!projectState.filePath) return
 
                       const updatedPages = projectState.pages.map((p) =>
-                        pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+                        pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
                       )
 
                       if (pageId) {
-                        projectState.updatePage(pageId, { blocks: editorState.blocks })
+                        projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
                       }
 
                       const content = JSON.stringify(
@@ -782,10 +825,12 @@ function Sidebar(): JSX.Element {
                         mode: 'edit',
                         pageId: page.id,
                         initialName: page.title,
+                        initialPageTitle: page.pageTitle,
                         initialTags: page.tags || [],
                         initialPath: page.slug,
                         initialDescription: page.meta?.description || '',
-                        initialMeta: page.meta || {}
+                        initialMeta: page.meta || {},
+                        initialFullWidthFormControls: page.fullWidthFormControls
                       })
                     }
                   }
@@ -815,10 +860,12 @@ function Sidebar(): JSX.Element {
         <PageModal
           mode={pageModal.mode}
           initialName={pageModal.initialName}
+          initialPageTitle={pageModal.initialPageTitle}
           initialTags={pageModal.initialTags}
           initialPath={pageModal.initialPath}
           initialDescription={pageModal.initialDescription}
           initialMeta={pageModal.initialMeta}
+          initialFullWidthFormControls={pageModal.initialFullWidthFormControls}
           onSave={handleModalSave}
           onCancel={() => setPageModal(null)}
         />

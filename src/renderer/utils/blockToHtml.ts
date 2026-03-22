@@ -79,6 +79,7 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
     'sortDefaultKey',
     'sortDefaultDir',
     'filterTag',
+    'hamburgerMenu',
     'isForm',
     'fluid',
     'gutters',
@@ -621,10 +622,20 @@ function getPropDrivenClasses(block: Block): string[] {
   return classes
 }
 
-function resolveFrameworkClasses(block: Block, framework: FrameworkChoice): string[] {
+function resolveFrameworkClasses(block: Block, framework: FrameworkChoice, options?: BlockToHtmlOptions): string[] {
   let baseClasses = [...block.classes]
   if (block.type === 'container' && block.props.fluid) {
     baseClasses = baseClasses.filter((cls) => cls !== 'container')
+  }
+
+  if (options?.fullWidthFormControls !== false) {
+    if (block.type === 'input' || block.type === 'textarea' || block.type === 'select') {
+      if (framework === 'tailwind' && !baseClasses.some(c => c.includes('w-'))) {
+        baseClasses.push('w-full')
+      } else if (framework === 'bootstrap-5' && !baseClasses.some(c => c.includes('w-'))) {
+        baseClasses.push('w-100')
+      }
+    }
   }
 
   const merged = [...baseClasses, ...getPropDrivenClasses(block)]
@@ -680,7 +691,12 @@ function resolveFrameworkClasses(block: Block, framework: FrameworkChoice): stri
 
 // ─── Content generation for specific block types ─────────────────────────────
 
-function getBlockContent(block: Block, isExportMode?: boolean, framework: FrameworkChoice = 'bootstrap-5'): string {
+function getBlockContent(
+  block: Block,
+  isExportMode?: boolean,
+  framework: FrameworkChoice = 'bootstrap-5',
+  includeEditorMetadata: boolean = false
+): string {
   const { type, props } = block
 
   switch (type) {
@@ -840,15 +856,16 @@ function getBlockContent(block: Block, isExportMode?: boolean, framework: Framew
 
     case 'tabs': {
       const id = String(props.id || 'tabs-' + Math.random().toString(36).substr(2, 9))
-      const tabs = (props.tabs as Array<{ label: string; content: string }>) ?? []
+      const tabs = (props.tabs as Array<{ label: string; content: string; blocks?: Block[] }>) ?? []
+      const defaultTab = typeof props.defaultTab === 'number' ? props.defaultTab : 0
 
       if (framework === 'tailwind') {
         const navItems = tabs.map((tab, i) => `
-        <button class="${i === 0 ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll('[data-tw-tab-button=\\"${id}\\"]').forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n')
+        <button class="${i === defaultTab ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll('[data-tw-tab-button=\\"${id}\\"]').forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n')
 
         const contentItems = tabs.map((tab, i) => `
-        <div class="${i === 0 ? '' : 'hidden ' }rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
-          ${escapeAttrValue(tab.content)}
+        <div class="${i === defaultTab ? '' : 'hidden ' }rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
+          ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode, includeEditorMetadata }) : escapeAttrValue(tab.content)}
         </div>`).join('\n')
 
         return `
@@ -865,11 +882,11 @@ function getBlockContent(block: Block, isExportMode?: boolean, framework: Framew
       const navItems = tabs.map((tab, i) => {
         const tabId = `${id}-tab-${i}`
         const contentId = `${id}-content-${i}`
-        const activeClass = i === 0 ? 'active' : ''
+        const activeClass = i === defaultTab ? 'active' : ''
 
         return `
         <li class="nav-item" role="presentation">
-          <button class="nav-link ${activeClass}" id="${tabId}" data-bs-toggle="tab" data-bs-target="#${contentId}" type="button" role="tab" aria-controls="${contentId}" aria-selected="${i === 0}">
+          <button class="nav-link ${activeClass}" id="${tabId}" data-bs-toggle="tab" data-bs-target="#${contentId}" type="button" role="tab" aria-controls="${contentId}" aria-selected="${i === defaultTab}">
             ${escapeAttrValue(tab.label)}
           </button>
         </li>`
@@ -878,11 +895,11 @@ function getBlockContent(block: Block, isExportMode?: boolean, framework: Framew
       const contentItems = tabs.map((tab, i) => {
         const tabId = `${id}-tab-${i}`
         const contentId = `${id}-content-${i}`
-        const activeClass = i === 0 ? 'show active' : ''
+        const activeClass = i === defaultTab ? 'show active' : ''
 
         return `
         <div class="tab-pane fade ${activeClass}" id="${contentId}" role="tabpanel" aria-labelledby="${tabId}">
-          ${escapeAttrValue(tab.content)}
+          ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode, includeEditorMetadata }) : escapeAttrValue(tab.content)}
         </div>`
       }).join('\n')
 
@@ -954,9 +971,11 @@ export interface BlockToHtmlOptions {
   indent?: number          // Starting indent level (default 0)
   indentSize?: number      // Spaces per indent (default 2)
   includeDataAttributes?: boolean  // Include data-block-id for editor use
+  includeEditorMetadata?: boolean
   pages?: Page[]           // Page list for components that use pages as datasource (e.g. navbar)
   folders?: PageFolder[]   // Folder list for effective tag resolution
   framework?: FrameworkChoice
+  fullWidthFormControls?: boolean
 }
 
 export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): string {
@@ -964,11 +983,13 @@ export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): 
     indent = 0,
     indentSize = 2,
     includeDataAttributes = false,
+    includeEditorMetadata = false,
     pages,
     folders,
-    framework = 'bootstrap-5'
+    framework = 'bootstrap-5',
+    fullWidthFormControls = true
   } = options
-  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, pages, folders, framework)).join('\n')
+  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n')
 }
 
 function renderBlock(
@@ -976,9 +997,11 @@ function renderBlock(
   indent: number,
   indentSize: number,
   includeDataAttributes: boolean,
+  includeEditorMetadata: boolean,
   pages?: Page[],
   folders?: PageFolder[],
-  framework: FrameworkChoice = 'bootstrap-5'
+  framework: FrameworkChoice = 'bootstrap-5',
+  fullWidthFormControls: boolean = true
 ): string {
   const pad = ' '.repeat(indent * indentSize)
 
@@ -996,7 +1019,7 @@ function renderBlock(
     const themeBorder = 'var(--theme-border)'
     const isExportMode = !includeDataAttributes
     
-    const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders, framework)).join('\n')
+    const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n')
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="modal"` : ''
 
     if (!isExportMode) {
@@ -1087,7 +1110,7 @@ ${pad}</div>`
     const checked = block.props.checked ? 'checked' : ''
     const id = block.id
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
-    const classes = resolveFrameworkClasses(block, framework).join(' ')
+    const classes = resolveFrameworkClasses(block, framework, { fullWidthFormControls }).join(' ')
 
     if (framework === 'tailwind') {
       return `${pad}<label class="mb-4 inline-flex items-center gap-3 text-[var(--theme-text)]" ${dataAttr}>
@@ -1145,6 +1168,8 @@ ${pad}</div>`
       brandHtml = brandText
     }
 
+    const hamburgerMenu = block.props.hamburgerMenu !== false
+
     if (framework === 'tailwind') {
       const themeClass = classesArray.find((c) => c.startsWith('navbar-theme-')) || 'navbar-theme-light'
       const toneClasses = themeClass === 'navbar-theme-dark'
@@ -1152,10 +1177,16 @@ ${pad}</div>`
         : themeClass === 'navbar-theme-primary'
           ? 'bg-[var(--theme-primary)] text-white'
           : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]'
+          
       return `${pad}<nav class="${toneClasses} w-full"${styleAttr} ${dataAttr}>
 ${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#">${brandHtml}</a>
-${pad}    <ul class="flex list-none flex-col gap-3 p-0 lg:flex-row lg:items-center">
+${hamburgerMenu ? `${pad}    <div class="flex items-center justify-between w-full lg:w-auto">
+${pad}      <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#">${brandHtml}</a>
+${pad}      <button class="lg:hidden text-current border p-1 rounded" onclick="document.getElementById('${navbarId}').classList.toggle('hidden')">
+${pad}        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+${pad}      </button>
+${pad}    </div>` : `${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#">${brandHtml}</a>`}
+${pad}    <ul id="${navbarId}" class="list-none flex-col gap-3 p-0 lg:flex-row lg:items-center ${hamburgerMenu ? 'hidden lg:flex' : 'flex'}">
 ${navLinks.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100')}
 ${pad}    </ul>
 ${pad}  </div>
@@ -1165,14 +1196,18 @@ ${pad}</nav>`
     return `${pad}<nav class="${classes}"${styleAttr} ${dataAttr}>
 ${pad}  <div class="container">
 ${pad}    <a class="navbar-brand" href="#">${brandHtml}</a>
-${pad}    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#${navbarId}" aria-controls="${navbarId}" aria-expanded="false" aria-label="Toggle navigation">
+${hamburgerMenu ? `${pad}    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#${navbarId}" aria-controls="${navbarId}" aria-expanded="false" aria-label="Toggle navigation">
 ${pad}      <span class="navbar-toggler-icon"></span>
 ${pad}    </button>
 ${pad}    <div class="collapse navbar-collapse" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
 ${navLinks}
 ${pad}      </ul>
-${pad}    </div>
+${pad}    </div>` : `${pad}    <div class="w-100 mt-2 mt-lg-0" id="${navbarId}">
+${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 flex-row gap-3 flex-wrap">
+${navLinks}
+${pad}      </ul>
+${pad}    </div>`}
 ${pad}  </div>
 ${pad}</nav>`
   }
@@ -1180,7 +1215,7 @@ ${pad}</nav>`
   // Special handling for Page List with pagination
   if (block.type === 'page-list' && pages && pages.length > 0) {
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="page-list"` : ''
-    const classes = resolveFrameworkClasses(block, framework).join(' ')
+    const classes = resolveFrameworkClasses(block, framework, { fullWidthFormControls }).join(' ')
     const styleStr = stylesToString(block.styles)
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const filterTag = String(block.props.filterTag || '').trim()
@@ -1622,7 +1657,9 @@ ${pad}</div>`
     const attrs = [
       classes.length > 0 ? `class="${classes.join(' ')}"` : '',
       styleStr ? `style="${styleStr}"` : '',
-      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : ''
+      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : '',
+      includeEditorMetadata ? 'data-amagon-component="icon"' : '',
+      includeEditorMetadata ? `data-amagon-icon-class="${escapeAttrValue(rawIconValue)}"` : ''
     ].filter(Boolean).join(' ')
 
     if (resolvedLucideName) {
@@ -1648,7 +1685,9 @@ ${pad}</div>`
       classes.length > 0 ? `class="${classes.join(' ')}"` : '',
       `style="${stylesToString(placeholderStyles)}"`,
       legacyBootstrapClass ? `title="${escapeAttrValue(legacyBootstrapClass)}"` : 'title="No icon selected"',
-      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : ''
+      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : '',
+      includeEditorMetadata ? 'data-amagon-component="icon"' : '',
+      includeEditorMetadata ? `data-amagon-icon-class="${escapeAttrValue(rawIconValue)}"` : ''
     ].filter(Boolean).join(' ')
 
     return `${pad}<span ${placeholderAttrs}>☆</span>`
@@ -1657,7 +1696,7 @@ ${pad}</div>`
   const tag = resolveTag(block)
   const isVoid = VOID_ELEMENTS.has(tag)
   const isExportMode = !includeDataAttributes
-  const textContent = getBlockContent(block, isExportMode, framework)
+  const textContent = getBlockContent(block, isExportMode, framework, includeEditorMetadata)
   const hasChildren = block.children.length > 0
   const hasContent = textContent.length > 0
 
@@ -1665,7 +1704,7 @@ ${pad}</div>`
   const parts: string[] = []
 
   // Classes (with legacy navbar class migration for generic path)
-  const finalClasses = resolveFrameworkClasses(block, framework)
+  const finalClasses = resolveFrameworkClasses(block, framework, { fullWidthFormControls })
 
   // Inline styles
   const styleStr = stylesToString(block.styles)
@@ -1744,7 +1783,7 @@ ${pad}</div>`
     fullAttrString.trim().length === 0
   ) {
     return block.children
-      .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, pages, folders, framework))
+      .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls))
       .join('\n')
   }
 
@@ -1766,8 +1805,16 @@ ${pad}</div>`
 
   if (hasChildren) {
     for (const child of block.children) {
-      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders, framework))
+      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls))
     }
+  } else if (tag === 'form' && includeDataAttributes) {
+    // Empty form indicator for editor mode
+    lines.push(`${pad}  <div class="editor-placeholder editor-outline-gated">`)
+    lines.push(`${pad}    <div class="text-center p-3">`)
+    lines.push(`${pad}      <div style="font-size:1.5rem;margin-bottom:0.1rem;">📝</div>`)
+    lines.push(`${pad}      <p class="mb-0" style="font-size:0.8rem;opacity:0.8;">Form — drop elements here</p>`)
+    lines.push(`${pad}    </div>`)
+    lines.push(`${pad}  </div>`)
   }
 
   lines.push(`${pad}</${tag}>`)
@@ -1778,6 +1825,7 @@ ${pad}</div>`
 
 export interface PageHtmlOptions extends BlockToHtmlOptions {
   title?: string
+  pageTitle?: string
   framework?: 'bootstrap-5' | 'tailwind' | 'vanilla'
   meta?: Record<string, string>
   customCss?: string
@@ -1788,11 +1836,14 @@ export interface PageHtmlOptions extends BlockToHtmlOptions {
 export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): string {
   const {
     title = 'Untitled Page',
+    pageTitle,
     framework = 'bootstrap-5',
     meta = {},
     customCss = '',
     ...blockOptions
   } = options
+
+  const effectiveTitle = pageTitle || title
 
   const bodyHtml = blockToHtml(blocks, { ...blockOptions, indent: 1, pages: options.pages, folders: options.folders, framework })
 
@@ -1812,7 +1863,7 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-${metaTags ? metaTags + '\n' : ''}    <title>${title}</title>
+${metaTags ? metaTags + '\n' : ''}    <title>${escapeAttrValue(effectiveTitle)}</title>
 ${frameworkHead}${customCssTag}</head>
 <body>
 ${bodyHtml}

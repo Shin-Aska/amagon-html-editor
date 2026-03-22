@@ -26,7 +26,9 @@ import {
   PanelLeft,
   PanelRight,
   Palette,
-  KeyRound
+  KeyRound,
+  Menu as MenuIcon,
+  ChevronDown
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
@@ -38,6 +40,7 @@ import AssetManager from '../AssetManager/AssetManager'
 import CredentialManager from '../CredentialManager/CredentialManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
+import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './Toolbar.css'
 
 interface ToolbarProps {
@@ -99,15 +102,18 @@ export default function Toolbar({
   const redo = useEditorStore((s) => s.redo)
   const getBlockById = useEditorStore((s) => s.getBlockById)
 
-  // Local State
   const [showAssetManager, setShowAssetManager] = useState(false)
   const [showCredentialManager, setShowCredentialManager] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [tempName, setTempName] = useState(projectName)
   const [isSaving, setIsSaving] = useState(false)
   const [showLayoutMenu, setShowLayoutMenu] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [editingZoom, setEditingZoom] = useState(false)
+  const [tempZoom, setTempZoom] = useState(String(zoom))
 
   // Store access for pages (read-only for display)
   const currentPage = useProjectStore((s) => s.getCurrentPage())
@@ -158,7 +164,7 @@ export default function Toolbar({
       const pageId = projectState.currentPageId
 
       const pages = projectState.pages.map((p) =>
-        pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+        pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
       )
 
       const content = JSON.stringify(
@@ -174,7 +180,7 @@ export default function Toolbar({
       )
 
       if (pageId) {
-        projectState.updatePage(pageId, { blocks: editorState.blocks })
+        projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
       }
 
       const result = await api.project.save({
@@ -222,7 +228,7 @@ export default function Toolbar({
     const ok = await ensureBackendReadyAndFlushEdits()
     if (!ok) return
     if (currentPageId) {
-      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+      updatePage(currentPageId, { blocks: useEditorStore.getState().getFullBlocks() })
     }
     setShowExport(true)
   }
@@ -232,7 +238,7 @@ export default function Toolbar({
       const ok = await ensureBackendReadyAndFlushEdits()
       if (!ok) return
       if (currentPageId) {
-        updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
+        updatePage(currentPageId, { blocks: useEditorStore.getState().getFullBlocks() })
       }
       const projectData = getProjectData()
       const { exportProject } = await import('../../utils/exportEngine')
@@ -330,10 +336,32 @@ export default function Toolbar({
     }
   }
 
+  // Zoom editing handlers
+  const commitZoom = () => {
+    const parsed = parseInt(tempZoom, 10)
+    if (!isNaN(parsed)) {
+      setZoom(parsed)
+    }
+    setEditingZoom(false)
+  }
+
+  const handleZoomKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') commitZoom()
+    if (e.key === 'Escape') {
+      setTempZoom(String(zoom))
+      setEditingZoom(false)
+    }
+  }
+
+  // Keep tempZoom in sync when zoom changes externally
+  useEffect(() => {
+    if (!editingZoom) setTempZoom(String(zoom))
+  }, [zoom, editingZoom])
+
   return (
     <>
       <div className="toolbar">
-        {/* LEFT: Menu, Name */}
+        {/* LEFT: Menu, Name + Mobile Hamburger */}
         <div className="toolbar-section toolbar-left">
           <button
             className={`toolbar-btn ${leftPanelOpen ? 'active' : ''}`}
@@ -365,7 +393,20 @@ export default function Toolbar({
               {projectName || 'Untitled Project'}
             </span>
           )}
+
+          <button
+            className="toolbar-btn toolbar-hamburger"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            title="Toggle menu"
+            aria-label="Toggle toolbar menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <ChevronDown size={16} aria-hidden="true" style={{ transform: mobileMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
         </div>
+
+        {/* Collapsible sections (hidden on mobile unless hamburger is open) */}
+        <div className={`toolbar-collapsible ${mobileMenuOpen ? 'open' : ''}`}>
 
         {/* LEFT-CENTER: File & Edit Operations */}
         <div className="toolbar-section">
@@ -452,7 +493,49 @@ export default function Toolbar({
             <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out" aria-label="Zoom out">
               <ZoomOut size={16} aria-hidden="true" />
             </button>
-            <span className="toolbar-text" aria-live="polite">{zoom}%</span>
+            {editingZoom ? (
+              <div
+                className="toolbar-zoom-controls"
+                style={{ display: 'flex', alignItems: 'center' }}
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget)) {
+                    commitZoom()
+                  }
+                }}
+              >
+                <input
+                  className="toolbar-zoom-input"
+                  type="text"
+                  value={tempZoom}
+                  onChange={(e) => setTempZoom(e.target.value.replace(/[^0-9]/g, ''))}
+                  onKeyDown={handleZoomKeyDown}
+                  autoFocus
+                  aria-label="Zoom percentage"
+                />
+                <input
+                  type="range"
+                  className="toolbar-zoom-slider"
+                  min={25}
+                  max={200}
+                  step={5}
+                  value={zoom}
+                  onChange={(e) => { setZoom(Number(e.target.value)); setTempZoom(e.target.value) }}
+                  title={`Zoom: ${zoom}%`}
+                  aria-label="Zoom slider"
+                />
+              </div>
+            ) : (
+              <span
+                className="toolbar-text toolbar-zoom-text"
+                onClick={() => { setTempZoom(String(zoom)); setEditingZoom(true) }}
+                title="Click to edit zoom"
+                aria-live="polite"
+                role="button"
+                tabIndex={0}
+              >
+                {zoom}%
+              </span>
+            )}
             <button className="toolbar-btn" onClick={() => setZoom(zoom + 10)} title="Zoom In" aria-label="Zoom in">
               <ZoomIn size={16} aria-hidden="true" />
             </button>
@@ -579,15 +662,17 @@ export default function Toolbar({
           </button>
 
           <button
-            className={`toolbar-btn ${rightPanelOpen ? 'active' : ''}`}
-            onClick={onToggleRightPanel}
-            title="Toggle Inspector"
-            aria-label="Toggle right inspector panel"
-            aria-pressed={rightPanelOpen}
+            className={`toolbar-btn ${showSettings ? 'active' : ''}`}
+            onClick={() => setShowSettings(true)}
+            title="Global Settings"
+            aria-label="Open global settings"
+            aria-pressed={showSettings}
           >
             <Settings size={16} aria-hidden="true" />
           </button>
         </div>
+
+        </div>{/* end toolbar-collapsible */}
       </div>
 
       {showAssetManager && (
@@ -600,6 +685,10 @@ export default function Toolbar({
 
       {showExport && (
         <ExportDialog onClose={() => setShowExport(false)} />
+      )}
+
+      {showSettings && (
+        <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       )}
     </>
   )

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import './ArrayField.css'
+import { useEditorStore } from '../../store/editorStore'
 
 export interface TabItem {
   label: string
@@ -14,12 +15,16 @@ export interface AccordionItem {
 export type ArrayItem = string | TabItem | AccordionItem
 
 interface ArrayFieldProps {
+  blockId?: string
   value: ArrayItem[]
   onChange: (value: ArrayItem[]) => void
   itemType?: 'string' | 'tab' | 'accordion'
+  defaultIndex?: number
+  onDefaultChange?: (index: number) => void
+  onChangeBoth?: (value: ArrayItem[], defaultIndex: number) => void
 }
 
-function ArrayField({ value = [], onChange, itemType = 'string' }: ArrayFieldProps): JSX.Element {
+function ArrayField({ blockId, value = [], onChange, itemType = 'string', defaultIndex = 0, onDefaultChange, onChangeBoth }: ArrayFieldProps): JSX.Element {
   const [newItemText, setNewItemText] = useState('')
 
   const normalizeValue = useCallback((): ArrayItem[] => {
@@ -66,13 +71,33 @@ function ArrayField({ value = [], onChange, itemType = 'string' }: ArrayFieldPro
     const next = [...current]
     const [item] = next.splice(index, 1)
     next.splice(newIndex, 0, item)
-    onChange(next)
+
+    let newDefault = defaultIndex
+    if (defaultIndex === index) newDefault = newIndex
+    else if (defaultIndex === newIndex) newDefault = index
+
+    if (onChangeBoth && newDefault !== defaultIndex) {
+      onChangeBoth(next, newDefault)
+    } else {
+      onChange(next)
+      if (onDefaultChange && newDefault !== defaultIndex) {
+        onDefaultChange(newDefault)
+      }
+    }
   }
 
   const removeItem = (index: number) => {
     const next = [...normalizeValue()]
     next.splice(index, 1)
     onChange(next)
+
+    if (onDefaultChange) {
+      if (defaultIndex === index) {
+        onDefaultChange(Math.max(0, index - 1))
+      } else if (defaultIndex > index) {
+        onDefaultChange(defaultIndex - 1)
+      }
+    }
   }
 
   const items = normalizeValue()
@@ -133,20 +158,33 @@ function ArrayField({ value = [], onChange, itemType = 'string' }: ArrayFieldPro
                 <div className="array-item-object">
                   {isTabArray && (
                     <>
-                      <input
-                        type="text"
-                        className="array-input"
-                        placeholder="Tab label"
-                        value={(item as TabItem).label || ''}
-                        onChange={(e) => updateItem(index, { label: e.target.value })}
-                      />
-                      <textarea
-                        className="array-textarea"
-                        placeholder="Tab content"
-                        value={(item as TabItem).content || ''}
-                        onChange={(e) => updateItem(index, { content: e.target.value })}
-                        rows={2}
-                      />
+                      <div className="array-tab-label-row">
+                        <input
+                          type="text"
+                          className="array-input"
+                          placeholder="Tab label"
+                          value={(item as TabItem).label || ''}
+                          onChange={(e) => updateItem(index, { label: e.target.value })}
+                        />
+                        {onDefaultChange && (
+                          <button
+                            className={`array-default-btn${index === defaultIndex ? ' active' : ''}`}
+                            onClick={() => onDefaultChange(index)}
+                            title={index === defaultIndex ? 'Default tab' : 'Set as default tab'}
+                          >
+                            {index === defaultIndex ? '★' : '☆'}
+                          </button>
+                        )}
+                      </div>
+                      {blockId && (
+                        <button
+                          className="array-edit-canvas-btn"
+                          onClick={() => useEditorStore.getState().enterTabEditMode(blockId, index)}
+                          title="Edit tab content visually in the canvas"
+                        >
+                          🎨 Edit tab content in Canvas
+                        </button>
+                      )}
                     </>
                   )}
                   {isAccordionArray && (

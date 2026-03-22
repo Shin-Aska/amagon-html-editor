@@ -1,5 +1,12 @@
 import { create } from 'zustand'
+import { useAppSettingsStore } from './appSettingsStore'
 import type { Block, EditorState, EditorActions, HistoryEntry } from './types'
+
+// Callback registered by projectStore to sync blocks on tab exit (avoids circular import)
+let _onExitTabEditMode: ((blocks: Block[]) => void) | null = null
+export function setOnExitTabEditModeCallback(cb: (blocks: Block[]) => void) {
+  _onExitTabEditMode = cb
+}
 
 const MAX_HISTORY = 50
 
@@ -73,15 +80,30 @@ function insertBlockInTree(
 function updateBlockInTree(
   blocks: Block[],
   id: string,
-  patch: Partial<Omit<Block, 'id' | 'children'>>
+  patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & { props?: Record<string, unknown>; styles?: Record<string, string | undefined> }
 ): Block[] {
   return blocks.map((block) => {
     if (block.id === id) {
+      const newProps = patch.props ? { ...block.props, ...patch.props } : block.props
+      const newStyles = patch.styles ? { ...block.styles, ...patch.styles } : block.styles
+
+      if (patch.props) {
+        for (const key in newProps) {
+          if (newProps[key] === undefined) delete newProps[key]
+        }
+      }
+
+      if (patch.styles) {
+        for (const key in newStyles) {
+          if (newStyles[key] === undefined) delete newStyles[key]
+        }
+      }
+
       return {
         ...block,
         ...patch,
-        props: patch.props ? { ...block.props, ...patch.props } : block.props,
-        styles: patch.styles ? { ...block.styles, ...patch.styles } : block.styles
+        props: newProps as Record<string, unknown>,
+        styles: newStyles as Record<string, string>
       }
     }
     return { ...block, children: updateBlockInTree(block.children, id, patch) }
@@ -149,17 +171,9 @@ export const useEditorStore = create<EditorStore>((set, get) => {
   }
 
   // ─── Restore persisted theme preference ──────────────────────────────
-  const savedTheme = (typeof window !== 'undefined' && localStorage.getItem('hoarses-theme')) as 'light' | 'dark' | null
-  const initialTheme: 'light' | 'dark' = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark'
-
-  // Apply the initial theme class to <body> immediately
-  if (typeof document !== 'undefined') {
-    if (initialTheme === 'dark') {
-      document.body.classList.add('dark')
-    } else {
-      document.body.classList.remove('dark')
-    }
-  }
+  // The initial theme is now managed by appSettingsStore.
+  // We default to 'dark' here; appSettingsStore will update it on load if needed.
+  const initialTheme: 'light' | 'dark' = 'dark'
 
   return {
     // ─── Initial State ─────────────────────────────────────────────────
@@ -181,6 +195,10 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     showLayoutOutlines: true,
     editorLayout: 'standard',
     clipboard: null,
+
+    activeTabEditBlockId: null,
+    activeTabIndex: null,
+    pageBlocksBackup: null,
 
     // ─── Block Mutations ───────────────────────────────────────────────
 
@@ -212,7 +230,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       })
     },
 
-    updateBlock: (id, patch) => {
+    updateBlock: (id, patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & { props?: Record<string, unknown>; styles?: Record<string, string | undefined> }) => {
       set((state) => {
         const newBlocks = updateBlockInTree(state.blocks, id, patch)
         return {
@@ -294,13 +312,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     setTheme: (theme) => {
       set({ theme })
-      if (theme === 'dark') {
-        document.body.classList.add('dark')
-      } else {
-        document.body.classList.remove('dark')
-      }
-      // Persist the preference so it survives reloads
-      try { localStorage.setItem('hoarses-theme', theme) } catch { /* quota or SSR */ }
+      useAppSettingsStore.getState().setTheme(theme)
     },
 
     setLayoutOutlines: (show) => {
@@ -309,6 +321,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     setEditorLayout: (layout) => {
       set({ editorLayout: layout })
+      useAppSettingsStore.getState().setDefaultLayout(layout)
     },
 
     setClipboard: (block) => {
@@ -396,6 +409,92 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     getBlockPath: (id) => {
       return findBlockPath(get().blocks, id) ?? []
+    },
+
+    getFullBlocks: () => {
+      const state = get()
+      if (!state.activeTabEditBlockId || !state.pageBlocksBackup || state.activeTabIndex === null) {
+        return state.blocks
+      }
+      
+      // We are in tab edit mode, merge current blocks back into the backup tree
+      const fullTree = cloneBlocks(state.pageBlocksBackup)
+      const tabBlock = findBlockById(fullTree, state.activeTabEditBlockId)
+      if (tabBlock && Array.isArray(tabBlock.props.tabs)) {
+        const tabs = tabBlock.props.tabs as any[]
+        if (tabs[state.activeTabIndex]) {
+          tabs[state.activeTabIndex] = {
+            ...tabs[state.activeTabIndex],
+            blocks: cloneBlocks(state.blocks)
+          }
+        }
+      }
+      return fullTree
+    },
+
+    enterTabEditMode: (blockId, tabIndex) => {
+      set((state) => {
+        if (state.activeTabEditBlockId) return state // Already in edit mode
+        
+        const tabBlock = findBlockById(state.blocks, blockId)
+        if (!tabBlock || !Array.isArray(tabBlock.props.tabs)) return state
+        
+        const tabs = tabBlock.props.tabs as any[]
+        const targetTab = tabs[tabIndex]
+        if (!targetTab) return state
+
+        // Initialize blocks if they don't exist
+        let tabBlocks: Block[] = targetTab.blocks || []
+        if (tabBlocks.length === 0 && targetTab.content) {
+          tabBlocks = [
+            {
+              id: `${blockId}-tab-${tabIndex}-p`,
+              type: 'paragraph',
+              props: { text: targetTab.content, editable: true },
+              styles: {},
+              classes: [],
+              children: []
+            }
+          ]
+        }
+
+        return {
+          pageBlocksBackup: cloneBlocks(state.blocks),
+          activeTabEditBlockId: blockId,
+          activeTabIndex: tabIndex,
+          blocks: cloneBlocks(tabBlocks),
+          selectedBlockId: null,
+          hoveredBlockId: null,
+          history: [createHistoryEntry(tabBlocks)],
+          historyIndex: 0
+        }
+      })
+    },
+
+    exitTabEditMode: () => {
+      // Compute the merged full tree BEFORE clearing state
+      const currentState = get()
+      if (!currentState.activeTabEditBlockId || !currentState.pageBlocksBackup || currentState.activeTabIndex === null) {
+        return
+      }
+
+      const fullTree = currentState.getFullBlocks()
+
+      // Immediately push merged tree to projectStore via callback so any
+      // subsequent loadPageBlocks call reads the correct blocks, not a stale snapshot
+      _onExitTabEditMode?.(fullTree)
+
+      set({
+        blocks: fullTree,
+        pageBlocksBackup: null,
+        activeTabEditBlockId: null,
+        activeTabIndex: null,
+        selectedBlockId: null,
+        hoveredBlockId: null,
+        isDirty: true,
+        history: [createHistoryEntry(fullTree)],
+        historyIndex: 0
+      })
     }
   }
 })

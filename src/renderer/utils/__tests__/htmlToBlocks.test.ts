@@ -143,4 +143,179 @@ describe('htmlToBlocks', () => {
     expect(result2.blocks[0].type).toBe('container')
     expect(result2.blocks[0].tag).toBe('main')
   })
+
+  it('parses bootstrap checkbox markup as a checkbox block', () => {
+    const result = htmlToBlocks(`
+      <div class="form-check" data-block-id="blk_check_1">
+        <input class="form-check-input" type="checkbox" id="blk_check_1" name="consent" checked>
+        <label class="form-check-label" for="blk_check_1">
+          Check me
+        </label>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].id).toBe('blk_check_1')
+    expect(result.blocks[0].type).toBe('checkbox')
+    expect(result.blocks[0].classes).toEqual(['form-check-input'])
+    expect(result.blocks[0].props.label).toBe('Check me')
+    expect(result.blocks[0].props.name).toBe('consent')
+    expect(result.blocks[0].props.checked).toBe(true)
+  })
+
+  it('preserves checkbox blocks inside bootstrap tab panes', () => {
+    const result = htmlToBlocks(`
+      <div id="tabs-demo">
+        <ul class="nav nav-tabs" id="tabs-demo" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tabs-demo-tab-0" data-bs-toggle="tab" data-bs-target="#tabs-demo-content-0" type="button" role="tab">
+              Home
+            </button>
+          </li>
+        </ul>
+        <div class="tab-content" id="tabs-demoContent">
+          <div class="tab-pane fade show active" id="tabs-demo-content-0" role="tabpanel">
+            <p>Home tab content.</p>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="blk_check_2">
+              <label class="form-check-label" for="blk_check_2">Check me</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('tabs')
+    const tabs = result.blocks[0].props.tabs as Array<{ blocks: Array<{ type: string }> }>
+    expect(tabs).toHaveLength(1)
+    expect(tabs[0].blocks.map((block) => block.type)).toEqual(['paragraph', 'checkbox'])
+  })
+
+  it('parses empty icon placeholders as icon blocks', () => {
+    const result = htmlToBlocks(`
+      <span
+        data-amagon-component="icon"
+        data-amagon-icon-class=""
+        style="display: inline-flex; align-items: center; justify-content: center; line-height: 1; min-width: 2rem; min-height: 2rem; border: 2px dashed #dee2e6; border-radius: 0.375rem; color: #6c757d"
+        title="No icon selected"
+      >☆</span>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('icon')
+    expect(result.blocks[0].props.iconClass).toBe('')
+  })
+
+  it('preserves icon blocks inside bootstrap tab panes', () => {
+    const result = htmlToBlocks(`
+      <div id="tabs-demo">
+        <ul class="nav nav-tabs" id="tabs-demo" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tabs-demo-tab-0" data-bs-toggle="tab" data-bs-target="#tabs-demo-content-0" type="button" role="tab">
+              Home
+            </button>
+          </li>
+        </ul>
+        <div class="tab-content" id="tabs-demoContent">
+          <div class="tab-pane fade show active" id="tabs-demo-content-0" role="tabpanel">
+            <p>Profile tab content.</p>
+            <span
+              data-amagon-component="icon"
+              data-amagon-icon-class=""
+              style="display: inline-flex; align-items: center; justify-content: center; line-height: 1; min-width: 2rem; min-height: 2rem; border: 2px dashed #dee2e6; border-radius: 0.375rem; color: #6c757d"
+              title="No icon selected"
+            >☆</span>
+            <img class="img-fluid" src="app-media://project-asset/assets/web-1774176696305.jpg" alt="Image" />
+          </div>
+        </div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('tabs')
+    const tabs = result.blocks[0].props.tabs as Array<{ blocks: Array<{ type: string }> }>
+    expect(tabs).toHaveLength(1)
+    expect(tabs[0].blocks.map((block) => block.type)).toEqual(['paragraph', 'icon', 'image'])
+  })
+
+  it('parses wrapped bootstrap input controls as input blocks', () => {
+    const result = htmlToBlocks(`
+      <div class="mb-3">
+        <label for="email-field" class="form-label">Email Address</label>
+        <input class="form-control mb-3" id="email-field" type="email" name="email" placeholder="name@example.com">
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('input')
+    expect(result.blocks[0].classes).toEqual(['form-control', 'mb-3'])
+    expect(result.blocks[0].props.type).toBe('email')
+    expect(result.blocks[0].props.name).toBe('email')
+    expect(result.blocks[0].props.placeholder).toBe('name@example.com')
+    expect(result.blocks[0].props.label).toBe('Email Address')
+  })
+
+  it('parses bootstrap carousel markup as a carousel block', () => {
+    const result = htmlToBlocks(`
+      <div id="hero-carousel" class="carousel slide">
+        <div class="carousel-indicators">
+          <button type="button" data-bs-target="#hero-carousel" data-bs-slide-to="0" class="active"></button>
+        </div>
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img src="slide-1.jpg" class="d-block w-100" alt="Slide 1">
+            <div class="carousel-caption d-none d-md-block"><h5>First Slide</h5></div>
+          </div>
+          <div class="carousel-item">
+            <img src="slide-2.jpg" class="d-block w-100" alt="Slide 2">
+          </div>
+        </div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('carousel')
+    expect(result.blocks[0].props.id).toBe('hero-carousel')
+    expect(result.blocks[0].props.slides).toEqual([
+      { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
+      { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
+    ])
+  })
+
+  it('parses bootstrap modal trigger and dialog as a single modal block', () => {
+    const result = htmlToBlocks(`
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#launch-modal">
+        Launch Modal
+      </button>
+      <div class="modal fade" id="launch-modal" tabindex="-1" aria-labelledby="launch-modalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="launch-modalLabel">Example Modal</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p>Modal body text goes here.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('modal')
+    expect(result.blocks[0].props.id).toBe('launch-modal')
+    expect(result.blocks[0].props.buttonText).toBe('Launch Modal')
+    expect(result.blocks[0].props.title).toBe('Example Modal')
+    expect(result.blocks[0].props.closeButton).toBe(true)
+    expect(result.blocks[0].props.footerButtons).toBe(true)
+    expect(result.blocks[0].props.size).toBe('modal-lg')
+    expect(result.blocks[0].children).toHaveLength(1)
+    expect(result.blocks[0].children[0].type).toBe('paragraph')
+  })
 })

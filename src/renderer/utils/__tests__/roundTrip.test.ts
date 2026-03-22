@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { blockToHtml } from '../blockToHtml'
+import { blockToHtml, pageToHtml } from '../blockToHtml'
 import { htmlToBlocks } from '../htmlToBlocks'
 import type { Block } from '../../store/types'
 import { createBlock } from '../../store/types'
@@ -176,5 +176,153 @@ describe('round-trip: blocks → HTML → blocks', () => {
     expect(blocks[0].children).toHaveLength(2)
     expect(blocks[0].children[0].type).toBe('heading')
     expect(blocks[0].children[1].type).toBe('paragraph')
+  })
+
+  it('preserves checkbox blocks nested inside tabs', () => {
+    const original: Block[] = [
+      createBlock('tabs', {
+        props: {
+          id: 'tabs-demo',
+          tabs: [
+            {
+              label: 'Home',
+              content: '',
+              blocks: [
+                createBlock('paragraph', { props: { text: 'Home tab content.' } }),
+                createBlock('checkbox', { props: { label: 'Check me', checked: true }, classes: ['form-check-input'] })
+              ]
+            }
+          ]
+        }
+      })
+    ]
+
+    const html = blockToHtml(original)
+    const { blocks } = htmlToBlocks(html)
+    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>
+
+    expect(blocks[0].type).toBe('tabs')
+    expect(tabs).toHaveLength(1)
+    expect(tabs[0].blocks[0].type).toBe('paragraph')
+    expect(tabs[0].blocks[1].type).toBe('checkbox')
+    expect(tabs[0].blocks[1].props.label).toBe('Check me')
+    expect(tabs[0].blocks[1].props.checked).toBe(true)
+  })
+
+  it('preserves icon blocks nested inside tabs through page HTML', () => {
+    const original: Block[] = [
+      createBlock('tabs', {
+        props: {
+          id: 'tabs-demo',
+          tabs: [
+            {
+              label: 'Profile',
+              content: '',
+              blocks: [
+                createBlock('paragraph', { props: { text: 'Profile tab content.' } }),
+                createBlock('icon', { props: { iconClass: '' } }),
+                createBlock('image', { props: { src: 'app-media://project-asset/assets/web-1774176696305.jpg', alt: 'Image' }, classes: ['img-fluid'] })
+              ]
+            }
+          ]
+        }
+      })
+    ]
+
+    const html = pageToHtml(original, { includeEditorMetadata: true })
+    const { blocks } = htmlToBlocks(html)
+    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>
+
+    expect(blocks[0].type).toBe('tabs')
+    expect(tabs).toHaveLength(1)
+    expect(tabs[0].blocks.map((block) => block.type)).toEqual(['paragraph', 'icon', 'image'])
+    expect(tabs[0].blocks[1].props.iconClass).toBe('')
+  })
+
+  it('preserves non-default icon selections nested inside tabs through page HTML', () => {
+    const original: Block[] = [
+      createBlock('tabs', {
+        props: {
+          id: 'tabs-demo',
+          tabs: [
+            {
+              label: 'Profile',
+              content: '',
+              blocks: [
+                createBlock('paragraph', { props: { text: 'Profile tab content.' } }),
+                createBlock('icon', { props: { iconClass: 'lucide:image', size: '3rem', color: 'orange' } })
+              ]
+            }
+          ]
+        }
+      })
+    ]
+
+    const html = pageToHtml(original, { includeEditorMetadata: true })
+    const { blocks } = htmlToBlocks(html)
+    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>
+
+    expect(blocks[0].type).toBe('tabs')
+    expect(tabs).toHaveLength(1)
+    expect(tabs[0].blocks[1].type).toBe('icon')
+    expect(tabs[0].blocks[1].props.iconClass).toBe('lucide:image')
+    expect(tabs[0].blocks[1].props.size).toBe('3rem')
+    expect(tabs[0].blocks[1].props.color).toBe('orange')
+  })
+
+  it('preserves modal blocks through page HTML', () => {
+    const original: Block[] = [
+      createBlock('modal', {
+        props: {
+          id: 'launch-modal',
+          buttonText: 'Launch Modal',
+          title: 'Example Modal',
+          closeButton: true,
+          footerButtons: true,
+          size: 'modal-lg'
+        },
+        children: [
+          createBlock('paragraph', { props: { text: 'Modal body text goes here.' } })
+        ]
+      })
+    ]
+
+    const html = pageToHtml(original, { includeEditorMetadata: true })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].type).toBe('modal')
+    expect(blocks[0].props.id).toBe('launch-modal')
+    expect(blocks[0].props.buttonText).toBe('Launch Modal')
+    expect(blocks[0].props.title).toBe('Example Modal')
+    expect(blocks[0].props.size).toBe('modal-lg')
+    expect(blocks[0].children).toHaveLength(1)
+    expect(blocks[0].children[0].type).toBe('paragraph')
+  })
+
+  it('preserves carousel blocks through HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('carousel', {
+        classes: ['carousel', 'slide'],
+        props: {
+          id: 'hero-carousel',
+          slides: [
+            { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
+            { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
+          ]
+        }
+      })
+    ]
+
+    const html = blockToHtml(original)
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].type).toBe('carousel')
+    expect(blocks[0].props.id).toBe('hero-carousel')
+    expect(blocks[0].props.slides).toEqual([
+      { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
+      { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
+    ])
   })
 })

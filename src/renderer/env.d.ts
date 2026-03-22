@@ -38,6 +38,8 @@ interface ElectronApi {
     isEncryptionSecure: () => Promise<any>
     getCredentials: () => Promise<any>
     deleteCredential: (id: string) => Promise<any>
+    getSettings: () => Promise<any>
+    saveSettings: (settings: any) => Promise<any>
   }
   ai: {
     chat: (data: {

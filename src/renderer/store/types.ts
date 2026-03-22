@@ -16,11 +16,13 @@ export interface Block {
 export interface Page {
   id: string
   title: string
+  pageTitle?: string
   slug: string
   tags?: string[]
   folderId?: string
   blocks: Block[]
   meta: Record<string, string>
+  fullWidthFormControls?: boolean
 }
 
 export interface PageFolder {
@@ -447,12 +449,23 @@ export interface EditorState {
 
   // Clipboard
   clipboard: Block | null
+
+  // Tab Edit Mode
+  activeTabEditBlockId: string | null
+  activeTabIndex: number | null
+  pageBlocksBackup: Block[] | null
 }
 
 export interface EditorActions {
   // Block mutations
   addBlock: (block: Block, parentId?: string | null, index?: number) => void
-  updateBlock: (id: string, patch: Partial<Omit<Block, 'id' | 'children'>>) => void
+  updateBlock: (
+    id: string,
+    patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & {
+      props?: Record<string, unknown>
+      styles?: Record<string, string | undefined>
+    }
+  ) => void
   moveBlock: (id: string, newParentId: string | null, newIndex: number) => void
   removeBlock: (id: string) => void
 
@@ -488,6 +501,11 @@ export interface EditorActions {
   // Utility
   getBlockById: (id: string) => Block | null
   getBlockPath: (id: string) => string[]
+  getFullBlocks: () => Block[]
+
+  // Tab edit mode
+  enterTabEditMode: (blockId: string, tabIndex: number) => void
+  exitTabEditMode: () => void
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────

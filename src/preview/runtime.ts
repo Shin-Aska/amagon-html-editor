@@ -22,7 +22,12 @@ interface DropTargetHint {
 }
 
 type RuntimeMessage =
-  | { type: 'clicked'; blockId?: string; rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number } }
+  | {
+    type: 'clicked'
+    blockId?: string
+    rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
+    redirectedFromNestedTabContent?: boolean
+  }
   | { type: 'hovered'; blockId?: string }
   | {
     type: 'contextMenu'
@@ -30,16 +35,28 @@ type RuntimeMessage =
     rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
     clientX?: number
     clientY?: number
+    redirectedFromNestedTabContent?: boolean
   }
   | { type: 'dropTarget'; dropTarget?: DropTargetHint }
   | { type: 'moveBlock'; blockId: string; dropTarget: DropTargetHint }
   | { type: 'updateText'; blockId: string; text: string }
   | { type: 'keydown'; key: string; code?: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; altKey: boolean }
   | { type: 'deleteBlock'; blockId: string }
+  | { type: 'debug'; payload: Record<string, unknown> }
   | { type: 'ready' }
 
 function sendToParent(message: RuntimeMessage): void {
   window.parent.postMessage({ source: 'canvas-runtime', ...message }, '*')
+}
+
+function sendDebugToParent(stage: string, payload: Record<string, unknown>): void {
+  sendToParent({
+    type: 'debug',
+    payload: {
+      stage,
+      ...payload
+    }
+  })
 }
 
 function ensureOverlayRoot(): HTMLDivElement {
@@ -543,6 +560,41 @@ let draggedPointerEventsBefore: string | null = null
 
 const DRAG_START_DISTANCE = 6
 
+function resolveTabSelectionTarget(el: HTMLElement): { target: HTMLElement; redirected: boolean } {
+  const tabsRoot = el.closest('[data-block-type="tabs"]') as HTMLElement | null
+  if (tabsRoot && tabsRoot !== el) {
+    return { target: tabsRoot, redirected: true }
+  }
+
+  return { target: el, redirected: false }
+}
+
+function getNestedTabContentSelectionTarget(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) return null
+
+  const panel = target.closest('.tab-pane, [data-tw-tab-panel]') as HTMLElement | null
+  if (!panel) return null
+
+  const tabsRoot = panel.closest('[data-block-type="tabs"]') as HTMLElement | null
+  if (!tabsRoot?.dataset.blockId) return null
+
+  return tabsRoot
+}
+
+function debugTabSelection(eventName: string, target: EventTarget | null, tabsRoot: HTMLElement | null): void {
+  const el = target instanceof Element ? target : null
+  const payload = {
+    eventName,
+    targetTag: el?.tagName?.toLowerCase() ?? null,
+    targetClasses: el?.className ?? null,
+    insidePanel: !!el?.closest?.('.tab-pane, [data-tw-tab-panel]'),
+    tabsBlockId: tabsRoot?.dataset.blockId ?? null,
+    tabsBlockType: tabsRoot?.dataset.blockType ?? null
+  }
+  console.debug('[amagon][tabs-warning][runtime]', payload)
+  sendDebugToParent('runtime-detect', payload)
+}
+
 function shouldBlockNavigationFromTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   return Boolean(target.closest('a[href], area[href]'))
@@ -551,6 +603,100 @@ function shouldBlockNavigationFromTarget(target: EventTarget | null): boolean {
 function attachBlockListeners(): void {
   if (!listenersInstalled) {
     listenersInstalled = true
+    document.addEventListener('click', (e) => {
+      const tabsRoot = getNestedTabContentSelectionTarget(e.target)
+      debugTabSelection('document-click-capture', e.target, tabsRoot)
+      if (!tabsRoot) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const rect = getElementVisualRect(tabsRoot) ?? toVisualRect(tabsRoot.getBoundingClientRect())
+      const payload = {
+        blockId: tabsRoot.dataset.blockId,
+        rect
+      }
+      console.debug('[amagon][tabs-warning][runtime] posting clicked redirect', payload)
+      sendDebugToParent('runtime-post-clicked', payload)
+      sendToParent({
+        type: 'clicked',
+        blockId: tabsRoot.dataset.blockId,
+        redirectedFromNestedTabContent: true,
+        rect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          right: rect.right,
+          bottom: rect.bottom
+        }
+      })
+    }, true)
+
+    document.addEventListener('dblclick', (e) => {
+      const tabsRoot = getNestedTabContentSelectionTarget(e.target)
+      debugTabSelection('document-dblclick-capture', e.target, tabsRoot)
+      if (!tabsRoot) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const rect = getElementVisualRect(tabsRoot) ?? toVisualRect(tabsRoot.getBoundingClientRect())
+      const payload = {
+        blockId: tabsRoot.dataset.blockId,
+        rect
+      }
+      console.debug('[amagon][tabs-warning][runtime] posting dblclick redirect', payload)
+      sendDebugToParent('runtime-post-dblclick', payload)
+      sendToParent({
+        type: 'clicked',
+        blockId: tabsRoot.dataset.blockId,
+        redirectedFromNestedTabContent: true,
+        rect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          right: rect.right,
+          bottom: rect.bottom
+        }
+      })
+    }, true)
+
+    document.addEventListener('contextmenu', (e) => {
+      const tabsRoot = getNestedTabContentSelectionTarget(e.target)
+      debugTabSelection('document-contextmenu-capture', e.target, tabsRoot)
+      if (!tabsRoot) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const rect = getElementVisualRect(tabsRoot) ?? toVisualRect(tabsRoot.getBoundingClientRect())
+      const payload = {
+        blockId: tabsRoot.dataset.blockId,
+        rect,
+        clientX: e.clientX,
+        clientY: e.clientY
+      }
+      console.debug('[amagon][tabs-warning][runtime] posting contextmenu redirect', payload)
+      sendDebugToParent('runtime-post-contextmenu', payload)
+      sendToParent({
+        type: 'contextMenu',
+        blockId: tabsRoot.dataset.blockId,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        redirectedFromNestedTabContent: true,
+        rect: {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          right: rect.right,
+          bottom: rect.bottom
+        }
+      })
+    }, true)
+
     document.addEventListener('click', (e) => {
       if (!shouldBlockNavigationFromTarget(e.target)) return
       e.preventDefault()
@@ -657,12 +803,14 @@ function attachBlockListeners(): void {
       }
 
       e.stopPropagation()
-      const blockId = el.dataset.blockId
+      const { target, redirected } = resolveTabSelectionTarget(el)
+      const blockId = target.dataset.blockId
       if (blockId) {
-        const rect = getElementVisualRect(el) ?? toVisualRect(el.getBoundingClientRect())
+        const rect = getElementVisualRect(target) ?? toVisualRect(target.getBoundingClientRect())
         sendToParent({
           type: 'clicked',
           blockId,
+          redirectedFromNestedTabContent: redirected,
           rect: {
             top: rect.top,
             left: rect.left,
@@ -688,6 +836,27 @@ function attachBlockListeners(): void {
 
     el.addEventListener('dblclick', (e) => {
       e.stopPropagation()
+      const { target, redirected } = resolveTabSelectionTarget(el)
+      if (redirected) {
+        const blockId = target.dataset.blockId
+        if (blockId) {
+          const rect = getElementVisualRect(target) ?? toVisualRect(target.getBoundingClientRect())
+          sendToParent({
+            type: 'clicked',
+            blockId,
+            redirectedFromNestedTabContent: true,
+            rect: {
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+              right: rect.right,
+              bottom: rect.bottom
+            }
+          })
+        }
+        return
+      }
       const blockId = el.dataset.blockId
       if (!blockId) return
       beginTextEditing(el, blockId)
@@ -695,14 +864,16 @@ function attachBlockListeners(): void {
 
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault()
-      const blockId = el.dataset.blockId
+      const { target, redirected } = resolveTabSelectionTarget(el)
+      const blockId = target.dataset.blockId
       if (blockId) {
-        const rect = getElementVisualRect(el) ?? toVisualRect(el.getBoundingClientRect())
+        const rect = getElementVisualRect(target) ?? toVisualRect(target.getBoundingClientRect())
         sendToParent({
           type: 'contextMenu',
           blockId,
           clientX: e.clientX,
           clientY: e.clientY,
+          redirectedFromNestedTabContent: redirected,
           rect: {
             top: rect.top,
             left: rect.left,

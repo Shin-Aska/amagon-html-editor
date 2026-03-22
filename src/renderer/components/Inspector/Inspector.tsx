@@ -18,10 +18,12 @@ import CarouselField from './CarouselField'
 import IconField from './IconField'
 import { useProjectStore } from '../../store/projectStore'
 import ArrayField from './ArrayField'
+import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
 
 function Inspector(): JSX.Element {
   const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
+  const blocks = useEditorStore((s) => s.blocks)
   const getBlockById = useEditorStore((s) => s.getBlockById)
   const updateBlock = useEditorStore((s) => s.updateBlock)
 
@@ -58,15 +60,10 @@ function Inspector(): JSX.Element {
   }
 
   const handleStyleChange = (key: string, value: string | undefined) => {
-    const newStyles = { ...block.styles }
-    if (value === undefined || value === '') {
-      delete newStyles[key]
-    } else {
-      newStyles[key] = value
-    }
-
     updateBlock(block.id, {
-      styles: newStyles
+      styles: {
+        [key]: (value === undefined || value === '') ? undefined : value
+      }
     })
   }
 
@@ -300,11 +297,16 @@ function Inspector(): JSX.Element {
           return 'string'
         }
 
+        const resolvedItemType = determineItemType()
         return (
           <ArrayField
+            blockId={block.id}
             value={val || []}
             onChange={(v) => handlePropChange(key, v)}
-            itemType={determineItemType()}
+            itemType={resolvedItemType}
+            defaultIndex={resolvedItemType === 'tab' ? (typeof block.props.defaultTab === 'number' ? block.props.defaultTab : 0) : undefined}
+            onDefaultChange={resolvedItemType === 'tab' ? (i) => handlePropChange('defaultTab', i) : undefined}
+            onChangeBoth={resolvedItemType === 'tab' ? (newTabs, newDefault) => updateBlock(block.id, { props: { ...block.props, [key]: newTabs, defaultTab: newDefault } }) : undefined}
           />
         )
       }
@@ -401,6 +403,11 @@ function Inspector(): JSX.Element {
         <div className="inspector-group">
           <h4 className="inspector-group-title">Border</h4>
           <BorderEditor styles={block.styles} onChange={handleStyleChange} />
+        </div>
+
+        <div className="inspector-group">
+          <h4 className="inspector-group-title">Inline Styles</h4>
+          <InlineStylesEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">

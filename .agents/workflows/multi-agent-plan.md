@@ -39,8 +39,12 @@ Hard requirements (must follow exactly):
 1) Output MUST be Markdown.
 2) Output MUST be a checkbox plan, with tasks using literal "- [ ]" checkboxes (no bullets without checkboxes).
 3) Plan MUST be split into numbered Phases (Phase 1, Phase 2, ...).
-4) Every Phase MUST specify exactly one assigned agent from the roster (not Claude), except a final "QA / Integration" phase which can be Claude.
-4a) Distribute execution across multiple non-Claude agents (use at least 2 different executor agents across the phases).
+4) Every Phase MUST specify exactly one assigned agent from the roster.
+4a) Distribute execution across multiple agents (use at least 2 different executor agents across the phases).
+4b) QA phases MUST follow this escalation path:
+    - **Simple QA** (running test suites, build verification, manual smoke testing): assign to **Gemini 3.1 Pro High**
+    - **Standard QA** (integration testing, regression checks, code review): assign to **Claude Sonnet 4.6**
+    - **Complex QA** (architectural validation, security review, cross-cutting concerns): assign to **Claude Opus 4.6**
 5) Every Phase MUST include:
    - Goal (1-2 sentences)
    - Context for Agent (what to read / what invariants to respect)
@@ -56,9 +60,9 @@ Project context:
 [PASTE CONTEXT HERE]
 
 Agent roster (choose from these):
-- Claude Opus 4.6 (Planner & QA only)
-- Claude Sonnet 4.6 (complex architecture, algorithms, critical code paths)
-- Gemini 3.1 Pro High (deep reasoning, large-scale refactoring, thorough analysis)
+- Claude Opus 4.6 (Planner & Complex QA — architectural validation, security review, cross-cutting concerns)
+- Claude Sonnet 4.6 (Standard QA, complex architecture, algorithms, critical code paths)
+- Gemini 3.1 Pro High (Simple QA — test suites, build verification, manual testing; deep reasoning, large-scale refactoring, thorough analysis)
 - Gemini 3.1 Pro Low (UI generation, component volume, styling, well-scoped implementation)
 - Gemini 3.1 Flash (quick tasks, boilerplate, simple fixes, documentation)
 
@@ -66,9 +70,9 @@ Now produce the plan.
 ```
 
 ## Agent roster & expertise
-- **Claude Opus 4.6 (Planner & QA only)**: High-level strategy, risk analysis, coordination, and final review.
-- **Claude Sonnet 4.6**: Complex architecture, algorithm design, critical code paths, and nuanced implementation.
-- **Gemini 3.1 Pro High**: Deep reasoning, large-scale refactoring, thorough code analysis, and complex problem-solving.
+- **Claude Opus 4.6 (Planner & Complex QA)**: High-level strategy, risk analysis, coordination, architectural validation, security review, and final review for complex concerns.
+- **Claude Sonnet 4.6 (Standard QA)**: Complex architecture, algorithm design, critical code paths, nuanced implementation, integration testing, regression checks, and code review.
+- **Gemini 3.1 Pro High (Simple QA)**: Running test suites, build verification, manual smoke testing, deep reasoning, large-scale refactoring, and thorough code analysis.
 - **Gemini 3.1 Pro Low**: UI/UX component generation, widget libraries, styling/theming, and well-scoped implementation.
 - **Gemini 3.1 Flash**: Quick tasks, boilerplate generation, simple bug fixes, and documentation.
 

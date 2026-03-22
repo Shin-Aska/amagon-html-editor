@@ -101,7 +101,9 @@ const api = {
   app: {
     isEncryptionSecure: () => ipcRenderer.invoke('app:isEncryptionSecure'),
     getCredentials: () => ipcRenderer.invoke('app:getCredentials'),
-    deleteCredential: (id: string) => ipcRenderer.invoke('app:deleteCredential', id)
+    deleteCredential: (id: string) => ipcRenderer.invoke('app:deleteCredential', id),
+    getSettings: () => ipcRenderer.invoke('app:getSettings'),
+    saveSettings: (settings: any) => ipcRenderer.invoke('app:saveSettings', settings)
   },
 
   ai: {
