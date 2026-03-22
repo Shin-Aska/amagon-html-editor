@@ -40,7 +40,8 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **Live Preview**: See your changes instantly in an isolated iframe canvas
 - **Inline Editing**: Double-click any text block on the canvas to edit content directly in place
 - **Responsive Preview**: Switch between desktop, tablet, and mobile viewports
-- **Block Library**: 50+ pre-built blocks including headers, heroes, grids, forms, navbars, footers, code blocks, and more
+- **Zoom Controls**: Adjust canvas zoom via [+]/[-] buttons, a slider, or by typing a value directly
+- **Block Library**: 50+ pre-built blocks including headers, heroes, grids, forms, navbars, footers, code blocks, and more — with a search bar for quick filtering
 - **Custom Components**: Save your own reusable block templates
 - **Floating Toolbar**: Context-aware toolbar appears on hover with quick edit, duplicate, delete, and move actions
 
