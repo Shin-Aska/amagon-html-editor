@@ -1,9 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Hoarses Dev (Electron)" type="js.build_tools.npm" package-json="file://$PROJECT_DIR$/package.json" command="run" scripts="dev">
-    <node-interpreter value="project" />
-    <envs>
-      <env name="FORCE_COLOR" value="1" />
-    </envs>
-    <method v="2" />
-  </configuration>
-</component>
