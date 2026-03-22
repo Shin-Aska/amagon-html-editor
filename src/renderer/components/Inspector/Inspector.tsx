@@ -18,6 +18,7 @@ import CarouselField from './CarouselField'
 import IconField from './IconField'
 import { useProjectStore } from '../../store/projectStore'
 import ArrayField from './ArrayField'
+import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
 
 function Inspector(): JSX.Element {
@@ -398,6 +399,11 @@ function Inspector(): JSX.Element {
         <div className="inspector-group">
           <h4 className="inspector-group-title">Border</h4>
           <BorderEditor styles={block.styles} onChange={handleStyleChange} />
+        </div>
+
+        <div className="inspector-group">
+          <h4 className="inspector-group-title">Inline Styles</h4>
+          <InlineStylesEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
