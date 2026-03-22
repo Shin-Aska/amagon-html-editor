@@ -5,6 +5,7 @@ import type { EditorLayout } from './types'
 export interface AppSettings {
   theme: 'light' | 'dark'
   defaultLayout: EditorLayout
+  showTabChildSelectionWarning: boolean
 }
 
 interface AppSettingsState extends AppSettings {
@@ -16,13 +17,15 @@ interface AppSettingsActions {
   saveSettings: (patch: Partial<AppSettings>) => Promise<void>
   setTheme: (theme: 'light' | 'dark') => void
   setDefaultLayout: (layout: EditorLayout) => void
+  setShowTabChildSelectionWarning: (show: boolean) => void
 }
 
 type AppSettingsStore = AppSettingsState & AppSettingsActions
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
-  defaultLayout: 'standard'
+  defaultLayout: 'standard',
+  showTabChildSelectionWarning: true
 }
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
@@ -34,12 +37,12 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       const api = getApi()
       const result = await api.app.getSettings()
       if (result.success && result.settings) {
-        set({ ...result.settings, loaded: true })
+        set({ ...DEFAULT_SETTINGS, ...result.settings, loaded: true })
       } else {
-        set({ loaded: true })
+        set({ ...DEFAULT_SETTINGS, loaded: true })
       }
     } catch {
-      set({ loaded: true })
+      set({ ...DEFAULT_SETTINGS, loaded: true })
     } finally {
       // Regardless of load success, apply the resolved theme
       const theme = get().theme
@@ -55,7 +58,8 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
     const current = get()
     const nextSettings: AppSettings = {
       theme: patch.theme ?? current.theme,
-      defaultLayout: patch.defaultLayout ?? current.defaultLayout
+      defaultLayout: patch.defaultLayout ?? current.defaultLayout,
+      showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning
     }
     set({ ...nextSettings })
 
@@ -80,5 +84,10 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   setDefaultLayout: (layout: EditorLayout) => {
     set({ defaultLayout: layout })
     get().saveSettings({ defaultLayout: layout })
+  },
+
+  setShowTabChildSelectionWarning: (show: boolean) => {
+    set({ showTabChildSelectionWarning: show })
+    get().saveSettings({ showTabChildSelectionWarning: show })
   }
 }))

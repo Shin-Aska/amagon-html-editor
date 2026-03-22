@@ -3,6 +3,7 @@ import ContextMenu, { type ContextMenuItem } from '../ContextMenu/ContextMenu'
 import './Canvas.css'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
 import { blockToHtml } from '../../utils/blockToHtml'
 import { createBlock, themeToCSS } from '../../store/types'
 import type { Block } from '../../store/types'
@@ -16,6 +17,7 @@ type CanvasRuntimeMessage =
     type: 'clicked'
     blockId?: string
     rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
+    redirectedFromNestedTabContent?: boolean
   }
   | {
     source: 'canvas-runtime'
@@ -29,6 +31,12 @@ type CanvasRuntimeMessage =
     rect?: { top: number; left: number; width: number; height: number; right: number; bottom: number }
     clientX?: number
     clientY?: number
+    redirectedFromNestedTabContent?: boolean
+  }
+  | {
+    source: 'canvas-runtime'
+    type: 'debug'
+    payload?: Record<string, unknown>
   }
   | {
     source: 'canvas-runtime'
@@ -88,6 +96,7 @@ function Canvas(): JSX.Element {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [runtimeReady, setRuntimeReady] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null)
+  const [tabWarningVisible, setTabWarningVisible] = useState(false)
 
   const blocks = useEditorStore((s) => s.blocks)
   const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
@@ -112,6 +121,8 @@ function Canvas(): JSX.Element {
   const framework = useProjectStore((s) => s.settings.framework)
   const pages = useProjectStore((s) => s.pages)
   const folders = useProjectStore((s) => s.folders)
+  const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning)
+  const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning)
   const activeTabEditBlockId = useEditorStore((s) => s.activeTabEditBlockId)
   const activeTabIndex = useEditorStore((s) => s.activeTabIndex)
   const exitTabEditMode = useEditorStore((s) => s.exitTabEditMode)
@@ -124,9 +135,32 @@ function Canvas(): JSX.Element {
 
 
   useEffect(() => {
+    if (showTabChildSelectionWarning) return
+    console.warn('[amagon][tabs-warning][canvas] setting disabled, hiding warning')
+    setTabWarningVisible(false)
+  }, [showTabChildSelectionWarning])
+
+  useEffect(() => {
+    const maybeShowNestedTabSelectionToast = (redirected?: boolean) => {
+      console.warn('[amagon][tabs-warning][canvas] maybeShowNestedTabSelectionToast', {
+        redirected,
+        showTabChildSelectionWarning
+      })
+      if (!redirected || !showTabChildSelectionWarning) return
+      console.warn('[amagon][tabs-warning][canvas] showing warning')
+      setTabWarningVisible(true)
+    }
+
     const onMessage = (event: MessageEvent) => {
       const data = event.data as CanvasRuntimeMessage
       if (!data || data.source !== 'canvas-runtime') return
+      if (data.type === 'debug') {
+        console.warn('[amagon][tabs-warning][bridge]', data.payload)
+        return
+      }
+      if (data.type === 'clicked' || data.type === 'contextMenu') {
+        console.warn('[amagon][tabs-warning][canvas] received runtime message', data)
+      }
 
       switch (data.type) {
         case 'ready':
@@ -134,6 +168,7 @@ function Canvas(): JSX.Element {
           break
         case 'clicked':
           selectBlock(data.blockId ?? null)
+          maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent)
           setContextMenu(null)
           break
         case 'hovered':
@@ -142,6 +177,7 @@ function Canvas(): JSX.Element {
         case 'contextMenu':
           if (data.blockId) {
             selectBlock(data.blockId)
+            maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent)
             const iframeRect = iframeRef.current?.getBoundingClientRect()
             if (iframeRect && data.clientX !== undefined && data.clientY !== undefined) {
               setContextMenu({
@@ -219,7 +255,14 @@ function Canvas(): JSX.Element {
 
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [hoverBlock, isTypingCode, moveBlock, selectBlock, zoom, updateBlock, removeBlock])
+  }, [hoverBlock, isTypingCode, moveBlock, selectBlock, zoom, updateBlock, removeBlock, showTabChildSelectionWarning])
+
+  useEffect(() => {
+    console.warn('[amagon][tabs-warning][canvas] render state', {
+      tabWarningVisible,
+      showTabChildSelectionWarning
+    })
+  }, [tabWarningVisible, showTabChildSelectionWarning])
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     if (!contextMenu) return []
@@ -402,6 +445,26 @@ function Canvas(): JSX.Element {
             sandbox="allow-scripts allow-same-origin"
           />
         </div>
+        {tabWarningVisible && showTabChildSelectionWarning && (
+          <div className="canvas-warning-toast" role="status" aria-live="polite">
+            <div className="canvas-warning-message">You are trying to select a component inside a tab component</div>
+            <div className="canvas-warning-actions">
+              <button type="button" className="canvas-warning-btn" onClick={() => setTabWarningVisible(false)}>
+                OK
+              </button>
+              <button
+                type="button"
+                className="canvas-warning-btn"
+                onClick={() => {
+                  setShowTabChildSelectionWarning(false)
+                  setTabWarningVisible(false)
+                }}
+              >
+                Hide this warning
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {contextMenu && <ContextMenu x={contextMenu.x} y={contextMenu.y} items={menuItems} onClose={() => setContextMenu(null)} />}
     </div>
