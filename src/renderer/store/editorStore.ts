@@ -80,15 +80,30 @@ function insertBlockInTree(
 function updateBlockInTree(
   blocks: Block[],
   id: string,
-  patch: Partial<Omit<Block, 'id' | 'children'>>
+  patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & { props?: Record<string, unknown>; styles?: Record<string, string | undefined> }
 ): Block[] {
   return blocks.map((block) => {
     if (block.id === id) {
+      const newProps = patch.props ? { ...block.props, ...patch.props } : block.props
+      const newStyles = patch.styles ? { ...block.styles, ...patch.styles } : block.styles
+
+      if (patch.props) {
+        for (const key in newProps) {
+          if (newProps[key] === undefined) delete newProps[key]
+        }
+      }
+
+      if (patch.styles) {
+        for (const key in newStyles) {
+          if (newStyles[key] === undefined) delete newStyles[key]
+        }
+      }
+
       return {
         ...block,
         ...patch,
-        props: patch.props ? { ...block.props, ...patch.props } : block.props,
-        styles: patch.styles ? { ...block.styles, ...patch.styles } : block.styles
+        props: newProps as Record<string, unknown>,
+        styles: newStyles as Record<string, string>
       }
     }
     return { ...block, children: updateBlockInTree(block.children, id, patch) }
@@ -215,7 +230,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       })
     },
 
-    updateBlock: (id, patch) => {
+    updateBlock: (id, patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & { props?: Record<string, unknown>; styles?: Record<string, string | undefined> }) => {
       set((state) => {
         const newBlocks = updateBlockInTree(state.blocks, id, patch)
         return {

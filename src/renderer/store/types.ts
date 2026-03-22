@@ -459,7 +459,13 @@ export interface EditorState {
 export interface EditorActions {
   // Block mutations
   addBlock: (block: Block, parentId?: string | null, index?: number) => void
-  updateBlock: (id: string, patch: Partial<Omit<Block, 'id' | 'children'>>) => void
+  updateBlock: (
+    id: string,
+    patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & {
+      props?: Record<string, unknown>
+      styles?: Record<string, string | undefined>
+    }
+  ) => void
   moveBlock: (id: string, newParentId: string | null, newIndex: number) => void
   removeBlock: (id: string) => void
 

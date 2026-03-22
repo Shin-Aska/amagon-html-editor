@@ -59,15 +59,10 @@ function Inspector(): JSX.Element {
   }
 
   const handleStyleChange = (key: string, value: string | undefined) => {
-    const newStyles = { ...block.styles }
-    if (value === undefined || value === '') {
-      delete newStyles[key]
-    } else {
-      newStyles[key] = value
-    }
-
     updateBlock(block.id, {
-      styles: newStyles
+      styles: {
+        [key]: (value === undefined || value === '') ? undefined : value
+      }
     })
   }
 
