@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, X, Settings } from 'lucide-react'
 import appLogo from '../../../../assets/app.png'
 import { getApi } from '../../utils/api'
@@ -18,6 +18,38 @@ export default function WelcomeScreen(): JSX.Element {
   const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
 
   const [recentProjects, setRecentProjects] = useState<{ path: string; name: string }[]>([])
+
+  const normalizeRecentProjects = (projects: unknown): Array<{ path: string; name: string }> => {
+    if (!Array.isArray(projects)) return []
+
+    return projects.flatMap((project) => {
+      if (typeof project === 'string') {
+        const trimmedPath = project.trim()
+        if (!trimmedPath) return []
+
+        return [{
+          path: trimmedPath,
+          name: trimmedPath.split(/[/\\]/).pop()?.replace(/\.json$/i, '') || 'Untitled'
+        }]
+      }
+
+      if (!project || typeof project !== 'object') return []
+
+      const pathValue = typeof (project as { path?: unknown }).path === 'string'
+        ? (project as { path: string }).path.trim()
+        : ''
+      if (!pathValue) return []
+
+      const nameValue = typeof (project as { name?: unknown }).name === 'string'
+        ? (project as { name: string }).name.trim()
+        : ''
+
+      return [{
+        path: pathValue,
+        name: nameValue || pathValue.split(/[/\\]/).pop()?.replace(/\.json$/i, '') || 'Untitled'
+      }]
+    })
+  }
   const [showNewProject, setShowNewProject] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -25,7 +57,7 @@ export default function WelcomeScreen(): JSX.Element {
     async function loadRecent() {
       const result = await api.project.getRecent()
       if (result.success && result.projects) {
-        setRecentProjects(result.projects)
+        setRecentProjects(normalizeRecentProjects(result.projects))
       }
     }
     loadRecent()
@@ -72,7 +104,7 @@ export default function WelcomeScreen(): JSX.Element {
     e.stopPropagation()
     const result = await api.project.removeRecent(projectPath)
     if (result.success && result.projects) {
-      setRecentProjects(result.projects)
+      setRecentProjects(normalizeRecentProjects(result.projects))
     } else {
       setRecentProjects((prev) => prev.filter((p) => p.path !== projectPath))
     }

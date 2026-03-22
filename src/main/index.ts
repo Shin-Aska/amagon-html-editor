@@ -115,6 +115,28 @@ async function removeRecentProject(projectPath: string): Promise<string[]> {
   return filtered
 }
 
+async function resolveRecentProjects(
+  projectPaths: string[]
+): Promise<Array<{ path: string; name: string }>> {
+  const projects = []
+  for (const projectPath of projectPaths) {
+    if (!projectPath || !existsSync(projectPath)) continue
+
+    try {
+      const content = await fs.readFile(projectPath, 'utf-8')
+      const data = JSON.parse(content)
+      const name = data.projectSettings?.name || 'Untitled Project'
+      projects.push({ path: projectPath, name })
+    } catch {
+      // If we can't read/parse the file, still show it with a filename fallback.
+      const name = path.basename(projectPath, path.extname(projectPath)) || 'Untitled'
+      projects.push({ path: projectPath, name })
+    }
+  }
+
+  return projects
+}
+
 // ---------------------------------------------------------------------------
 // Window creation
 // ---------------------------------------------------------------------------
@@ -386,21 +408,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('project:getRecent', async () => {
     try {
       const recents = await loadRecentProjects()
-      // Filter out projects whose files no longer exist and read project names
-      const projects = []
-      for (const projectPath of recents) {
-        if (!existsSync(projectPath)) continue
-        try {
-          const content = await fs.readFile(projectPath, 'utf-8')
-          const data = JSON.parse(content)
-          const name = data.projectSettings?.name || 'Untitled Project'
-          projects.push({ path: projectPath, name })
-        } catch {
-          // If we can't read/parse the file, still show it with filename
-          const name = projectPath.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'
-          projects.push({ path: projectPath, name })
-        }
-      }
+      const projects = await resolveRecentProjects(recents)
       return { success: true, projects }
     } catch (error: any) {
       return { success: false, error: error.message, projects: [] }
@@ -410,7 +418,8 @@ function registerIpcHandlers(): void {
   ipcMain.handle('project:removeRecent', async (_, projectPath: string) => {
     try {
       const updated = await removeRecentProject(projectPath)
-      return { success: true, projects: updated }
+      const projects = await resolveRecentProjects(updated)
+      return { success: true, projects }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
