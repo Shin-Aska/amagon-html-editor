@@ -857,13 +857,14 @@ function getBlockContent(
     case 'tabs': {
       const id = String(props.id || 'tabs-' + Math.random().toString(36).substr(2, 9))
       const tabs = (props.tabs as Array<{ label: string; content: string; blocks?: Block[] }>) ?? []
+      const defaultTab = typeof props.defaultTab === 'number' ? props.defaultTab : 0
 
       if (framework === 'tailwind') {
         const navItems = tabs.map((tab, i) => `
-        <button class="${i === 0 ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll('[data-tw-tab-button=\\"${id}\\"]').forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n')
+        <button class="${i === defaultTab ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll('[data-tw-tab-button=\\"${id}\\"]').forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n')
 
         const contentItems = tabs.map((tab, i) => `
-        <div class="${i === 0 ? '' : 'hidden ' }rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
+        <div class="${i === defaultTab ? '' : 'hidden ' }rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
           ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode, includeEditorMetadata }) : escapeAttrValue(tab.content)}
         </div>`).join('\n')
 
@@ -881,11 +882,11 @@ function getBlockContent(
       const navItems = tabs.map((tab, i) => {
         const tabId = `${id}-tab-${i}`
         const contentId = `${id}-content-${i}`
-        const activeClass = i === 0 ? 'active' : ''
+        const activeClass = i === defaultTab ? 'active' : ''
 
         return `
         <li class="nav-item" role="presentation">
-          <button class="nav-link ${activeClass}" id="${tabId}" data-bs-toggle="tab" data-bs-target="#${contentId}" type="button" role="tab" aria-controls="${contentId}" aria-selected="${i === 0}">
+          <button class="nav-link ${activeClass}" id="${tabId}" data-bs-toggle="tab" data-bs-target="#${contentId}" type="button" role="tab" aria-controls="${contentId}" aria-selected="${i === defaultTab}">
             ${escapeAttrValue(tab.label)}
           </button>
         </li>`
@@ -894,7 +895,7 @@ function getBlockContent(
       const contentItems = tabs.map((tab, i) => {
         const tabId = `${id}-tab-${i}`
         const contentId = `${id}-content-${i}`
-        const activeClass = i === 0 ? 'show active' : ''
+        const activeClass = i === defaultTab ? 'show active' : ''
 
         return `
         <div class="tab-pane fade ${activeClass}" id="${contentId}" role="tabpanel" aria-labelledby="${tabId}">

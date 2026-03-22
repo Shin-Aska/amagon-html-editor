@@ -476,6 +476,7 @@ export function registerBlocks(): void {
     defaultClasses: [],
     defaultProps: {
       id: 'tabs-' + Math.random().toString(36).substr(2, 9),
+      defaultTab: 0,
       tabs: [
         { label: 'Home', content: 'Home tab content.', blocks: [] },
         { label: 'Profile', content: 'Profile tab content.', blocks: [] },

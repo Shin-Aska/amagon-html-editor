@@ -549,6 +549,7 @@ function parseBootstrapTabs(el: Element): Block {
   const contentContainer = el.querySelector(':scope > div.tab-content') ?? el.querySelector('div.tab-content')
   const panes = Array.from(contentContainer?.querySelectorAll(':scope > div.tab-pane, div.tab-pane') ?? [])
   const tabCount = Math.max(navButtons.length, panes.length)
+  const defaultTab = navButtons.findIndex((btn) => btn.classList.contains('active'))
   const tabs = Array.from({ length: tabCount }, (_, i) => {
     const pane = panes[i]
     const paneBlocks = pane ? parseChildren(pane) : []
@@ -569,6 +570,7 @@ function parseBootstrapTabs(el: Element): Block {
     tag: tagName !== defaultTagForType('tabs') ? tagName : undefined,
     props: {
       id: tabsId,
+      defaultTab: defaultTab >= 0 ? defaultTab : 0,
       tabs
     },
     styles,
@@ -588,6 +590,7 @@ function parseTailwindTabs(el: Element, tabsIdInput: string): Block {
   const navButtons = Array.from(el.querySelectorAll(`[data-tw-tab-button="${tabsId}"]`))
   const panels = Array.from(el.querySelectorAll('[data-tw-tab-panel]'))
   const tabCount = Math.max(navButtons.length, panels.length)
+  const defaultTab = panels.findIndex((panel) => !panel.classList.contains('hidden'))
   const tabs = Array.from({ length: tabCount }, (_, i) => {
     const panel = panels[i]
     const panelBlocks = panel ? parseChildren(panel) : []
@@ -608,6 +611,7 @@ function parseTailwindTabs(el: Element, tabsIdInput: string): Block {
     tag: tagName !== defaultTagForType('tabs') ? tagName : undefined,
     props: {
       id: tabsId,
+      defaultTab: defaultTab >= 0 ? defaultTab : 0,
       tabs
     },
     styles,

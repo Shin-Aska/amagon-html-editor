@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, Activity, X, Settings } from 'lucide-react'
+import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, X, Settings } from 'lucide-react'
+import appLogo from '../../../../assets/app.png'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
 import { useEditorStore } from '../../store/editorStore'
@@ -82,12 +83,13 @@ export default function WelcomeScreen(): JSX.Element {
       <div className="welcome-content">
         <div className="welcome-header">
           <div className="logo-container">
-            <Activity className="logo-icon" size={32} />
+            <img src={appLogo} className="logo-icon" width={40} height={40} />
             <div className="welcome-logo">Amagon</div>
           </div>
           <div className="welcome-subtitle">
             Visual Website Builder. <span className="highlight">Build websites within minutes.</span>
           </div>
+          <div className="welcome-version">v1.5.0</div>
         </div>
 
         <div className="welcome-body">

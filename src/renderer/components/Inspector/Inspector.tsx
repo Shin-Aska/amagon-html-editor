@@ -297,12 +297,16 @@ function Inspector(): JSX.Element {
           return 'string'
         }
 
+        const resolvedItemType = determineItemType()
         return (
           <ArrayField
             blockId={block.id}
             value={val || []}
             onChange={(v) => handlePropChange(key, v)}
-            itemType={determineItemType()}
+            itemType={resolvedItemType}
+            defaultIndex={resolvedItemType === 'tab' ? (typeof block.props.defaultTab === 'number' ? block.props.defaultTab : 0) : undefined}
+            onDefaultChange={resolvedItemType === 'tab' ? (i) => handlePropChange('defaultTab', i) : undefined}
+            onChangeBoth={resolvedItemType === 'tab' ? (newTabs, newDefault) => updateBlock(block.id, { props: { ...block.props, [key]: newTabs, defaultTab: newDefault } }) : undefined}
           />
         )
       }

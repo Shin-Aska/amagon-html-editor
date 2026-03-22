@@ -153,6 +153,39 @@
   background-color: rgba(220, 53, 69, 0.1);
 }
 
+.array-tab-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.array-default-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.array-default-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.array-default-btn.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
 .array-edit-canvas-btn {
   width: 100%;
   margin-top: 8px;
