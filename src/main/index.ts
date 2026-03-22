@@ -386,9 +386,22 @@ function registerIpcHandlers(): void {
   ipcMain.handle('project:getRecent', async () => {
     try {
       const recents = await loadRecentProjects()
-      // Filter out projects whose files no longer exist
-      const valid = recents.filter((p) => existsSync(p))
-      return { success: true, projects: valid }
+      // Filter out projects whose files no longer exist and read project names
+      const projects = []
+      for (const projectPath of recents) {
+        if (!existsSync(projectPath)) continue
+        try {
+          const content = await fs.readFile(projectPath, 'utf-8')
+          const data = JSON.parse(content)
+          const name = data.projectSettings?.name || 'Untitled Project'
+          projects.push({ path: projectPath, name })
+        } catch {
+          // If we can't read/parse the file, still show it with filename
+          const name = projectPath.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'
+          projects.push({ path: projectPath, name })
+        }
+      }
+      return { success: true, projects }
     } catch (error: any) {
       return { success: false, error: error.message, projects: [] }
     }

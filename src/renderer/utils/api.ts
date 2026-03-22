@@ -14,7 +14,7 @@ export interface IpcResult {
   content?: unknown
   data?: string
   mimeType?: string
-  projects?: string[]
+  projects?: Array<{ path: string; name: string }>
   assets?: { name: string; path: string; relativePath: string; type?: 'image' | 'video' }[]
   directory?: string | null
   previewPath?: string
@@ -182,8 +182,12 @@ const mockApi: ElectronApi = {
     getRecent: async (): Promise<IpcResult> => {
       try {
         const raw = localStorage.getItem('recent-projects')
-        const projects = raw ? JSON.parse(raw) : []
-        return { success: true, projects }
+        const projects: Array<string | { path: string; name: string }> = raw ? JSON.parse(raw) : []
+        // Normalize to object format
+        const normalized = projects.map((p) =>
+          typeof p === 'string' ? { path: p, name: p.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled' } : p
+        )
+        return { success: true, projects: normalized }
       } catch {
         return { success: true, projects: [] }
       }
@@ -192,10 +196,16 @@ const mockApi: ElectronApi = {
     removeRecent: async (projectPath: string): Promise<IpcResult> => {
       try {
         const raw = localStorage.getItem('recent-projects')
-        const projects: string[] = raw ? JSON.parse(raw) : []
-        const filtered = projects.filter((p) => p !== projectPath)
+        const projects: Array<string | { path: string; name: string }> = raw ? JSON.parse(raw) : []
+        const filtered = projects.filter((p) =>
+          typeof p === 'string' ? p !== projectPath : p.path !== projectPath
+        )
         localStorage.setItem('recent-projects', JSON.stringify(filtered))
-        return { success: true, projects: filtered }
+        // Return normalized format
+        const normalized = filtered.map((p) =>
+          typeof p === 'string' ? { path: p, name: p.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled' } : p
+        )
+        return { success: true, projects: normalized }
       } catch {
         return { success: true, projects: [] }
       }

@@ -16,7 +16,7 @@ export default function WelcomeScreen(): JSX.Element {
   const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
   const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
 
-  const [recentProjects, setRecentProjects] = useState<string[]>([])
+  const [recentProjects, setRecentProjects] = useState<{ path: string; name: string }[]>([])
   const [showNewProject, setShowNewProject] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -67,13 +67,13 @@ export default function WelcomeScreen(): JSX.Element {
     }
   }
 
-  const handleRemoveRecent = async (e: React.MouseEvent, path: string) => {
+  const handleRemoveRecent = async (e: React.MouseEvent, projectPath: string) => {
     e.stopPropagation()
-    const result = await api.project.removeRecent(path)
+    const result = await api.project.removeRecent(projectPath)
     if (result.success && result.projects) {
       setRecentProjects(result.projects)
     } else {
-      setRecentProjects((prev) => prev.filter((p) => p !== path))
+      setRecentProjects((prev) => prev.filter((p) => p.path !== projectPath))
     }
   }
 
@@ -137,20 +137,19 @@ export default function WelcomeScreen(): JSX.Element {
                   No recent projects found
                 </div>
               ) : (
-                recentProjects.map((path) => {
-                  const name = path.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled'
+                recentProjects.map((project) => {
                   return (
-                    <div key={path} className="recent-item" onClick={() => handleOpenRecent(path)}>
+                    <div key={project.path} className="recent-item" onClick={() => handleOpenRecent(project.path)}>
                       <div className="recent-item-icon">
                         <Zap size={14} />
                       </div>
                       <div className="recent-item-info">
-                        <div className="recent-name">{name}</div>
-                        <div className="recent-path">{path}</div>
+                        <div className="recent-name">{project.name}</div>
+                        <div className="recent-path">{project.path}</div>
                       </div>
                       <button
                         className="recent-item-remove"
-                        onClick={(e) => handleRemoveRecent(e, path)}
+                        onClick={(e) => handleRemoveRecent(e, project.path)}
                         title="Remove from recent projects"
                       >
                         <X size={14} />
