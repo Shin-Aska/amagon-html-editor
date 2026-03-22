@@ -2,6 +2,7 @@
 // In production (Electron), this will be replaced by the real IPC bridge.
 // For now, uses browser APIs (localStorage, File API, download links).
 
+import packageJson from '../../../package.json'
 import { createDefaultTheme } from '../store/types'
 import { createWelcomeBlocks } from '../../shared/welcomeBlocks'
 
@@ -450,6 +451,9 @@ const mockApi: ElectronApi = {
   },
 
   app: {
+    getVersion: async (): Promise<any> => {
+      return { success: true, version: packageJson.version }
+    },
     isEncryptionSecure: async (): Promise<any> => {
       // In browser mode, report as secure (no real keys stored anyway)
       return { secure: true }

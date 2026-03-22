@@ -99,6 +99,7 @@ const api = {
   },
 
   app: {
+    getVersion: () => ipcRenderer.invoke('app:getVersion'),
     isEncryptionSecure: () => ipcRenderer.invoke('app:isEncryptionSecure'),
     getCredentials: () => ipcRenderer.invoke('app:getCredentials'),
     deleteCredential: (id: string) => ipcRenderer.invoke('app:deleteCredential', id),

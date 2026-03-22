@@ -18,6 +18,7 @@ export default function WelcomeScreen(): JSX.Element {
   const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
 
   const [recentProjects, setRecentProjects] = useState<{ path: string; name: string }[]>([])
+  const [appVersion, setAppVersion] = useState('')
 
   const normalizeRecentProjects = (projects: unknown): Array<{ path: string; name: string }> => {
     if (!Array.isArray(projects)) return []
@@ -61,6 +62,17 @@ export default function WelcomeScreen(): JSX.Element {
       }
     }
     loadRecent()
+  }, [])
+
+  useEffect(() => {
+    async function loadAppVersion() {
+      const result = await api.app.getVersion()
+      if (result.success && typeof result.version === 'string') {
+        setAppVersion(result.version)
+      }
+    }
+
+    loadAppVersion()
   }, [])
 
   const handleLoad = async () => {
@@ -121,7 +133,7 @@ export default function WelcomeScreen(): JSX.Element {
           <div className="welcome-subtitle">
             Visual Website Builder. <span className="highlight">Build websites within minutes.</span>
           </div>
-          <div className="welcome-version">v1.5.0</div>
+          <div className="welcome-version">{appVersion ? `v${appVersion}` : ''}</div>
         </div>
 
         <div className="welcome-body">

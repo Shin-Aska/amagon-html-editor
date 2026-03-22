@@ -35,6 +35,7 @@ interface ElectronApi {
     onAction: (callback: (action: string) => void) => () => void
   }
   app: {
+    getVersion: () => Promise<any>
     isEncryptionSecure: () => Promise<any>
     getCredentials: () => Promise<any>
     deleteCredential: (id: string) => Promise<any>

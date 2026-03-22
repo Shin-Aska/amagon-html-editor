@@ -1051,6 +1051,10 @@ function registerIpcHandlers(): void {
 
   // ── App Settings ───────────────────────────────────────────────────────
 
+  ipcMain.handle('app:getVersion', () => {
+    return { success: true, version: app.getVersion() }
+  })
+
   ipcMain.handle('app:getSettings', async () => {
     try {
       const filePath = path.join(app.getPath('userData'), 'app-settings.json')
