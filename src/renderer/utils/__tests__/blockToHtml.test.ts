@@ -246,6 +246,15 @@ describe('blockToHtml', () => {
     expect(html).toContain('☆')
   })
 
+  it('includes editor metadata for icon blocks when requested', () => {
+    const html = pageToHtml([
+      createBlock('icon', { props: { iconClass: 'lucide:star', size: '2rem', color: 'orange' } })
+    ], { includeEditorMetadata: true })
+
+    expect(html).toContain('data-amagon-component="icon"')
+    expect(html).toContain('data-amagon-icon-class="lucide:star"')
+  })
+
   it('maps legacy bootstrap icon classes to a visible icon', () => {
     const blocks: Block[] = [
       createBlock('icon', { props: { iconClass: 'bi-star' }, classes: ['bi', 'bi-star'] })

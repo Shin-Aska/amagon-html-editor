@@ -691,7 +691,12 @@ function resolveFrameworkClasses(block: Block, framework: FrameworkChoice, optio
 
 // ─── Content generation for specific block types ─────────────────────────────
 
-function getBlockContent(block: Block, isExportMode?: boolean, framework: FrameworkChoice = 'bootstrap-5'): string {
+function getBlockContent(
+  block: Block,
+  isExportMode?: boolean,
+  framework: FrameworkChoice = 'bootstrap-5',
+  includeEditorMetadata: boolean = false
+): string {
   const { type, props } = block
 
   switch (type) {
@@ -859,7 +864,7 @@ function getBlockContent(block: Block, isExportMode?: boolean, framework: Framew
 
         const contentItems = tabs.map((tab, i) => `
         <div class="${i === 0 ? '' : 'hidden ' }rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
-          ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode }) : escapeAttrValue(tab.content)}
+          ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode, includeEditorMetadata }) : escapeAttrValue(tab.content)}
         </div>`).join('\n')
 
         return `
@@ -893,7 +898,7 @@ function getBlockContent(block: Block, isExportMode?: boolean, framework: Framew
 
         return `
         <div class="tab-pane fade ${activeClass}" id="${contentId}" role="tabpanel" aria-labelledby="${tabId}">
-          ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode }) : escapeAttrValue(tab.content)}
+          ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, { framework, includeDataAttributes: !isExportMode, includeEditorMetadata }) : escapeAttrValue(tab.content)}
         </div>`
       }).join('\n')
 
@@ -965,6 +970,7 @@ export interface BlockToHtmlOptions {
   indent?: number          // Starting indent level (default 0)
   indentSize?: number      // Spaces per indent (default 2)
   includeDataAttributes?: boolean  // Include data-block-id for editor use
+  includeEditorMetadata?: boolean
   pages?: Page[]           // Page list for components that use pages as datasource (e.g. navbar)
   folders?: PageFolder[]   // Folder list for effective tag resolution
   framework?: FrameworkChoice
@@ -976,12 +982,13 @@ export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): 
     indent = 0,
     indentSize = 2,
     includeDataAttributes = false,
+    includeEditorMetadata = false,
     pages,
     folders,
     framework = 'bootstrap-5',
     fullWidthFormControls = true
   } = options
-  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, pages, folders, framework, fullWidthFormControls)).join('\n')
+  return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n')
 }
 
 function renderBlock(
@@ -989,6 +996,7 @@ function renderBlock(
   indent: number,
   indentSize: number,
   includeDataAttributes: boolean,
+  includeEditorMetadata: boolean,
   pages?: Page[],
   folders?: PageFolder[],
   framework: FrameworkChoice = 'bootstrap-5',
@@ -1010,7 +1018,7 @@ function renderBlock(
     const themeBorder = 'var(--theme-border)'
     const isExportMode = !includeDataAttributes
     
-    const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders, framework, fullWidthFormControls)).join('\n')
+    const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n')
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="modal"` : ''
 
     if (!isExportMode) {
@@ -1648,7 +1656,9 @@ ${pad}</div>`
     const attrs = [
       classes.length > 0 ? `class="${classes.join(' ')}"` : '',
       styleStr ? `style="${styleStr}"` : '',
-      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : ''
+      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : '',
+      includeEditorMetadata ? 'data-amagon-component="icon"' : '',
+      includeEditorMetadata ? `data-amagon-icon-class="${escapeAttrValue(rawIconValue)}"` : ''
     ].filter(Boolean).join(' ')
 
     if (resolvedLucideName) {
@@ -1674,7 +1684,9 @@ ${pad}</div>`
       classes.length > 0 ? `class="${classes.join(' ')}"` : '',
       `style="${stylesToString(placeholderStyles)}"`,
       legacyBootstrapClass ? `title="${escapeAttrValue(legacyBootstrapClass)}"` : 'title="No icon selected"',
-      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : ''
+      includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : '',
+      includeEditorMetadata ? 'data-amagon-component="icon"' : '',
+      includeEditorMetadata ? `data-amagon-icon-class="${escapeAttrValue(rawIconValue)}"` : ''
     ].filter(Boolean).join(' ')
 
     return `${pad}<span ${placeholderAttrs}>☆</span>`
@@ -1683,7 +1695,7 @@ ${pad}</div>`
   const tag = resolveTag(block)
   const isVoid = VOID_ELEMENTS.has(tag)
   const isExportMode = !includeDataAttributes
-  const textContent = getBlockContent(block, isExportMode, framework)
+  const textContent = getBlockContent(block, isExportMode, framework, includeEditorMetadata)
   const hasChildren = block.children.length > 0
   const hasContent = textContent.length > 0
 
@@ -1770,7 +1782,7 @@ ${pad}</div>`
     fullAttrString.trim().length === 0
   ) {
     return block.children
-      .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, pages, folders, framework, fullWidthFormControls))
+      .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls))
       .join('\n')
   }
 
@@ -1792,7 +1804,7 @@ ${pad}</div>`
 
   if (hasChildren) {
     for (const child of block.children) {
-      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, pages, folders, framework, fullWidthFormControls))
+      lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls))
     }
   } else if (tag === 'form' && includeDataAttributes) {
     // Empty form indicator for editor mode
