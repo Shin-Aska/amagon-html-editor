@@ -61,7 +61,8 @@ function CodeEditor(): JSX.Element {
       customCss, 
       title: currentPage?.title || 'index', 
       pageTitle: currentPage?.pageTitle,
-      fullWidthFormControls: currentPage?.fullWidthFormControls
+      fullWidthFormControls: currentPage?.fullWidthFormControls,
+      includeEditorMetadata: true
     })
   }, [blocks, customCss, framework, currentPage])
 

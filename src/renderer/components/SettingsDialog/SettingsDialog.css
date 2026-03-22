@@ -198,6 +198,19 @@ body.dark .settings-dialog-tab.active {
   flex-shrink: 0;
 }
 
+.settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  accent-color: var(--color-accent);
+}
+
 /* Forms (API Keys Tab) */
 .settings-card {
   background: var(--color-bg-secondary);

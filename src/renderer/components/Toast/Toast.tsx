@@ -8,17 +8,32 @@ export default function Toast(): JSX.Element | null {
 
   useEffect(() => {
     if (!toast) return
+    if (toast.autoCloseMs === null || (toast.actions && toast.actions.length > 0)) return
     const t = setTimeout(() => {
       clearToast()
-    }, 2200)
+    }, toast.autoCloseMs ?? 2200)
     return () => clearTimeout(t)
   }, [toast, clearToast])
 
   if (!toast) return null
 
   return (
-    <div className={`toast toast-${toast.type}`} role="status" aria-live="polite">
-      {toast.message}
+    <div className={`toast toast-${toast.type} toast-${toast.position ?? 'bottom-right'}`} role="status" aria-live="polite">
+      <div className="toast-message">{toast.message}</div>
+      {toast.actions && toast.actions.length > 0 && (
+        <div className="toast-actions">
+          {toast.actions.map((action) => (
+            <button
+              key={action.label}
+              className="toast-action-btn"
+              onClick={action.onClick}
+              type="button"
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -22,6 +22,8 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
   const setTheme = useAppSettingsStore((s) => s.setTheme)
   const defaultLayout = useAppSettingsStore((s) => s.defaultLayout)
   const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout)
+  const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning)
+  const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning)
 
   // -- AI Settings --
   const aiConfig = useAiStore((s) => s.config)
@@ -173,6 +175,23 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
                         <option value="zen">Zen Mode</option>
                       </select>
                     </div>
+                  </div>
+                </div>
+
+                <div className="settings-row">
+                  <div className="settings-label">
+                    <span className="settings-label-title">Tab Child Selection Warning</span>
+                    <span className="settings-label-desc">Show an informational warning when selecting content rendered inside a tab component</span>
+                  </div>
+                  <div className="settings-control">
+                    <label className="settings-toggle">
+                      <input
+                        type="checkbox"
+                        checked={showTabChildSelectionWarning}
+                        onChange={(e) => setShowTabChildSelectionWarning(e.target.checked)}
+                      />
+                      <span>{showTabChildSelectionWarning ? 'On' : 'Off'}</span>
+                    </label>
                   </div>
                 </div>
               </div>

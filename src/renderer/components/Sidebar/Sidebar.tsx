@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronDown, ChevronRight, FilePlus, FileText, FolderPlus, Folder, FolderOpen } from 'lucide-react'
+import { ChevronDown, ChevronRight, FilePlus, FileText, FolderPlus, Folder, FolderOpen, Search, X } from 'lucide-react'
 import './Sidebar.css'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -8,7 +8,7 @@ import { componentRegistry, type BlockDefinition } from '../../registry/Componen
 import BlockIcon from '../BlockIcon/BlockIcon'
 import BlockTree from '../BlockTree/BlockTree'
 import AiAssistant from '../AiAssistant/AiAssistant'
-import { useRef, useState, type MouseEvent } from 'react'
+import { useMemo, useRef, useState, type MouseEvent } from 'react'
 import ContextMenu from '../ContextMenu/ContextMenu'
 import { useToastStore } from '../../store/toastStore'
 import { getApi } from '../../utils/api'
@@ -93,6 +93,7 @@ function Sidebar(): JSX.Element {
   const showToast = useToastStore((s) => s.showToast)
   const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets')
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null)
+  const [widgetSearch, setWidgetSearch] = useState('')
 
   // Page management
   const pages = useProjectStore((s) => s.pages)
@@ -162,6 +163,29 @@ function Sidebar(): JSX.Element {
   const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)))
   const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c))
   const allCategories = [...allRegistryCategories, ...customOnlyCategories]
+
+  // Filter widgets by search query
+  const filteredWidgetsByCategory = useMemo(() => {
+    const q = widgetSearch.trim().toLowerCase()
+    const result: Record<string, BlockDefinition[]> = {}
+    for (const category of allCategories) {
+      const widgets = [
+        ...componentRegistry.getByCategory(category),
+        ...userBlockDefinitions.filter((w) => w.category === category)
+      ]
+      if (!q) {
+        result[category] = widgets
+      } else {
+        result[category] = widgets.filter(
+          (w) =>
+            w.label.toLowerCase().includes(q) ||
+            w.type.toLowerCase().includes(q) ||
+            category.toLowerCase().includes(q)
+        )
+      }
+    }
+    return result
+  }, [widgetSearch, allCategories, userBlockDefinitions])
 
   const handleWidgetContextMenu = (e: MouseEvent, widget: BlockDefinition) => {
     if (!widget.type.startsWith('user:')) return
@@ -653,17 +677,32 @@ function Sidebar(): JSX.Element {
         )}
         {activeTab === 'widgets' && (
           <>
+            <div className="widget-search">
+              <Search size={14} className="widget-search-icon" />
+              <input
+                type="text"
+                className="widget-search-input"
+                placeholder="Search widgets..."
+                value={widgetSearch}
+                onChange={(e) => setWidgetSearch(e.target.value)}
+              />
+              {widgetSearch && (
+                <button className="widget-search-clear" onClick={() => setWidgetSearch('')}>
+                  <X size={12} />
+                </button>
+              )}
+            </div>
             {allCategories.map((category) => (
               <WidgetCategory
                 key={category}
                 title={category}
-                widgets={[
-                  ...componentRegistry.getByCategory(category),
-                  ...userBlockDefinitions.filter((w) => w.category === category)
-                ]}
+                widgets={filteredWidgetsByCategory[category] || []}
                 onWidgetContextMenu={handleWidgetContextMenu}
               />
             ))}
+            {widgetSearch && allCategories.every((c) => (filteredWidgetsByCategory[c] || []).length === 0) && (
+              <div className="widget-search-empty">No widgets match "{widgetSearch}"</div>
+            )}
           </>
         )}
         {activeTab === 'layers' && <BlockTree />}
