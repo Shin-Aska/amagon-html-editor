@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { getApi } from '../../utils/api'
 import type { Asset } from './AssetManager'
 import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
+import './AssetManager.css'
 import './AssetPicker.css'
 
 export type AssetPickerMode = 'single-image' | 'single-video' | 'multi-image'
@@ -64,15 +65,30 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
     }
   }
 
-  const filteredAssets = assets.filter((asset) => {
-    if (mode === 'single-image' || mode === 'multi-image') {
-      return asset.type === 'image' || !asset.type
-    }
-    if (mode === 'single-video') {
-      return asset.type === 'video'
-    }
-    return true
-  })
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const filteredAssets = useMemo(() => {
+    return assets.filter((asset) => {
+      if (mode === 'single-image' || mode === 'multi-image') {
+        return asset.type === 'image' || !asset.type
+      }
+      if (mode === 'single-video') {
+        return asset.type === 'video'
+      }
+      return true
+    })
+  }, [assets, mode])
+
+  const PROJECT_ASSETS_PER_PAGE = 8
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PROJECT_ASSETS_PER_PAGE))
+  const pageStartIndex = (currentPage - 1) * PROJECT_ASSETS_PER_PAGE
+  const paginatedAssets = filteredAssets.slice(pageStartIndex, pageStartIndex + PROJECT_ASSETS_PER_PAGE)
+  const visibleStart = filteredAssets.length === 0 ? 0 : pageStartIndex + 1
+  const visibleEnd = Math.min(pageStartIndex + PROJECT_ASSETS_PER_PAGE, filteredAssets.length)
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   const handleAssetClick = (asset: Asset) => {
     if (mode === 'single-image' || mode === 'single-video') {
@@ -150,7 +166,7 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
                       <p>No matching assets found.</p>
                     </div>
                   ) : (
-                    filteredAssets.map(asset => {
+                    paginatedAssets.map(asset => {
                       const isSelected = selectedUrls.includes(asset.path)
                       return (
                         <div
@@ -185,6 +201,32 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
                     })
                   )}
                 </div>
+                {filteredAssets.length > 0 && (
+                  <div className="am-pagination">
+                    <span className="am-pagination-summary">
+                      Showing {visibleStart}-{visibleEnd} of {filteredAssets.length}
+                    </span>
+                    <div className="am-pagination-controls">
+                      <button
+                        className="am-page-btn"
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </button>
+                      <span className="am-page-status">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <button
+                        className="am-page-btn"
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {isMulti && (

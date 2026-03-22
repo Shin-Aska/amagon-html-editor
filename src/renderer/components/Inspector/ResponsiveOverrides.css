@@ -1,62 +1,71 @@
 .responsive-overrides-editor {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.breakpoint-tabs {
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--color-border);
-  padding-bottom: 4px;
-}
-
-.breakpoint-tab {
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.2s;
-  opacity: 0.5;
-}
-
-.breakpoint-tab:hover {
-  background-color: var(--color-bg-surface);
-  opacity: 0.8;
-}
-
-.breakpoint-tab.active {
-  color: var(--color-accent);
-  opacity: 1;
-  background-color: rgba(23, 106, 255, 0.1);
-}
-
-.breakpoint-content {
+.responsive-visibility-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
-.responsive-info {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  line-height: 1.4;
-  background-color: var(--color-bg-surface);
-  padding: 8px;
-  border-radius: 4px;
+.responsive-visibility-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
   border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
 }
 
-.responsive-info p {
-  margin: 0;
+.responsive-visibility-btn:hover {
+  background: var(--color-bg-primary);
+  border-color: var(--color-text-secondary);
 }
 
-.responsive-info code {
-  background-color: var(--color-bg-primary);
-  padding: 2px 4px;
-  border-radius: 2px;
-  font-family: monospace;
+.responsive-visibility-btn.visible {
+  border-color: var(--color-border);
+}
+
+.responsive-visibility-btn.hidden-state {
+  border-color: var(--color-border);
+  opacity: 0.7;
+}
+
+.rv-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.rv-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.rv-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.rv-status.status-visible {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+}
+
+.rv-status.status-hidden {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
 }
