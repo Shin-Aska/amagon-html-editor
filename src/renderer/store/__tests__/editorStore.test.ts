@@ -184,6 +184,32 @@ describe('editorStore - block tree manipulation', () => {
       
       expect(get().blocks[0].children[0].props.text).toBe('Updated')
     })
+
+    it('replaces button variant classes when the variant prop changes', () => {
+      const block = createBlock('button', {
+        props: { text: 'CTA', variant: 'btn-primary' },
+        classes: ['btn', 'btn-primary', 'mt-3']
+      })
+      store.addBlock(block)
+
+      store.updateBlock(block.id, { props: { variant: 'btn-secondary' } })
+
+      expect(get().blocks[0].props.variant).toBe('btn-secondary')
+      expect(get().blocks[0].classes).toEqual(['btn', 'mt-3', 'btn-secondary'])
+    })
+
+    it('removes button size classes when size is cleared', () => {
+      const block = createBlock('button', {
+        props: { text: 'CTA', size: 'btn-lg' },
+        classes: ['btn', 'btn-primary', 'btn-lg']
+      })
+      store.addBlock(block)
+
+      store.updateBlock(block.id, { props: { size: '' } })
+
+      expect(get().blocks[0].props.size).toBe('')
+      expect(get().blocks[0].classes).toEqual(['btn', 'btn-primary'])
+    })
   })
 
   describe('getBlockById', () => {

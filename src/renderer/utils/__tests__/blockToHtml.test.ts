@@ -13,7 +13,7 @@ describe('blockToHtml', () => {
       createBlock('heading', { props: { text: 'Hello World', level: 1 }, classes: [] })
     ]
     const html = blockToHtml(blocks)
-    expect(html).toContain('<h1>')
+    expect(html).toContain('<h1')
     expect(html).toContain('Hello World')
     expect(html).toContain('</h1>')
   })
@@ -23,7 +23,7 @@ describe('blockToHtml', () => {
       createBlock('heading', { props: { text: 'Title', level: 3 } })
     ]
     const html = blockToHtml(blocks)
-    expect(html).toContain('<h3>')
+    expect(html).toContain('<h3')
     expect(html).toContain('</h3>')
   })
 
@@ -32,8 +32,21 @@ describe('blockToHtml', () => {
       createBlock('paragraph', { props: { text: 'Some text here' } })
     ]
     const html = blockToHtml(blocks)
-    expect(html).toContain('<p>')
+    expect(html).toContain('<p')
     expect(html).toContain('Some text here')
+  })
+
+  it('renders a fallback HTML id for generic blocks', () => {
+    const block = createBlock('paragraph', { props: { text: 'Some text here' } })
+    const html = blockToHtml([block])
+    expect(html).toContain(`id="${block.id}"`)
+  })
+
+  it('prefers a custom HTML id for checkbox blocks', () => {
+    const block = createBlock('checkbox', { props: { id: 'newsletter-optin', label: 'Join newsletter' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('id="newsletter-optin"')
+    expect(html).toContain('for="newsletter-optin"')
   })
 
   it('renders classes', () => {
@@ -96,7 +109,7 @@ describe('blockToHtml', () => {
       createBlock('list', { props: { items: ['Alpha', 'Beta', 'Gamma'] } })
     ]
     const html = blockToHtml(blocks)
-    expect(html).toContain('<ul>')
+    expect(html).toContain('<ul')
     expect(html).toContain('<li>Alpha</li>')
     expect(html).toContain('<li>Beta</li>')
     expect(html).toContain('<li>Gamma</li>')
@@ -107,7 +120,9 @@ describe('blockToHtml', () => {
       createBlock('button', { props: { text: 'Click Me' }, classes: ['btn', 'btn-primary'] })
     ]
     const html = blockToHtml(blocks)
-    expect(html).toContain('<button class="btn btn-primary">Click Me</button>')
+    expect(html).toContain('<button')
+    expect(html).toContain('class="btn btn-primary"')
+    expect(html).toContain('>Click Me</button>')
   })
 
   it('renders prop-driven Tailwind classes without leaking inspector props as attributes', () => {
@@ -211,9 +226,11 @@ describe('blockToHtml', () => {
     ]
 
     const html = blockToHtml(blocks, { framework: 'tailwind' })
-    expect(html).toContain('<section class="py-12 flex items-center">')
-    expect(html).toContain('<div class="flex w-full justify-center text-center flex-wrap -mx-2">')
-    expect(html).not.toContain('<section class="py-12 flex items-center">\n  <div>\n')
+    expect(html).toContain('<section')
+    expect(html).toContain('class="py-12 flex items-center"')
+    expect(html).toContain('<div')
+    expect(html).toContain('class="flex w-full justify-center text-center flex-wrap -mx-2"')
+    expect(html).not.toContain('class="py-12 flex items-center">\n  <div>\n')
   })
 
   it('renders a link with href', () => {
@@ -281,7 +298,7 @@ describe('blockToHtml', () => {
       createBlock('container', { tag: 'main' })
     ]
     const html = blockToHtml(blocks)
-    expect(html).toContain('<main>')
+    expect(html).toContain('<main')
     expect(html).toContain('</main>')
   })
 
@@ -322,7 +339,8 @@ describe('pageToHtml', () => {
     expect(html).toContain('<!DOCTYPE html>')
     expect(html).toContain('<html lang="en">')
     expect(html).toContain('<title>Test Page</title>')
-    expect(html).toContain('<h1>Hello</h1>')
+    expect(html).toContain('<h1')
+    expect(html).toContain('>Hello</h1>')
     expect(html).toContain('</body>')
     expect(html).toContain('</html>')
   })

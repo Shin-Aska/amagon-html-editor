@@ -85,6 +85,22 @@
   color: var(--color-text-primary);
 }
 
+.inspector-field-note {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.inspector-field-note code {
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.inspector-id-input {
+  font-family: var(--font-mono);
+}
+
 .inspector-help-tooltip {
   margin-left: 6px;
   font-size: 10px;

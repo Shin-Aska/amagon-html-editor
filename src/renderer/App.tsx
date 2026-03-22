@@ -24,7 +24,7 @@ import { useToastStore } from './store/toastStore'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { Block } from './store/types'
 import { createBlock } from './store/types'
-import { componentRegistry } from './registry/ComponentRegistry'
+import { buildDefaultBlockProps, componentRegistry } from './registry/ComponentRegistry'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
 import { getApi } from './utils/api'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
@@ -423,7 +423,7 @@ function App(): JSX.Element {
     if (!def) return null
 
     const block = createBlock(def.type, {
-      props: def.defaultProps ? { ...def.defaultProps } : {},
+      props: buildDefaultBlockProps(def),
       classes: def.defaultClasses ? [...def.defaultClasses] : [],
       styles: def.defaultStyles ? { ...def.defaultStyles } : {}
     })

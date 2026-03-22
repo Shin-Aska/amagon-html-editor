@@ -45,6 +45,22 @@ export interface BlockDefinition {
   // template? - Rendering is currently handled by blockToHtml, but we might move it here later
 }
 
+export function buildDefaultBlockProps(definition: BlockDefinition): Record<string, unknown> {
+  const props: Record<string, unknown> = {}
+
+  Object.entries(definition.propsSchema).forEach(([key, schema]) => {
+    if (schema.default !== undefined) {
+      props[key] = schema.default
+    }
+  })
+
+  if (definition.defaultProps) {
+    Object.assign(props, definition.defaultProps)
+  }
+
+  return props
+}
+
 class ComponentRegistry {
   private definitions: Map<string, BlockDefinition> = new Map()
   private categories: Set<string> = new Set()

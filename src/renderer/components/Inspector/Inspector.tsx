@@ -71,6 +71,15 @@ function Inspector(): JSX.Element {
     updateBlock(block.id, { classes })
   }
 
+  const handleElementIdChange = (value: string) => {
+    updateBlock(block.id, {
+      props: {
+        ...block.props,
+        id: value.trim() || undefined
+      }
+    })
+  }
+
   // Render different input types based on the schema
   const renderField = (key: string, schema: PropSchema, value: any) => {
     const val = value !== undefined ? value : schema.default
@@ -413,6 +422,27 @@ function Inspector(): JSX.Element {
         <div className="inspector-group">
           <h4 className="inspector-group-title">Responsive</h4>
           <ResponsiveOverrides classes={block.classes} onChange={handleClassesChange} />
+        </div>
+
+        <div className="inspector-group">
+          <h4 className="inspector-group-title">Element ID</h4>
+          <div className="inspector-field">
+            <div className="inspector-field-header">
+              <label className="inspector-label">ID</label>
+            </div>
+            <div className="inspector-control">
+              <input
+                type="text"
+                className="inspector-input inspector-id-input"
+                value={typeof block.props.id === 'string' ? block.props.id : ''}
+                onChange={(e) => handleElementIdChange(e.target.value)}
+                placeholder={block.id}
+              />
+            </div>
+            <div className="inspector-field-note">
+              Defaults to generated ID: <code>{block.id}</code>
+            </div>
+          </div>
         </div>
 
         <div className="inspector-group">

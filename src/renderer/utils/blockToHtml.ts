@@ -58,6 +58,7 @@ const VOID_ELEMENTS = new Set([
 function propsToAttributes(tag: string, type: string, props: Record<string, unknown>): string {
   const attrs: string[] = []
   const nonAttributeProps = new Set([
+    'id',
     'text',
     'items',
     'slides',
@@ -1108,7 +1109,7 @@ ${pad}</div>`
     const label = escapeAttrValue(String(block.props.label ?? ''))
     const name = block.props.name ? `name="${escapeAttrValue(String(block.props.name))}"` : ''
     const checked = block.props.checked ? 'checked' : ''
-    const id = block.id
+    const id = sanitizeElementId(String(block.props.id || block.id), block.id)
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
     const classes = resolveFrameworkClasses(block, framework, { fullWidthFormControls }).join(' ')
 
@@ -1557,7 +1558,7 @@ ${pad}  <\/script>`
   // Special handling for Input/Textarea/Select (Form controls with labels)
   if (['input', 'textarea', 'select'].includes(block.type)) {
     const label = block.props.label ? escapeAttrValue(String(block.props.label)) : null
-    const id = block.id
+    const id = sanitizeElementId(String(block.props.id || block.id), block.id)
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}"` : ''
     // Filter out label from attributes as we render it separately
     // The inner input rendering needs to NOT include data-block-id if we put it on the wrapper
@@ -1753,6 +1754,8 @@ ${pad}</div>`
       parts.push('data-editor-layout-neutral="true"')
     }
   }
+
+  parts.push(`id="${sanitizeElementId(String(block.props.id || block.id), block.id)}"`)
 
   if (finalClasses.length > 0) {
     parts.push(`class="${finalClasses.join(' ')}"`)

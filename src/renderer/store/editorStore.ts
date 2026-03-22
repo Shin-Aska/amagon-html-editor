@@ -77,6 +77,46 @@ function insertBlockInTree(
   })
 }
 
+const BUTTON_VARIANT_CLASSES = new Set([
+  'btn-primary',
+  'btn-secondary',
+  'btn-success',
+  'btn-danger',
+  'btn-warning',
+  'btn-info',
+  'btn-light',
+  'btn-dark',
+  'btn-link'
+])
+
+const BUTTON_SIZE_CLASSES = new Set(['btn-sm', 'btn-lg'])
+
+function syncButtonClasses(
+  block: Block,
+  propPatch: Record<string, unknown> | undefined,
+  nextProps: Record<string, unknown>,
+  nextClasses: string[]
+): string[] {
+  if (block.type !== 'button') return nextClasses
+
+  const updatesVariant = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'variant')
+  const updatesSize = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'size')
+
+  const classes = nextClasses.filter((cls) => {
+    if (updatesVariant && BUTTON_VARIANT_CLASSES.has(cls)) return false
+    if (updatesSize && BUTTON_SIZE_CLASSES.has(cls)) return false
+    return true
+  })
+
+  const variant = updatesVariant && typeof nextProps.variant === 'string' ? nextProps.variant.trim() : ''
+  const size = updatesSize && typeof nextProps.size === 'string' ? nextProps.size.trim() : ''
+
+  if (variant) classes.push(variant)
+  if (size) classes.push(size)
+
+  return classes
+}
+
 function updateBlockInTree(
   blocks: Block[],
   id: string,
@@ -99,11 +139,19 @@ function updateBlockInTree(
         }
       }
 
+      const newClasses = syncButtonClasses(
+        block,
+        patch.props,
+        newProps as Record<string, unknown>,
+        patch.classes ? [...patch.classes] : [...block.classes]
+      )
+
       return {
         ...block,
         ...patch,
         props: newProps as Record<string, unknown>,
-        styles: newStyles as Record<string, string>
+        styles: newStyles as Record<string, string>,
+        classes: newClasses
       }
     }
     return { ...block, children: updateBlockInTree(block.children, id, patch) }

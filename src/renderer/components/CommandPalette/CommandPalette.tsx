@@ -27,7 +27,8 @@ import {
 } from 'lucide-react'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
-import { componentRegistry } from '../../registry/ComponentRegistry'
+import { buildDefaultBlockProps, componentRegistry } from '../../registry/ComponentRegistry'
+import { createBlock } from '../../store/types'
 import './CommandPalette.css'
 
 interface CommandPaletteProps {
@@ -292,11 +293,8 @@ export default function CommandPalette({
         icon: category.icon,
         keywords: [...category.keywords, def.label.toLowerCase(), def.type, 'insert', 'add', 'block'],
         action: () => {
-          // Create block from widget - this is a simplified version
-          // In practice, we'd need the full createBlockFromWidget logic
-          const { createBlock } = require('../../store/types')
           const newBlock = createBlock(def.type, {
-            props: def.defaultProps ? { ...def.defaultProps } : {},
+            props: buildDefaultBlockProps(def),
             classes: def.defaultClasses ? [...def.defaultClasses] : [],
             styles: def.defaultStyles ? { ...def.defaultStyles } : {}
           })

@@ -266,6 +266,7 @@ function injectLayoutOutlinesCss(): void {
     }
 
     body.show-layout-outlines :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
@@ -287,7 +288,15 @@ function injectLayoutOutlinesCss(): void {
       min-height: 48px !important;
     }
 
+    body.show-layout-outlines [data-block-type="form"] {
+      min-height: 96px !important;
+      padding: 28px 16px 16px !important;
+      border-radius: 0.5rem !important;
+      background: rgba(137, 180, 250, 0.04) !important;
+    }
+
     body.show-layout-outlines :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
@@ -298,6 +307,7 @@ function injectLayoutOutlinesCss(): void {
       [data-block-type="aside"],
       [data-block-type="nav"]
     ) :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
@@ -313,6 +323,7 @@ function injectLayoutOutlinesCss(): void {
     }
 
     body.show-layout-outlines :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
@@ -323,6 +334,7 @@ function injectLayoutOutlinesCss(): void {
       [data-block-type="aside"],
       [data-block-type="nav"]
     ) :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
@@ -333,6 +345,7 @@ function injectLayoutOutlinesCss(): void {
       [data-block-type="aside"],
       [data-block-type="nav"]
     ) :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
@@ -348,6 +361,7 @@ function injectLayoutOutlinesCss(): void {
     }
 
     body.show-layout-outlines :is(
+      [data-block-type="form"],
       [data-block-type="container"],
       [data-block-type="row"],
       [data-block-type="column"],
