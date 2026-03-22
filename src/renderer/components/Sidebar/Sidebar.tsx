@@ -695,11 +695,11 @@ function Sidebar(): JSX.Element {
                       if (!projectState.filePath) return
 
                       const updatedPages = projectState.pages.map((p) =>
-                        pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+                        pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
                       )
 
                       if (pageId) {
-                        projectState.updatePage(pageId, { blocks: editorState.blocks })
+                        projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
                       }
 
                       const content = JSON.stringify(

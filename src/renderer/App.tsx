@@ -161,7 +161,7 @@ function App(): JSX.Element {
     const pageId = projectState.currentPageId
 
     const pages = projectState.pages.map((p) =>
-      pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+      pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
     )
 
     const content = JSON.stringify(
@@ -177,7 +177,7 @@ function App(): JSX.Element {
     )
 
     if (pageId) {
-      projectState.updatePage(pageId, { blocks: editorState.blocks })
+      projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
     }
     const filePath = projectState.filePath
 
@@ -206,7 +206,7 @@ function App(): JSX.Element {
     const pageId = projectState.currentPageId
 
     const pages = projectState.pages.map((p) =>
-      pageId && p.id === pageId ? { ...p, blocks: editorState.blocks } : p
+      pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
     )
 
     const content = JSON.stringify(
@@ -222,7 +222,7 @@ function App(): JSX.Element {
     )
 
     if (pageId) {
-      projectState.updatePage(pageId, { blocks: editorState.blocks })
+      projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
     }
 
     try {
