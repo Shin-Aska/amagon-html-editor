@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { KeyRound, X, Trash2, ShieldCheck, ShieldAlert, Sparkles, Image as ImageIcon, Info, CheckCircle, AlertTriangle } from 'lucide-react'
 import { getApi } from '../../utils/api'
+import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
 import './CredentialManager.css'
 
@@ -76,6 +77,7 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
       const api = getApi()
       const result = await api.app.deleteCredential(id)
       if (result.success) {
+        dispatchAiAvailabilityChanged()
         await fetchCredentials()
       }
     } catch {
