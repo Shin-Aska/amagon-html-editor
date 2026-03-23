@@ -474,9 +474,16 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   }, [setProjectTheme, showToast, addCustomPreset, getUniquePresetName, editingMode])
 
   const handleApplyPreset = useCallback((preset: ProjectTheme) => {
-    setProjectTheme({ ...preset }, editingMode)
+    const mergedPreset: ProjectTheme = {
+      ...preset,
+      customCss: selectedTheme.customCss,
+      customCssFiles: Array.isArray(selectedTheme.customCssFiles)
+        ? selectedTheme.customCssFiles.map((file) => ({ ...file }))
+        : []
+    }
+    setProjectTheme(mergedPreset, editingMode)
     showToast(`Applied "${preset.name}" to ${editingMode} page`, 'success')
-  }, [editingMode, setProjectTheme, showToast])
+  }, [editingMode, selectedTheme, setProjectTheme, showToast])
 
   const handleCreatePreset = useCallback((name: string, colors: ThemeColors) => {
     const finalName = getUniquePresetName(name)
