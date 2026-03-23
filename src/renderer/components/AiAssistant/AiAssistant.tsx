@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Settings, Send, Trash2, Sparkles, ArrowDownToLine, Copy, X, Eye, Loader2, ShieldAlert } from 'lucide-react'
-import { useAiStore, type AiProvider } from '../../store/aiStore'
-import { getApi } from '../../utils/api'
+import { Send, Trash2, Sparkles, ArrowDownToLine, Copy, Eye } from 'lucide-react'
+import { useAiStore } from '../../store/aiStore'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
 import { createBlock, type Block } from '../../store/types'
 import { themeToCSS } from '../../store/types'
 import { blockToHtml } from '../../utils/blockToHtml'
+import { openGlobalSettings } from '../../utils/settingsNavigation'
 import './AiAssistant.css'
 
 // ---------------------------------------------------------------------------
@@ -145,257 +145,6 @@ ${themeCss}
 }
 
 // ---------------------------------------------------------------------------
-// Settings Modal
-// ---------------------------------------------------------------------------
-
-function AiSettingsModal(): JSX.Element {
-    const { config, saveConfig, setShowSettings, fetchModelsForProvider } = useAiStore()
-    const [localConfig, setLocalConfig] = useState(() => ({
-        ...config,
-        apiKey: '' // Never pre-fill with the masked key
-    }))
-    const hasExistingKey = !!(config.apiKey && config.apiKey.startsWith('\u2022\u2022\u2022\u2022'))
-    const [isLoadingModels, setIsLoadingModels] = useState(false)
-    const [fetchedModels, setFetchedModels] = useState<string[]>([])
-    const [modelsFetched, setModelsFetched] = useState(false)
-    const [encryptionSecure, setEncryptionSecure] = useState(true)
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    // Check whether OS-level keyring encryption is available
-    useEffect(() => {
-        getApi().app.isEncryptionSecure().then((res: any) => {
-            if (res && typeof res.secure === 'boolean') setEncryptionSecure(res.secure)
-        }).catch(() => { /* ignore */ })
-    }, [])
-
-    const hasStoredKeyForProvider = hasExistingKey && localConfig.provider === config.provider
-    const hasUsableKey = localConfig.provider === 'ollama' || !!localConfig.apiKey || hasStoredKeyForProvider
-
-    // Fetch models when API key changes (debounced)
-    const triggerModelFetch = useCallback((provider: AiProvider, apiKey: string, ollamaUrl?: string) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-
-        // For non-ollama providers, require an API key
-        if (provider !== 'ollama' && !apiKey) {
-            setFetchedModels([])
-            setModelsFetched(false)
-            setIsLoadingModels(false)
-            setLocalConfig((prev) => ({ ...prev, model: '' }))
-            return
-        }
-
-        setIsLoadingModels(true)
-        debounceRef.current = setTimeout(async () => {
-            try {
-                const models = await fetchModelsForProvider(provider, apiKey, ollamaUrl)
-                setFetchedModels(models)
-                setModelsFetched(true)
-                // Auto-select first model if current model is empty or not in list
-                if (models.length > 0) {
-                    setLocalConfig((prev) => {
-                        if (!prev.model || !models.includes(prev.model)) {
-                            return { ...prev, model: models[0] }
-                        }
-                        return prev
-                    })
-                }
-            } finally {
-                setIsLoadingModels(false)
-            }
-        }, 500)
-    }, [fetchModelsForProvider])
-
-    // Fetch models on mount if we already have a key configured
-    useEffect(() => {
-        if (hasStoredKeyForProvider || localConfig.provider === 'ollama') {
-            triggerModelFetch(localConfig.provider, hasStoredKeyForProvider ? config.apiKey : '', localConfig.ollamaUrl)
-        }
-        return () => {
-            if (debounceRef.current) clearTimeout(debounceRef.current)
-        }
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-    const models = modelsFetched ? fetchedModels : []
-
-    const handleProviderChange = (provider: AiProvider) => {
-        const useStored = hasExistingKey && provider === config.provider
-        setLocalConfig((prev) => ({ ...prev, provider, model: '', apiKey: '' }))
-        setFetchedModels([])
-        setModelsFetched(false)
-        triggerModelFetch(provider, useStored ? config.apiKey : '', localConfig.ollamaUrl)
-    }
-
-    const handleApiKeyChange = (apiKey: string) => {
-        setLocalConfig((prev) => ({ ...prev, apiKey, model: apiKey ? prev.model : '' }))
-        triggerModelFetch(localConfig.provider, apiKey, localConfig.ollamaUrl)
-    }
-
-    const handleOllamaUrlChange = (ollamaUrl: string) => {
-        setLocalConfig((prev) => ({ ...prev, ollamaUrl }))
-        triggerModelFetch(localConfig.provider, '', ollamaUrl)
-    }
-
-    const handleSave = () => {
-        const configToSave = { ...localConfig }
-        if (!configToSave.apiKey && hasExistingKey) {
-            // User didn't enter a new key — send the masked value so the
-            // main process knows to keep the existing encrypted key.
-            configToSave.apiKey = config.apiKey
-        }
-        saveConfig(configToSave)
-        setShowSettings(false)
-    }
-
-    return (
-        <div className="ai-settings-overlay" onClick={() => setShowSettings(false)}>
-            <div className="ai-settings-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="ai-settings-header">
-                    <h3>AI Settings</h3>
-                    <button className="ai-settings-close" onClick={() => setShowSettings(false)}>
-                        <X size={16} />
-                    </button>
-                </div>
-
-                <div className="ai-settings-body">
-                    <div className="ai-settings-field">
-                        <label>Provider</label>
-                        <select
-                            value={localConfig.provider}
-                            onChange={(e) => handleProviderChange(e.target.value as AiProvider)}
-                        >
-                            <option value="openai">OpenAI</option>
-                            <option value="anthropic">Anthropic (Claude)</option>
-                            <option value="google">Google (Gemini)</option>
-                            <option value="ollama">Ollama (Local)</option>
-                        </select>
-                    </div>
-
-                    {!encryptionSecure && localConfig.provider !== 'ollama' && (
-                        <div className="ai-settings-warning">
-                            <ShieldAlert size={14} />
-                            <span>
-                                OS keyring is unavailable. Your API key will be encrypted with a machine-derived key instead.
-                                For stronger protection, install a keyring service (e.g. <code>gnome-keyring</code> or <code>seahorse</code>).
-                            </span>
-                        </div>
-                    )}
-
-                    {localConfig.provider !== 'ollama' ? (
-                        <div className="ai-settings-field">
-                            <label>API Key</label>
-                            <input
-                                type="password"
-                                value={localConfig.apiKey}
-                                placeholder={
-                                    hasStoredKeyForProvider
-                                        ? `Key configured (${config.apiKey}). Enter new key to replace.`
-                                        : `Enter your ${localConfig.provider === 'openai' ? 'OpenAI' : localConfig.provider === 'anthropic' ? 'Anthropic' : 'Google'} API key`
-                                }
-                                onChange={(e) => handleApiKeyChange(e.target.value)}
-                            />
-                            <span className="ai-settings-hint">
-                                {hasStoredKeyForProvider
-                                    ? encryptionSecure
-                                        ? 'Your API key is encrypted and stored securely. Leave empty to keep the current key.'
-                                        : 'Your API key is encrypted with a machine-derived key. Leave empty to keep the current key.'
-                                    : encryptionSecure
-                                        ? 'Your API key is encrypted and stored securely on your machine.'
-                                        : 'Your API key will be encrypted with a machine-derived key on your machine.'}
-                            </span>
-                        </div>
-                    ) : (
-                        <div className="ai-settings-field">
-                            <label>Ollama Server URL</label>
-                            <input
-                                type="text"
-                                value={localConfig.ollamaUrl}
-                                placeholder="http://localhost:11434"
-                                onChange={(e) => handleOllamaUrlChange(e.target.value)}
-                            />
-                            <span className="ai-settings-hint">
-                                Default is http://localhost:11434. Make sure Ollama is running.
-                            </span>
-                        </div>
-                    )}
-
-                    <div className="ai-settings-field">
-                        <label>
-                            Model
-                            {isLoadingModels && (
-                                <Loader2 size={12} className="ai-settings-spinner" style={{ marginLeft: 6, display: 'inline-block', animation: 'spin 1s linear infinite' }} />
-                            )}
-                        </label>
-                        {!hasUsableKey ? (
-                            <>
-                                <select disabled>
-                                    <option>-- Enter API key first --</option>
-                                </select>
-                                <span className="ai-settings-hint">
-                                    Provide an API key above to load available models.
-                                </span>
-                            </>
-                        ) : ((!modelsFetched || isLoadingModels) && models.length === 0) ? (
-                            <>
-                                <select disabled>
-                                    <option>Loading models...</option>
-                                </select>
-                                <span className="ai-settings-hint">
-                                    Fetching available models from {localConfig.provider === 'ollama' ? 'Ollama server' : 'provider API'}...
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                <select
-                                    value={models.includes(localConfig.model) ? localConfig.model : 'custom'}
-                                    onChange={(e) => {
-                                        if (e.target.value !== 'custom') {
-                                            setLocalConfig({ ...localConfig, model: e.target.value })
-                                        } else {
-                                            setLocalConfig({ ...localConfig, model: '' })
-                                        }
-                                    }}
-                                >
-                                    {models.map((m) => (
-                                        <option key={m} value={m}>
-                                            {m}
-                                        </option>
-                                    ))}
-                                    <option value="custom">-- Custom Model --</option>
-                                </select>
-
-                                {!models.includes(localConfig.model) && (
-                                    <input
-                                        type="text"
-                                        style={{ marginTop: '4px' }}
-                                        value={localConfig.model}
-                                        onChange={(e) => setLocalConfig({ ...localConfig, model: e.target.value })}
-                                        placeholder="Enter custom model name"
-                                    />
-                                )}
-                                <span className="ai-settings-hint">
-                                    {localConfig.provider === 'ollama'
-                                        ? 'Type any model name or pick from suggestions. Make sure it\'s pulled via `ollama pull <model>`.'
-                                        : 'Pick from suggestions or type any model name (e.g. a new release).'}
-                                </span>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                <div className="ai-settings-footer">
-                    <button className="ai-settings-cancel-btn" onClick={() => setShowSettings(false)}>
-                        Cancel
-                    </button>
-                    <button className="ai-settings-save-btn" onClick={handleSave}>
-                        Save Settings
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-// ---------------------------------------------------------------------------
 // AI Message Bubble
 // ---------------------------------------------------------------------------
 
@@ -496,7 +245,7 @@ const SUGGESTIONS = [
 ]
 
 export default function AiAssistant(): JSX.Element {
-    const { messages, isLoading, config, configLoaded, showSettings, sendMessage, clearChat, loadConfig, setShowSettings } = useAiStore()
+    const { messages, isLoading, config, configLoaded, sendMessage, clearChat, loadConfig } = useAiStore()
     const addBlock = useEditorStore((s) => s.addBlock)
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
     const [input, setInput] = useState('')
@@ -591,13 +340,6 @@ export default function AiAssistant(): JSX.Element {
                             <Trash2 size={14} />
                         </button>
                     )}
-                    <button
-                        className="ai-header-btn"
-                        title="AI Settings"
-                        onClick={() => setShowSettings(true)}
-                    >
-                        <Settings size={14} />
-                    </button>
                 </div>
             </div>
 
@@ -610,8 +352,16 @@ export default function AiAssistant(): JSX.Element {
                         <div className="ai-empty-subtitle">
                             {hasApiKey
                                 ? 'Ask me to generate components, edit content, or suggest design improvements.'
-                                : 'Configure your API key in settings to get started.'}
+                                : 'Manage your API keys in Global Settings to get started.'}
                         </div>
+                        {!hasApiKey && (
+                            <button
+                                className="ai-suggestion-btn"
+                                onClick={() => openGlobalSettings({ tab: 'keys' })}
+                            >
+                                Manage API Keys
+                            </button>
+                        )}
                         {hasApiKey && (
                             <div className="ai-empty-suggestions">
                                 {SUGGESTIONS.map((s) => (
@@ -680,9 +430,6 @@ export default function AiAssistant(): JSX.Element {
                     <Send size={16} />
                 </button>
             </div>
-
-            {/* Settings modal */}
-            {showSettings && <AiSettingsModal />}
         </div>
     )
 }
