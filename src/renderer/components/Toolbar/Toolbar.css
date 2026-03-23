@@ -184,6 +184,21 @@
   padding: 2px;
 }
 
+.toolbar-page-theme-btn {
+  min-width: 34px;
+  padding: 4px 8px;
+}
+
+.toolbar-page-theme-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
 .toolbar-text {
   font-size: 12px;
   color: var(--color-text-secondary);

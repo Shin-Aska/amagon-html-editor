@@ -513,8 +513,9 @@ function buildStylesCss(ctx: BuildContext, project: ProjectData, customCss?: str
 
   // Theme CSS variables and base styles (inserted first so everything else can override)
   const theme = project.projectSettings.theme
+  const themes = project.projectSettings.themes
   if (theme && typeof theme === 'object' && theme.colors) {
-    const themeCss = themeToCSS(theme)
+    const themeCss = themeToCSS(theme, themes)
     if (themeCss.trim()) lines.push(themeCss.trim())
   }
 

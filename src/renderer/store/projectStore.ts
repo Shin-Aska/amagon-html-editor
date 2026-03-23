@@ -1,8 +1,26 @@
 import { create } from 'zustand'
-import type { Page, PageFolder, ProjectSettings, ProjectData, FrameworkChoice, UserBlock, ProjectTheme, CssFile } from './types'
-import { generateBlockId, createDefaultTheme } from './types'
+import type {
+  Page,
+  PageFolder,
+  ProjectSettings,
+  ProjectData,
+  FrameworkChoice,
+  UserBlock,
+  ProjectTheme,
+  CssFile,
+  PageThemeMode,
+  PageThemePreviewMode,
+  ProjectThemeVariants
+} from './types'
+import {
+  generateBlockId,
+  createDefaultTheme,
+  createDefaultThemeVariants,
+  createDefaultDarkTheme,
+  cloneTheme
+} from './types'
 import { createPageHeaderBlock } from '../../shared/welcomeBlocks'
-import { setOnExitTabEditModeCallback } from './editorStore'
+import { setOnExitTabEditModeCallback, useEditorStore } from './editorStore'
 
 // ─── Project State ───────────────────────────────────────────────────────────
 
@@ -29,13 +47,14 @@ interface ProjectActions {
   getProjectData: () => ProjectData
 
   // Theme management
-  setProjectTheme: (theme: ProjectTheme) => void
-  updateProjectTheme: (patch: Partial<ProjectTheme>) => void
-  updateThemeColors: (patch: Partial<ProjectTheme['colors']>) => void
-  updateThemeTypography: (patch: Partial<ProjectTheme['typography']>) => void
-  updateThemeSpacing: (patch: Partial<ProjectTheme['spacing']>) => void
-  updateThemeBorders: (patch: Partial<ProjectTheme['borders']>) => void
+  setProjectTheme: (theme: ProjectTheme, mode?: PageThemeMode) => void
+  updateProjectTheme: (patch: Partial<ProjectTheme>, mode?: PageThemeMode) => void
+  updateThemeColors: (patch: Partial<ProjectTheme['colors']>, mode?: PageThemeMode) => void
+  updateThemeTypography: (patch: Partial<ProjectTheme['typography']>, mode?: PageThemeMode) => void
+  updateThemeSpacing: (patch: Partial<ProjectTheme['spacing']>, mode?: PageThemeMode) => void
+  updateThemeBorders: (patch: Partial<ProjectTheme['borders']>, mode?: PageThemeMode) => void
   setThemeCustomCss: (css: string) => void
+  setThemePreviewMode: (mode: PageThemePreviewMode) => void
 
   // Custom preset management
   addCustomPreset: (preset: ProjectTheme) => void
@@ -75,10 +94,12 @@ type ProjectStore = ProjectState & ProjectActions
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 function createDefaultSettings(): ProjectSettings {
+  const theme = createDefaultTheme()
   return {
     name: 'Untitled Project',
     framework: 'bootstrap-5',
-    theme: createDefaultTheme(),
+    theme,
+    themes: createDefaultThemeVariants(theme),
     globalStyles: {}
   }
 }
@@ -148,6 +169,32 @@ function sortedMetaKeysFromCounts(counts: Record<string, number>): string[] {
   return Object.keys(counts).sort()
 }
 
+function normalizeThemeVariants(
+  variants: ProjectThemeVariants | undefined,
+  fallbackTheme: ProjectTheme
+): ProjectThemeVariants {
+  if (!variants) return createDefaultThemeVariants(fallbackTheme)
+
+  return {
+    light: cloneTheme(variants.light ?? fallbackTheme),
+    dark: cloneTheme(variants.dark ?? createDefaultDarkTheme()),
+    previewMode: variants.previewMode ?? 'device'
+  }
+}
+
+function syncLegacyTheme(settings: ProjectSettings): ProjectSettings {
+  const variants = normalizeThemeVariants(settings.themes, settings.theme)
+  return {
+    ...settings,
+    theme: cloneTheme(variants.light),
+    themes: variants
+  }
+}
+
+function markProjectDirty(): void {
+  useEditorStore.getState().markDirty()
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
@@ -171,35 +218,47 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     setProject: (data, filePath) => {
       // Backward compatibility: migrate old string theme to ProjectTheme object
       const incoming = data.projectSettings
+      const fallbackTheme =
+        incoming?.theme && typeof incoming.theme === 'object' && (incoming.theme as ProjectTheme).colors
+          ? (incoming.theme as ProjectTheme)
+          : createDefaultTheme()
       const migratedSettings = {
         ...createDefaultSettings(),
         ...incoming,
-        theme:
-          incoming?.theme && typeof incoming.theme === 'object' && (incoming.theme as ProjectTheme).colors
-            ? (incoming.theme as ProjectTheme)
-            : createDefaultTheme()
+        theme: cloneTheme(fallbackTheme),
+        themes: normalizeThemeVariants(incoming?.themes, fallbackTheme)
       }
+      const normalizedSettings = syncLegacyTheme(migratedSettings)
 
       // Migrate legacy customCss string to customCssFiles
-      const theme = migratedSettings.theme
-      if (!theme.customCssFiles || theme.customCssFiles.length === 0) {
-        if (theme.customCss && theme.customCss.trim().length > 0) {
-          theme.customCssFiles = [{
+      const sharedCssFiles = (() => {
+        const lightTheme = normalizedSettings.themes?.light
+        if (lightTheme?.customCssFiles && lightTheme.customCssFiles.length > 0) {
+          return lightTheme.customCssFiles.map((file) => ({ ...file }))
+        }
+        if (lightTheme?.customCss && lightTheme.customCss.trim().length > 0) {
+          return [{
             id: generateBlockId(),
             name: 'Custom Styles',
-            css: theme.customCss,
+            css: lightTheme.customCss,
             enabled: true
           }]
-        } else {
-          theme.customCssFiles = []
         }
+        return []
+      })()
+
+      const themes = normalizedSettings.themes
+      if (themes) {
+        themes.light.customCssFiles = sharedCssFiles.map((file) => ({ ...file }))
+        themes.dark.customCssFiles = sharedCssFiles.map((file) => ({ ...file }))
+        normalizedSettings.theme = cloneTheme(themes.light)
       }
 
       const nextPages = data.pages.length > 0 ? data.pages : [createDefaultPage()]
       const counts = buildMetaKeyCounts(nextPages)
 
       set({
-        settings: migratedSettings,
+        settings: normalizedSettings,
         pages: nextPages,
         folders: data.folders || [],
         userBlocks: data.userBlocks || [],
@@ -231,14 +290,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     updateSettings: (patch) => {
       set((state) => ({
-        settings: { ...state.settings, ...patch }
+        settings: syncLegacyTheme({ ...state.settings, ...patch })
       }))
+      markProjectDirty()
     },
 
     setFramework: (framework) => {
       set((state) => ({
         settings: { ...state.settings, framework }
       }))
+      markProjectDirty()
     },
 
     setFilePath: (path) => {
@@ -248,7 +309,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     getProjectData: () => {
       const state = get()
       return {
-        projectSettings: state.settings,
+        projectSettings: syncLegacyTheme(state.settings),
         pages: state.pages,
         folders: state.folders,
         userBlocks: state.userBlocks,
@@ -258,61 +319,170 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     // ─── Theme management ─────────────────────────────────────────────
 
-    setProjectTheme: (theme) => {
-      set((state) => ({
-        settings: { ...state.settings, theme }
-      }))
-    },
-
-    updateProjectTheme: (patch) => {
-      set((state) => ({
-        settings: { ...state.settings, theme: { ...state.settings.theme, ...patch } }
-      }))
-    },
-
-    updateThemeColors: (patch) => {
-      set((state) => ({
-        settings: {
-          ...state.settings,
-          theme: { ...state.settings.theme, colors: { ...state.settings.theme.colors, ...patch } }
+    setProjectTheme: (theme, mode = 'light') => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const nextTheme = cloneTheme(theme)
+        const nextVariants = {
+          ...variants,
+          [mode]: nextTheme
         }
-      }))
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: mode === 'light' ? cloneTheme(nextTheme) : state.settings.theme,
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
     },
 
-    updateThemeTypography: (patch) => {
-      set((state) => ({
-        settings: {
-          ...state.settings,
-          theme: { ...state.settings.theme, typography: { ...state.settings.theme.typography, ...patch } }
+    updateProjectTheme: (patch, mode = 'light') => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const current = mode === 'dark' ? variants.dark : variants.light
+        const nextTheme: ProjectTheme = {
+          ...current,
+          ...patch
         }
-      }))
+        const nextVariants = {
+          ...variants,
+          [mode]: nextTheme
+        }
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: mode === 'light' ? cloneTheme(nextTheme) : state.settings.theme,
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
     },
 
-    updateThemeSpacing: (patch) => {
-      set((state) => ({
-        settings: {
-          ...state.settings,
-          theme: { ...state.settings.theme, spacing: { ...state.settings.theme.spacing, ...patch } }
+    updateThemeColors: (patch, mode = 'light') => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const current = mode === 'dark' ? variants.dark : variants.light
+        const nextTheme: ProjectTheme = {
+          ...current,
+          colors: { ...current.colors, ...patch }
         }
-      }))
+        const nextVariants = {
+          ...variants,
+          [mode]: nextTheme
+        }
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: mode === 'light' ? cloneTheme(nextTheme) : state.settings.theme,
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
     },
 
-    updateThemeBorders: (patch) => {
-      set((state) => ({
-        settings: {
-          ...state.settings,
-          theme: { ...state.settings.theme, borders: { ...state.settings.theme.borders, ...patch } }
+    updateThemeTypography: (patch, mode = 'light') => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const current = mode === 'dark' ? variants.dark : variants.light
+        const nextTheme: ProjectTheme = {
+          ...current,
+          typography: { ...current.typography, ...patch }
         }
-      }))
+        const nextVariants = {
+          ...variants,
+          [mode]: nextTheme
+        }
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: mode === 'light' ? cloneTheme(nextTheme) : state.settings.theme,
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
+    },
+
+    updateThemeSpacing: (patch, mode = 'light') => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const current = mode === 'dark' ? variants.dark : variants.light
+        const nextTheme: ProjectTheme = {
+          ...current,
+          spacing: { ...current.spacing, ...patch }
+        }
+        const nextVariants = {
+          ...variants,
+          [mode]: nextTheme
+        }
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: mode === 'light' ? cloneTheme(nextTheme) : state.settings.theme,
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
+    },
+
+    updateThemeBorders: (patch, mode = 'light') => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const current = mode === 'dark' ? variants.dark : variants.light
+        const nextTheme: ProjectTheme = {
+          ...current,
+          borders: { ...current.borders, ...patch }
+        }
+        const nextVariants = {
+          ...variants,
+          [mode]: nextTheme
+        }
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: mode === 'light' ? cloneTheme(nextTheme) : state.settings.theme,
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
     },
 
     setThemeCustomCss: (css) => {
-      set((state) => ({
-        settings: {
-          ...state.settings,
-          theme: { ...state.settings.theme, customCss: css }
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const nextVariants = {
+          ...variants,
+          light: { ...variants.light, customCss: css },
+          dark: { ...variants.dark, customCss: css }
         }
-      }))
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            theme: { ...nextVariants.light },
+            themes: nextVariants
+          })
+        }
+      })
+      markProjectDirty()
+    },
+
+    setThemePreviewMode: (mode) => {
+      set((state) => {
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        return {
+          settings: syncLegacyTheme({
+            ...state.settings,
+            themes: { ...variants, previewMode: mode }
+          })
+        }
+      })
+      markProjectDirty()
     },
 
     // ─── Custom preset management ────────────────────────────────────
@@ -327,6 +497,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         }
         return { customPresets: [...state.customPresets, { ...preset, isCustom: true }] }
       })
+      markProjectDirty()
     },
 
     updateCustomPreset: (name, patch) => {
@@ -335,12 +506,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           p.name === name ? { ...p, ...patch, isCustom: true } : p
         )
       }))
+      markProjectDirty()
     },
 
     deleteCustomPreset: (name) => {
       set((state) => ({
         customPresets: state.customPresets.filter((p) => p.name !== name)
       }))
+      markProjectDirty()
     },
 
     // ─── CSS file management ─────────────────────────────────────────
@@ -355,12 +528,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set((state) => ({
         settings: {
           ...state.settings,
-          theme: {
-            ...state.settings.theme,
-            customCssFiles: [...(state.settings.theme.customCssFiles || []), file]
+          theme: { ...state.settings.theme, customCssFiles: [...(state.settings.theme.customCssFiles || []), file] },
+          themes: {
+            ...normalizeThemeVariants(state.settings.themes, state.settings.theme),
+            light: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).light,
+              customCssFiles: [...(normalizeThemeVariants(state.settings.themes, state.settings.theme).light.customCssFiles || []), file]
+            },
+            dark: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).dark,
+              customCssFiles: [...(normalizeThemeVariants(state.settings.themes, state.settings.theme).dark.customCssFiles || []), { ...file }]
+            }
           }
         }
       }))
+      markProjectDirty()
       return file
     },
 
@@ -371,9 +553,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           theme: {
             ...state.settings.theme,
             customCssFiles: (state.settings.theme.customCssFiles || []).filter((f) => f.id !== id)
+          },
+          themes: {
+            ...normalizeThemeVariants(state.settings.themes, state.settings.theme),
+            light: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).light,
+              customCssFiles: (normalizeThemeVariants(state.settings.themes, state.settings.theme).light.customCssFiles || []).filter((f) => f.id !== id)
+            },
+            dark: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).dark,
+              customCssFiles: (normalizeThemeVariants(state.settings.themes, state.settings.theme).dark.customCssFiles || []).filter((f) => f.id !== id)
+            }
           }
         }
       }))
+      markProjectDirty()
     },
 
     updateCssFile: (id, patch) => {
@@ -385,23 +579,50 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             customCssFiles: (state.settings.theme.customCssFiles || []).map((f) =>
               f.id === id ? { ...f, ...patch } : f
             )
+          },
+          themes: {
+            ...normalizeThemeVariants(state.settings.themes, state.settings.theme),
+            light: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).light,
+              customCssFiles: (normalizeThemeVariants(state.settings.themes, state.settings.theme).light.customCssFiles || []).map((f) =>
+                f.id === id ? { ...f, ...patch } : f
+              )
+            },
+            dark: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).dark,
+              customCssFiles: (normalizeThemeVariants(state.settings.themes, state.settings.theme).dark.customCssFiles || []).map((f) =>
+                f.id === id ? { ...f, ...patch } : f
+              )
+            }
           }
         }
       }))
+      markProjectDirty()
     },
 
     reorderCssFiles: (fromIndex, toIndex) => {
       set((state) => {
-        const files = [...(state.settings.theme.customCssFiles || [])]
-        const [moved] = files.splice(fromIndex, 1)
-        files.splice(toIndex, 0, moved)
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const reorder = (files: CssFile[]) => {
+          const next = [...files]
+          const [moved] = next.splice(fromIndex, 1)
+          next.splice(toIndex, 0, moved)
+          return next
+        }
+        const files = reorder(state.settings.theme.customCssFiles || [])
         return {
           settings: {
             ...state.settings,
-            theme: { ...state.settings.theme, customCssFiles: files }
+            theme: { ...state.settings.theme, customCssFiles: files },
+            themes: {
+              ...variants,
+              light: { ...variants.light, customCssFiles: reorder(variants.light.customCssFiles || []) },
+              dark: { ...variants.dark, customCssFiles: reorder(variants.dark.customCssFiles || []) }
+            }
           }
         }
       })
+      markProjectDirty()
     },
 
     toggleCssFile: (id) => {
@@ -413,9 +634,25 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             customCssFiles: (state.settings.theme.customCssFiles || []).map((f) =>
               f.id === id ? { ...f, enabled: !f.enabled } : f
             )
+          },
+          themes: {
+            ...normalizeThemeVariants(state.settings.themes, state.settings.theme),
+            light: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).light,
+              customCssFiles: (normalizeThemeVariants(state.settings.themes, state.settings.theme).light.customCssFiles || []).map((f) =>
+                f.id === id ? { ...f, enabled: !f.enabled } : f
+              )
+            },
+            dark: {
+              ...normalizeThemeVariants(state.settings.themes, state.settings.theme).dark,
+              customCssFiles: (normalizeThemeVariants(state.settings.themes, state.settings.theme).dark.customCssFiles || []).map((f) =>
+                f.id === id ? { ...f, enabled: !f.enabled } : f
+              )
+            }
           }
         }
       }))
+      markProjectDirty()
     },
 
     // ─── Page management ─────────────────────────────────────────────
