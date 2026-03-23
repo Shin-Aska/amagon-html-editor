@@ -11,6 +11,7 @@ type EditorMessage =
   | { type: 'scrollToElement'; blockId?: string | null }
   | { type: 'setCustomCss'; css?: string }
   | { type: 'setThemeCss'; css?: string }
+  | { type: 'setPageThemeMode'; mode?: 'device' | 'light' | 'dark' }
   | { type: 'setUiTheme'; isDark: boolean }
   | { type: 'toggleLayoutOutlines'; show: boolean }
   | { type: 'dragMove'; x: number; y: number }
@@ -467,6 +468,15 @@ function setCustomCss(css: string): void {
   document.head.appendChild(style)
 }
 
+function setPageThemeMode(mode: 'device' | 'light' | 'dark'): void {
+  if (mode === 'device') {
+    document.documentElement.setAttribute('data-page-theme', 'device')
+    return
+  }
+
+  document.documentElement.setAttribute('data-page-theme', mode)
+}
+
 function initRuntime(): void {
   // Inject Highlight.js CSS into the iframe's head dynamically so code blocks inherit colors
   const hljsStyle = document.createElement('link')
@@ -505,6 +515,9 @@ function initRuntime(): void {
         break
       case 'setThemeCss':
         setThemeCss((data as { css?: string }).css ?? '')
+        break
+      case 'setPageThemeMode':
+        setPageThemeMode((data as { mode?: 'device' | 'light' | 'dark' }).mode ?? 'device')
         break
       case 'setUiTheme':
         if ((data as { isDark?: boolean }).isDark) {
