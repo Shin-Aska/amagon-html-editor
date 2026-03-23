@@ -124,6 +124,13 @@ export default function WelcomeScreen(): JSX.Element {
 
   return (
     <div className="welcome-screen">
+      <div className="welcome-background" aria-hidden="true">
+        <div className="welcome-aurora welcome-aurora-one" />
+        <div className="welcome-aurora welcome-aurora-two" />
+        <div className="welcome-grid-glow" />
+        <div className="welcome-scanline" />
+      </div>
+
       <div className="welcome-content">
         <div className="welcome-header">
           <div className="logo-container">
