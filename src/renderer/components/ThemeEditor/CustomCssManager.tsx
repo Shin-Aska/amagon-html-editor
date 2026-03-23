@@ -1,9 +1,37 @@
 import { useState, useCallback, useEffect, useMemo, type MouseEvent } from 'react'
-import Editor from '@monaco-editor/react'
+import Editor, { DiffEditor } from '@monaco-editor/react'
 import { useProjectStore } from '../../store/projectStore'
 import type { CssFile, ProjectTheme } from '../../store/types'
-import AiCssAssistModal from './AiCssAssistModal'
+import AiCssAssistModal, { type AiCssProposal } from './AiCssAssistModal'
 import './CustomCssManager.css'
+
+interface PendingCssReview {
+    proposal: AiCssProposal
+    sourceCss: string
+    previewCss: string
+}
+
+function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
+    const snippet = proposal.css.trim()
+    if (!snippet) return currentCss
+
+    if (proposal.mode === 'replace') {
+        return snippet
+    }
+
+    if (proposal.matchText) {
+        const lines = currentCss.split('\n')
+        const lineIndex = lines.findIndex((line) => line.includes(proposal.matchText!))
+        if (lineIndex >= 0) {
+            const insertIndex = proposal.anchor === 'before_selector' ? lineIndex : lineIndex + 1
+            lines.splice(insertIndex, 0, ...snippet.split('\n'))
+            return lines.join('\n')
+        }
+    }
+
+    if (!currentCss.trim()) return snippet
+    return `${currentCss.replace(/\s*$/, '')}\n\n${snippet}`
+}
 
 export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JSX.Element {
     const addCssFile = useProjectStore((s) => s.addCssFile)
@@ -20,6 +48,8 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
     const [renameValue, setRenameValue] = useState('')
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: CssFile } | null>(null)
     const [aiModalFile, setAiModalFile] = useState<CssFile | null>(null)
+    const [aiPrompt, setAiPrompt] = useState('')
+    const [pendingCssReview, setPendingCssReview] = useState<PendingCssReview | null>(null)
 
     const selectedFile = files.find((f) => f.id === selectedFileId) || null
     const allFileNames = useMemo(() => files.map((f) => f.name), [files])
@@ -42,6 +72,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
         const name = `stylesheet-${files.length + 1}.css`
         const file = addCssFile(name)
         setSelectedFileId(file.id)
+        setPendingCssReview(null)
     }, [files.length, addCssFile])
 
     const handleRemoveFile = useCallback((id: string) => {
@@ -55,6 +86,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
     const handleCssChange = useCallback((value: string | undefined) => {
         if (selectedFileId) {
             updateCssFile(selectedFileId, { css: value || '' })
+            setPendingCssReview(null)
         }
     }, [selectedFileId, updateCssFile])
 
@@ -89,6 +121,31 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
         setSelectedFileId(file.id)
         setContextMenu({ x, y, file })
     }, [])
+
+    const handleProposalGenerated = useCallback((proposal: AiCssProposal) => {
+        if (!aiModalFile) return
+        const sourceCss = aiModalFile.css || ''
+        const previewCss = applyCssProposal(sourceCss, proposal)
+        setPendingCssReview({
+            proposal,
+            sourceCss,
+            previewCss
+        })
+    }, [aiModalFile])
+
+    const handleAcceptProposal = useCallback(() => {
+        if (!pendingCssReview || !selectedFileId) return
+        updateCssFile(selectedFileId, { css: pendingCssReview.previewCss })
+        setPendingCssReview(null)
+        setAiPrompt('')
+    }, [pendingCssReview, selectedFileId, updateCssFile])
+
+    const handleDenyProposal = useCallback(() => {
+        setPendingCssReview(null)
+        if (selectedFile) {
+            setAiModalFile(selectedFile)
+        }
+    }, [selectedFile])
 
     return (
         <div className="css-manager">
@@ -183,25 +240,70 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                 <span className="css-manager-editor-disabled-badge">Disabled</span>
                             )}
                         </div>
+                        {pendingCssReview && selectedFileId === selectedFile.id && (
+                            <div className="css-manager-review-bar">
+                                <div className="css-manager-review-summary">
+                                    <span className="css-manager-review-badge">{pendingCssReview.proposal.mode}</span>
+                                    <div className="css-manager-review-explanation">
+                                        {pendingCssReview.proposal.explanation}
+                                    </div>
+                                    {pendingCssReview.proposal.insertHint && (
+                                        <div className="css-manager-review-hint">
+                                            {pendingCssReview.proposal.insertHint}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="css-manager-review-actions">
+                                    <button className="theme-btn" onClick={handleDenyProposal}>
+                                        Deny Proposal
+                                    </button>
+                                    <button className="theme-btn theme-btn-primary" onClick={handleAcceptProposal}>
+                                        Accept Proposal
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         <div className="css-manager-editor-body">
-                            <Editor
-                                key={selectedFile.id}
-                                height="100%"
-                                defaultLanguage="css"
-                                value={selectedFile.css}
-                                onChange={handleCssChange}
-                                theme="vs-dark"
-                                options={{
-                                    minimap: { enabled: false },
-                                    fontSize: 13,
-                                    lineNumbers: 'on',
-                                    scrollBeyondLastLine: false,
-                                    wordWrap: 'on',
-                                    tabSize: 2,
-                                    automaticLayout: true,
-                                    padding: { top: 8 }
-                                }}
-                            />
+                            {pendingCssReview && selectedFileId === selectedFile.id ? (
+                                <DiffEditor
+                                    height="100%"
+                                    original={pendingCssReview.sourceCss}
+                                    modified={pendingCssReview.previewCss}
+                                    language="css"
+                                    theme="vs-dark"
+                                    options={{
+                                        renderSideBySide: false,
+                                        readOnly: true,
+                                        minimap: { enabled: false },
+                                        fontSize: 13,
+                                        lineNumbers: 'on',
+                                        scrollBeyondLastLine: false,
+                                        wordWrap: 'on',
+                                        automaticLayout: true,
+                                        diffCodeLens: true,
+                                        renderIndicators: true
+                                    }}
+                                />
+                            ) : (
+                                <Editor
+                                    key={selectedFile.id}
+                                    height="100%"
+                                    defaultLanguage="css"
+                                    value={selectedFile.css}
+                                    onChange={handleCssChange}
+                                    theme="vs-dark"
+                                    options={{
+                                        minimap: { enabled: false },
+                                        fontSize: 13,
+                                        lineNumbers: 'on',
+                                        scrollBeyondLastLine: false,
+                                        wordWrap: 'on',
+                                        tabSize: 2,
+                                        automaticLayout: true,
+                                        padding: { top: 8 }
+                                    }}
+                                />
+                            )}
                         </div>
                     </>
                 ) : (
@@ -237,18 +339,10 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                 file={aiModalFile}
                 allFileNames={allFileNames}
                 theme={theme}
+                prompt={aiPrompt}
+                onPromptChange={setAiPrompt}
                 onClose={() => setAiModalFile(null)}
-                onApplyReplace={(css) => {
-                    if (!aiModalFile) return
-                    updateCssFile(aiModalFile.id, { css })
-                }}
-                onApplyAppend={(css) => {
-                    if (!aiModalFile) return
-                    const current = files.find((f) => f.id === aiModalFile.id)
-                    const base = current?.css ?? aiModalFile.css ?? ''
-                    const next = `${base}\n${css}`.trimStart()
-                    updateCssFile(aiModalFile.id, { css: next })
-                }}
+                onProposalGenerated={handleProposalGenerated}
             />
         </div>
     )

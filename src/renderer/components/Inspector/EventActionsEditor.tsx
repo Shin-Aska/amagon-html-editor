@@ -363,13 +363,10 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
 
             {eventEntries.length > 0 && (
                 <div className="event-actions-list">
-                    {eventEntries.map(([name, code]) => (
+                    {eventEntries.map(([name]) => (
                         <div key={name} className="event-actions-item">
                             <div className="event-actions-item-info">
                                 <span className="event-actions-name">{getEventLabel(name)}</span>
-                                <span className="event-actions-code-preview">
-                                    {code ? code.substring(0, 40) + (code.length > 40 ? '…' : '') : '(empty)'}
-                                </span>
                             </div>
                             <div className="event-actions-item-buttons">
                                 <button
@@ -377,14 +374,14 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                     onClick={() => handleEditEvent(name)}
                                     title="Edit code"
                                 >
-                                    ✎
+                                    Edit
                                 </button>
                                 <button
                                     className="event-actions-btn remove"
                                     onClick={() => handleRemoveEvent(name)}
                                     title="Remove event"
                                 >
-                                    ×
+                                    Remove
                                 </button>
                             </div>
                         </div>

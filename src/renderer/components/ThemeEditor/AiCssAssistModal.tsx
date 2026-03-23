@@ -3,14 +3,27 @@ import { getApi } from '../../utils/api'
 import type { CssFile, ProjectTheme } from '../../store/types'
 import './AiCssAssistModal.css'
 
+type AiCssMode = 'replace' | 'insert'
+type AiCssAnchor = 'end_of_file' | 'after_selector' | 'before_selector'
+
+export interface AiCssProposal {
+    mode: AiCssMode
+    css: string
+    explanation: string
+    insertHint?: string
+    anchor?: AiCssAnchor
+    matchText?: string
+}
+
 interface AiCssAssistModalProps {
     isOpen: boolean
     file: CssFile | null
     allFileNames: string[]
     theme: ProjectTheme
+    prompt: string
+    onPromptChange: (value: string) => void
     onClose: () => void
-    onApplyReplace: (css: string) => void
-    onApplyAppend: (css: string) => void
+    onProposalGenerated: (proposal: AiCssProposal) => void
 }
 
 function buildThemeVariables(theme: ProjectTheme): string {
@@ -47,6 +60,18 @@ function buildThemeVariables(theme: ProjectTheme): string {
     return lines.join('\n')
 }
 
+function extractJsonBlock(content: string): string | null {
+    const match = content.match(/```(?:json)?\s*([\s\S]*?)```/i)
+    return match?.[1]?.trim() ?? null
+}
+
+function extractJsonObject(content: string): string | null {
+    const start = content.indexOf('{')
+    const end = content.lastIndexOf('}')
+    if (start === -1 || end === -1 || end <= start) return null
+    return content.slice(start, end + 1).trim()
+}
+
 function extractCssFromResponse(content: string): string {
     const fenceMatch = content.match(/```(?:css)?\s*([\s\S]*?)```/i)
     if (fenceMatch && fenceMatch[1]) {
@@ -55,17 +80,49 @@ function extractCssFromResponse(content: string): string {
     return content.trim()
 }
 
+function parseCssProposal(content: string, currentCss: string): AiCssProposal | null {
+    const jsonCandidate = extractJsonBlock(content) ?? extractJsonObject(content) ?? content.trim()
+
+    try {
+        const parsed = JSON.parse(jsonCandidate) as Partial<AiCssProposal>
+        const css = typeof parsed.css === 'string' ? parsed.css.trim() : ''
+        if (!css) return null
+
+        return {
+            mode: parsed.mode === 'insert' || parsed.mode === 'replace' ? parsed.mode : currentCss.trim() ? 'insert' : 'replace',
+            css,
+            explanation:
+                typeof parsed.explanation === 'string' && parsed.explanation.trim()
+                    ? parsed.explanation.trim()
+                    : 'AI prepared a CSS proposal.',
+            insertHint: typeof parsed.insertHint === 'string' ? parsed.insertHint.trim() : undefined,
+            anchor:
+                parsed.anchor === 'end_of_file' || parsed.anchor === 'after_selector' || parsed.anchor === 'before_selector'
+                    ? parsed.anchor
+                    : undefined,
+            matchText: typeof parsed.matchText === 'string' ? parsed.matchText.trim() : undefined
+        }
+    } catch {
+        const css = extractCssFromResponse(content)
+        if (!css) return null
+        return {
+            mode: 'replace',
+            css,
+            explanation: 'AI returned a full CSS replacement.'
+        }
+    }
+}
+
 export default function AiCssAssistModal({
     isOpen,
     file,
     allFileNames,
     theme,
+    prompt,
+    onPromptChange,
     onClose,
-    onApplyReplace,
-    onApplyAppend
+    onProposalGenerated
 }: AiCssAssistModalProps): JSX.Element | null {
-    const [prompt, setPrompt] = useState('')
-    const [generatedCss, setGeneratedCss] = useState('')
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -81,11 +138,9 @@ export default function AiCssAssistModal({
     }, [isOpen, onClose])
 
     useEffect(() => {
-        if (isOpen) {
-            setPrompt('')
-            setGeneratedCss('')
-            setError(null)
-        }
+        if (!isOpen) return
+        setError(null)
+        setIsGenerating(false)
     }, [isOpen, file?.id])
 
     if (!isOpen || !file) return null
@@ -101,9 +156,37 @@ export default function AiCssAssistModal({
 
         try {
             const api = getApi()
-            const systemPrompt = `You are an AI assistant embedded in "Amagon", a visual HTML editor.\n\nYou help users write CSS that complements the existing project styles.\nReturn ONLY valid CSS. Do not include JSON or explanations. A \`\`\`css\`\`\` code fence is allowed, but do not include any extra text.`
+            const systemPrompt = `You are an AI assistant embedded in "Amagon", a visual HTML editor.
 
-            const userPrompt = `User request:\n${prompt.trim()}\n\nCurrent CSS file (${file.name}):\n\`\`\`css\n${file.css || '/* empty */'}\n\`\`\`\n\nOther CSS files:\n${allFileNames.join(', ') || 'None'}\n\nTheme CSS variables (use these when relevant):\n${themeVariables}`
+You help users edit a CSS file safely.
+- Prefer targeted insertions when the file already has useful styles.
+- Use "replace" only when the request clearly asks for a full rewrite or the file is nearly empty.
+- Return ONLY a JSON code block in this shape:
+\`\`\`json
+{
+  "mode": "insert",
+  "anchor": "end_of_file",
+  "matchText": "",
+  "insertHint": "Append this as a new block at the end of the file.",
+  "explanation": "Adds a new hover treatment without disturbing existing rules.",
+  "css": ".button:hover { transform: translateY(-2px); }"
+}
+\`\`\`
+- The "css" field must contain only valid CSS, with no markdown fences.`
+
+            const userPrompt = `User request:
+${prompt.trim()}
+
+Current CSS file (${file.name}):
+\`\`\`css
+${file.css || '/* empty */'}
+\`\`\`
+
+Other CSS files:
+${allFileNames.join(', ') || 'None'}
+
+Theme CSS variables (use these when relevant):
+${themeVariables}`
 
             const result = await (api as any).ai.chat({
                 messages: [
@@ -118,31 +201,20 @@ export default function AiCssAssistModal({
                 return
             }
 
-            const css = extractCssFromResponse(result.content || '')
-            if (!css) {
+            const proposal = parseCssProposal(String(result.content || ''), file.css || '')
+            if (!proposal) {
                 setError('AI response was empty. Try adjusting your request.')
                 setIsGenerating(false)
                 return
             }
 
-            setGeneratedCss(css)
+            onProposalGenerated(proposal)
+            onClose()
         } catch (err: any) {
             setError(err?.message || 'AI request failed.')
         } finally {
             setIsGenerating(false)
         }
-    }
-
-    const handleApplyReplace = () => {
-        if (!generatedCss.trim()) return
-        onApplyReplace(generatedCss)
-        onClose()
-    }
-
-    const handleApplyAppend = () => {
-        if (!generatedCss.trim()) return
-        onApplyAppend(generatedCss)
-        onClose()
     }
 
     return (
@@ -162,44 +234,21 @@ export default function AiCssAssistModal({
                         className="ai-css-assist-textarea"
                         placeholder="E.g. Create a glassmorphism card style for .pricing-card"
                         value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
+                        onChange={(e) => onPromptChange(e.target.value)}
                     />
 
-                    <div className="ai-css-assist-actions">
-                        <button
-                            className="theme-btn theme-btn-primary"
-                            onClick={handleGenerate}
-                            disabled={isGenerating}
-                        >
-                            {isGenerating ? 'Generating...' : 'Generate'}
-                        </button>
-                        {error && <span className="ai-css-assist-error">{error}</span>}
-                    </div>
-
-                    <label className="ai-css-assist-label">AI Output</label>
-                    <pre className="ai-css-assist-preview">
-                        {generatedCss || 'AI-generated CSS will appear here.'}
-                    </pre>
+                    {error && <div className="ai-css-assist-error">{error}</div>}
                 </div>
 
                 <div className="ai-css-assist-footer">
                     <button className="theme-btn" onClick={onClose}>Cancel</button>
-                    <div className="ai-css-assist-footer-actions">
-                        <button
-                            className="theme-btn"
-                            onClick={handleApplyAppend}
-                            disabled={!generatedCss.trim()}
-                        >
-                            Append
-                        </button>
-                        <button
-                            className="theme-btn theme-btn-primary"
-                            onClick={handleApplyReplace}
-                            disabled={!generatedCss.trim()}
-                        >
-                            Apply
-                        </button>
-                    </div>
+                    <button
+                        className="theme-btn theme-btn-primary"
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                    >
+                        {isGenerating ? 'Generating...' : 'Generate'}
+                    </button>
                 </div>
             </div>
         </div>
