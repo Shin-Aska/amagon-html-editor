@@ -7,6 +7,12 @@
   overflow: hidden;
 }
 
+.ai-assistant.is-disabled .ai-header,
+.ai-assistant.is-disabled .ai-messages,
+.ai-assistant.is-disabled .ai-input-bar {
+  opacity: 0.72;
+}
+
 /* ─── Messages area ──────────────────────────────────────────────────────── */
 
 .ai-messages {
@@ -330,6 +336,34 @@
 
 .ai-send-btn:not(:disabled):hover {
   opacity: 0.85;
+}
+
+.ai-disabled-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 82%, var(--color-danger, #dc3545) 18%);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-disabled-link {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ai-disabled-link:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */

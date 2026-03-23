@@ -7,6 +7,8 @@ import { createBlock, type Block } from '../../store/types'
 import { themeToCSS } from '../../store/types'
 import { blockToHtml } from '../../utils/blockToHtml'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
+import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import AiProviderSelector from './AiProviderSelector'
 import './AiAssistant.css'
 
 // ---------------------------------------------------------------------------
@@ -246,6 +248,7 @@ const SUGGESTIONS = [
 
 export default function AiAssistant(): JSX.Element {
     const { messages, isLoading, config, configLoaded, sendMessage, clearChat, loadConfig } = useAiStore()
+    const { hasConfiguredAiProvider } = useAiAvailability()
     const addBlock = useEditorStore((s) => s.addBlock)
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
     const [input, setInput] = useState('')
@@ -310,29 +313,18 @@ export default function AiAssistant(): JSX.Element {
         })
     }
 
-    const providerLabel =
-        config.provider === 'openai'
-            ? 'OpenAI'
-            : config.provider === 'anthropic'
-                ? 'Claude'
-                : config.provider === 'google'
-                    ? 'Gemini'
-                    : config.provider === 'mistral'
-                        ? 'Mistral'
-                        : 'Ollama'
-
-    const hasApiKey = config.provider === 'ollama' || (config.apiKey && config.apiKey.length > 0)
+    const aiEnabled = hasConfiguredAiProvider
 
     return (
-        <div className="ai-assistant">
+        <div className={`ai-assistant ${!aiEnabled ? 'is-disabled' : ''}`}>
             {/* Header */}
             <div className="ai-header">
                 <div className="ai-header-left">
                     <Sparkles size={14} />
                     <span>AI Assistant</span>
-                    <span className="ai-header-provider">{providerLabel}</span>
                 </div>
                 <div className="ai-header-actions">
+                    <AiProviderSelector />
                     {messages.length > 0 && (
                         <button
                             className="ai-header-btn"
@@ -352,11 +344,11 @@ export default function AiAssistant(): JSX.Element {
                         <div className="ai-empty-icon">✨</div>
                         <div className="ai-empty-title">AI Assistant</div>
                         <div className="ai-empty-subtitle">
-                            {hasApiKey
+                            {aiEnabled
                                 ? 'Ask me to generate components, edit content, or suggest design improvements.'
-                                : 'Manage your API keys in Global Settings to get started.'}
+                                : AI_API_KEY_REQUIRED_MESSAGE}
                         </div>
-                        {!hasApiKey && (
+                        {!aiEnabled && (
                             <button
                                 className="ai-suggestion-btn"
                                 onClick={() => openGlobalSettings({ tab: 'keys' })}
@@ -364,7 +356,7 @@ export default function AiAssistant(): JSX.Element {
                                 Manage API Keys
                             </button>
                         )}
-                        {hasApiKey && (
+                        {aiEnabled && (
                             <div className="ai-empty-suggestions">
                                 {SUGGESTIONS.map((s) => (
                                     <button
@@ -419,19 +411,27 @@ export default function AiAssistant(): JSX.Element {
                         requestAnimationFrame(adjustTextareaHeight)
                     }}
                     onKeyDown={handleKeyDown}
-                    placeholder={hasApiKey ? 'Ask the AI to build something...' : 'Configure API key in settings first...'}
+                    placeholder={aiEnabled ? 'Ask the AI to build something...' : AI_API_KEY_REQUIRED_MESSAGE}
                     rows={1}
-                    disabled={isLoading}
+                    disabled={isLoading || !aiEnabled}
                 />
                 <button
                     className="ai-send-btn"
                     onClick={handleSend}
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || isLoading || !aiEnabled}
                     title="Send message"
                 >
                     <Send size={16} />
                 </button>
             </div>
+            {!aiEnabled && (
+                <div className="ai-disabled-note">
+                    <span>{AI_API_KEY_REQUIRED_MESSAGE}</span>
+                    <button type="button" className="ai-disabled-link" onClick={() => openGlobalSettings({ tab: 'keys' })}>
+                        Open Global Settings
+                    </button>
+                </div>
+            )}
         </div>
     )
 }
