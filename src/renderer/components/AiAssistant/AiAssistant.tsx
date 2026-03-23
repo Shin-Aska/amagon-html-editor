@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Send, Trash2, Sparkles, ArrowDownToLine, Copy, Eye } from 'lucide-react'
+import { Send, Trash2, Sparkles, ArrowDownToLine, Copy, Eye, ZoomIn, ZoomOut } from 'lucide-react'
 import { useAiStore } from '../../store/aiStore'
 import { useEditorStore } from '../../store/editorStore'
 import { useProjectStore } from '../../store/projectStore'
@@ -70,9 +70,25 @@ function buildBlockFromAiData(data: any): Block {
 function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
     const iframeRef = useRef<HTMLIFrameElement>(null)
     const [height, setHeight] = useState(120)
+    const [zoom, setZoom] = useState(1)
+    const [systemUiTheme, setSystemUiTheme] = useState<'light' | 'dark'>(() =>
+        document.body.classList.contains('dark') ? 'dark' : 'light'
+    )
 
     const projectTheme = useProjectStore((s) => s.settings.theme)
-    const themeCss = useMemo(() => themeToCSS(projectTheme), [projectTheme])
+    const projectThemeVariants = useProjectStore((s) => s.settings.themes)
+    const previewMode = projectThemeVariants?.previewMode ?? 'device'
+    const previewTheme = previewMode === 'device' ? systemUiTheme : previewMode
+    const activeTheme = useMemo(
+        () => previewTheme === 'dark'
+            ? (projectThemeVariants?.dark ?? projectTheme)
+            : (projectThemeVariants?.light ?? projectTheme),
+        [previewTheme, projectTheme, projectThemeVariants]
+    )
+    const themeCss = useMemo(
+        () => themeToCSS(activeTheme),
+        [activeTheme]
+    )
 
     const html = useMemo(() => blockToHtml(blocks), [blocks])
 
@@ -128,20 +144,78 @@ ${themeCss}
         return () => window.removeEventListener('message', onMessage)
     }, [])
 
+    useEffect(() => {
+        const syncTheme = () => {
+            setSystemUiTheme(document.body.classList.contains('dark') ? 'dark' : 'light')
+        }
+
+        syncTheme()
+
+        const observer = new MutationObserver(syncTheme)
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['class']
+        })
+
+        return () => observer.disconnect()
+    }, [])
+
+    useEffect(() => {
+        const iframe = iframeRef.current
+        const doc = iframe?.contentDocument
+        if (!iframe || !doc) return
+
+        doc.documentElement.setAttribute('data-page-theme', previewTheme)
+        doc.documentElement.setAttribute('data-bs-theme', previewTheme)
+        doc.documentElement.style.colorScheme = previewTheme
+
+        const themeStyle = doc.getElementById('hoarses-theme-css')
+        if (themeStyle) {
+            themeStyle.textContent = themeCss
+        }
+    }, [previewTheme, themeCss])
+
     return (
         <div className="ai-preview-container">
             <div className="ai-preview-label">
                 <Eye size={11} />
                 <span>Preview</span>
+                <div className="ai-preview-zoom">
+                    <button
+                        className="ai-preview-zoom-btn"
+                        onClick={() => setZoom(z => Math.max(0.25, parseFloat((z - 0.25).toFixed(2))))}
+                        title="Zoom out"
+                        disabled={zoom <= 0.25}
+                    >
+                        <ZoomOut size={10} />
+                    </button>
+                    <span className="ai-preview-zoom-level">{Math.round(zoom * 100)}%</span>
+                    <button
+                        className="ai-preview-zoom-btn"
+                        onClick={() => setZoom(z => Math.min(2, parseFloat((z + 0.25).toFixed(2))))}
+                        title="Zoom in"
+                        disabled={zoom >= 2}
+                    >
+                        <ZoomIn size={10} />
+                    </button>
+                </div>
             </div>
-            <iframe
-                ref={iframeRef}
-                className="ai-preview-iframe"
-                srcDoc={previewDoc}
-                title="Block Preview"
-                sandbox="allow-scripts"
-                style={{ height: `${height}px` }}
-            />
+            <div className="ai-preview-viewport" style={{ height: `${height * zoom}px` }}>
+                <iframe
+                    ref={iframeRef}
+                    className="ai-preview-iframe"
+                    key={previewTheme}
+                    srcDoc={previewDoc}
+                    title="Block Preview"
+                    sandbox="allow-scripts"
+                    style={{
+                        height: `${height}px`,
+                        width: `${(1 / zoom) * 100}%`,
+                        transform: `scale(${zoom})`,
+                        transformOrigin: 'top left',
+                    }}
+                />
+            </div>
         </div>
     )
 }
