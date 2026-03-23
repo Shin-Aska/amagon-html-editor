@@ -1,0 +1,126 @@
+/* ─── AI CSS Assist Modal ─────────────────────────────────────────────── */
+
+.ai-css-assist-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1010;
+}
+
+.ai-css-assist-dialog {
+    width: min(720px, 92vw);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.42);
+    overflow: hidden;
+}
+
+.ai-css-assist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+}
+
+.ai-css-assist-title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.ai-css-assist-subtitle {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.ai-css-assist-close {
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+}
+
+.ai-css-assist-close:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.ai-css-assist-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+}
+
+.ai-css-assist-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+
+.ai-css-assist-textarea {
+    min-height: 90px;
+    resize: vertical;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.ai-css-assist-textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.ai-css-assist-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-css-assist-error {
+    font-size: 0.75rem;
+    color: var(--danger, #dc3545);
+}
+
+.ai-css-assist-preview {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 0.75rem;
+    color: var(--color-text-primary);
+    max-height: 260px;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+.ai-css-assist-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+}
+
+.ai-css-assist-footer-actions {
+    display: flex;
+    gap: 8px;
+}
