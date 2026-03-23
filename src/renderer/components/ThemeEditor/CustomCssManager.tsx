@@ -218,15 +218,17 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                     onPointerDown={(e) => e.stopPropagation()}
                     onContextMenu={(e) => e.preventDefault()}
                 >
+                    <div className="css-manager-context-group-label">Smart Actions</div>
                     <button
-                        className="css-manager-context-item"
+                        className="css-manager-context-item css-manager-context-item-ai"
                         onClick={() => {
                             setAiModalFile(contextMenu.file)
                             setContextMenu(null)
                         }}
                     >
-                        Assist with AI ✨
+                        ✨ Assist with AI
                     </button>
+                    <div className="css-manager-context-divider" />
                 </div>
             )}
 

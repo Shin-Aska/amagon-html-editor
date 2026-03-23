@@ -235,6 +235,15 @@
     min-width: 170px;
 }
 
+.css-manager-context-group-label {
+    padding: 6px 10px 4px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+}
+
 .css-manager-context-item {
     width: 100%;
     border: none;
@@ -249,4 +258,19 @@
 
 .css-manager-context-item:hover {
     background: var(--color-bg-hover);
+}
+
+.css-manager-context-item-ai {
+    color: var(--color-accent);
+    font-weight: 600;
+}
+
+.css-manager-context-item-ai:hover {
+    background: color-mix(in srgb, var(--color-accent) 14%, var(--color-bg-hover));
+}
+
+.css-manager-context-divider {
+    height: 1px;
+    margin: 4px 6px 2px;
+    background: var(--color-border);
 }
