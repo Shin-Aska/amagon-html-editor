@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getApi } from '../../utils/api'
 import type { CssFile, ProjectTheme } from '../../store/types'
+import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import { openGlobalSettings } from '../../utils/settingsNavigation'
+import AiProviderSelector from '../AiAssistant/AiProviderSelector'
 import './AiCssAssistModal.css'
 
 type AiCssMode = 'replace' | 'insert'
@@ -123,6 +126,7 @@ export default function AiCssAssistModal({
     onClose,
     onProposalGenerated
 }: AiCssAssistModalProps): JSX.Element | null {
+    const { hasConfiguredAiProvider } = useAiAvailability()
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -225,6 +229,7 @@ ${themeVariables}`
                         <div className="ai-css-assist-title">Assist with AI ✨</div>
                         <div className="ai-css-assist-subtitle">{file.name}</div>
                     </div>
+                    <AiProviderSelector />
                     <button className="ai-css-assist-close" onClick={onClose} aria-label="Close">×</button>
                 </div>
 
@@ -235,9 +240,18 @@ ${themeVariables}`
                         placeholder="E.g. Create a glassmorphism card style for .pricing-card"
                         value={prompt}
                         onChange={(e) => onPromptChange(e.target.value)}
+                        disabled={!hasConfiguredAiProvider || isGenerating}
                     />
 
                     {error && <div className="ai-css-assist-error">{error}</div>}
+                    {!hasConfiguredAiProvider && (
+                        <div className="ai-css-assist-disabled-note">
+                            <span>{AI_API_KEY_REQUIRED_MESSAGE}</span>
+                            <button type="button" onClick={() => openGlobalSettings({ tab: 'keys' })}>
+                                Open Global Settings
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="ai-css-assist-footer">
@@ -245,7 +259,7 @@ ${themeVariables}`
                     <button
                         className="theme-btn theme-btn-primary"
                         onClick={handleGenerate}
-                        disabled={isGenerating}
+                        disabled={isGenerating || !hasConfiguredAiProvider}
                     >
                         {isGenerating ? 'Generating...' : 'Generate'}
                     </button>
