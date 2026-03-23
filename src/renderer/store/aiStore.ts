@@ -4,6 +4,7 @@
 
 import { create } from 'zustand'
 import { getApi } from '../utils/api'
+import { dispatchAiAvailabilityChanged } from '../hooks/useAiAvailability'
 import { componentRegistry } from '../registry/ComponentRegistry'
 import { useEditorStore } from './editorStore'
 import { useProjectStore } from './projectStore'
@@ -188,6 +189,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
                 // Update state with masked config from main process so the
                 // raw API key isn't retained in renderer memory.
                 set({ config: result.config })
+                dispatchAiAvailabilityChanged()
             }
         } catch {
             // silently fail — config still in memory
