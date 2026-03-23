@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getApi } from '../../utils/api'
 import type { Block } from '../../store/types'
+import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import { openGlobalSettings } from '../../utils/settingsNavigation'
+import AiProviderSelector from '../AiAssistant/AiProviderSelector'
 import './AiCodeAssistModal.css'
 
 type AiEditMode = 'insert' | 'replace_selection' | 'replace_all'
@@ -221,6 +224,7 @@ export default function AiCodeAssistModal({
     onProposalGenerated,
     onClose
 }: AiCodeAssistModalProps): JSX.Element | null {
+    const { hasConfiguredAiProvider } = useAiAvailability()
     const [isGenerating, setIsGenerating] = useState(false)
     const [proposal, setProposal] = useState<AiCodeProposal | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -297,9 +301,12 @@ export default function AiCodeAssistModal({
         <div className="ai-code-assist-panel">
             <div className="ai-code-assist-header">
                 <h4>AI Assist: {eventName}</h4>
-                <button className="ai-code-assist-close" onClick={onClose} title="Close">
-                    ×
-                </button>
+                <div className="ai-code-assist-header-right">
+                    <AiProviderSelector />
+                    <button className="ai-code-assist-close" onClick={onClose} title="Close">
+                        ×
+                    </button>
+                </div>
             </div>
 
             <div className="ai-code-assist-body">
@@ -312,8 +319,22 @@ export default function AiCodeAssistModal({
                     onChange={(e) => onRequestTextChange(e.target.value)}
                     placeholder='Example: "Add a guard clause for disabled buttons, then toggle an active class."'
                     rows={4}
-                    disabled={isGenerating}
+                    disabled={isGenerating || !hasConfiguredAiProvider}
                 />
+
+                {!hasConfiguredAiProvider && (
+                    <div className="ai-code-assist-selection-note">
+                        <span>{AI_API_KEY_REQUIRED_MESSAGE}</span>
+                        {' '}
+                        <button
+                            type="button"
+                            className="ai-code-assist-inline-link"
+                            onClick={() => openGlobalSettings({ tab: 'keys' })}
+                        >
+                            Open Global Settings
+                        </button>
+                    </div>
+                )}
 
                 {selection?.text.trim() && (
                     <div className="ai-code-assist-selection-note">
@@ -332,7 +353,11 @@ export default function AiCodeAssistModal({
             </div>
 
             <div className="ai-code-assist-footer">
-                <button className="ai-code-assist-btn primary" onClick={handleGenerate} disabled={isGenerating}>
+                <button
+                    className="ai-code-assist-btn primary"
+                    onClick={handleGenerate}
+                    disabled={isGenerating || !hasConfiguredAiProvider}
+                >
                     {isGenerating ? 'Generating…' : 'Generate'}
                 </button>
             </div>
