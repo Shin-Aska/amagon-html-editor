@@ -60,7 +60,7 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
     anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
     google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-    ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3'],
+    ollama: [], // no fallback — models are fetched live from the server
     mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo']
 }
 
@@ -141,6 +141,37 @@ export async function loadApiKeyForProvider(provider: AiProvider): Promise<strin
         try { return decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted */ }
     }
     return ''
+}
+
+/** Returns masked credentials for every AI provider that has a stored key. */
+export async function loadAllProviderCredentials(): Promise<{ provider: AiProvider; hasKey: boolean; maskedKey: string }[]> {
+    const { encryptedApiKeys } = await loadPersistedRaw()
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral']
+    const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = []
+
+    for (const provider of providers) {
+        if (!encryptedApiKeys[provider]) continue
+        let key = ''
+        try { key = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted — skip */ }
+        if (!key) continue
+        result.push({ provider, hasKey: true, maskedKey: maskApiKey(key) })
+    }
+
+    return result
+}
+
+/** Removes the stored API key for a specific provider. */
+export async function clearApiKeyForProvider(provider: AiProvider): Promise<void> {
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+    const updatedKeys = { ...encryptedApiKeys }
+    delete updatedKeys[provider]
+
+    await fs.writeFile(getConfigPath(), JSON.stringify({
+        provider: persisted.provider ?? DEFAULT_CONFIG.provider,
+        model: persisted.model ?? DEFAULT_CONFIG.model,
+        encryptedApiKeys: updatedKeys,
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+    }, null, 2), 'utf-8')
 }
 
 export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
@@ -371,10 +402,13 @@ async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<Pr
         stream: false
     })
 
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`
+
     try {
         const response = await net.fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body
         })
 
@@ -491,14 +525,17 @@ async function fetchOpenAIModels(apiKey: string): Promise<string[]> {
     }
 }
 
-async function fetchOllamaModels(ollamaUrl: string): Promise<string[]> {
+async function fetchOllamaModels(ollamaUrl: string, apiKey?: string): Promise<string[]> {
     const baseUrl = ollamaUrl || 'http://localhost:11434'
     const url = `${baseUrl}/api/tags`
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS)
 
+    const headers: Record<string, string> = {}
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
+
     try {
-        const response = await net.fetch(url, { signal: controller.signal })
+        const response = await net.fetch(url, { signal: controller.signal, headers })
         if (!response.ok) return []
         const data = (await response.json()) as any
         if (!Array.isArray(data.models)) return []
@@ -540,8 +577,7 @@ export async function fetchModelsForProvider(
         if (provider === 'google') return await fetchGoogleModels(apiKey)
         if (provider === 'mistral') return await fetchMistralModels(apiKey)
         if (provider === 'ollama') {
-            const models = await fetchOllamaModels(ollamaUrl || 'http://localhost:11434')
-            return models.length > 0 ? models : FALLBACK_MODELS.ollama
+            return await fetchOllamaModels(ollamaUrl || 'http://localhost:11434', apiKey || undefined)
         }
         // Anthropic has no public list-models endpoint
         if (provider === 'anthropic') {
@@ -550,7 +586,7 @@ export async function fetchModelsForProvider(
     } catch {
         // fall through
     }
-    return provider === 'ollama' ? (FALLBACK_MODELS[provider] || []) : []
+    return []
 }
 
 export async function fetchAvailableModels(): Promise<Record<AiProvider, string[]>> {
@@ -566,7 +602,7 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         openai: [],
         anthropic: [],
         google: [],
-        ollama: [...FALLBACK_MODELS.ollama],
+        ollama: [],
         mistral: []
     }
 
@@ -601,11 +637,11 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         )
     }
 
-    // Ollama: always try (local server, no API key needed)
+    // Ollama: try the configured URL with the optional stored key
     fetchers.push(
-        fetchOllamaModels(persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl)
+        fetchOllamaModels(persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl, apiKeys['ollama'])
             .then((models) => { if (models.length > 0) result.ollama = models })
-            .catch(() => { /* keep fallback */ })
+            .catch(() => { /* server unreachable — leave empty */ })
     )
 
     await Promise.allSettled(fetchers)

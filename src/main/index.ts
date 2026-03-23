@@ -4,7 +4,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
-import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
+import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, loadAllProviderCredentials, clearApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type AiProvider, type ChatMessage } from './aiService'
 import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
 import { isEncryptionSecure } from './cryptoHelpers'
 import { buildAppMenu } from './menu'
@@ -1094,27 +1094,40 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('app:getCredentials', async () => {
     try {
-      const aiConfig = await aiLoadConfig()
+      const aiProviderCreds = await loadAllProviderCredentials()
       const mediaConfig = await mediaSearchLoadConfig()
+
+      const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
+        openai: 'OpenAI',
+        anthropic: 'Anthropic',
+        google: 'Google Gemini',
+        ollama: 'Ollama',
+        mistral: 'Mistral'
+      }
+
       const credentials: { id: string; label: string; source: string; provider: string; maskedKey: string; hasKey: boolean }[] = []
 
-      credentials.push({
-        id: 'ai',
-        label: 'AI Assistant',
-        source: 'ai',
-        provider: aiConfig.provider,
-        maskedKey: maskApiKey(aiConfig.apiKey),
-        hasKey: !!aiConfig.apiKey
-      })
+      for (const { provider, hasKey, maskedKey } of aiProviderCreds) {
+        credentials.push({
+          id: `ai:${provider}`,
+          label: 'AI Assistant',
+          source: 'ai',
+          provider: AI_PROVIDER_LABELS[provider] ?? provider,
+          maskedKey,
+          hasKey
+        })
+      }
 
-      credentials.push({
-        id: 'media-search',
-        label: 'Media Search',
-        source: 'media-search',
-        provider: mediaConfig.provider,
-        maskedKey: maskMediaApiKey(mediaConfig.apiKey),
-        hasKey: !!mediaConfig.apiKey
-      })
+      if (mediaConfig.apiKey) {
+        credentials.push({
+          id: 'media-search',
+          label: 'Media Search',
+          source: 'media-search',
+          provider: mediaConfig.provider,
+          maskedKey: maskMediaApiKey(mediaConfig.apiKey),
+          hasKey: true
+        })
+      }
 
       return { success: true, credentials, secure: isEncryptionSecure() }
     } catch (error: any) {
@@ -1124,8 +1137,9 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('app:deleteCredential', async (_, id: string) => {
     try {
-      if (id === 'ai') {
-        await aiSaveConfig({ apiKey: '' })
+      if (id.startsWith('ai:')) {
+        const provider = id.slice(3) as AiProvider
+        await clearApiKeyForProvider(provider)
       } else if (id === 'media-search') {
         await mediaSearchSaveConfig({ apiKey: '' })
       } else {
