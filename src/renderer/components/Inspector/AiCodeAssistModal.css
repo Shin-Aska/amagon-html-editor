@@ -1,30 +1,9 @@
-/* ─── AI Code Assist Modal ───────────────────────────────────────────────── */
+/* ─── AI Code Assist Panel ───────────────────────────────────────────────── */
 
-.ai-code-assist-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(2px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 11000;
-}
-
-.ai-code-assist-modal {
-    background: var(--surface, #1e1e2e);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    width: 720px;
-    max-width: 92vw;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-    overflow: hidden;
+.ai-code-assist-panel {
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(0, 0, 0, 0.08) 100%);
+    animation: ai-code-assist-reveal 0.2s ease-out;
 }
 
 .ai-code-assist-header {
@@ -63,6 +42,7 @@
     flex-direction: column;
     gap: 10px;
     overflow: auto;
+    max-height: 320px;
 }
 
 .ai-code-assist-label {
@@ -95,6 +75,38 @@
     font-size: 0.78rem;
 }
 
+.ai-code-assist-selection-note {
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+}
+
+.ai-code-assist-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: var(--text);
+}
+
+.ai-code-assist-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #d1fae5;
+    background: rgba(22, 163, 74, 0.28);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
 .ai-code-assist-preview-header {
     display: flex;
     align-items: center;
@@ -113,7 +125,13 @@
     color: var(--text);
     white-space: pre;
     overflow: auto;
-    max-height: 280px;
+    max-height: 180px;
+}
+
+.ai-code-assist-preview-diff {
+    border-color: rgba(34, 197, 94, 0.28);
+    background: linear-gradient(180deg, rgba(8, 24, 16, 0.95) 0%, rgba(10, 18, 14, 0.98) 100%);
+    color: #d1fae5;
 }
 
 .ai-code-assist-footer {
@@ -159,3 +177,14 @@
     color: var(--text-muted);
 }
 
+@keyframes ai-code-assist-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

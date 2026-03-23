@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import Editor, { type OnMount } from '@monaco-editor/react'
+import Editor, { DiffEditor, type OnMount } from '@monaco-editor/react'
 import { useEditorStore } from '../../store/editorStore'
 import './EventActionsEditor.css'
 import type * as MonacoType from 'monaco-editor'
-import AiCodeAssistModal from './AiCodeAssistModal'
+import AiCodeAssistModal, { type AiCodeProposal, type AiCodeSelection } from './AiCodeAssistModal'
 
 const AVAILABLE_EVENTS = [
     { value: 'onclick', label: 'On Click' },
@@ -98,6 +98,80 @@ interface EventActionsEditorProps {
     events: Record<string, string>
 }
 
+interface PendingAiReview {
+    proposal: AiCodeProposal
+    sourceCode: string
+    previewCode: string
+    selectionSnapshot: AiCodeSelection | null
+}
+
+function normalizeProposalToFullCode(currentCode: string, proposal: AiCodeProposal): string {
+    const nextCode = proposal.code.trim()
+    if (!nextCode) return currentCode
+    if (nextCode.includes('(function') && nextCode.includes('.call(this, event)')) return nextCode
+    return `(function(event) {\n  ${nextCode.replace(/\n/g, '\n  ')}\n}).call(this, event)`
+}
+
+function insertSnippetAtAnchor(currentCode: string, proposal: AiCodeProposal): string {
+    const snippet = proposal.code.trim()
+    if (!snippet) return currentCode
+
+    const appendWithSpacing = (base: string, addition: string): string => {
+        if (!base.trim()) return addition
+        const separator = base.endsWith('\n') ? '' : '\n'
+        return `${base}${separator}${addition}`
+    }
+
+    if (proposal.anchor === 'inside_function_start') {
+        const match = currentCode.match(/\(function\(event\)\s*\{\n?/)
+        if (match && typeof match.index === 'number') {
+            const insertAt = match.index + match[0].length
+            return `${currentCode.slice(0, insertAt)}\n  ${snippet.replace(/\n/g, '\n  ')}${currentCode.slice(insertAt)}`
+        }
+    }
+
+    if (proposal.anchor === 'inside_function_end') {
+        const closingIndex = currentCode.lastIndexOf('}).call(this, event)')
+        if (closingIndex >= 0) {
+            const beforeClosing = currentCode.slice(0, closingIndex).replace(/\s*$/, '')
+            const afterClosing = currentCode.slice(closingIndex)
+            return `${beforeClosing}\n  ${snippet.replace(/\n/g, '\n  ')}\n${afterClosing}`
+        }
+    }
+
+    if (proposal.matchText) {
+        const lines = currentCode.split('\n')
+        const lineIndex = lines.findIndex((line) => line.includes(proposal.matchText!))
+        if (lineIndex >= 0) {
+            const insertIndex = proposal.anchor === 'before_line_containing' ? lineIndex : lineIndex + 1
+            lines.splice(insertIndex, 0, ...snippet.split('\n'))
+            return lines.join('\n')
+        }
+    }
+
+    return appendWithSpacing(currentCode, snippet)
+}
+
+function applyProposalToCode(
+    currentCode: string,
+    proposal: AiCodeProposal,
+    selectionSnapshot: AiCodeSelection | null
+): string {
+    if (proposal.mode === 'replace_all') {
+        return normalizeProposalToFullCode(currentCode, proposal)
+    }
+
+    if (proposal.mode === 'replace_selection' && selectionSnapshot?.text.trim()) {
+        const target = selectionSnapshot.text
+        const index = currentCode.indexOf(target)
+        if (index >= 0) {
+            return `${currentCode.slice(0, index)}${proposal.code}${currentCode.slice(index + target.length)}`
+        }
+    }
+
+    return insertSnippetAtAnchor(currentCode, proposal)
+}
+
 export default function EventActionsEditor({ blockId, events }: EventActionsEditorProps): JSX.Element {
     const updateBlock = useEditorStore((s) => s.updateBlock)
     const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode)
@@ -106,6 +180,9 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     const [editorCode, setEditorCode] = useState('')
     const [showAddDropdown, setShowAddDropdown] = useState(false)
     const [showAiAssist, setShowAiAssist] = useState(false)
+    const [aiRequestText, setAiRequestText] = useState('')
+    const [selection, setSelection] = useState<AiCodeSelection | null>(null)
+    const [pendingAiReview, setPendingAiReview] = useState<PendingAiReview | null>(null)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null)
 
@@ -134,6 +211,9 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         // Open editor for new event — only persist when user clicks Save
         setEditingEvent(eventName)
         setEditorCode(template)
+        setAiRequestText('')
+        setSelection(null)
+        setPendingAiReview(null)
     }, [])
 
     const handleRemoveEvent = useCallback((eventName: string) => {
@@ -145,6 +225,9 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     const handleEditEvent = useCallback((eventName: string) => {
         setEditingEvent(eventName)
         setEditorCode(currentEvents[eventName] || '')
+        setAiRequestText('')
+        setSelection(null)
+        setPendingAiReview(null)
     }, [currentEvents])
 
     const handleSaveCode = useCallback(() => {
@@ -153,6 +236,8 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         updateBlock(blockId, { events: newEvents })
         setEditingEvent(null)
         setEditorCode('')
+        setAiRequestText('')
+        setPendingAiReview(null)
     }, [blockId, editingEvent, editorCode, currentEvents, updateBlock])
 
     const handleSaveAndClose = useCallback(() => {
@@ -165,6 +250,9 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         setShowAiAssist(false)
         setEditingEvent(null)
         setEditorCode('')
+        setAiRequestText('')
+        setSelection(null)
+        setPendingAiReview(null)
         setIsTypingCode(false)
     }, [setIsTypingCode])
 
@@ -194,6 +282,26 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
 
     const handleEditorMount: OnMount = (editor) => {
         editorRef.current = editor
+        const updateSelectionState = () => {
+            const model = editor.getModel()
+            const currentSelection = editor.getSelection()
+            if (!model || !currentSelection) {
+                setSelection(null)
+                return
+            }
+
+            const text = model.getValueInRange(currentSelection)
+            if (!text.trim()) {
+                setSelection(null)
+                return
+            }
+
+            setSelection({
+                text,
+                startLineNumber: currentSelection.startLineNumber,
+                endLineNumber: currentSelection.endLineNumber
+            })
+        }
         
         // Focus the editor when it mounts
         editor.focus()
@@ -207,38 +315,45 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         const disposableFocus = editor.onDidFocusEditorWidget(() => {
             setIsTypingCode(true)
         })
+
+        const disposableSelection = editor.onDidChangeCursorSelection(() => {
+            updateSelectionState()
+        })
         
         return () => {
             disposableBlur.dispose()
             disposableFocus.dispose()
+            disposableSelection.dispose()
         }
     }
 
-    const handleApplyAiCode = useCallback(
-        (nextCode: string, mode?: 'replace' | 'insert') => {
-            if (mode === 'insert' && editorRef.current) {
-                const editor = editorRef.current
-                const selection = editor.getSelection()
-                if (selection) {
-                    editor.executeEdits('ai-assist', [
-                        {
-                            range: selection,
-                            text: nextCode,
-                            forceMoveMarkers: true
-                        }
-                    ])
-                    setEditorCode(editor.getValue())
-                    editor.focus()
-                } else {
-                    setEditorCode(nextCode)
-                }
-            } else {
-                setEditorCode(nextCode)
-            }
+    const handleProposalGenerated = useCallback(
+        (proposal: AiCodeProposal) => {
+            const selectionSnapshot = selection ? { ...selection } : null
+            const sourceCode = editorCode
+            const previewCode = applyProposalToCode(sourceCode, proposal, selectionSnapshot)
+            setPendingAiReview({
+                proposal,
+                sourceCode,
+                previewCode,
+                selectionSnapshot
+            })
             setShowAiAssist(false)
         },
-        [setEditorCode]
+        [editorCode, selection]
     )
+
+    const handleApplyAiReview = useCallback(() => {
+        if (!pendingAiReview) return
+        setEditorCode(pendingAiReview.previewCode)
+        setPendingAiReview(null)
+        setSelection(null)
+    }, [pendingAiReview])
+
+    const handleDiscardAiReview = useCallback(() => {
+        setPendingAiReview(null)
+        setShowAiAssist(true)
+    }, [])
 
     return (
         <div className="event-actions-editor">
@@ -309,37 +424,105 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                 <div className="event-editor-header-left">
                                     <h4>Edit: {getEventLabel(editingEvent)}</h4>
                                     <span className="event-editor-event-name">{editingEvent}</span>
-                                    <button
-                                        className="event-editor-ai-btn"
-                                        onClick={() => setShowAiAssist(true)}
-                                        title="Assist with AI"
-                                        type="button"
-                                    >
-                                        ✨
-                                    </button>
                                 </div>
                             </div>
                             <div className="event-editor-body">
-                                <Editor
-                                    height="300px"
-                                    defaultLanguage="javascript"
-                                    value={editorCode}
-                                    onChange={(value) => setEditorCode(value || '')}
-                                    theme="vs-dark"
-                                    onMount={handleEditorMount}
-                                    options={{
-                                        minimap: { enabled: false },
-                                        fontSize: 13,
-                                        lineNumbers: 'on',
-                                        scrollBeyondLastLine: false,
-                                        wordWrap: 'on',
-                                        tabSize: 2,
-                                        automaticLayout: true,
-                                        padding: { top: 8 }
-                                    }}
+                                <AiCodeAssistModal
+                                    isOpen={showAiAssist}
+                                    eventName={editingEvent}
+                                    block={block}
+                                    currentCode={editorCode}
+                                    selection={selection}
+                                    requestText={aiRequestText}
+                                    onRequestTextChange={setAiRequestText}
+                                    onProposalGenerated={handleProposalGenerated}
+                                    onClose={() => setShowAiAssist(false)}
                                 />
+                                {pendingAiReview && (
+                                    <div className="event-editor-review-bar">
+                                        <div className="event-editor-review-summary">
+                                            <span className="event-editor-review-badge">
+                                                {pendingAiReview.proposal.mode.replace('_', ' ')}
+                                            </span>
+                                            <span>{pendingAiReview.proposal.explanation}</span>
+                                            {pendingAiReview.proposal.insertHint && (
+                                                <span className="event-editor-review-hint">
+                                                    {pendingAiReview.proposal.insertHint}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="event-editor-review-actions">
+                                            <button
+                                                className="event-editor-btn"
+                                                type="button"
+                                                onClick={handleDiscardAiReview}
+                                            >
+                                                Discard Proposal
+                                            </button>
+                                            <button
+                                                className="event-editor-btn save"
+                                                type="button"
+                                                onClick={handleApplyAiReview}
+                                            >
+                                                Apply Proposal
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="event-editor-code-surface">
+                                    {pendingAiReview ? (
+                                        <DiffEditor
+                                            height="300px"
+                                            original={pendingAiReview.sourceCode}
+                                            modified={pendingAiReview.previewCode}
+                                            language="javascript"
+                                            theme="vs-dark"
+                                            options={{
+                                                renderSideBySide: false,
+                                                readOnly: true,
+                                                minimap: { enabled: false },
+                                                fontSize: 13,
+                                                lineNumbers: 'on',
+                                                scrollBeyondLastLine: false,
+                                                wordWrap: 'on',
+                                                automaticLayout: true,
+                                                diffCodeLens: true,
+                                                renderIndicators: true
+                                            }}
+                                        />
+                                    ) : (
+                                        <Editor
+                                            height="300px"
+                                            defaultLanguage="javascript"
+                                            value={editorCode}
+                                            onChange={(value) => {
+                                                setEditorCode(value || '')
+                                                if (pendingAiReview) setPendingAiReview(null)
+                                            }}
+                                            theme="vs-dark"
+                                            onMount={handleEditorMount}
+                                            options={{
+                                                minimap: { enabled: false },
+                                                fontSize: 13,
+                                                lineNumbers: 'on',
+                                                scrollBeyondLastLine: false,
+                                                wordWrap: 'on',
+                                                tabSize: 2,
+                                                automaticLayout: true,
+                                                padding: { top: 8 }
+                                            }}
+                                        />
+                                    )}
+                                </div>
                             </div>
                             <div className="event-editor-footer">
+                                <button
+                                    className="event-editor-btn ai"
+                                    onClick={() => setShowAiAssist((prev) => !prev)}
+                                    type="button"
+                                >
+                                    {showAiAssist ? 'Hide AI Assist' : '✨ AI Code Assist'}
+                                </button>
                                 <button className="event-editor-btn cancel" onClick={handleCancelEdit}>
                                     Cancel
                                 </button>
@@ -349,14 +532,6 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                             </div>
                         </div>
                     </div>
-                    <AiCodeAssistModal
-                        isOpen={showAiAssist}
-                        eventName={editingEvent}
-                        block={block}
-                        currentCode={editorCode}
-                        onApply={handleApplyAiCode}
-                        onClose={() => setShowAiAssist(false)}
-                    />
                 </>
             )}
         </div>
