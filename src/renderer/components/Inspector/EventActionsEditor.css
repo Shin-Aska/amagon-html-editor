@@ -271,6 +271,7 @@
 }
 
 .event-editor-btn {
+    background: transparent;
     padding: 6px 16px;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -292,6 +293,18 @@
     color: var(--text);
 }
 
+.event-editor-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.event-editor-btn.ai:disabled {
+    color: var(--text-muted);
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--surface, #1e1e2e) 86%, var(--border) 14%);
+    box-shadow: none;
+}
+
 .event-editor-btn.cancel {
     background: transparent;
     color: var(--text-muted);
@@ -310,6 +323,21 @@
 
 .event-editor-btn.save:hover {
     opacity: 0.9;
+}
+
+.event-editor-inline-link {
+    margin-right: auto;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+    padding: 0;
+}
+
+.event-editor-inline-link:hover {
+    color: var(--color-accent, #1e66f5);
 }
 
 @media (max-width: 760px) {

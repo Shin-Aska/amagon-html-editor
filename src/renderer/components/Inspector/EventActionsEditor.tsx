@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import Editor, { DiffEditor, type OnMount } from '@monaco-editor/react'
 import { useEditorStore } from '../../store/editorStore'
+import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import { openGlobalSettings } from '../../utils/settingsNavigation'
 import './EventActionsEditor.css'
 import type * as MonacoType from 'monaco-editor'
 import AiCodeAssistModal, { type AiCodeProposal, type AiCodeSelection } from './AiCodeAssistModal'
@@ -176,6 +178,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     const updateBlock = useEditorStore((s) => s.updateBlock)
     const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode)
     const getBlockById = useEditorStore((s) => s.getBlockById)
+    const { hasConfiguredAiProvider } = useAiAvailability()
     const [editingEvent, setEditingEvent] = useState<string | null>(null)
     const [editorCode, setEditorCode] = useState('')
     const [showAddDropdown, setShowAddDropdown] = useState(false)
@@ -515,11 +518,25 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                             <div className="event-editor-footer">
                                 <button
                                     className="event-editor-btn ai"
-                                    onClick={() => setShowAiAssist((prev) => !prev)}
+                                    onClick={() => {
+                                        if (!hasConfiguredAiProvider) return
+                                        setShowAiAssist((prev) => !prev)
+                                    }}
                                     type="button"
+                                    disabled={!hasConfiguredAiProvider}
+                                    title={!hasConfiguredAiProvider ? AI_API_KEY_REQUIRED_MESSAGE : undefined}
                                 >
                                     {showAiAssist ? 'Hide AI Assist' : '✨ AI Code Assist'}
                                 </button>
+                                {!hasConfiguredAiProvider && (
+                                    <button
+                                        className="event-editor-inline-link"
+                                        type="button"
+                                        onClick={() => openGlobalSettings({ tab: 'keys' })}
+                                    >
+                                        {AI_API_KEY_REQUIRED_MESSAGE}
+                                    </button>
+                                )}
                                 <button className="event-editor-btn cancel" onClick={handleCancelEdit}>
                                     Cancel
                                 </button>

@@ -328,6 +328,15 @@
     background: var(--color-bg-hover);
 }
 
+.css-manager-context-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.css-manager-context-item:disabled:hover {
+    background: transparent;
+}
+
 .css-manager-context-item-ai {
     color: var(--color-accent);
     font-weight: 600;
@@ -341,6 +350,22 @@
     height: 1px;
     margin: 4px 6px 2px;
     background: var(--color-border);
+}
+
+.css-manager-context-note {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    text-align: left;
+    padding: 6px 10px 8px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.css-manager-context-note:hover {
+    color: var(--color-accent);
 }
 
 @media (max-width: 900px) {

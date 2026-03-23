@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import type { ProjectTheme, ThemeColors } from '../../store/types'
+import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import { openGlobalSettings } from '../../utils/settingsNavigation'
 import { getApi } from '../../utils/api'
 import ColorField from './ColorField'
 import './CreatePresetModal.css'
@@ -108,6 +110,7 @@ export default function CreatePresetModal({
   onClose: () => void
   onCreate: (name: string, colors: ThemeColors) => void
 }): JSX.Element | null {
+  const { hasConfiguredAiProvider } = useAiAvailability()
   const [name, setName] = useState('')
   const [aiDescription, setAiDescription] = useState('')
   const [colors, setColors] = useState<ThemeColors>(initialTheme.colors)
@@ -215,7 +218,7 @@ export default function CreatePresetModal({
         </div>
 
         <div className="create-preset-body">
-          <div className="create-preset-ai-card">
+          <div className={`create-preset-ai-card ${!hasConfiguredAiProvider ? 'is-disabled' : ''}`}>
             <label className="theme-field-label" htmlFor="create-preset-ai-description">
               Describe your desired color scheme
             </label>
@@ -227,19 +230,31 @@ export default function CreatePresetModal({
                 onChange={(e) => setAiDescription(e.target.value)}
                 placeholder="Describe your desired color scheme (e.g., Ocean breeze, Cyberpunk, Soft pastel)..."
                 rows={3}
+                disabled={!hasConfiguredAiProvider || isGenerating}
               />
               <button
                 className="theme-btn theme-btn-primary create-preset-generate-btn"
                 onClick={generateWithAi}
-                disabled={isGenerating}
+                disabled={isGenerating || !hasConfiguredAiProvider}
               >
                 {isGenerating ? <Loader2 size={14} className="create-preset-spin" /> : <Sparkles size={14} />}
                 {isGenerating ? 'Generating...' : 'Generate Colors'}
               </button>
             </div>
             <p className="create-preset-helper">
-              Generate a palette, then fine-tune any color below before saving.
+              {hasConfiguredAiProvider
+                ? 'Generate a palette, then fine-tune any color below before saving.'
+                : AI_API_KEY_REQUIRED_MESSAGE}
             </p>
+            {!hasConfiguredAiProvider && (
+              <button
+                type="button"
+                className="create-preset-settings-link"
+                onClick={() => openGlobalSettings({ tab: 'keys' })}
+              >
+                Open Global Settings
+              </button>
+            )}
           </div>
 
           <div className="create-preset-divider" />

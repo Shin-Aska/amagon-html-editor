@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo, type MouseEvent } from 'reac
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import { useProjectStore } from '../../store/projectStore'
 import type { CssFile, ProjectTheme } from '../../store/types'
+import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import { openGlobalSettings } from '../../utils/settingsNavigation'
 import AiCssAssistModal, { type AiCssProposal } from './AiCssAssistModal'
 import './CustomCssManager.css'
 
@@ -34,6 +36,7 @@ function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
 }
 
 export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JSX.Element {
+    const { hasConfiguredAiProvider } = useAiAvailability()
     const addCssFile = useProjectStore((s) => s.addCssFile)
     const removeCssFile = useProjectStore((s) => s.removeCssFile)
     const updateCssFile = useProjectStore((s) => s.updateCssFile)
@@ -323,13 +326,26 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                     <div className="css-manager-context-group-label">Smart Actions</div>
                     <button
                         className="css-manager-context-item css-manager-context-item-ai"
+                        disabled={!hasConfiguredAiProvider}
                         onClick={() => {
+                            if (!hasConfiguredAiProvider) return
                             setAiModalFile(contextMenu.file)
                             setContextMenu(null)
                         }}
                     >
                         ✨ Assist with AI
                     </button>
+                    {!hasConfiguredAiProvider && (
+                        <button
+                            className="css-manager-context-note"
+                            onClick={() => {
+                                setContextMenu(null)
+                                openGlobalSettings({ tab: 'keys' })
+                            }}
+                        >
+                            {AI_API_KEY_REQUIRED_MESSAGE}
+                        </button>
+                    )}
                     <div className="css-manager-context-divider" />
                 </div>
             )}
