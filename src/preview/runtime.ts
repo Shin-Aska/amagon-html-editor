@@ -486,6 +486,21 @@ function initRuntime(): void {
   hljsStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css'
   document.head.appendChild(hljsStyle)
 
+  // Canvas-only overrides: disable interactive form controls that are only
+  // functional at export time (e.g. page-list search/sort/direction inputs).
+  const canvasOverrides = document.createElement('style')
+  canvasOverrides.id = 'editor-canvas-overrides'
+  canvasOverrides.textContent = `
+    [data-page-list-search],
+    [data-page-list-sort],
+    [data-page-list-dir] {
+      pointer-events: none;
+      user-select: none;
+      cursor: default;
+    }
+  `
+  document.head.appendChild(canvasOverrides)
+
   // Listen for messages from the parent editor
   window.addEventListener('message', (event: MessageEvent) => {
     const data = event.data as Partial<EditorMessage> | undefined
