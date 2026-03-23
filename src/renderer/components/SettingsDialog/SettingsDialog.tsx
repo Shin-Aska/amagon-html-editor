@@ -9,12 +9,13 @@ import './SettingsDialog.css'
 interface SettingsDialogProps {
   open: boolean
   onClose: () => void
+  initialTab?: TabType
 }
 
 type TabType = 'general' | 'keys'
 
-export default function SettingsDialog({ open, onClose }: SettingsDialogProps): JSX.Element | null {
-  const [activeTab, setActiveTab] = useState<TabType>('general')
+export default function SettingsDialog({ open, onClose, initialTab = 'general' }: SettingsDialogProps): JSX.Element | null {
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const overlayRef = useRef<HTMLDivElement>(null)
 
   // -- App Settings --
@@ -43,6 +44,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
 
   useEffect(() => {
     if (open) {
+      setActiveTab(initialTab)
       loadAiConfig().then(() => {
         loadAiModels()
       })
@@ -263,6 +265,8 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
                       className="settings-input"
                     >
                       <option value="unsplash">Unsplash</option>
+                      <option value="pexels">Pexels</option>
+                      <option value="pixabay">Pixabay</option>
                     </select>
                   </div>
                   <div className="settings-field">

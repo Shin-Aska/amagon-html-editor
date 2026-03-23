@@ -41,6 +41,7 @@ import CredentialManager from '../CredentialManager/CredentialManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
+import { OPEN_GLOBAL_SETTINGS_EVENT, type GlobalSettingsTab, type OpenGlobalSettingsDetail } from '../../utils/settingsNavigation'
 import './Toolbar.css'
 
 interface ToolbarProps {
@@ -107,6 +108,7 @@ export default function Toolbar({
   const [showAssetManager, setShowAssetManager] = useState(false)
   const [showCredentialManager, setShowCredentialManager] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsInitialTab, setSettingsInitialTab] = useState<GlobalSettingsTab>('general')
   const [showNewProject, setShowNewProject] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -124,6 +126,18 @@ export default function Toolbar({
   useEffect(() => {
     setTempName(projectName)
   }, [projectName])
+
+  useEffect(() => {
+    const handleOpenSettings = (event: Event) => {
+      const customEvent = event as CustomEvent<OpenGlobalSettingsDetail>
+      setSettingsInitialTab(customEvent.detail?.tab ?? 'general')
+      setShowSettings(true)
+      setShowCredentialManager(false)
+    }
+
+    window.addEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener)
+    return () => window.removeEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener)
+  }, [])
 
   // Auto-save listener
   useEffect(() => {
@@ -719,7 +733,11 @@ export default function Toolbar({
       )}
 
       {showSettings && (
-        <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+        <SettingsDialog
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+          initialTab={settingsInitialTab}
+        />
       )}
     </>
   )
