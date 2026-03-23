@@ -5,8 +5,6 @@ import { getApi } from '../../utils/api'
 import ColorField from './ColorField'
 import './CreatePresetModal.css'
 
-type CreatePresetView = 'choice' | 'manual' | 'ai'
-
 const COLOR_FIELDS: { key: keyof ThemeColors; label: string }[] = [
   { key: 'primary', label: 'Primary' },
   { key: 'secondary', label: 'Secondary' },
@@ -110,21 +108,21 @@ export default function CreatePresetModal({
   onClose: () => void
   onCreate: (name: string, colors: ThemeColors) => void
 }): JSX.Element | null {
-  const [view, setView] = useState<CreatePresetView>('choice')
   const [name, setName] = useState('')
   const [aiDescription, setAiDescription] = useState('')
   const [colors, setColors] = useState<ThemeColors>(initialTheme.colors)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isAiPreviewing, setIsAiPreviewing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isOpen) return
-    setView('choice')
     setName('')
     setAiDescription('')
     setColors(initialTheme.colors)
     setError(null)
     setIsGenerating(false)
+    setIsAiPreviewing(false)
   }, [initialTheme.colors, isOpen])
 
   useEffect(() => {
@@ -138,6 +136,12 @@ export default function CreatePresetModal({
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [isOpen, onClose])
+
+  useEffect(() => {
+    if (!isAiPreviewing) return
+    const timer = window.setTimeout(() => setIsAiPreviewing(false), 900)
+    return () => window.clearTimeout(timer)
+  }, [isAiPreviewing])
 
   const previewColors = useMemo(
     () => COLOR_FIELDS.map(({ key, label }) => ({ key, label, value: colors[key] })),
@@ -184,8 +188,7 @@ export default function CreatePresetModal({
       }
 
       setColors(parsed)
-      setView('manual')
-      setAiDescription('')
+      setIsAiPreviewing(true)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate colors.'
       setError(message)
@@ -208,111 +211,88 @@ export default function CreatePresetModal({
     <div className="create-preset-overlay" onClick={onClose}>
       <div className="create-preset-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="create-preset-header">
-          <h3>Create Preset</h3>
+          <h3>Create Theme Preset</h3>
         </div>
 
         <div className="create-preset-body">
-          {view === 'choice' && (
-            <div className="create-preset-choice">
-              <p>How would you like to build this preset?</p>
-              <div className="create-preset-choice-actions">
-                <button className="theme-btn theme-btn-primary" onClick={() => setView('manual')}>
-                  Choose Manually
-                </button>
-                <button className="theme-btn" onClick={() => setView('ai')}>
-                  <Sparkles size={14} /> AI Assistance
-                </button>
-              </div>
-            </div>
-          )}
-
-          {view === 'manual' && (
-            <div className="create-preset-manual">
-              <div className="theme-field">
-                <label className="theme-field-label">Preset Name</label>
-                <input
-                  className="theme-field-input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="My preset name"
-                  autoFocus
-                />
-              </div>
-
-              <div className="theme-color-grid">
-                {COLOR_FIELDS.map(({ key, label }) => (
-                  <ColorField
-                    key={key}
-                    label={label}
-                    value={colors[key]}
-                    onChange={(value) => setColors((prev) => ({ ...prev, [key]: value }))}
-                  />
-                ))}
-              </div>
-
-              <div className="create-preset-preview" aria-label="Color preview strip">
-                {previewColors.map(({ key, label, value }) => (
-                  <div key={key} className="create-preset-preview-swatch" title={`${label}: ${value}`} style={{ backgroundColor: value }} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {view === 'ai' && (
-            <div className="create-preset-ai">
-              <label className="theme-field-label" htmlFor="create-preset-ai-description">
-                Describe your desired color scheme
-              </label>
+          <div className="create-preset-ai-card">
+            <label className="theme-field-label" htmlFor="create-preset-ai-description">
+              Describe your desired color scheme
+            </label>
+            <div className="create-preset-ai-row">
               <textarea
                 id="create-preset-ai-description"
                 className="create-preset-ai-textarea"
                 value={aiDescription}
                 onChange={(e) => setAiDescription(e.target.value)}
-                placeholder="Example: Warm, earthy palette with high-contrast text and a calm accent color."
-                rows={6}
-                autoFocus
+                placeholder="Describe your desired color scheme (e.g., Ocean breeze, Cyberpunk, Soft pastel)..."
+                rows={3}
               />
+              <button
+                className="theme-btn theme-btn-primary create-preset-generate-btn"
+                onClick={generateWithAi}
+                disabled={isGenerating}
+              >
+                {isGenerating ? <Loader2 size={14} className="create-preset-spin" /> : <Sparkles size={14} />}
+                {isGenerating ? 'Generating...' : 'Generate Colors'}
+              </button>
             </div>
-          )}
+            <p className="create-preset-helper">
+              Generate a palette, then fine-tune any color below before saving.
+            </p>
+          </div>
+
+          <div className="create-preset-divider" />
+
+          <div className={`create-preset-manual ${isAiPreviewing ? 'is-ai-updated' : ''}`}>
+            <div className="theme-color-grid">
+              {COLOR_FIELDS.map(({ key, label }) => (
+                <ColorField
+                  key={key}
+                  label={label}
+                  value={colors[key]}
+                  onChange={(value) => setColors((prev) => ({ ...prev, [key]: value }))}
+                />
+              ))}
+            </div>
+
+            <div className="create-preset-preview" aria-label="Color preview strip">
+              {previewColors.map(({ key, label, value }) => (
+                <div
+                  key={key}
+                  className="create-preset-preview-swatch"
+                  title={`${label}: ${value}`}
+                  style={{ backgroundColor: value }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="theme-field">
+            <label className="theme-field-label">Preset Name</label>
+            <input
+              className="theme-field-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="My preset name"
+              autoFocus
+            />
+          </div>
 
           {error && <div className="create-preset-error">{error}</div>}
         </div>
 
         <div className="create-preset-footer">
-          {view === 'choice' && (
-            <button className="theme-btn" onClick={onClose}>
-              Cancel
-            </button>
-          )}
-
-          {view === 'manual' && (
-            <>
-              <button className="theme-btn" onClick={onClose}>
-                Cancel
-              </button>
-              <button className="theme-btn" onClick={() => setView('ai')}>
-                <Sparkles size={14} /> Revise with AI ✨
-              </button>
-              <button className="theme-btn theme-btn-primary" onClick={handleCreate}>
-                Create
-              </button>
-            </>
-          )}
-
-          {view === 'ai' && (
-            <>
-              <button className="theme-btn" onClick={onClose}>
-                Cancel
-              </button>
-              <button className="theme-btn" onClick={() => setView('manual')} disabled={isGenerating}>
-                Back
-              </button>
-              <button className="theme-btn theme-btn-primary" onClick={generateWithAi} disabled={isGenerating}>
-                {isGenerating ? <Loader2 size={14} className="create-preset-spin" /> : <Sparkles size={14} />}
-                {isGenerating ? 'Generating...' : 'Generate'}
-              </button>
-            </>
-          )}
+          <button className="theme-btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="theme-btn theme-btn-primary"
+            onClick={handleCreate}
+            disabled={!name.trim()}
+          >
+            Save Preset
+          </button>
         </div>
       </div>
     </div>
