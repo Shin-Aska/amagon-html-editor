@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useMemo, type MouseEvent } from 'react'
 import Editor from '@monaco-editor/react'
 import { useProjectStore } from '../../store/projectStore'
-import type { CssFile } from '../../store/types'
+import type { CssFile, ProjectTheme } from '../../store/types'
+import AiCssAssistModal from './AiCssAssistModal'
 import './CustomCssManager.css'
 
-export default function CustomCssManager(): JSX.Element {
-    const theme = useProjectStore((s) => s.settings.theme)
+export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JSX.Element {
     const addCssFile = useProjectStore((s) => s.addCssFile)
     const removeCssFile = useProjectStore((s) => s.removeCssFile)
     const updateCssFile = useProjectStore((s) => s.updateCssFile)
@@ -18,8 +18,25 @@ export default function CustomCssManager(): JSX.Element {
     )
     const [renamingId, setRenamingId] = useState<string | null>(null)
     const [renameValue, setRenameValue] = useState('')
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: CssFile } | null>(null)
+    const [aiModalFile, setAiModalFile] = useState<CssFile | null>(null)
 
     const selectedFile = files.find((f) => f.id === selectedFileId) || null
+    const allFileNames = useMemo(() => files.map((f) => f.name), [files])
+
+    useEffect(() => {
+        if (!contextMenu) return
+        const handlePointerDown = () => setContextMenu(null)
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setContextMenu(null)
+        }
+        window.addEventListener('pointerdown', handlePointerDown)
+        window.addEventListener('keydown', handleKeyDown)
+        return () => {
+            window.removeEventListener('pointerdown', handlePointerDown)
+            window.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [contextMenu])
 
     const handleAddFile = useCallback(() => {
         const name = `stylesheet-${files.length + 1}.css`
@@ -62,6 +79,17 @@ export default function CustomCssManager(): JSX.Element {
         if (index < files.length - 1) reorderCssFiles(index, index + 1)
     }, [files.length, reorderCssFiles])
 
+    const handleOpenContextMenu = useCallback((event: MouseEvent<HTMLDivElement>, file: CssFile) => {
+        event.preventDefault()
+        const menuWidth = 180
+        const menuHeight = 44
+        const padding = 8
+        const x = Math.min(event.clientX, window.innerWidth - menuWidth - padding)
+        const y = Math.min(event.clientY, window.innerHeight - menuHeight - padding)
+        setSelectedFileId(file.id)
+        setContextMenu({ x, y, file })
+    }, [])
+
     return (
         <div className="css-manager">
             <div className="css-manager-sidebar">
@@ -82,6 +110,7 @@ export default function CustomCssManager(): JSX.Element {
                             key={file.id}
                             className={`css-manager-file-item ${file.id === selectedFileId ? 'active' : ''} ${!file.enabled ? 'disabled' : ''}`}
                             onClick={() => setSelectedFileId(file.id)}
+                            onContextMenu={(e) => handleOpenContextMenu(e, file)}
                         >
                             <span className="css-manager-file-order">{index + 1}</span>
 
@@ -181,6 +210,44 @@ export default function CustomCssManager(): JSX.Element {
                     </div>
                 )}
             </div>
+
+            {contextMenu && (
+                <div
+                    className="css-manager-context-menu"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.preventDefault()}
+                >
+                    <button
+                        className="css-manager-context-item"
+                        onClick={() => {
+                            setAiModalFile(contextMenu.file)
+                            setContextMenu(null)
+                        }}
+                    >
+                        Assist with AI ✨
+                    </button>
+                </div>
+            )}
+
+            <AiCssAssistModal
+                isOpen={!!aiModalFile}
+                file={aiModalFile}
+                allFileNames={allFileNames}
+                theme={theme}
+                onClose={() => setAiModalFile(null)}
+                onApplyReplace={(css) => {
+                    if (!aiModalFile) return
+                    updateCssFile(aiModalFile.id, { css })
+                }}
+                onApplyAppend={(css) => {
+                    if (!aiModalFile) return
+                    const current = files.find((f) => f.id === aiModalFile.id)
+                    const base = current?.css ?? aiModalFile.css ?? ''
+                    const next = `${base}\n${css}`.trimStart()
+                    updateCssFile(aiModalFile.id, { css: next })
+                }}
+            />
         </div>
     )
 }

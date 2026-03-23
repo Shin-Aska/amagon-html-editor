@@ -6,6 +6,7 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     overflow: hidden;
+    position: relative;
 }
 
 /* Sidebar */
@@ -220,4 +221,32 @@
     color: var(--text-muted);
     font-size: 0.8rem;
     font-style: italic;
+}
+
+/* Context menu */
+.css-manager-context-menu {
+    position: fixed;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+    padding: 4px;
+    z-index: 1100;
+    min-width: 170px;
+}
+
+.css-manager-context-item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--color-text-primary);
+    text-align: left;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.css-manager-context-item:hover {
+    background: var(--color-bg-hover);
 }
