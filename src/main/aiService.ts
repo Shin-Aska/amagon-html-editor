@@ -17,7 +17,7 @@ export interface ChatMessage {
     content: string
 }
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama'
+export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral'
 
 export interface AiConfig {
     provider: AiProvider
@@ -31,11 +31,12 @@ interface ProviderResponse {
     error?: string
 }
 
-/** Shape of the config as persisted to disk (API key is encrypted). */
+/** Shape of the config as persisted to disk (API keys are encrypted). */
 interface PersistedAiConfig {
     provider: AiProvider
     model: string
-    encryptedApiKey?: string   // base64-encoded, encrypted via safeStorage
+    encryptedApiKeys?: Record<string, string>  // per-provider encrypted keys (current format)
+    encryptedApiKey?: string   // legacy single key — auto-migrated on first load
     apiKey?: string            // legacy plaintext — auto-migrated on first load
     ollamaUrl: string
 }
@@ -59,7 +60,8 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
     anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
     google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-    ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3']
+    ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3'],
+    mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo']
 }
 
 // Re-export for the IPC handler to use as a baseline
@@ -73,54 +75,110 @@ function getConfigPath(): string {
     return path.join(app.getPath('userData'), 'ai-config.json')
 }
 
-export async function loadConfig(): Promise<AiConfig> {
+/** Read the persisted file and normalize to the current format (encryptedApiKeys map). */
+async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encryptedApiKeys: Record<string, string> }> {
     try {
         const raw = await fs.readFile(getConfigPath(), 'utf-8')
         const parsed = JSON.parse(raw) as PersistedAiConfig
+        const provider = parsed.provider ?? DEFAULT_CONFIG.provider
 
-        let apiKey = ''
+        let encryptedApiKeys: Record<string, string> = { ...(parsed.encryptedApiKeys ?? {}) }
 
-        if (parsed.encryptedApiKey) {
-            // Decrypt the stored key
-            apiKey = decryptApiKey(parsed.encryptedApiKey)
-        } else if (parsed.apiKey) {
-            // Legacy migration: encrypt the plaintext key and rewrite the file
-            apiKey = parsed.apiKey
-            const migrated: PersistedAiConfig = {
-                provider: parsed.provider ?? DEFAULT_CONFIG.provider,
-                model: parsed.model ?? DEFAULT_CONFIG.model,
-                encryptedApiKey: encryptApiKey(apiKey),
-                ollamaUrl: parsed.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+        // Migrate legacy single-key format → per-provider map
+        if (Object.keys(encryptedApiKeys).length === 0) {
+            if (parsed.encryptedApiKey) {
+                encryptedApiKeys[provider] = parsed.encryptedApiKey
+            } else if (parsed.apiKey) {
+                encryptedApiKeys[provider] = encryptApiKey(parsed.apiKey)
             }
-            await fs.writeFile(getConfigPath(), JSON.stringify(migrated, null, 2), 'utf-8')
-            console.log('[AI Service] Migrated plaintext API key to encrypted storage.')
+
+            if (Object.keys(encryptedApiKeys).length > 0) {
+                const migrated: PersistedAiConfig = {
+                    provider,
+                    model: parsed.model ?? DEFAULT_CONFIG.model,
+                    encryptedApiKeys,
+                    ollamaUrl: parsed.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+                }
+                await fs.writeFile(getConfigPath(), JSON.stringify(migrated, null, 2), 'utf-8')
+                console.log('[AI Service] Migrated legacy API key to per-provider encrypted storage.')
+                return { persisted: migrated, encryptedApiKeys }
+            }
         }
 
-        return {
-            provider: parsed.provider ?? DEFAULT_CONFIG.provider,
-            model: parsed.model ?? DEFAULT_CONFIG.model,
-            apiKey,
-            ollamaUrl: parsed.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
-        }
+        return { persisted: parsed, encryptedApiKeys }
     } catch {
-        return { ...DEFAULT_CONFIG }
+        const empty: PersistedAiConfig = {
+            provider: DEFAULT_CONFIG.provider,
+            model: DEFAULT_CONFIG.model,
+            encryptedApiKeys: {},
+            ollamaUrl: DEFAULT_CONFIG.ollamaUrl
+        }
+        return { persisted: empty, encryptedApiKeys: {} }
     }
 }
 
-export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
-    const current = await loadConfig()
-    const merged: AiConfig = { ...current, ...config }
+export async function loadConfig(): Promise<AiConfig> {
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+    const provider = persisted.provider ?? DEFAULT_CONFIG.provider
 
-    // Persist with the API key encrypted — never write plaintext to disk
-    const persisted: PersistedAiConfig = {
+    let apiKey = ''
+    if (encryptedApiKeys[provider]) {
+        try { apiKey = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted key */ }
+    }
+
+    return {
+        provider,
+        model: persisted.model ?? DEFAULT_CONFIG.model,
+        apiKey,
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+    }
+}
+
+/** Returns the stored (decrypted) API key for a specific provider, regardless of the active provider. */
+export async function loadApiKeyForProvider(provider: AiProvider): Promise<string> {
+    const { encryptedApiKeys } = await loadPersistedRaw()
+    if (encryptedApiKeys[provider]) {
+        try { return decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted */ }
+    }
+    return ''
+}
+
+export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+
+    const current: AiConfig = {
+        provider: persisted.provider ?? DEFAULT_CONFIG.provider,
+        model: persisted.model ?? DEFAULT_CONFIG.model,
+        apiKey: '',
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+    }
+    const merged: AiConfig = { ...current, ...config }
+    const activeProvider = merged.provider
+
+    // Preserve existing per-provider keys; only update the active provider's key if explicitly set
+    const newEncryptedApiKeys = { ...encryptedApiKeys }
+    if (config.apiKey !== undefined && config.apiKey !== '') {
+        newEncryptedApiKeys[activeProvider] = encryptApiKey(config.apiKey)
+    }
+
+    const newPersisted: PersistedAiConfig = {
         provider: merged.provider,
         model: merged.model,
-        encryptedApiKey: encryptApiKey(merged.apiKey),
+        encryptedApiKeys: newEncryptedApiKeys,
         ollamaUrl: merged.ollamaUrl
     }
 
-    await fs.writeFile(getConfigPath(), JSON.stringify(persisted, null, 2), 'utf-8')
-    return merged
+    await fs.writeFile(getConfigPath(), JSON.stringify(newPersisted, null, 2), 'utf-8')
+
+    // Return config with the decrypted key for the active provider
+    let activeApiKey = ''
+    if (config.apiKey !== undefined && config.apiKey !== '') {
+        activeApiKey = config.apiKey
+    } else if (newEncryptedApiKeys[activeProvider]) {
+        try { activeApiKey = decryptApiKey(newEncryptedApiKeys[activeProvider]) } catch { /* ignore */ }
+    }
+
+    return { ...merged, apiKey: activeApiKey }
 }
 
 // ---------------------------------------------------------------------------
@@ -335,6 +393,33 @@ async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<Pr
     }
 }
 
+async function chatMistral(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
+    const url = 'https://api.mistral.ai/v1/chat/completions'
+    const body = JSON.stringify({
+        model: config.model,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        temperature: 0.7,
+        max_tokens: 4096
+    })
+
+    const response = await net.fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.apiKey}`
+        },
+        body
+    })
+
+    if (!response.ok) {
+        const errorText = await response.text()
+        return { content: '', error: `Mistral API error (${response.status}): ${errorText}` }
+    }
+
+    const data = await response.json() as any
+    return { content: data.choices?.[0]?.message?.content ?? '' }
+}
+
 // ---------------------------------------------------------------------------
 // Main chat dispatcher
 // ---------------------------------------------------------------------------
@@ -343,7 +428,8 @@ const ADAPTERS: Record<AiProvider, (msgs: ChatMessage[], cfg: AiConfig) => Promi
     openai: chatOpenAI,
     anthropic: chatAnthropic,
     google: chatGoogle,
-    ollama: chatOllama
+    ollama: chatOllama,
+    mistral: chatMistral
 }
 
 // ---------------------------------------------------------------------------
@@ -423,6 +509,26 @@ async function fetchOllamaModels(ollamaUrl: string): Promise<string[]> {
     }
 }
 
+async function fetchMistralModels(apiKey: string): Promise<string[]> {
+    const url = 'https://api.mistral.ai/v1/models'
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS)
+
+    try {
+        const response = await net.fetch(url, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: controller.signal
+        })
+        if (!response.ok) return []
+        const data = (await response.json()) as any
+        if (!Array.isArray(data.data)) return []
+
+        return data.data.map((m: any) => m.id as string).filter((id: string) => id.length > 0)
+    } finally {
+        clearTimeout(timer)
+    }
+}
+
 export async function fetchModelsForProvider(
     provider: AiProvider,
     apiKey: string,
@@ -432,6 +538,7 @@ export async function fetchModelsForProvider(
         if (provider !== 'ollama' && !apiKey) return []
         if (provider === 'openai') return await fetchOpenAIModels(apiKey)
         if (provider === 'google') return await fetchGoogleModels(apiKey)
+        if (provider === 'mistral') return await fetchMistralModels(apiKey)
         if (provider === 'ollama') {
             const models = await fetchOllamaModels(ollamaUrl || 'http://localhost:11434')
             return models.length > 0 ? models : FALLBACK_MODELS.ollama
@@ -447,39 +554,56 @@ export async function fetchModelsForProvider(
 }
 
 export async function fetchAvailableModels(): Promise<Record<AiProvider, string[]>> {
-    const config = await loadConfig()
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+
+    // Decrypt all stored per-provider keys
+    const apiKeys: Record<string, string> = {}
+    for (const [provider, encrypted] of Object.entries(encryptedApiKeys)) {
+        try { apiKeys[provider] = decryptApiKey(encrypted) } catch { /* skip corrupted */ }
+    }
+
     const result: Record<AiProvider, string[]> = {
         openai: [],
         anthropic: [],
         google: [],
-        ollama: [...FALLBACK_MODELS.ollama]
+        ollama: [...FALLBACK_MODELS.ollama],
+        mistral: []
     }
 
     const fetchers: Promise<void>[] = []
 
-    if (config.provider === 'anthropic' && config.apiKey) {
+    // Anthropic has no public list-models endpoint — use fallback if key is present
+    if (apiKeys['anthropic']) {
         result.anthropic = [...FALLBACK_MODELS.anthropic]
     }
 
-    if (config.apiKey) {
-        if (config.provider === 'google') {
-            fetchers.push(
-                fetchGoogleModels(config.apiKey)
-                    .then((models) => { result.google = models })
-                    .catch(() => { /* keep empty */ })
-            )
-        } else if (config.provider === 'openai') {
-            fetchers.push(
-                fetchOpenAIModels(config.apiKey)
-                    .then((models) => { result.openai = models })
-                    .catch(() => { /* keep empty */ })
-            )
-        }
+    if (apiKeys['openai']) {
+        fetchers.push(
+            fetchOpenAIModels(apiKeys['openai'])
+                .then((models) => { result.openai = models })
+                .catch(() => { /* keep empty */ })
+        )
+    }
+
+    if (apiKeys['google']) {
+        fetchers.push(
+            fetchGoogleModels(apiKeys['google'])
+                .then((models) => { result.google = models })
+                .catch(() => { /* keep empty */ })
+        )
+    }
+
+    if (apiKeys['mistral']) {
+        fetchers.push(
+            fetchMistralModels(apiKeys['mistral'])
+                .then((models) => { result.mistral = models.length > 0 ? models : FALLBACK_MODELS.mistral })
+                .catch(() => { result.mistral = FALLBACK_MODELS.mistral })
+        )
     }
 
     // Ollama: always try (local server, no API key needed)
     fetchers.push(
-        fetchOllamaModels(config.ollamaUrl)
+        fetchOllamaModels(persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl)
             .then((models) => { if (models.length > 0) result.ollama = models })
             .catch(() => { /* keep fallback */ })
     )

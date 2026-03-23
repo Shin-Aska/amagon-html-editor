@@ -4,7 +4,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
-import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
+import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
 import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
 import { isEncryptionSecure } from './cryptoHelpers'
 import { buildAppMenu } from './menu'
@@ -1221,12 +1221,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle('ai:fetchModelsForProvider', async (_event, data: { provider: string; apiKey: string; ollamaUrl?: string }) => {
     try {
       let apiKeyToUse = data.apiKey || ''
-      if (apiKeyToUse && apiKeyToUse.startsWith(MASKED_KEY_PREFIX)) {
-        const saved = await aiLoadConfig()
-        apiKeyToUse = saved.provider === data.provider ? saved.apiKey : ''
-      } else if (!apiKeyToUse) {
-        const saved = await aiLoadConfig()
-        apiKeyToUse = saved.provider === data.provider ? saved.apiKey : ''
+      // If the renderer sent a masked or empty key, look up the saved key for this specific provider
+      if (!apiKeyToUse || apiKeyToUse.startsWith(MASKED_KEY_PREFIX)) {
+        apiKeyToUse = await loadApiKeyForProvider(data.provider as any)
       }
 
       const models = await fetchModelsForProvider(data.provider as any, apiKeyToUse, data.ollamaUrl)

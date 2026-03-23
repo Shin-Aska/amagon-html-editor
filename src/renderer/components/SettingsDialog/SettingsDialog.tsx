@@ -32,6 +32,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   const loadAiConfig = useAiStore((s) => s.loadConfig)
   const saveAiConfig = useAiStore((s) => s.saveConfig)
   const loadAiModels = useAiStore((s) => s.loadModels)
+  const fetchModelsForProvider = useAiStore((s) => s.fetchModelsForProvider)
 
   // local AI state for form
   const [aiProvider, setAiProvider] = useState(aiConfig?.provider || 'openai')
@@ -87,6 +88,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
 
   const handleSaveAi = async () => {
     await saveAiConfig({ provider: aiProvider as any, model: aiModel, apiKey: aiKey })
+    // Refresh available models for the current provider now that the key may have changed
+    fetchModelsForProvider(aiProvider, aiKey, aiConfig?.ollamaUrl)
   }
 
   const handleSaveMedia = async () => {
@@ -207,13 +210,19 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                     <label>Provider</label>
                     <select
                       value={aiProvider}
-                      onChange={(e) => setAiProvider(e.target.value as any)}
+                      onChange={(e) => {
+                        const newProvider = e.target.value as any
+                        setAiProvider(newProvider)
+                        // Reset model so the new provider's default is used
+                        setAiModel('')
+                      }}
                       onBlur={handleSaveAi}
                       className="settings-input"
                     >
                       <option value="openai">OpenAI</option>
                       <option value="anthropic">Anthropic</option>
                       <option value="google">Google</option>
+                      <option value="mistral">Mistral</option>
                       <option value="ollama">Ollama (Local)</option>
                     </select>
                   </div>
@@ -223,8 +232,9 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                     <select
                       value={aiModel}
                       onChange={(e) => {
-                        setAiModel(e.target.value)
-                        setTimeout(handleSaveAi, 0)
+                        const newModel = e.target.value
+                        setAiModel(newModel)
+                        saveAiConfig({ provider: aiProvider as any, model: newModel, apiKey: aiKey })
                       }}
                       className="settings-input"
                     >

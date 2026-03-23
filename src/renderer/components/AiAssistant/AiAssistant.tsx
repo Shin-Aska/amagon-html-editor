@@ -317,7 +317,9 @@ export default function AiAssistant(): JSX.Element {
                 ? 'Claude'
                 : config.provider === 'google'
                     ? 'Gemini'
-                    : 'Ollama'
+                    : config.provider === 'mistral'
+                        ? 'Mistral'
+                        : 'Ollama'
 
     const hasApiKey = config.provider === 'ollama' || (config.apiKey && config.apiKey.length > 0)
 

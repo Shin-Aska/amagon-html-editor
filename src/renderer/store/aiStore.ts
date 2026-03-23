@@ -12,7 +12,7 @@ import { useProjectStore } from './projectStore'
 // Types
 // ---------------------------------------------------------------------------
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama'
+export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral'
 
 export interface ChatMessage {
     id: string
