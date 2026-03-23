@@ -3,6 +3,7 @@ import Editor, { type OnMount } from '@monaco-editor/react'
 import { useEditorStore } from '../../store/editorStore'
 import './EventActionsEditor.css'
 import type * as MonacoType from 'monaco-editor'
+import AiCodeAssistModal from './AiCodeAssistModal'
 
 const AVAILABLE_EVENTS = [
     { value: 'onclick', label: 'On Click' },
@@ -100,14 +101,17 @@ interface EventActionsEditorProps {
 export default function EventActionsEditor({ blockId, events }: EventActionsEditorProps): JSX.Element {
     const updateBlock = useEditorStore((s) => s.updateBlock)
     const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode)
+    const getBlockById = useEditorStore((s) => s.getBlockById)
     const [editingEvent, setEditingEvent] = useState<string | null>(null)
     const [editorCode, setEditorCode] = useState('')
     const [showAddDropdown, setShowAddDropdown] = useState(false)
+    const [showAiAssist, setShowAiAssist] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
     const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null)
 
     const currentEvents = events || {}
     const eventEntries = Object.entries(currentEvents).filter(([, v]) => v !== undefined)
+    const block = getBlockById(blockId)
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -124,15 +128,13 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     const handleAddEvent = useCallback((eventName: string) => {
         const template = EVENT_TEMPLATES[eventName] || `(function(event) {
   // Your code here
-  
+
 }).call(this, event)`
-        const newEvents = { ...currentEvents, [eventName]: template }
-        updateBlock(blockId, { events: newEvents })
         setShowAddDropdown(false)
-        // Immediately open editor for new event
+        // Open editor for new event — only persist when user clicks Save
         setEditingEvent(eventName)
         setEditorCode(template)
-    }, [blockId, currentEvents, updateBlock])
+    }, [])
 
     const handleRemoveEvent = useCallback((eventName: string) => {
         const newEvents = { ...currentEvents }
@@ -155,10 +157,12 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
 
     const handleSaveAndClose = useCallback(() => {
         handleSaveCode()
+        setShowAiAssist(false)
         setIsTypingCode(false)
     }, [handleSaveCode, setIsTypingCode])
 
     const handleCancelEdit = useCallback(() => {
+        setShowAiAssist(false)
         setEditingEvent(null)
         setEditorCode('')
         setIsTypingCode(false)
@@ -209,6 +213,32 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
             disposableFocus.dispose()
         }
     }
+
+    const handleApplyAiCode = useCallback(
+        (nextCode: string, mode?: 'replace' | 'insert') => {
+            if (mode === 'insert' && editorRef.current) {
+                const editor = editorRef.current
+                const selection = editor.getSelection()
+                if (selection) {
+                    editor.executeEdits('ai-assist', [
+                        {
+                            range: selection,
+                            text: nextCode,
+                            forceMoveMarkers: true
+                        }
+                    ])
+                    setEditorCode(editor.getValue())
+                    editor.focus()
+                } else {
+                    setEditorCode(nextCode)
+                }
+            } else {
+                setEditorCode(nextCode)
+            }
+            setShowAiAssist(false)
+        },
+        [setEditorCode]
+    )
 
     return (
         <div className="event-actions-editor">
@@ -272,42 +302,62 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
 
             {/* Monaco Editor Modal */}
             {editingEvent && (
-                <div className="event-editor-overlay" onClick={handleCancelEdit}>
-                    <div className="event-editor-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="event-editor-header">
-                            <h4>Edit: {getEventLabel(editingEvent)}</h4>
-                            <span className="event-editor-event-name">{editingEvent}</span>
-                        </div>
-                        <div className="event-editor-body">
-                            <Editor
-                                height="300px"
-                                defaultLanguage="javascript"
-                                value={editorCode}
-                                onChange={(value) => setEditorCode(value || '')}
-                                theme="vs-dark"
-                                onMount={handleEditorMount}
-                                options={{
-                                    minimap: { enabled: false },
-                                    fontSize: 13,
-                                    lineNumbers: 'on',
-                                    scrollBeyondLastLine: false,
-                                    wordWrap: 'on',
-                                    tabSize: 2,
-                                    automaticLayout: true,
-                                    padding: { top: 8 }
-                                }}
-                            />
-                        </div>
-                        <div className="event-editor-footer">
-                            <button className="event-editor-btn cancel" onClick={handleCancelEdit}>
-                                Cancel
-                            </button>
-                            <button className="event-editor-btn save" onClick={handleSaveAndClose}>
-                                Save
-                            </button>
+                <>
+                    <div className="event-editor-overlay" onClick={handleCancelEdit}>
+                        <div className="event-editor-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="event-editor-header">
+                                <div className="event-editor-header-left">
+                                    <h4>Edit: {getEventLabel(editingEvent)}</h4>
+                                    <span className="event-editor-event-name">{editingEvent}</span>
+                                    <button
+                                        className="event-editor-ai-btn"
+                                        onClick={() => setShowAiAssist(true)}
+                                        title="Assist with AI"
+                                        type="button"
+                                    >
+                                        ✨
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="event-editor-body">
+                                <Editor
+                                    height="300px"
+                                    defaultLanguage="javascript"
+                                    value={editorCode}
+                                    onChange={(value) => setEditorCode(value || '')}
+                                    theme="vs-dark"
+                                    onMount={handleEditorMount}
+                                    options={{
+                                        minimap: { enabled: false },
+                                        fontSize: 13,
+                                        lineNumbers: 'on',
+                                        scrollBeyondLastLine: false,
+                                        wordWrap: 'on',
+                                        tabSize: 2,
+                                        automaticLayout: true,
+                                        padding: { top: 8 }
+                                    }}
+                                />
+                            </div>
+                            <div className="event-editor-footer">
+                                <button className="event-editor-btn cancel" onClick={handleCancelEdit}>
+                                    Cancel
+                                </button>
+                                <button className="event-editor-btn save" onClick={handleSaveAndClose}>
+                                    Save
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    <AiCodeAssistModal
+                        isOpen={showAiAssist}
+                        eventName={editingEvent}
+                        block={block}
+                        currentCode={editorCode}
+                        onApply={handleApplyAiCode}
+                        onClose={() => setShowAiAssist(false)}
+                    />
+                </>
             )}
         </div>
     )

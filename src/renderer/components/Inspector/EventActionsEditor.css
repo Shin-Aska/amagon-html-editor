@@ -180,6 +180,13 @@
     border-bottom: 1px solid var(--border);
 }
 
+.event-editor-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .event-editor-header h4 {
     margin: 0;
     font-size: 0.95rem;
@@ -193,6 +200,26 @@
     background: var(--border);
     padding: 2px 8px;
     border-radius: 3px;
+}
+
+.event-editor-ai-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1;
+    color: var(--text);
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.event-editor-ai-btn:hover {
+    background: var(--border);
+}
+
+.event-editor-ai-btn:active {
+    opacity: 0.9;
 }
 
 .event-editor-body {
