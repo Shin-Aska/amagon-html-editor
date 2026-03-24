@@ -210,51 +210,6 @@
     flex-direction: column;
 }
 
-.event-editor-review-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, rgba(22, 163, 74, 0.1) 0%, rgba(22, 163, 74, 0.04) 100%);
-}
-
-.event-editor-review-summary {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    min-width: 0;
-    color: var(--text);
-    font-size: 0.78rem;
-}
-
-.event-editor-review-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #d1fae5;
-    background: rgba(22, 163, 74, 0.28);
-    border: 1px solid rgba(34, 197, 94, 0.35);
-}
-
-.event-editor-review-hint {
-    color: var(--text-muted);
-}
-
-.event-editor-review-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
 .event-editor-code-surface {
     flex: 1;
     min-height: 0;
@@ -345,13 +300,3 @@
     color: var(--color-accent, #1e66f5);
 }
 
-@media (max-width: 760px) {
-    .event-editor-review-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .event-editor-review-actions {
-        justify-content: flex-end;
-    }
-}

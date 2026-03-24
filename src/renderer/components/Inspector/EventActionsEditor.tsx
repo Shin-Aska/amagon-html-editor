@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import Editor, { DiffEditor, type OnMount } from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import { useEditorStore } from '../../store/editorStore'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
 import './EventActionsEditor.css'
 import type * as MonacoType from 'monaco-editor'
 import AiCodeAssistModal, { type AiCodeProposal, type AiCodeSelection } from './AiCodeAssistModal'
+import AiProposalReviewPanel from '../AiAssistant/AiProposalReviewPanel'
 
 const AVAILABLE_EVENTS = [
     { value: 'onclick', label: 'On Click' },
@@ -438,57 +439,18 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                     onProposalGenerated={handleProposalGenerated}
                                     onClose={() => setShowAiAssist(false)}
                                 />
-                                {pendingAiReview && (
-                                    <div className="event-editor-review-bar">
-                                        <div className="event-editor-review-summary">
-                                            <span className="event-editor-review-badge">
-                                                {pendingAiReview.proposal.mode.replace('_', ' ')}
-                                            </span>
-                                            <span>{pendingAiReview.proposal.explanation}</span>
-                                            {pendingAiReview.proposal.insertHint && (
-                                                <span className="event-editor-review-hint">
-                                                    {pendingAiReview.proposal.insertHint}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="event-editor-review-actions">
-                                            <button
-                                                className="event-editor-btn"
-                                                type="button"
-                                                onClick={handleDiscardAiReview}
-                                            >
-                                                Discard Proposal
-                                            </button>
-                                            <button
-                                                className="event-editor-btn save"
-                                                type="button"
-                                                onClick={handleApplyAiReview}
-                                            >
-                                                Apply Proposal
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                                 <div className="event-editor-code-surface">
                                     {pendingAiReview ? (
-                                        <DiffEditor
-                                            height="300px"
+                                        <AiProposalReviewPanel
+                                            modeLabel={pendingAiReview.proposal.mode.replace('_', ' ')}
+                                            explanation={pendingAiReview.proposal.explanation}
+                                            hint={pendingAiReview.proposal.insertHint}
                                             original={pendingAiReview.sourceCode}
                                             modified={pendingAiReview.previewCode}
                                             language="javascript"
-                                            theme="vs-dark"
-                                            options={{
-                                                renderSideBySide: false,
-                                                readOnly: true,
-                                                minimap: { enabled: false },
-                                                fontSize: 13,
-                                                lineNumbers: 'on',
-                                                scrollBeyondLastLine: false,
-                                                wordWrap: 'on',
-                                                automaticLayout: true,
-                                                diffCodeLens: true,
-                                                renderIndicators: true
-                                            }}
+                                            height="300px"
+                                            onDiscard={handleDiscardAiReview}
+                                            onApply={handleApplyAiReview}
                                         />
                                     ) : (
                                         <Editor
