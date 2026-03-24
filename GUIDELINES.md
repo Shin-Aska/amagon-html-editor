@@ -55,7 +55,7 @@ src/
 │   ├── canvasRuntime.ts    # Canvas initialisation
 │   │
 │   ├── components/         # ~25 top-level components
-│   │   ├── AiAssistant/    # AI chat panel
+│   │   ├── AiAssistant/    # AI chat panel + AiProposalReviewPanel (diff editor for AI proposals)
 │   │   ├── Canvas/         # Iframe wrapper for visual editing
 │   │   ├── CodeEditor/     # Monaco editor wrapper
 │   │   ├── Inspector/      # Property/style panel (~20 sub-components)
@@ -295,4 +295,4 @@ If you need deeper context, start with these:
 
 ---
 
-*Last updated: 2026-03-23*
+*Last updated: 2026-03-24*

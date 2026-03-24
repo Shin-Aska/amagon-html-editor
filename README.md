@@ -31,6 +31,7 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **One-Click Insert**: AI-generated blocks include a live preview and can be inserted into the canvas with a single click
 - **Secure Key Storage**: API keys are encrypted via the OS keyring (`safeStorage`) and never leave the main process. On Linux systems without a supported keyring, keys are encrypted using a machine-derived AES key as a fallback
 - **Dynamic Model Discovery**: Available models are fetched live from each provider's API. Ollama models are auto-detected from your local server
+- **AI Proposal Review**: AI-suggested changes to CSS files and event handlers are shown in a Monaco diff editor with Apply / Discard actions before anything is committed
 
 ### Visual Editing
 
