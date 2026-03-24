@@ -208,125 +208,12 @@
     font-weight: 600;
 }
 
-.css-manager-review-bar {
+.css-manager-editor-body {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, rgba(22, 163, 74, 0.1) 0%, rgba(22, 163, 74, 0.04) 100%);
-    flex-shrink: 0;
-}
-
-.css-manager-review-summary {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    font-size: 0.78rem;
-    color: var(--text);
-    line-height: 1.45;
-}
-
-.css-manager-review-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #d1fae5;
-    background: rgba(22, 163, 74, 0.28);
-    border: 1px solid rgba(34, 197, 94, 0.35);
-    flex-shrink: 0;
-    justify-self: start;
-}
-
-.css-manager-review-explanation {
-    max-height: 3.8em;
-    overflow-y: auto;
-    padding-right: 6px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    color: var(--text);
-}
-
-.css-manager-review-hint {
-    max-height: 2.6em;
-    overflow-y: auto;
-    padding-right: 6px;
-    padding: 7px 10px;
-    border-radius: 8px;
-    background: rgba(137, 180, 250, 0.08);
-    border: 1px solid rgba(137, 180, 250, 0.18);
-    color: var(--text-muted);
-    font-size: 0.75rem;
-}
-
-.css-manager-review-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: flex-end;
-    flex-shrink: 0;
-}
-
-.css-manager-editor-body {
     flex: 1;
     min-height: 0;
     overflow: hidden;
-}
-
-.css-manager-editor-body.is-reviewing {
-    background:
-        linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%),
-        rgba(6, 10, 18, 0.35);
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor,
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .editor.original,
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .editor.modified {
-    background: transparent !important;
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .line-insert,
-.css-manager-editor-body.is-reviewing .monaco-editor .line-insert {
-    background: rgba(34, 197, 94, 0.2) !important;
-    box-shadow: inset 4px 0 0 rgba(74, 222, 128, 0.95);
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .char-insert,
-.css-manager-editor-body.is-reviewing .monaco-editor .char-insert {
-    background: rgba(134, 239, 172, 0.28) !important;
-    border-bottom: 1px solid rgba(134, 239, 172, 0.75);
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .line-delete,
-.css-manager-editor-body.is-reviewing .monaco-editor .line-delete {
-    background: rgba(248, 113, 113, 0.16) !important;
-    box-shadow: inset 4px 0 0 rgba(248, 113, 113, 0.78);
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .char-delete,
-.css-manager-editor-body.is-reviewing .monaco-editor .char-delete {
-    background: rgba(252, 165, 165, 0.22) !important;
-    border-bottom: 1px solid rgba(252, 165, 165, 0.7);
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .margin-view-overlays .line-insert,
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .margin-view-overlays .char-insert,
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .glyph-margin .line-insert {
-    background: rgba(34, 197, 94, 0.34) !important;
-}
-
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .margin-view-overlays .line-delete,
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .margin-view-overlays .char-delete,
-.css-manager-editor-body.is-reviewing .monaco-diff-editor .glyph-margin .line-delete {
-    background: rgba(248, 113, 113, 0.28) !important;
 }
 
 .css-manager-no-selection {
@@ -416,14 +303,3 @@
     color: var(--color-accent);
 }
 
-@media (max-width: 900px) {
-    .css-manager-review-actions {
-        justify-content: stretch;
-        flex-wrap: wrap;
-    }
-
-    .css-manager-review-actions .theme-btn {
-        flex: 1 1 180px;
-        justify-content: center;
-    }
-}

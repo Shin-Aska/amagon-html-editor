@@ -1,39 +1,17 @@
 import { useState, useCallback, useEffect, useMemo, type MouseEvent } from 'react'
-import Editor, { DiffEditor } from '@monaco-editor/react'
+import Editor from '@monaco-editor/react'
 import { useProjectStore } from '../../store/projectStore'
 import type { CssFile, ProjectTheme } from '../../store/types'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
 import AiCssAssistModal, { type AiCssProposal } from './AiCssAssistModal'
-import type * as MonacoType from 'monaco-editor'
+import AiProposalReviewPanel from '../AiAssistant/AiProposalReviewPanel'
 import './CustomCssManager.css'
 
 interface PendingCssReview {
     proposal: AiCssProposal
     sourceCss: string
     previewCss: string
-}
-
-const AI_DIFF_THEME = 'amagon-ai-review'
-
-function ensureAiDiffTheme(monaco: typeof MonacoType): void {
-    monaco.editor.defineTheme(AI_DIFF_THEME, {
-        base: 'vs-dark',
-        inherit: true,
-        rules: [],
-        colors: {
-            'diffEditor.insertedTextBackground': '#86efac44',
-            'diffEditor.insertedLineBackground': '#22c55e33',
-            'diffEditor.removedTextBackground': '#fca5a544',
-            'diffEditor.removedLineBackground': '#ef444429',
-            'editorGutter.addedBackground': '#4ade80',
-            'editorGutter.deletedBackground': '#f87171',
-            'minimapGutter.addedBackground': '#4ade80',
-            'minimapGutter.deletedBackground': '#f87171',
-            'editorOverviewRuler.insertedForeground': '#4ade80cc',
-            'editorOverviewRuler.deletedForeground': '#f87171cc'
-        }
-    })
 }
 
 function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
@@ -266,50 +244,19 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                 <span className="css-manager-editor-disabled-badge">Disabled</span>
                             )}
                         </div>
-                        {pendingCssReview && selectedFileId === selectedFile.id && (
-                            <div className="css-manager-review-bar">
-                                <div className="css-manager-review-summary">
-                                    <span className="css-manager-review-badge">{pendingCssReview.proposal.mode}</span>
-                                    <div className="css-manager-review-explanation">
-                                        {pendingCssReview.proposal.explanation}
-                                    </div>
-                                    {pendingCssReview.proposal.insertHint && (
-                                        <div className="css-manager-review-hint">
-                                            {pendingCssReview.proposal.insertHint}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="css-manager-review-actions">
-                                    <button className="theme-btn" onClick={handleDenyProposal}>
-                                        Deny Proposal
-                                    </button>
-                                    <button className="theme-btn theme-btn-primary" onClick={handleAcceptProposal}>
-                                        Accept Proposal
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        <div className={`css-manager-editor-body ${pendingCssReview && selectedFileId === selectedFile.id ? 'is-reviewing' : ''}`}>
+                        <div className="css-manager-editor-body">
                             {pendingCssReview && selectedFileId === selectedFile.id ? (
-                                <DiffEditor
-                                    height="100%"
+                                <AiProposalReviewPanel
+                                    modeLabel={pendingCssReview.proposal.mode}
+                                    explanation={pendingCssReview.proposal.explanation}
+                                    hint={pendingCssReview.proposal.insertHint}
                                     original={pendingCssReview.sourceCss}
                                     modified={pendingCssReview.previewCss}
                                     language="css"
-                                    beforeMount={ensureAiDiffTheme}
-                                    theme={AI_DIFF_THEME}
-                                    options={{
-                                        renderSideBySide: false,
-                                        readOnly: true,
-                                        minimap: { enabled: false },
-                                        fontSize: 13,
-                                        lineNumbers: 'on',
-                                        scrollBeyondLastLine: false,
-                                        wordWrap: 'on',
-                                        automaticLayout: true,
-                                        diffCodeLens: true,
-                                        renderIndicators: true
-                                    }}
+                                    onDiscard={handleDenyProposal}
+                                    onApply={handleAcceptProposal}
+                                    discardLabel="Deny Proposal"
+                                    applyLabel="Accept Proposal"
                                 />
                             ) : (
                                 <Editor
