@@ -405,6 +405,10 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       })
     },
 
+    markDirty: () => {
+      set({ isDirty: true })
+    },
+
     markSaved: () => {
       set({ isDirty: false })
     },

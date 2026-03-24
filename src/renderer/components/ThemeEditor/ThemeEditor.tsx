@@ -2,10 +2,19 @@ import { useState, useCallback, useEffect } from 'react'
 import { X, Palette, Download, Upload, RotateCcw, Plus, Pencil, Trash2, Check, XIcon } from 'lucide-react'
 import { useProjectStore } from '../../store/projectStore'
 import { useToastStore } from '../../store/toastStore'
-import { createDefaultTheme, themeToCSS } from '../../store/types'
-import type { ProjectTheme, ThemeColors, ThemeTypography, ThemeSpacing, ThemeBorders } from '../../store/types'
+import { createDefaultTheme, createDefaultDarkTheme, getThemeVariant } from '../../store/types'
+import type {
+  ProjectTheme,
+  ThemeColors,
+  ThemeTypography,
+  ThemeSpacing,
+  ThemeBorders,
+  PageThemeMode
+} from '../../store/types'
 import { themePresets } from './themePresets'
 import CustomCssManager from './CustomCssManager'
+import ColorField from './ColorField'
+import CreatePresetModal from './CreatePresetModal'
 import './ThemeEditor.css'
 
 type ThemeTab = 'colors' | 'typography' | 'spacing' | 'borders' | 'customCss' | 'presets'
@@ -13,60 +22,6 @@ type ThemeTab = 'colors' | 'typography' | 'spacing' | 'borders' | 'customCss' | 
 interface ThemeEditorProps {
   isOpen: boolean
   onClose: () => void
-}
-
-// ─── Color Field ──────────────────────────────────────────────────────────────
-
-function ColorField({
-  label,
-  value,
-  onChange
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}): JSX.Element {
-  const [hex, setHex] = useState(value)
-
-  useEffect(() => {
-    setHex(value)
-  }, [value])
-
-  const handleHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value
-    setHex(v)
-    if (/^#[0-9a-fA-F]{6}$/.test(v) || /^#[0-9a-fA-F]{3}$/.test(v)) {
-      onChange(v)
-    }
-  }
-
-  const handleHexBlur = () => {
-    if (!/^#[0-9a-fA-F]{3,6}$/.test(hex)) {
-      setHex(value)
-    }
-  }
-
-  return (
-    <div className="theme-color-item">
-      <span className="theme-color-label">{label}</span>
-      <div className="theme-color-input-row">
-        <div className="theme-color-swatch" style={{ backgroundColor: value }}>
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => { setHex(e.target.value); onChange(e.target.value) }}
-          />
-        </div>
-        <input
-          className="theme-color-hex"
-          value={hex}
-          onChange={handleHexChange}
-          onBlur={handleHexBlur}
-          spellCheck={false}
-        />
-      </div>
-    </div>
-  )
 }
 
 // ─── Colors Tab ───────────────────────────────────────────────────────────────
@@ -280,6 +235,7 @@ function BordersTab({
 function PresetsTab({
   currentTheme,
   customPresets,
+  editingMode,
   onApplyPreset,
   onCreatePreset,
   onUpdatePreset,
@@ -287,23 +243,15 @@ function PresetsTab({
 }: {
   currentTheme: ProjectTheme
   customPresets: ProjectTheme[]
+  editingMode: PageThemeMode
   onApplyPreset: (preset: ProjectTheme) => void
-  onCreatePreset: (name: string) => void
+  onCreatePreset: (name: string, colors: ThemeColors) => void
   onUpdatePreset: (name: string, preset: ProjectTheme) => void
   onDeletePreset: (name: string) => void
 }): JSX.Element {
-  const [isCreating, setIsCreating] = useState(false)
-  const [newPresetName, setNewPresetName] = useState('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editingPreset, setEditingPreset] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
-
-  const handleCreate = () => {
-    if (newPresetName.trim()) {
-      onCreatePreset(newPresetName.trim())
-      setNewPresetName('')
-      setIsCreating(false)
-    }
-  }
 
   const handleEditStart = (preset: ProjectTheme) => {
     setEditingPreset(preset.name)
@@ -331,36 +279,14 @@ function PresetsTab({
   return (
     <div className="theme-section">
       <div className="theme-section-header">
-        <div className="theme-section-title">Theme Presets</div>
-        {!isCreating ? (
-          <button
-            className="theme-btn theme-btn-small"
-            onClick={() => setIsCreating(true)}
-            title="Save current theme as preset"
-          >
-            <Plus size={14} /> Create Preset
-          </button>
-        ) : (
-          <div className="theme-preset-create-form">
-            <input
-              className="theme-field-input"
-              placeholder="Preset name..."
-              value={newPresetName}
-              onChange={(e) => setNewPresetName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCreate()
-                if (e.key === 'Escape') setIsCreating(false)
-              }}
-              autoFocus
-            />
-            <button className="theme-btn theme-btn-primary" onClick={handleCreate}>
-              <Check size={14} />
-            </button>
-            <button className="theme-btn" onClick={() => setIsCreating(false)}>
-              <XIcon size={14} />
-            </button>
-          </div>
-        )}
+        <div className="theme-section-title">Theme Presets for {editingMode === 'light' ? 'Light Page' : 'Dark Page'}</div>
+        <button
+          className="theme-btn theme-btn-small"
+          onClick={() => setIsCreateModalOpen(true)}
+          title="Save current theme as preset"
+        >
+          <Plus size={14} /> Create Preset
+        </button>
       </div>
 
       <div className="theme-preset-grid">
@@ -436,6 +362,13 @@ function PresetsTab({
           )
         })}
       </div>
+
+      <CreatePresetModal
+        isOpen={isCreateModalOpen}
+        initialTheme={currentTheme}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={onCreatePreset}
+      />
     </div>
   )
 }
@@ -444,9 +377,12 @@ function PresetsTab({
 
 export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.Element | null {
   const [activeTab, setActiveTab] = useState<ThemeTab>('colors')
+  const [editingMode, setEditingMode] = useState<PageThemeMode>('light')
   const theme = useProjectStore((s) => s.settings.theme)
+  const themeVariants = useProjectStore((s) => s.settings.themes)
   const customPresets = useProjectStore((s) => s.customPresets)
   const setProjectTheme = useProjectStore((s) => s.setProjectTheme)
+  const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode)
   const addCustomPreset = useProjectStore((s) => s.addCustomPreset)
   const updateCustomPreset = useProjectStore((s) => s.updateCustomPreset)
   const deleteCustomPreset = useProjectStore((s) => s.deleteCustomPreset)
@@ -455,6 +391,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   const updateThemeSpacing = useProjectStore((s) => s.updateThemeSpacing)
   const updateThemeBorders = useProjectStore((s) => s.updateThemeBorders)
   const showToast = useToastStore((s) => s.showToast)
+  const selectedTheme = getThemeVariant(theme, themeVariants, editingMode)
 
   const getUniquePresetName = useCallback((baseName: string) => {
     const reserved = new Set<string>([...themePresets.map((p) => p.name), ...customPresets.map((p) => p.name)])
@@ -467,7 +404,9 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return
+    setEditingMode('light')
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -475,22 +414,23 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
   }, [isOpen, onClose])
 
   const handleReset = useCallback(() => {
-    setProjectTheme(createDefaultTheme())
-    showToast('Theme reset to defaults', 'success')
-  }, [setProjectTheme, showToast])
+    const resetTheme = editingMode === 'dark' ? createDefaultDarkTheme() : createDefaultTheme()
+    setProjectTheme(resetTheme, editingMode)
+    showToast(`${editingMode === 'dark' ? 'Dark' : 'Light'} page theme reset to defaults`, 'success')
+  }, [editingMode, setProjectTheme, showToast])
 
   const handleExportTheme = useCallback(() => {
-    const exportTheme: ProjectTheme = { ...theme, isCustom: true }
+    const exportTheme: ProjectTheme = { ...selectedTheme, isCustom: true }
     const json = JSON.stringify(exportTheme, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${theme.name.toLowerCase().replace(/\s+/g, '-')}.hoarses-theme.json`
+    a.download = `${selectedTheme.name.toLowerCase().replace(/\s+/g, '-')}.hoarses-theme.json`
     a.click()
     URL.revokeObjectURL(url)
     showToast('Theme exported', 'success')
-  }, [theme, showToast])
+  }, [selectedTheme, showToast])
 
   const handleImportTheme = useCallback(() => {
     const input = document.createElement('input')
@@ -524,26 +464,39 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
         }
 
         addCustomPreset(imported)
-        setProjectTheme(imported)
-        showToast(`Theme "${imported.name}" imported as custom preset`, 'success')
+        setProjectTheme(imported, editingMode)
+        showToast(`Theme "${imported.name}" imported and applied to ${editingMode} page`, 'success')
       } catch (err) {
         showToast('Failed to parse theme file', 'error')
       }
     }
     input.click()
-  }, [setProjectTheme, showToast, addCustomPreset, getUniquePresetName])
+  }, [setProjectTheme, showToast, addCustomPreset, getUniquePresetName, editingMode])
 
   const handleApplyPreset = useCallback((preset: ProjectTheme) => {
-    setProjectTheme({ ...preset })
-    showToast(`Applied "${preset.name}" theme`, 'success')
-  }, [setProjectTheme, showToast])
+    const mergedPreset: ProjectTheme = {
+      ...preset,
+      customCss: selectedTheme.customCss,
+      customCssFiles: Array.isArray(selectedTheme.customCssFiles)
+        ? selectedTheme.customCssFiles.map((file) => ({ ...file }))
+        : []
+    }
+    setProjectTheme(mergedPreset, editingMode)
+    showToast(`Applied "${preset.name}" to ${editingMode} page`, 'success')
+  }, [editingMode, selectedTheme, setProjectTheme, showToast])
 
-  const handleCreatePreset = useCallback((name: string) => {
+  const handleCreatePreset = useCallback((name: string, colors: ThemeColors) => {
     const finalName = getUniquePresetName(name)
-    const presetToSave: ProjectTheme = { ...theme, name: finalName, isCustom: true }
+    const presetToSave: ProjectTheme = {
+      ...selectedTheme,
+      name: finalName,
+      colors,
+      isCustom: true
+    }
     addCustomPreset(presetToSave)
+    setProjectTheme(presetToSave, editingMode)
     showToast(`Created preset "${finalName}"`, 'success')
-  }, [theme, addCustomPreset, showToast, getUniquePresetName])
+  }, [selectedTheme, addCustomPreset, showToast, getUniquePresetName, editingMode, setProjectTheme])
 
   const handleUpdatePreset = useCallback((name: string, preset: ProjectTheme) => {
     updateCustomPreset(name, preset)
@@ -570,7 +523,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
     <div className="theme-editor-overlay" onClick={onClose}>
       <div className="theme-editor-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="theme-editor-header">
-          <h2><Palette size={18} /> Theme Editor — {theme.name}</h2>
+          <h2><Palette size={18} /> Theme Editor — {selectedTheme.name}</h2>
           <button className="theme-editor-close" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
@@ -588,11 +541,52 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
           ))}
         </div>
 
+        <div className="theme-editor-mode-bar">
+          <div className="theme-editor-mode-group">
+            <span className="theme-editor-mode-label">Editing</span>
+            <button
+              className={`theme-btn theme-btn-small ${editingMode === 'light' ? 'theme-btn-primary' : ''}`}
+              onClick={() => setEditingMode('light')}
+            >
+              Light Page
+            </button>
+            <button
+              className={`theme-btn theme-btn-small ${editingMode === 'dark' ? 'theme-btn-primary' : ''}`}
+              onClick={() => setEditingMode('dark')}
+            >
+              Dark Page
+            </button>
+          </div>
+
+          <div className="theme-editor-mode-group">
+            <span className="theme-editor-mode-label">Page Preview</span>
+            <button
+              className={`theme-btn theme-btn-small ${themeVariants?.previewMode === 'device' ? 'theme-btn-primary' : ''}`}
+              onClick={() => setThemePreviewMode('device')}
+            >
+              Device
+            </button>
+            <button
+              className={`theme-btn theme-btn-small ${themeVariants?.previewMode === 'light' ? 'theme-btn-primary' : ''}`}
+              onClick={() => setThemePreviewMode('light')}
+            >
+              Light
+            </button>
+            <button
+              className={`theme-btn theme-btn-small ${themeVariants?.previewMode === 'dark' ? 'theme-btn-primary' : ''}`}
+              onClick={() => setThemePreviewMode('dark')}
+            >
+              Dark
+            </button>
+          </div>
+        </div>
+
         <div className="theme-editor-content">
           {activeTab === 'presets' && (
             <PresetsTab
-              currentTheme={theme}
+              currentTheme={selectedTheme}
               customPresets={customPresets}
+              editingMode={editingMode}
               onApplyPreset={handleApplyPreset}
               onCreatePreset={handleCreatePreset}
               onUpdatePreset={handleUpdatePreset}
@@ -600,19 +594,19 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
             />
           )}
           {activeTab === 'colors' && (
-            <ColorsTab colors={theme.colors} onChange={updateThemeColors} />
+            <ColorsTab colors={selectedTheme.colors} onChange={(patch) => updateThemeColors(patch, editingMode)} />
           )}
           {activeTab === 'typography' && (
-            <TypographyTab typography={theme.typography} onChange={updateThemeTypography} />
+            <TypographyTab typography={selectedTheme.typography} onChange={(patch) => updateThemeTypography(patch, editingMode)} />
           )}
           {activeTab === 'spacing' && (
-            <SpacingTab spacing={theme.spacing} onChange={updateThemeSpacing} />
+            <SpacingTab spacing={selectedTheme.spacing} onChange={(patch) => updateThemeSpacing(patch, editingMode)} />
           )}
           {activeTab === 'borders' && (
-            <BordersTab borders={theme.borders} onChange={updateThemeBorders} />
+            <BordersTab borders={selectedTheme.borders} onChange={(patch) => updateThemeBorders(patch, editingMode)} />
           )}
           {activeTab === 'customCss' && (
-            <CustomCssManager />
+            <CustomCssManager theme={selectedTheme} />
           )}
         </div>
 

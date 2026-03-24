@@ -170,6 +170,7 @@ function App(): JSX.Element {
         pages,
         folders: projectState.folders,
         userBlocks: projectState.userBlocks,
+        customPresets: projectState.customPresets,
         customCss: editorState.customCss
       },
       null,
@@ -215,6 +216,7 @@ function App(): JSX.Element {
         pages,
         folders: projectState.folders,
         userBlocks: projectState.userBlocks,
+        customPresets: projectState.customPresets,
         customCss: editorState.customCss
       },
       null,

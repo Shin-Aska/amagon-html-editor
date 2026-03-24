@@ -5,6 +5,56 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes gridDrift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(24px, 24px, 0); }
+}
+
+@keyframes auroraFloatOne {
+  0% { transform: translate3d(-10%, -6%, 0) scale(1); }
+  50% { transform: translate3d(6%, 4%, 0) scale(1.08); }
+  100% { transform: translate3d(-4%, 10%, 0) scale(0.96); }
+}
+
+@keyframes auroraFloatTwo {
+  0% { transform: translate3d(8%, -8%, 0) scale(0.96); }
+  50% { transform: translate3d(-5%, 7%, 0) scale(1.06); }
+  100% { transform: translate3d(10%, 2%, 0) scale(1); }
+}
+
+@keyframes sweepGlow {
+  0% { transform: translateX(-65%) skewX(-18deg); opacity: 0; }
+  18% { opacity: 0; }
+  42% { opacity: 0.22; }
+  58% { opacity: 0.22; }
+  100% { transform: translateX(70%) skewX(-18deg); opacity: 0; }
+}
+
+@keyframes pulseField {
+  0%, 100% { opacity: 0.28; transform: scale(1); }
+  50% { opacity: 0.48; transform: scale(1.08); }
+}
+
+@keyframes dotPulseOne {
+  0%, 100% { opacity: 0.32; }
+  40%, 60% { opacity: 0.68; }
+}
+
+@keyframes dotPulseTwo {
+  0%, 100% { opacity: 0.32; }
+  50%, 70% { opacity: 0.64; }
+}
+
+@keyframes dotPulseThree {
+  0%, 100% { opacity: 0.32; }
+  30%, 45% { opacity: 0.62; }
+}
+
+@keyframes dotPulseFour {
+  0%, 100% { opacity: 0.32; }
+  60%, 80% { opacity: 0.66; }
+}
+
 .welcome-screen {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   height: 100vh;
@@ -19,15 +69,151 @@
   user-select: none;
 }
 
-/* Subtle dot pattern background */
+.welcome-background {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Animated dot field */
 .welcome-screen::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: -24px;
+  left: -24px;
+  right: -24px;
+  bottom: -24px;
   background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
   background-size: 24px 24px;
-  opacity: 0.4;
+  opacity: 0.32;
   pointer-events: none;
+  animation: gridDrift 20s linear infinite;
+}
+
+.welcome-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 32%),
+    radial-gradient(circle at 80% 18%, color-mix(in srgb, var(--color-success) 10%, transparent), transparent 28%),
+    radial-gradient(circle at 50% 85%, color-mix(in srgb, var(--color-accent-hover) 10%, transparent), transparent 30%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.welcome-aurora {
+  position: absolute;
+  filter: blur(72px);
+  opacity: 0.3;
+  mix-blend-mode: screen;
+}
+
+.welcome-aurora-one {
+  width: 38rem;
+  height: 38rem;
+  top: -12rem;
+  left: -8rem;
+  background:
+    radial-gradient(circle at 30% 35%, color-mix(in srgb, var(--color-accent) 54%, transparent), transparent 48%),
+    radial-gradient(circle at 70% 65%, color-mix(in srgb, var(--color-accent-hover) 42%, transparent), transparent 52%);
+  animation: auroraFloatOne 17s ease-in-out infinite alternate;
+}
+
+.welcome-aurora-two {
+  width: 34rem;
+  height: 34rem;
+  right: -10rem;
+  bottom: -14rem;
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--color-success) 30%, transparent), transparent 42%),
+    radial-gradient(circle at 60% 60%, color-mix(in srgb, var(--color-accent) 32%, transparent), transparent 56%);
+  animation: auroraFloatTwo 19s ease-in-out infinite alternate;
+}
+
+.welcome-grid-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 38%);
+  animation: pulseField 7s ease-in-out infinite;
+}
+
+.welcome-scanline {
+  position: absolute;
+  top: -15%;
+  bottom: -15%;
+  width: 32%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-accent) 8%, transparent) 35%,
+    color-mix(in srgb, var(--color-accent-hover) 18%, transparent) 50%,
+    color-mix(in srgb, var(--color-accent) 8%, transparent) 65%,
+    transparent 100%
+  );
+  filter: blur(6px);
+  opacity: 0;
+  animation: sweepGlow 11s ease-in-out infinite;
+}
+
+/* Pulsing dot groups */
+.dot-pulse {
+  position: absolute;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.32;
+  border-radius: 50%;
+  filter: blur(1px);
+}
+
+.dot-pulse-one {
+  width: 280px;
+  height: 280px;
+  top: 5%;
+  left: 8%;
+  animation: dotPulseOne 6.2s ease-in-out infinite;
+  background-image:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.08) 0%, transparent 70%),
+    radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+.dot-pulse-two {
+  width: 320px;
+  height: 320px;
+  top: 55%;
+  right: 10%;
+  animation: dotPulseTwo 7.8s ease-in-out infinite;
+  background-image:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.08) 0%, transparent 70%),
+    radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+.dot-pulse-three {
+  width: 260px;
+  height: 260px;
+  bottom: 8%;
+  left: 15%;
+  animation: dotPulseThree 5.4s ease-in-out infinite;
+  background-image:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.08) 0%, transparent 70%),
+    radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
+}
+
+.dot-pulse-four {
+  width: 300px;
+  height: 300px;
+  top: 20%;
+  right: 5%;
+  animation: dotPulseFour 8.1s ease-in-out infinite;
+  background-image:
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.08) 0%, transparent 70%),
+    radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
 }
 
 /* Main Card */
@@ -45,6 +231,7 @@
   flex-direction: column;
   gap: 40px;
   animation: fadeIn 0.4s ease-out forwards;
+  backdrop-filter: blur(18px);
 }
 
 /* Header */
@@ -327,4 +514,16 @@
 
 .recent-item-remove:active {
   background: rgba(220, 38, 38, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-screen::before,
+  .welcome-aurora-one,
+  .welcome-aurora-two,
+  .welcome-grid-glow,
+  .welcome-scanline,
+  .dot-pulse,
+  .welcome-content {
+    animation: none;
+  }
 }

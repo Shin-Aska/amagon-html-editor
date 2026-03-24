@@ -1,0 +1,76 @@
+import { useEffect } from 'react'
+import { useAiStore, type AiProvider } from '../../store/aiStore'
+import './AiProviderSelector.css'
+
+const PROVIDER_LABELS: Record<AiProvider, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Gemini',
+    mistral: 'Mistral',
+    ollama: 'Ollama'
+}
+
+export default function AiProviderSelector(): JSX.Element {
+    const config = useAiStore((s) => s.config)
+    const configLoaded = useAiStore((s) => s.configLoaded)
+    const providerModels = useAiStore((s) => s.providerModels)
+    const loadConfig = useAiStore((s) => s.loadConfig)
+    const loadModels = useAiStore((s) => s.loadModels)
+    const saveConfig = useAiStore((s) => s.saveConfig)
+
+    useEffect(() => {
+        if (!configLoaded) {
+            loadConfig().then(() => loadModels())
+        }
+    }, [configLoaded, loadConfig, loadModels])
+
+    const models = providerModels[config.provider] || []
+
+    // Only show providers that have been configured (have models loaded), plus
+    // always include the currently active provider so the selector is never blank.
+    const visibleProviders = (Object.keys(PROVIDER_LABELS) as AiProvider[]).filter(
+        (p) => p === config.provider || (providerModels[p] && providerModels[p].length > 0)
+    )
+
+    const handleProviderChange = (provider: AiProvider) => {
+        const firstModel = (providerModels[provider] || [])[0] || ''
+        saveConfig({ provider, model: firstModel })
+    }
+
+    const handleModelChange = (model: string) => {
+        saveConfig({ model })
+    }
+
+    // Nothing to show yet — config hasn't loaded or no providers are configured
+    if (visibleProviders.length === 0) return <></>
+
+    return (
+        <div className="ai-provider-selector">
+            <select
+                className="ai-provider-select"
+                value={config.provider}
+                onChange={(e) => handleProviderChange(e.target.value as AiProvider)}
+                title="AI Provider"
+            >
+                {visibleProviders.map((p) => (
+                    <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
+                ))}
+            </select>
+            <select
+                className="ai-provider-select ai-model-select"
+                value={config.model}
+                onChange={(e) => handleModelChange(e.target.value)}
+                title="AI Model"
+                disabled={models.length === 0}
+            >
+                {models.length === 0 ? (
+                    <option value="">No models</option>
+                ) : (
+                    models.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                    ))
+                )}
+            </select>
+        </div>
+    )
+}

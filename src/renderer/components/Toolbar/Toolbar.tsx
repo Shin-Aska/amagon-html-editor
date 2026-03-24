@@ -41,6 +41,7 @@ import CredentialManager from '../CredentialManager/CredentialManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
+import { OPEN_GLOBAL_SETTINGS_EVENT, type GlobalSettingsTab, type OpenGlobalSettingsDetail } from '../../utils/settingsNavigation'
 import './Toolbar.css'
 
 interface ToolbarProps {
@@ -77,8 +78,10 @@ export default function Toolbar({
   const setFilePath = useProjectStore((s) => s.setFilePath)
   const currentPageId = useProjectStore((s) => s.currentPageId)
   const projectName = useProjectStore((s) => s.settings.name)
+  const pageThemePreviewMode = useProjectStore((s) => s.settings.themes?.previewMode ?? 'device')
   const updateSettings = useProjectStore((s) => s.updateSettings)
   const updatePage = useProjectStore((s) => s.updatePage)
+  const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode)
 
   // Editor Store
   const editorBlocks = useEditorStore((s) => s.blocks)
@@ -105,6 +108,7 @@ export default function Toolbar({
   const [showAssetManager, setShowAssetManager] = useState(false)
   const [showCredentialManager, setShowCredentialManager] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [settingsInitialTab, setSettingsInitialTab] = useState<GlobalSettingsTab>('general')
   const [showNewProject, setShowNewProject] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -122,6 +126,18 @@ export default function Toolbar({
   useEffect(() => {
     setTempName(projectName)
   }, [projectName])
+
+  useEffect(() => {
+    const handleOpenSettings = (event: Event) => {
+      const customEvent = event as CustomEvent<OpenGlobalSettingsDetail>
+      setSettingsInitialTab(customEvent.detail?.tab ?? 'general')
+      setShowSettings(true)
+      setShowCredentialManager(false)
+    }
+
+    window.addEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener)
+    return () => window.removeEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener)
+  }, [])
 
   // Auto-save listener
   useEffect(() => {
@@ -173,6 +189,7 @@ export default function Toolbar({
           pages,
           folders: projectState.folders,
           userBlocks: projectState.userBlocks,
+          customPresets: projectState.customPresets,
           customCss: editorState.customCss
         },
         null,
@@ -481,6 +498,34 @@ export default function Toolbar({
 
           <div className="toolbar-group">
             <button
+              className={`toolbar-btn toolbar-page-theme-btn ${pageThemePreviewMode === 'device' ? 'active' : ''}`}
+              onClick={() => setThemePreviewMode('device')}
+              title="Preview page using the device color scheme"
+              aria-label="Preview page with device color scheme"
+              aria-pressed={pageThemePreviewMode === 'device'}
+            >
+              <span className="toolbar-page-theme-label">A</span>
+            </button>
+            <button
+              className={`toolbar-btn toolbar-page-theme-btn ${pageThemePreviewMode === 'light' ? 'active' : ''}`}
+              onClick={() => setThemePreviewMode('light')}
+              title="Preview page light theme"
+              aria-label="Preview page with light theme"
+              aria-pressed={pageThemePreviewMode === 'light'}
+            >
+              <span className="toolbar-page-theme-label">L</span>
+            </button>
+            <button
+              className={`toolbar-btn toolbar-page-theme-btn ${pageThemePreviewMode === 'dark' ? 'active' : ''}`}
+              onClick={() => setThemePreviewMode('dark')}
+              title="Preview page dark theme"
+              aria-label="Preview page with dark theme"
+              aria-pressed={pageThemePreviewMode === 'dark'}
+            >
+              <span className="toolbar-page-theme-label">D</span>
+            </button>
+            <div className="toolbar-divider" />
+            <button
               className={`toolbar-btn ${showLayoutOutlines ? 'active' : ''}`}
               onClick={() => setLayoutOutlines(!showLayoutOutlines)}
               title="Toggle Layout Outlines"
@@ -688,7 +733,11 @@ export default function Toolbar({
       )}
 
       {showSettings && (
-        <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+        <SettingsDialog
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+          initialTab={settingsInitialTab}
+        />
       )}
     </>
   )

@@ -7,6 +7,12 @@
   overflow: hidden;
 }
 
+.ai-assistant.is-disabled .ai-header,
+.ai-assistant.is-disabled .ai-messages,
+.ai-assistant.is-disabled .ai-input-bar {
+  opacity: 0.72;
+}
+
 /* ─── Messages area ──────────────────────────────────────────────────────── */
 
 .ai-messages {
@@ -196,7 +202,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg-surface);
   margin-top: 4px;
 }
 
@@ -214,14 +220,53 @@
   letter-spacing: 0.3px;
 }
 
+.ai-preview-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.ai-preview-zoom-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.ai-preview-zoom-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.ai-preview-zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ai-preview-zoom-level {
+  font-size: 9px;
+  min-width: 26px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-preview-viewport {
+  overflow: hidden;
+  position: relative;
+}
+
 .ai-preview-iframe {
-  width: 100%;
   border: none;
   display: block;
-  background: #fff;
-  transition: height 0.2s ease;
   min-height: 60px;
-  max-height: 400px;
 }
 
 /* ─── Loading indicator ──────────────────────────────────────────────────── */
@@ -330,6 +375,34 @@
 
 .ai-send-btn:not(:disabled):hover {
   opacity: 0.85;
+}
+
+.ai-disabled-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 82%, var(--color-danger, #dc3545) 18%);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-disabled-link {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ai-disabled-link:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* ─── Header ─────────────────────────────────────────────────────────────── */

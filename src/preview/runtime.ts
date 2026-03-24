@@ -11,6 +11,7 @@ type EditorMessage =
   | { type: 'scrollToElement'; blockId?: string | null }
   | { type: 'setCustomCss'; css?: string }
   | { type: 'setThemeCss'; css?: string }
+  | { type: 'setPageThemeMode'; mode?: 'device' | 'light' | 'dark' }
   | { type: 'setUiTheme'; isDark: boolean }
   | { type: 'toggleLayoutOutlines'; show: boolean }
   | { type: 'dragMove'; x: number; y: number }
@@ -467,6 +468,15 @@ function setCustomCss(css: string): void {
   document.head.appendChild(style)
 }
 
+function setPageThemeMode(mode: 'device' | 'light' | 'dark'): void {
+  if (mode === 'device') {
+    document.documentElement.setAttribute('data-page-theme', 'device')
+    return
+  }
+
+  document.documentElement.setAttribute('data-page-theme', mode)
+}
+
 function initRuntime(): void {
   // Inject Highlight.js CSS into the iframe's head dynamically so code blocks inherit colors
   const hljsStyle = document.createElement('link')
@@ -475,6 +485,21 @@ function initRuntime(): void {
   // Use a default dark theme for now, we can update it dynamically if needed based on `isDark`
   hljsStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css'
   document.head.appendChild(hljsStyle)
+
+  // Canvas-only overrides: disable interactive form controls that are only
+  // functional at export time (e.g. page-list search/sort/direction inputs).
+  const canvasOverrides = document.createElement('style')
+  canvasOverrides.id = 'editor-canvas-overrides'
+  canvasOverrides.textContent = `
+    [data-page-list-search],
+    [data-page-list-sort],
+    [data-page-list-dir] {
+      pointer-events: none;
+      user-select: none;
+      cursor: default;
+    }
+  `
+  document.head.appendChild(canvasOverrides)
 
   // Listen for messages from the parent editor
   window.addEventListener('message', (event: MessageEvent) => {
@@ -505,6 +530,9 @@ function initRuntime(): void {
         break
       case 'setThemeCss':
         setThemeCss((data as { css?: string }).css ?? '')
+        break
+      case 'setPageThemeMode':
+        setPageThemeMode((data as { mode?: 'device' | 'light' | 'dark' }).mode ?? 'device')
         break
       case 'setUiTheme':
         if ((data as { isDark?: boolean }).isDark) {

@@ -96,6 +96,15 @@ export interface ProjectTheme {
   customCssFiles?: CssFile[]     // multi-file custom CSS (takes precedence over customCss)
 }
 
+export type PageThemeMode = 'light' | 'dark'
+export type PageThemePreviewMode = 'device' | PageThemeMode
+
+export interface ProjectThemeVariants {
+  light: ProjectTheme
+  dark: ProjectTheme
+  previewMode: PageThemePreviewMode
+}
+
 export function createDefaultTheme(): ProjectTheme {
   return {
     name: 'Default',
@@ -133,11 +142,76 @@ export function createDefaultTheme(): ProjectTheme {
   }
 }
 
-export function themeToCSS(theme: ProjectTheme): string {
-  const lines: string[] = []
-  lines.push(':root {')
+export function createDefaultDarkTheme(): ProjectTheme {
+  return {
+    name: 'Default Dark',
+    colors: {
+      primary: '#7fb2ff',
+      secondary: '#94a3b8',
+      accent: '#f59e0b',
+      background: '#0f172a',
+      surface: '#111827',
+      text: '#e5e7eb',
+      textMuted: '#94a3b8',
+      border: '#334155',
+      success: '#34d399',
+      warning: '#fbbf24',
+      danger: '#f87171'
+    },
+    typography: {
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+      headingFontFamily: 'inherit',
+      baseFontSize: '16px',
+      lineHeight: '1.6',
+      headingLineHeight: '1.2'
+    },
+    spacing: {
+      baseUnit: '8px',
+      scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
+    },
+    borders: {
+      radius: '6px',
+      width: '1px',
+      color: '#334155'
+    },
+    customCss: '',
+    customCssFiles: []
+  }
+}
 
-  // Colors
+export function cloneTheme(theme: ProjectTheme): ProjectTheme {
+  return {
+    ...theme,
+    colors: { ...theme.colors },
+    typography: { ...theme.typography },
+    spacing: { ...theme.spacing, scale: [...theme.spacing.scale] },
+    borders: { ...theme.borders },
+    customCssFiles: Array.isArray(theme.customCssFiles)
+      ? theme.customCssFiles.map((file) => ({ ...file }))
+      : []
+  }
+}
+
+export function createDefaultThemeVariants(lightTheme?: ProjectTheme): ProjectThemeVariants {
+  return {
+    light: cloneTheme(lightTheme ?? createDefaultTheme()),
+    dark: createDefaultDarkTheme(),
+    previewMode: 'device'
+  }
+}
+
+export function getThemeVariant(
+  baseTheme: ProjectTheme,
+  variants: ProjectThemeVariants | undefined,
+  mode: PageThemeMode
+): ProjectTheme {
+  if (!variants) return baseTheme
+  return mode === 'dark' ? variants.dark : variants.light
+}
+
+function buildThemeVariableLines(theme: ProjectTheme): string[] {
+  const lines: string[] = []
+
   lines.push(`  --theme-primary: ${theme.colors.primary};`)
   lines.push(`  --theme-secondary: ${theme.colors.secondary};`)
   lines.push(`  --theme-accent: ${theme.colors.accent};`)
@@ -150,14 +224,12 @@ export function themeToCSS(theme: ProjectTheme): string {
   lines.push(`  --theme-warning: ${theme.colors.warning};`)
   lines.push(`  --theme-danger: ${theme.colors.danger};`)
 
-  // Typography
   lines.push(`  --theme-font-family: ${theme.typography.fontFamily};`)
   lines.push(`  --theme-heading-font-family: ${theme.typography.headingFontFamily};`)
   lines.push(`  --theme-font-size: ${theme.typography.baseFontSize};`)
   lines.push(`  --theme-line-height: ${theme.typography.lineHeight};`)
   lines.push(`  --theme-heading-line-height: ${theme.typography.headingLineHeight};`)
 
-  // Spacing
   lines.push(`  --theme-spacing-unit: ${theme.spacing.baseUnit};`)
   const unit = parseFloat(theme.spacing.baseUnit) || 8
   const unitSuffix = theme.spacing.baseUnit.replace(/[\d.]+/, '') || 'px'
@@ -165,12 +237,42 @@ export function themeToCSS(theme: ProjectTheme): string {
     lines.push(`  --theme-space-${i}: ${mult * unit}${unitSuffix};`)
   })
 
-  // Borders
   lines.push(`  --theme-border-radius: ${theme.borders.radius};`)
   lines.push(`  --theme-border-width: ${theme.borders.width};`)
   lines.push(`  --theme-border-color: ${theme.borders.color};`)
 
-  lines.push('}')
+  return lines
+}
+
+function pushThemeVariableBlock(lines: string[], selector: string, theme: ProjectTheme, indent = ''): void {
+  lines.push(`${indent}${selector} {`)
+  for (const line of buildThemeVariableLines(theme)) {
+    lines.push(`${indent}${line}`)
+  }
+  lines.push(`${indent}}`)
+}
+
+export function themeToCSS(theme: ProjectTheme, variants?: ProjectThemeVariants): string {
+  const lines: string[] = []
+  const lightTheme = variants?.light ?? theme
+  const darkTheme = variants?.dark
+
+  pushThemeVariableBlock(lines, ':root', lightTheme)
+
+  if (darkTheme) {
+    lines.push('')
+    lines.push(':root {')
+    lines.push('  color-scheme: light dark;')
+    lines.push('}')
+    lines.push('')
+    pushThemeVariableBlock(lines, 'html[data-page-theme="light"]', lightTheme)
+    lines.push('')
+    pushThemeVariableBlock(lines, 'html[data-page-theme="dark"]', darkTheme)
+    lines.push('')
+    lines.push('@media (prefers-color-scheme: dark) {')
+    pushThemeVariableBlock(lines, 'html:not([data-page-theme]), html[data-page-theme="device"]', darkTheme, '  ')
+    lines.push('}')
+  }
 
   // Base body styles using theme variables
   lines.push('')
@@ -374,8 +476,8 @@ export function themeToCSS(theme: ProjectTheme): string {
   lines.push('}')
 
   // Append custom CSS (multi-file takes precedence over legacy single string)
-  const cssFiles = theme.customCssFiles && theme.customCssFiles.length > 0
-    ? theme.customCssFiles
+  const cssFiles = lightTheme.customCssFiles && lightTheme.customCssFiles.length > 0
+    ? lightTheme.customCssFiles
     : null
 
   if (cssFiles) {
@@ -386,10 +488,10 @@ export function themeToCSS(theme: ProjectTheme): string {
         lines.push(file.css.trim())
       }
     }
-  } else if (theme.customCss.trim()) {
+  } else if (lightTheme.customCss.trim()) {
     // Legacy fallback: single customCss string
     lines.push('')
-    lines.push(theme.customCss.trim())
+    lines.push(lightTheme.customCss.trim())
   }
 
   return lines.join('\n')
@@ -401,6 +503,7 @@ export interface ProjectSettings {
   name: string
   framework: FrameworkChoice
   theme: ProjectTheme
+  themes?: ProjectThemeVariants
   globalStyles: Record<string, string>
 }
 
@@ -488,6 +591,7 @@ export interface EditorActions {
   loadPageBlocks: (blocks: Block[]) => void
 
   // Mark the current state as saved (clears dirty indicator)
+  markDirty: () => void
   markSaved: () => void
 
   // Selection

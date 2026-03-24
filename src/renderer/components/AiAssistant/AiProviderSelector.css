@@ -1,0 +1,44 @@
+/* ─── AI Provider Selector ────────────────────────────────────────────────── */
+/* Shared across AI Assistant, CSS Assist, and Code Assist panels             */
+
+.ai-provider-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ai-provider-select {
+    background: var(--color-bg-surface, var(--bg, #1e1e2e));
+    border: 1px solid var(--color-border, var(--border, rgba(255, 255, 255, 0.1)));
+    border-radius: var(--radius-sm, 4px);
+    color: var(--color-text-muted, var(--text-muted, #888));
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+    outline: none;
+    max-width: 100px;
+    font-family: inherit;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.ai-provider-select.ai-model-select {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ai-provider-select:hover {
+    border-color: var(--color-accent, var(--primary, #1e66f5));
+    color: var(--color-text-primary, var(--text, #e0e0e0));
+}
+
+.ai-provider-select:focus {
+    border-color: var(--color-accent, var(--primary, #1e66f5));
+    color: var(--color-text-primary, var(--text, #e0e0e0));
+}
+
+.ai-provider-select:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

@@ -9,12 +9,13 @@ import './SettingsDialog.css'
 interface SettingsDialogProps {
   open: boolean
   onClose: () => void
+  initialTab?: TabType
 }
 
 type TabType = 'general' | 'keys'
 
-export default function SettingsDialog({ open, onClose }: SettingsDialogProps): JSX.Element | null {
-  const [activeTab, setActiveTab] = useState<TabType>('general')
+export default function SettingsDialog({ open, onClose, initialTab = 'general' }: SettingsDialogProps): JSX.Element | null {
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const overlayRef = useRef<HTMLDivElement>(null)
 
   // -- App Settings --
@@ -31,11 +32,13 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
   const loadAiConfig = useAiStore((s) => s.loadConfig)
   const saveAiConfig = useAiStore((s) => s.saveConfig)
   const loadAiModels = useAiStore((s) => s.loadModels)
+  const fetchModelsForProvider = useAiStore((s) => s.fetchModelsForProvider)
 
   // local AI state for form
   const [aiProvider, setAiProvider] = useState(aiConfig?.provider || 'openai')
   const [aiModel, setAiModel] = useState(aiConfig?.model || '')
   const [aiKey, setAiKey] = useState(aiConfig?.apiKey || '')
+  const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434')
 
   // -- Media Search Settings --
   const [mediaProvider, setMediaProvider] = useState('unsplash')
@@ -43,6 +46,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
 
   useEffect(() => {
     if (open) {
+      setActiveTab(initialTab)
       loadAiConfig().then(() => {
         loadAiModels()
       })
@@ -63,6 +67,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
       setAiProvider(aiConfig.provider)
       setAiModel(aiConfig.model)
       setAiKey(aiConfig.apiKey)
+      setAiOllamaUrl(aiConfig.ollamaUrl || 'http://localhost:11434')
     }
   }, [aiConfig])
 
@@ -84,7 +89,9 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
   }
 
   const handleSaveAi = async () => {
-    await saveAiConfig({ provider: aiProvider as any, model: aiModel, apiKey: aiKey })
+    await saveAiConfig({ provider: aiProvider as any, model: aiModel, apiKey: aiKey, ollamaUrl: aiOllamaUrl })
+    // Refresh available models for the current provider now that the key / URL may have changed
+    fetchModelsForProvider(aiProvider, aiKey, aiOllamaUrl)
   }
 
   const handleSaveMedia = async () => {
@@ -205,24 +212,48 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
                     <label>Provider</label>
                     <select
                       value={aiProvider}
-                      onChange={(e) => setAiProvider(e.target.value as any)}
+                      onChange={(e) => {
+                        const newProvider = e.target.value as any
+                        setAiProvider(newProvider)
+                        // Reset model so the new provider's default is used
+                        setAiModel('')
+                      }}
                       onBlur={handleSaveAi}
                       className="settings-input"
                     >
                       <option value="openai">OpenAI</option>
                       <option value="anthropic">Anthropic</option>
                       <option value="google">Google</option>
+                      <option value="mistral">Mistral</option>
                       <option value="ollama">Ollama (Local)</option>
                     </select>
                   </div>
-                  
+
+                  {aiProvider === 'ollama' && (
+                    <div className="settings-field">
+                      <label>Base URL</label>
+                      <input
+                        type="text"
+                        placeholder="http://localhost:11434"
+                        value={aiOllamaUrl}
+                        onChange={(e) => setAiOllamaUrl(e.target.value)}
+                        onBlur={handleSaveAi}
+                        className="settings-input"
+                      />
+                      <span className="settings-hint">
+                        URL of your Ollama server
+                      </span>
+                    </div>
+                  )}
+
                   <div className="settings-field">
                     <label>Model</label>
                     <select
                       value={aiModel}
                       onChange={(e) => {
-                        setAiModel(e.target.value)
-                        setTimeout(handleSaveAi, 0)
+                        const newModel = e.target.value
+                        setAiModel(newModel)
+                        saveAiConfig({ provider: aiProvider as any, model: newModel, apiKey: aiKey, ollamaUrl: aiOllamaUrl })
                       }}
                       className="settings-input"
                     >
@@ -232,22 +263,22 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
                     </select>
                   </div>
 
-                  {aiProvider !== 'ollama' && (
-                    <div className="settings-field">
-                      <label>API Key</label>
-                      <input
-                        type="password"
-                        placeholder="sk-..."
-                        value={aiKey}
-                        onChange={(e) => setAiKey(e.target.value)}
-                        onBlur={handleSaveAi}
-                        className="settings-input"
-                      />
-                      <span className="settings-hint">
-                        Saved securely in system keychain
-                      </span>
-                    </div>
-                  )}
+                  <div className="settings-field">
+                    <label>API Key{aiProvider === 'ollama' ? ' (Optional)' : ''}</label>
+                    <input
+                      type="password"
+                      placeholder={aiProvider === 'ollama' ? 'Leave empty if not required' : 'sk-...'}
+                      value={aiKey}
+                      onChange={(e) => setAiKey(e.target.value)}
+                      onBlur={handleSaveAi}
+                      className="settings-input"
+                    />
+                    <span className="settings-hint">
+                      {aiProvider === 'ollama'
+                        ? 'Only needed for authenticated Ollama deployments'
+                        : 'Saved securely in system keychain'}
+                    </span>
+                  </div>
                 </div>
 
                 <h3 className="section-divider">Media Search</h3>
@@ -263,6 +294,8 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps): 
                       className="settings-input"
                     >
                       <option value="unsplash">Unsplash</option>
+                      <option value="pexels">Pexels</option>
+                      <option value="pixabay">Pixabay</option>
                     </select>
                   </div>
                   <div className="settings-field">

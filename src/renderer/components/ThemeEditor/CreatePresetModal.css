@@ -1,0 +1,201 @@
+.create-preset-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.create-preset-dialog {
+  width: min(920px, 92vw);
+  max-height: 86vh;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.create-preset-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.create-preset-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.create-preset-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.create-preset-ai-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-bg-primary) 88%, var(--color-accent) 12%) 0%,
+    var(--color-bg-primary) 100%
+  );
+}
+
+.create-preset-ai-card.is-disabled {
+  opacity: 0.7;
+}
+
+.create-preset-ai-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.create-preset-ai-textarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.create-preset-ai-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.create-preset-generate-btn {
+  min-width: 164px;
+  justify-content: center;
+  align-self: stretch;
+}
+
+.create-preset-helper {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.create-preset-settings-link {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.create-preset-settings-link:hover {
+  text-decoration: underline;
+}
+
+.create-preset-divider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.create-preset-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.create-preset-manual.is-ai-updated {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 28%, transparent);
+  transform: translateY(-1px);
+}
+
+.create-preset-preview {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  overflow-x: auto;
+}
+
+.create-preset-preview-swatch {
+  width: 28px;
+  height: 24px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+
+.create-preset-error {
+  color: var(--color-danger, #dc3545);
+  font-size: 12px;
+}
+
+.create-preset-footer {
+  border-top: 1px solid var(--color-border);
+  padding: 12px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.create-preset-spin {
+  animation: create-preset-spin 0.7s linear infinite;
+}
+
+@keyframes create-preset-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 700px) {
+  .create-preset-dialog {
+    width: 95vw;
+    max-height: 92vh;
+  }
+
+  .create-preset-ai-row {
+    grid-template-columns: 1fr;
+  }
+
+  .create-preset-generate-btn {
+    width: 100%;
+  }
+
+  .create-preset-footer {
+    justify-content: stretch;
+  }
+
+  .create-preset-footer .theme-btn {
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
+  }
+}
