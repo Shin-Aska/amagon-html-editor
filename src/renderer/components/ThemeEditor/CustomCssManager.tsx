@@ -374,7 +374,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                             setContextMenu(null)
                         }}
                     >
-                        ✨ Assist with AI
+                        <Sparkles size={14} /> Assist with AI
                     </button>
                     {!hasConfiguredAiProvider && (
                         <button

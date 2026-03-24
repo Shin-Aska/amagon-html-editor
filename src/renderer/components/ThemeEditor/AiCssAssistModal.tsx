@@ -5,6 +5,7 @@ import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useA
 import { openGlobalSettings } from '../../utils/settingsNavigation'
 import AiProviderSelector from '../AiAssistant/AiProviderSelector'
 import './AiCssAssistModal.css'
+import { Sparkles } from 'lucide-react'
 
 type AiCssMode = 'replace' | 'insert' | 'replace_match' | 'delete_match'
 type AiCssAnchor = 'end_of_file' | 'after_selector' | 'before_selector'
@@ -386,7 +387,7 @@ ${themeVariables}`
             <div className="ai-css-assist-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="ai-css-assist-header">
                     <div>
-                        <div className="ai-css-assist-title">Assist with AI ✨</div>
+                        <div className="ai-css-assist-title">Assist with AI <Sparkles size={14} /></div>
                         <div className="ai-css-assist-subtitle">{file.name}</div>
                     </div>
                     <AiProviderSelector />
