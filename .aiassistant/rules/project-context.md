@@ -6,6 +6,8 @@ apply: always
 
 Amagon is an offline, AI-powered visual HTML editor built with Electron, React, and TypeScript.
 
+For deeper context on architecture, data models, IPC channels, and conventions, see `GUIDELINES.md` at the repo root.
+
 ## Tech Stack
 
 - Electron, Vite, React, TypeScript, Zustand, Monaco Editor, Bootstrap 5
