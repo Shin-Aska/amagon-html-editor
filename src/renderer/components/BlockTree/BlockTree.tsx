@@ -3,6 +3,7 @@ import './BlockTree.css'
 import { useEditorStore } from '../../store/editorStore'
 import { type Block } from '../../store/types'
 import { componentRegistry } from '../../registry/ComponentRegistry'
+import BlockIcon from '../BlockIcon/BlockIcon'
 
 interface TreeNodeProps {
   block: Block
@@ -24,8 +25,16 @@ function TreeNode({ block, depth, onContextMenu }: TreeNodeProps): JSX.Element {
   }
 
   const def = componentRegistry.get(block.type)
-  const icon = def?.icon || '📦'
   const label = def?.label || block.type
+  const iconString = typeof def?.icon === 'string' ? def.icon.trim() : ''
+  const renderTreeIcon = () => {
+    if (block.type.startsWith('user:')) {
+      if (iconString.startsWith('lucide:')) return <BlockIcon name={iconString.replace(/^lucide:/, '')} />
+      if (iconString) return <span>{iconString}</span>
+      return <BlockIcon name="user-block" />
+    }
+    return <BlockIcon name={block.type} />
+  }
 
   return (
     <>
@@ -45,7 +54,7 @@ function TreeNode({ block, depth, onContextMenu }: TreeNodeProps): JSX.Element {
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </div>
-        <div className="tree-icon">{icon}</div>
+        <div className="tree-icon">{renderTreeIcon()}</div>
         <div className="tree-label">{label}</div>
       </div>
       {hasChildren && expanded && (
