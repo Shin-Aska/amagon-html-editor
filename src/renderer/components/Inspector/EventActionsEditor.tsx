@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
+import { Sparkles } from 'lucide-react'
 import { useEditorStore } from '../../store/editorStore'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
@@ -492,7 +493,14 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                               : undefined
                                     }
                                 >
-                                    {showAiAssist ? 'Hide AI Assist' : '✨ AI Code Assist'}
+                                    {showAiAssist ? (
+                                        'Hide AI Assist'
+                                    ) : (
+                                        <>
+                                            <Sparkles size={14} strokeWidth={2.4} />
+                                            <span>AI Code Assist</span>
+                                        </>
+                                    )}
                                 </button>
                                 {!hasConfiguredAiProvider && (
                                     <button

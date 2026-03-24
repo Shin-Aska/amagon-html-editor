@@ -130,6 +130,7 @@
 
 .css-manager-file-actions {
     display: flex;
+    align-items: center;
     gap: 2px;
     flex-shrink: 0;
     opacity: 0;
@@ -153,9 +154,34 @@
     transition: color 0.15s, background 0.15s;
 }
 
+.css-manager-icon-btn.ai {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-accent, #1e66f5);
+    background: transparent;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: none;
+    outline: none;
+}
+
+.css-manager-icon-btn.ai svg {
+    display: block;
+}
+
 .css-manager-icon-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text);
+}
+
+.css-manager-icon-btn.ai:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-accent, #1e66f5) 20%, transparent);
+    color: #fff;
 }
 
 .css-manager-icon-btn:disabled {

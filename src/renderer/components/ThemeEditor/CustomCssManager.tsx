@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, type MouseEvent } from 'react'
 import Editor from '@monaco-editor/react'
+import { Sparkles } from 'lucide-react'
 import { useProjectStore } from '../../store/projectStore'
 import type { CssFile, ProjectTheme } from '../../store/types'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
@@ -252,6 +253,24 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                             )}
 
                             <div className="css-manager-file-actions" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    className="css-manager-icon-btn ai"
+                                    onClick={() => {
+                                        if (!hasConfiguredAiProvider || pendingCssReview) return
+                                        setSelectedFileId(file.id)
+                                        setAiModalFile(file)
+                                    }}
+                                    disabled={!hasConfiguredAiProvider || !!pendingCssReview}
+                                    title={
+                                        pendingCssReview
+                                            ? 'Apply or deny the current AI proposal first'
+                                        : !hasConfiguredAiProvider
+                                              ? AI_API_KEY_REQUIRED_MESSAGE
+                                              : 'Assist with AI'
+                                    }
+                                >
+                                    <Sparkles size={12} strokeWidth={2.5} />
+                                </button>
                                 <button
                                     className="css-manager-icon-btn"
                                     onClick={() => handleMoveUp(index)}

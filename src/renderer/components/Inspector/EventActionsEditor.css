@@ -245,11 +245,18 @@
 }
 
 .event-editor-btn.ai {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-right: auto;
     color: var(--color-accent, #1e66f5);
     border-color: color-mix(in srgb, var(--color-accent, #1e66f5) 45%, var(--border));
     background: color-mix(in srgb, var(--color-accent, #1e66f5) 10%, transparent);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent, #1e66f5) 12%, transparent);
+}
+
+.event-editor-btn.ai svg {
+    display: block;
 }
 
 .event-editor-btn.ai:hover {

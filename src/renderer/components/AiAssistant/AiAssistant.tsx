@@ -415,7 +415,9 @@ export default function AiAssistant(): JSX.Element {
             <div className="ai-messages">
                 {messages.length === 0 && !isLoading ? (
                     <div className="ai-empty">
-                        <div className="ai-empty-icon">✨</div>
+                        <div className="ai-empty-icon">
+                            <Sparkles size={28} strokeWidth={2.2} />
+                        </div>
                         <div className="ai-empty-title">AI Assistant</div>
                         <div className="ai-empty-subtitle">
                             {aiEnabled
