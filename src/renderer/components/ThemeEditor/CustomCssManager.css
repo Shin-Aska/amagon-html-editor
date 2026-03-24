@@ -216,6 +216,10 @@
     overflow: hidden;
 }
 
+.css-manager-editor-body.has-review-panel {
+    overflow: visible;
+}
+
 .css-manager-no-selection {
     flex: 1;
     display: flex;

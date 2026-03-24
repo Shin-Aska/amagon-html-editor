@@ -6,7 +6,7 @@ import { openGlobalSettings } from '../../utils/settingsNavigation'
 import AiProviderSelector from '../AiAssistant/AiProviderSelector'
 import './AiCssAssistModal.css'
 
-type AiCssMode = 'replace' | 'insert'
+type AiCssMode = 'replace' | 'insert' | 'replace_match' | 'delete_match'
 type AiCssAnchor = 'end_of_file' | 'after_selector' | 'before_selector'
 
 export interface AiCssProposal {
@@ -133,9 +133,18 @@ function buildProposalFromParsed(
     const rawCss = typeof cssOverride === 'string' ? cssOverride.trim() : typeof parsed.css === 'string' ? parsed.css.trim() : ''
     // Strip any accidental fences the AI embedded inside the css field value
     const css = extractCssFromResponse(rawCss) ?? rawCss
-    if (!css) return null
+    const requestedMode = parsed.mode
+    if (!css && requestedMode !== 'delete_match') return null
     return {
-        mode: parsed.mode === 'insert' || parsed.mode === 'replace' ? parsed.mode : currentCss.trim() ? 'insert' : 'replace',
+        mode:
+            requestedMode === 'insert' ||
+            requestedMode === 'replace' ||
+            requestedMode === 'replace_match' ||
+            requestedMode === 'delete_match'
+                ? requestedMode
+                : currentCss.trim()
+                  ? 'insert'
+                  : 'replace',
         css,
         explanation:
             typeof parsed.explanation === 'string' && parsed.explanation.trim()
@@ -196,7 +205,7 @@ function extractJsonLikeStringField(jsonLike: string, fieldName: string): string
 function extractCssFieldFromJsonLike(jsonLike: string): { css: string; mode: AiCssMode | null } | null {
     const css = extractJsonLikeStringField(jsonLike, 'css')
     if (!css) return null
-    const modeMatch = jsonLike.match(/"mode"\s*:\s*"(insert|replace)"/)
+    const modeMatch = jsonLike.match(/"mode"\s*:\s*"(insert|replace|replace_match|delete_match)"/)
     return { css, mode: (modeMatch?.[1] as AiCssMode) ?? null }
 }
 
@@ -300,16 +309,20 @@ export default function AiCssAssistModal({
             const systemPrompt = `You are an AI assistant embedded in "Amagon", a visual HTML editor.
 
 You help users edit a CSS file safely.
-- Prefer targeted insertions when the file already has useful styles.
+- Inspect the current CSS carefully before proposing changes.
+- Prefer targeted edits to existing rules when the request asks to change or remove something already in the file.
+- Use "insert" only when adding new CSS that does not replace existing blocks.
+- Use "replace_match" when modifying an existing selector or block.
+- Use "delete_match" when removing an existing selector or block.
 - Use "replace" only when the request clearly asks for a full rewrite or the file is nearly empty.
 - Return ONLY two code blocks in this exact order:
 \`\`\`json
 {
-  "mode": "insert",
+  "mode": "replace_match",
   "anchor": "end_of_file",
-  "matchText": "",
-  "insertHint": "Append this as a new block at the end of the file.",
-  "explanation": "Adds a new hover treatment without disturbing existing rules."
+  "matchText": ".button:hover",
+  "insertHint": "Replaces the existing hover rule.",
+  "explanation": "Updates the existing hover treatment instead of appending a duplicate block."
 }
 \`\`\`
 \`\`\`css
@@ -320,7 +333,10 @@ You help users edit a CSS file safely.
 - Do not include any prose before, between, or after the two blocks.
 - The CSS block must contain only valid CSS, with no JSON escaping and no markdown inside it.
 - For "replace", return the full replacement stylesheet in the CSS block.
-- For "insert", return only the CSS snippet to add.`
+- For "insert", return only the CSS snippet to add.
+- For "replace_match", set "matchText" to the exact selector or a unique snippet from the current CSS that should be replaced, and return the replacement CSS block in the CSS block.
+- For "delete_match", set "matchText" to the exact selector or a unique snippet from the current CSS that should be removed. Return an empty CSS block for deletions when no replacement text is needed.
+- When the user asks to remove or change something that already exists, do not choose "insert" unless you are intentionally adding a separate new rule.`
 
             const userPrompt = `User request:
 ${prompt.trim()}

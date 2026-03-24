@@ -216,6 +216,10 @@
     overflow: hidden;
 }
 
+.event-editor-code-surface.has-review-panel {
+    overflow: visible;
+}
+
 .event-editor-footer {
     display: flex;
     justify-content: flex-end;

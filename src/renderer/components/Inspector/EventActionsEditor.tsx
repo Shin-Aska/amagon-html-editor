@@ -439,12 +439,10 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                     onProposalGenerated={handleProposalGenerated}
                                     onClose={() => setShowAiAssist(false)}
                                 />
-                                <div className="event-editor-code-surface">
+                                <div className={`event-editor-code-surface ${pendingAiReview ? 'has-review-panel' : ''}`}>
                                     {pendingAiReview ? (
                                         <AiProposalReviewPanel
-                                            modeLabel={pendingAiReview.proposal.mode.replace('_', ' ')}
                                             explanation={pendingAiReview.proposal.explanation}
-                                            hint={pendingAiReview.proposal.insertHint}
                                             original={pendingAiReview.sourceCode}
                                             modified={pendingAiReview.previewCode}
                                             language="javascript"

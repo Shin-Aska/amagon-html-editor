@@ -7,46 +7,61 @@
 }
 
 .ai-proposal-review-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border);
     background: linear-gradient(180deg, rgba(22, 163, 74, 0.1) 0%, rgba(22, 163, 74, 0.04) 100%);
 }
 
 .ai-proposal-review-summary {
     display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ai-proposal-review-summary-top {
+    display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
-    min-width: 0;
-    color: var(--text);
-    font-size: 0.78rem;
 }
 
-.ai-proposal-review-badge {
+.ai-proposal-review-info {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
     border-radius: 999px;
-    font-size: 0.7rem;
+    border: 1px solid rgba(137, 180, 250, 0.28);
+    background: rgba(137, 180, 250, 0.1);
+    color: #cdd6f4;
+    cursor: help;
+    outline: none;
+    padding: 0;
+}
+
+.ai-proposal-review-info-icon {
+    font-size: 0.72rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #d1fae5;
-    background: rgba(22, 163, 74, 0.28);
-    border: 1px solid rgba(34, 197, 94, 0.35);
+    line-height: 1;
 }
 
-.ai-proposal-review-explanation {
+.ai-proposal-review-tooltip {
+    position: fixed;
+    z-index: 20000;
+    width: min(320px, 60vw);
+    padding: 9px 11px;
+    border-radius: 8px;
+    border: 1px solid rgba(137, 180, 250, 0.2);
+    background: rgba(15, 23, 42, 0.96);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
     color: var(--text);
-}
-
-.ai-proposal-review-hint {
-    color: var(--text-muted);
-    font-size: 0.75rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    pointer-events: none;
 }
 
 .ai-proposal-review-actions {
@@ -54,6 +69,7 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    align-self: center;
 }
 
 .ai-proposal-review-btn {
@@ -89,11 +105,12 @@
 
 @media (max-width: 900px) {
     .ai-proposal-review-bar {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         align-items: stretch;
     }
 
     .ai-proposal-review-actions {
         justify-content: flex-end;
+        align-self: stretch;
     }
 }

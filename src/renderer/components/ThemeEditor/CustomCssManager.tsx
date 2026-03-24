@@ -14,12 +14,65 @@ interface PendingCssReview {
     previewCss: string
 }
 
-function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
+function findBalancedCssBlock(css: string, startIndex: number): { start: number; end: number } | null {
+    const openBraceIndex = css.indexOf('{', startIndex)
+    if (openBraceIndex === -1) return null
+
+    let depth = 0
+    for (let index = openBraceIndex; index < css.length; index += 1) {
+        const ch = css[index]
+        if (ch === '{') depth += 1
+        else if (ch === '}') {
+            depth -= 1
+            if (depth === 0) {
+                let blockStart = startIndex
+                while (blockStart > 0 && css[blockStart - 1] !== '\n') blockStart -= 1
+                let blockEnd = index + 1
+                while (blockEnd < css.length && /\s/.test(css[blockEnd])) blockEnd += 1
+                return { start: blockStart, end: blockEnd }
+            }
+        }
+    }
+
+    return null
+}
+
+function findMatchRange(css: string, matchText: string): { start: number; end: number } | null {
+    const trimmedMatch = matchText.trim()
+    if (!trimmedMatch) return null
+
+    const directIndex = css.indexOf(trimmedMatch)
+    if (directIndex === -1) return null
+
+    const balancedBlock = findBalancedCssBlock(css, directIndex)
+    if (balancedBlock) return balancedBlock
+
+    return { start: directIndex, end: directIndex + trimmedMatch.length }
+}
+
+export function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
     const snippet = proposal.css.trim()
-    if (!snippet) return currentCss
+    if (!snippet && proposal.mode !== 'delete_match') return currentCss
 
     if (proposal.mode === 'replace') {
         return snippet
+    }
+
+    if ((proposal.mode === 'replace_match' || proposal.mode === 'delete_match') && proposal.matchText) {
+        const range = findMatchRange(currentCss, proposal.matchText)
+        if (range) {
+            const replacement = proposal.mode === 'delete_match' ? '' : snippet
+            const before = currentCss.slice(0, range.start).replace(/\s*$/, '')
+            const after = currentCss.slice(range.end).replace(/^\s*/, '')
+            if (!replacement) {
+                if (!before) return after
+                if (!after) return before
+                return `${before}\n\n${after}`
+            }
+            if (!before) return after ? `${replacement}\n\n${after}` : replacement
+            if (!after) return `${before}\n\n${replacement}`
+            return `${before}\n\n${replacement}\n\n${after}`
+        }
     }
 
     if (proposal.matchText) {
@@ -244,12 +297,10 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                 <span className="css-manager-editor-disabled-badge">Disabled</span>
                             )}
                         </div>
-                        <div className="css-manager-editor-body">
+                        <div className={`css-manager-editor-body ${pendingCssReview && selectedFileId === selectedFile.id ? 'has-review-panel' : ''}`}>
                             {pendingCssReview && selectedFileId === selectedFile.id ? (
                                 <AiProposalReviewPanel
-                                    modeLabel={pendingCssReview.proposal.mode}
                                     explanation={pendingCssReview.proposal.explanation}
-                                    hint={pendingCssReview.proposal.insertHint}
                                     original={pendingCssReview.sourceCss}
                                     modified={pendingCssReview.previewCss}
                                     language="css"
