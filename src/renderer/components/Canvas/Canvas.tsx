@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Layers } from 'lucide-react'
 import ContextMenu, { type ContextMenuItem } from '../ContextMenu/ContextMenu'
 import './Canvas.css'
 import { useEditorStore } from '../../store/editorStore'
@@ -397,7 +398,7 @@ function Canvas(): JSX.Element {
           zIndex: 10
         }}>
           <div>
-            <strong>📑 Editing Tab Content</strong>
+            <strong><Layers size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Editing Tab Content</strong>
           </div>
           <button 
             onClick={() => exitTabEditMode()}
