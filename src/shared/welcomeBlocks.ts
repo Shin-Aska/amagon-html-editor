@@ -89,7 +89,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                                                     classes: ['card-body', 'text-center'],
                                                     children: [
                                                         block('heading', {
-                                                            props: { text: '🧩 Widgets', level: 4 },
+                                                            props: { text: 'Widgets', level: 4 },
                                                             classes: ['card-title']
                                                         }),
                                                         block('paragraph', {
@@ -114,7 +114,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                                                     classes: ['card-body', 'text-center'],
                                                     children: [
                                                         block('heading', {
-                                                            props: { text: '🎨 Inspector', level: 4 },
+                                                            props: { text: 'Inspector', level: 4 },
                                                             classes: ['card-title']
                                                         }),
                                                         block('paragraph', {
@@ -139,7 +139,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                                                     classes: ['card-body', 'text-center'],
                                                     children: [
                                                         block('heading', {
-                                                            props: { text: '🚀 Preview & Export', level: 4 },
+                                                            props: { text: 'Preview & Export', level: 4 },
                                                             classes: ['card-title']
                                                         }),
                                                         block('paragraph', {
