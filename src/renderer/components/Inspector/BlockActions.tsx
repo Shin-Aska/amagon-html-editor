@@ -7,6 +7,7 @@ import { getApi } from '../../utils/api'
 import './BlockActions.css'
 import { useMemo, useState } from 'react'
 import SaveCustomBlockDialog from './SaveCustomBlockDialog'
+import { ArrowUp, ArrowDown, Copy, Lock, LockOpen, Star, Trash2 } from 'lucide-react'
 
 interface BlockActionsProps {
   blockId: string
@@ -144,21 +145,21 @@ export default function BlockActions({ blockId, blockType }: BlockActionsProps):
     <div className="block-actions-editor">
       <div className="action-buttons-grid">
         <button className="action-btn" onClick={handleMoveUp} title="Move Up" disabled={isLocked}>
-          <span className="action-icon">↑</span> Move Up
+          <span className="action-icon"><ArrowUp size={14} /></span> Move Up
         </button>
         <button className="action-btn" onClick={handleMoveDown} title="Move Down" disabled={isLocked}>
-          <span className="action-icon">↓</span> Move Down
+          <span className="action-icon"><ArrowDown size={14} /></span> Move Down
         </button>
         <button className="action-btn" onClick={handleDuplicate} title="Duplicate" disabled={isLocked}>
-          <span className="action-icon">⧉</span> Duplicate
+          <span className="action-icon"><Copy size={14} /></span> Duplicate
         </button>
         <button className={`action-btn ${isLocked ? 'active' : ''}`} onClick={handleToggleLock} title={isLocked ? "Unlock Block" : "Lock Block"}>
-          <span className="action-icon">{isLocked ? '🔒' : '🔓'}</span> {isLocked ? 'Unlock' : 'Lock'}
+          <span className="action-icon">{isLocked ? <Lock size={14} /> : <LockOpen size={14} />}</span> {isLocked ? 'Unlock' : 'Lock'}
         </button>
       </div>
-      
+
       <button className="action-btn primary-action-btn mt-2" onClick={handleSaveAsUserBlock} title="Save as reusable block">
-        <span className="action-icon">⭐</span> Save as Custom Block
+        <span className="action-icon"><Star size={14} /></span> Save as Custom Block
       </button>
 
       <SaveCustomBlockDialog
@@ -223,7 +224,7 @@ export default function BlockActions({ blockId, blockType }: BlockActionsProps):
       />
 
       <button className="action-btn danger-action-btn mt-2" onClick={handleDelete} title="Delete Block" disabled={isLocked}>
-        <span className="action-icon">🗑️</span> Delete Block
+        <span className="action-icon"><Trash2 size={14} /></span> Delete Block
       </button>
     </div>
   )

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import './ArrayField.css'
 import { useEditorStore } from '../../store/editorStore'
+import { Star, Palette } from 'lucide-react'
 
 export interface TabItem {
   label: string
@@ -172,7 +173,7 @@ function ArrayField({ blockId, value = [], onChange, itemType = 'string', defaul
                             onClick={() => onDefaultChange(index)}
                             title={index === defaultIndex ? 'Default tab' : 'Set as default tab'}
                           >
-                            {index === defaultIndex ? '★' : '☆'}
+                            <Star size={12} fill={index === defaultIndex ? 'currentColor' : 'none'} />
                           </button>
                         )}
                       </div>
@@ -182,7 +183,7 @@ function ArrayField({ blockId, value = [], onChange, itemType = 'string', defaul
                           onClick={() => useEditorStore.getState().enterTabEditMode(blockId, index)}
                           title="Edit tab content visually in the canvas"
                         >
-                          🎨 Edit tab content in Canvas
+                          <Palette size={12} /> Edit tab content in Canvas
                         </button>
                       )}
                     </>

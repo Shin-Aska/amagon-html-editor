@@ -42,6 +42,10 @@
   flex-shrink: 0;
   width: 24px;
   text-align: center;
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .rv-label {

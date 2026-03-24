@@ -20,6 +20,7 @@ import { useProjectStore } from '../../store/projectStore'
 import ArrayField from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
+import { Check, Clipboard } from 'lucide-react'
 
 function Inspector(): JSX.Element {
   const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
@@ -375,7 +376,7 @@ function Inspector(): JSX.Element {
                             transition: 'opacity 0.2s'
                           }}
                         >
-                          {copiedKey === key ? '✅' : '📋'}
+                          {copiedKey === key ? <Check size={14} /> : <Clipboard size={14} />}
                         </button>
                       )}
                     </div>

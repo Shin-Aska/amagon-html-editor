@@ -1,4 +1,6 @@
 import './ResponsiveOverrides.css'
+import { Monitor, Tablet, Smartphone, Eye, EyeOff } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface ResponsiveOverridesProps {
   classes: string[]
@@ -21,13 +23,13 @@ type Viewport = 'mobile' | 'tablet' | 'desktop'
 interface ViewportConfig {
   id: Viewport
   label: string
-  icon: string
+  icon: ReactNode
 }
 
 const VIEWPORTS: ViewportConfig[] = [
-  { id: 'desktop', label: 'Desktop', icon: '🖥️' },
-  { id: 'tablet', label: 'Tablet', icon: '📱' },
-  { id: 'mobile', label: 'Mobile', icon: '📱' },
+  { id: 'desktop', label: 'Desktop', icon: <Monitor size={14} /> },
+  { id: 'tablet', label: 'Tablet', icon: <Tablet size={14} /> },
+  { id: 'mobile', label: 'Mobile', icon: <Smartphone size={14} /> },
 ]
 
 /**
@@ -126,7 +128,7 @@ export default function ResponsiveOverrides({ classes, onChange }: ResponsiveOve
               onClick={() => handleToggle(vp.id)}
               title={`${isVisible ? 'Visible' : 'Hidden'} on ${vp.label} — click to toggle`}
             >
-              <span className="rv-icon">{isVisible ? '👁️' : '🚫'}</span>
+              <span className="rv-icon">{isVisible ? <Eye size={14} /> : <EyeOff size={14} />}</span>
               <span className="rv-label">{vp.label}</span>
               <span className={`rv-status ${isVisible ? 'status-visible' : 'status-hidden'}`}>
                 {isVisible ? 'Visible' : 'Hidden'}
