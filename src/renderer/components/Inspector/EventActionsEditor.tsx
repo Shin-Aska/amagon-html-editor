@@ -523,8 +523,14 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                         setShowAiAssist((prev) => !prev)
                                     }}
                                     type="button"
-                                    disabled={!hasConfiguredAiProvider}
-                                    title={!hasConfiguredAiProvider ? AI_API_KEY_REQUIRED_MESSAGE : undefined}
+                                    disabled={!hasConfiguredAiProvider || !!pendingAiReview}
+                                    title={
+                                        pendingAiReview
+                                            ? 'Apply or discard the current proposal first'
+                                            : !hasConfiguredAiProvider
+                                              ? AI_API_KEY_REQUIRED_MESSAGE
+                                              : undefined
+                                    }
                                 >
                                     {showAiAssist ? 'Hide AI Assist' : '✨ AI Code Assist'}
                                 </button>

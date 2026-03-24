@@ -271,13 +271,18 @@
 }
 
 .event-editor-btn {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
     padding: 6px 16px;
     border: 1px solid var(--border);
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.8rem;
     transition: background 0.15s, color 0.15s;
+}
+
+.event-editor-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .event-editor-btn.ai {

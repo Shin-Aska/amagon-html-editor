@@ -64,55 +64,192 @@ function buildThemeVariables(theme: ProjectTheme): string {
 }
 
 function extractJsonBlock(content: string): string | null {
-    const match = content.match(/```(?:json)?\s*([\s\S]*?)```/i)
+    const match = content.match(/```json\s*([\s\S]*?)```/i)
     return match?.[1]?.trim() ?? null
 }
 
 function extractJsonObject(content: string): string | null {
     const start = content.indexOf('{')
-    const end = content.lastIndexOf('}')
-    if (start === -1 || end === -1 || end <= start) return null
-    return content.slice(start, end + 1).trim()
-}
+    if (start === -1) return null
 
-function extractCssFromResponse(content: string): string {
-    const fenceMatch = content.match(/```(?:css)?\s*([\s\S]*?)```/i)
-    if (fenceMatch && fenceMatch[1]) {
-        return fenceMatch[1].trim()
+    let depth = 0
+    let inString = false
+    let escaped = false
+
+    for (let index = start; index < content.length; index += 1) {
+        const ch = content[index]
+        if (escaped) {
+            escaped = false
+            continue
+        }
+        if (inString) {
+            if (ch === '\\') escaped = true
+            else if (ch === '"') inString = false
+            continue
+        }
+        if (ch === '"') {
+            inString = true
+            continue
+        }
+        if (ch === '{') depth += 1
+        else if (ch === '}') {
+            depth -= 1
+            if (depth === 0) return content.slice(start, index + 1).trim()
+        }
     }
-    return content.trim()
+
+    return null
 }
 
-function parseCssProposal(content: string, currentCss: string): AiCssProposal | null {
+// Escape literal newlines/tabs inside JSON string values so JSON.parse can handle them.
+// LLMs often emit multi-line CSS inside a JSON string without proper \n escaping.
+function repairJson(json: string): string {
+    let inStr = false, escaped = false, out = ''
+    for (const ch of json) {
+        if (escaped) { out += ch; escaped = false }
+        else if (ch === '\\' && inStr) { out += ch; escaped = true }
+        else if (ch === '"') { out += ch; inStr = !inStr }
+        else if (inStr && ch === '\n') { out += '\\n' }
+        else if (inStr && ch === '\r') { out += '\\r' }
+        else { out += ch }
+    }
+    return out
+}
+
+// Only match ```css fences or bare ``` fences — never ```json or other language fences.
+function extractCssFromResponse(content: string): string | null {
+    const cssMatch = content.match(/```css\s*\n([\s\S]*?)```/i)
+    if (cssMatch?.[1]) return cssMatch[1].trim()
+    const bareMatch = content.match(/```\n([\s\S]*?)```/)
+    if (bareMatch?.[1]) return bareMatch[1].trim()
+    return null
+}
+
+function buildProposalFromParsed(
+    parsed: Partial<AiCssProposal>,
+    currentCss: string,
+    cssOverride?: string
+): AiCssProposal | null {
+    const rawCss = typeof cssOverride === 'string' ? cssOverride.trim() : typeof parsed.css === 'string' ? parsed.css.trim() : ''
+    // Strip any accidental fences the AI embedded inside the css field value
+    const css = extractCssFromResponse(rawCss) ?? rawCss
+    if (!css) return null
+    return {
+        mode: parsed.mode === 'insert' || parsed.mode === 'replace' ? parsed.mode : currentCss.trim() ? 'insert' : 'replace',
+        css,
+        explanation:
+            typeof parsed.explanation === 'string' && parsed.explanation.trim()
+                ? parsed.explanation.trim()
+                : 'AI prepared a CSS proposal.',
+        insertHint: typeof parsed.insertHint === 'string' ? parsed.insertHint.trim() : undefined,
+        anchor:
+            parsed.anchor === 'end_of_file' || parsed.anchor === 'after_selector' || parsed.anchor === 'before_selector'
+                ? parsed.anchor
+                : undefined,
+        matchText: typeof parsed.matchText === 'string' ? parsed.matchText.trim() : undefined
+    }
+}
+
+function decodeJsonLikeString(value: string): string {
+    return value
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, '\\')
+}
+
+function extractJsonLikeStringField(jsonLike: string, fieldName: string): string | null {
+    const keyMatch = new RegExp(`"${fieldName}"\\s*:\\s*"`, 'm').exec(jsonLike)
+    if (!keyMatch) return null
+
+    let value = ''
+    let escaped = false
+    let index = keyMatch.index + keyMatch[0].length
+
+    while (index < jsonLike.length) {
+        const ch = jsonLike[index]
+        if (escaped) {
+            value += ch
+            escaped = false
+            index += 1
+            continue
+        }
+        if (ch === '\\') {
+            value += ch
+            escaped = true
+            index += 1
+            continue
+        }
+        if (ch === '"') {
+            const remainder = jsonLike.slice(index + 1)
+            if (/^\s*(?:,|\})/.test(remainder)) {
+                return decodeJsonLikeString(value).trim()
+            }
+        }
+        value += ch
+        index += 1
+    }
+
+    return null
+}
+
+// When JSON.parse fails entirely, extract the "css" and "mode" fields via regex.
+// Handles unescaped quotes/backslashes that repairJson cannot fix.
+function extractCssFieldFromJsonLike(jsonLike: string): { css: string; mode: AiCssMode | null } | null {
+    const css = extractJsonLikeStringField(jsonLike, 'css')
+    if (!css) return null
+    const modeMatch = jsonLike.match(/"mode"\s*:\s*"(insert|replace)"/)
+    return { css, mode: (modeMatch?.[1] as AiCssMode) ?? null }
+}
+
+export function parseCssProposal(content: string, currentCss: string): AiCssProposal | null {
+    const fencedCss = extractCssFromResponse(content)
     const jsonCandidate = extractJsonBlock(content) ?? extractJsonObject(content) ?? content.trim()
 
-    try {
-        const parsed = JSON.parse(jsonCandidate) as Partial<AiCssProposal>
-        const css = typeof parsed.css === 'string' ? parsed.css.trim() : ''
-        if (!css) return null
+    if (fencedCss) {
+        for (const candidate of [jsonCandidate, repairJson(jsonCandidate)]) {
+            try {
+                const parsed = JSON.parse(candidate) as Partial<AiCssProposal>
+                const proposal = buildProposalFromParsed(parsed, currentCss, fencedCss)
+                if (proposal) return proposal
+            } catch {
+                // continue to older fallbacks
+            }
+        }
+    }
 
-        return {
-            mode: parsed.mode === 'insert' || parsed.mode === 'replace' ? parsed.mode : currentCss.trim() ? 'insert' : 'replace',
-            css,
-            explanation:
-                typeof parsed.explanation === 'string' && parsed.explanation.trim()
-                    ? parsed.explanation.trim()
-                    : 'AI prepared a CSS proposal.',
-            insertHint: typeof parsed.insertHint === 'string' ? parsed.insertHint.trim() : undefined,
-            anchor:
-                parsed.anchor === 'end_of_file' || parsed.anchor === 'after_selector' || parsed.anchor === 'before_selector'
-                    ? parsed.anchor
-                    : undefined,
-            matchText: typeof parsed.matchText === 'string' ? parsed.matchText.trim() : undefined
+    // Attempt 1: direct parse. Attempt 2: repair literal newlines in string values.
+    for (const candidate of [jsonCandidate, repairJson(jsonCandidate)]) {
+        try {
+            const parsed = JSON.parse(candidate) as Partial<AiCssProposal>
+            const proposal = buildProposalFromParsed(parsed, currentCss)
+            if (proposal) return proposal
+        } catch {
+            // try next candidate
         }
-    } catch {
-        const css = extractCssFromResponse(content)
-        if (!css) return null
-        return {
-            mode: 'replace',
-            css,
-            explanation: 'AI returned a full CSS replacement.'
+    }
+
+    // Attempt 3: regex-extract the css field when JSON is completely unparseable
+    // (e.g. unescaped quotes inside CSS string values like content: "text")
+    const jsonLike = extractJsonBlock(content) ?? extractJsonObject(content)
+    if (jsonLike) {
+        const rescued = extractCssFieldFromJsonLike(jsonLike)
+        if (rescued?.css) {
+            return {
+                mode: rescued.mode ?? (currentCss.trim() ? 'insert' : 'replace'),
+                css: rescued.css,
+                explanation: 'AI prepared a CSS proposal.'
+            }
         }
+    }
+
+    // Last resort: look for an explicit ```css block in the response
+    const css = extractCssFromResponse(content)
+    if (!css) return null
+    return {
+        mode: currentCss.trim() ? 'insert' : 'replace',
+        css,
+        explanation: currentCss.trim()
+            ? 'AI returned CSS without a structured response — appending to existing styles.'
+            : 'AI returned a full CSS replacement.'
     }
 }
 
@@ -165,18 +302,25 @@ export default function AiCssAssistModal({
 You help users edit a CSS file safely.
 - Prefer targeted insertions when the file already has useful styles.
 - Use "replace" only when the request clearly asks for a full rewrite or the file is nearly empty.
-- Return ONLY a JSON code block in this shape:
+- Return ONLY two code blocks in this exact order:
 \`\`\`json
 {
   "mode": "insert",
   "anchor": "end_of_file",
   "matchText": "",
   "insertHint": "Append this as a new block at the end of the file.",
-  "explanation": "Adds a new hover treatment without disturbing existing rules.",
-  "css": ".button:hover { transform: translateY(-2px); }"
+  "explanation": "Adds a new hover treatment without disturbing existing rules."
 }
 \`\`\`
-- The "css" field must contain only valid CSS, with no markdown fences.`
+\`\`\`css
+.button:hover { transform: translateY(-2px); }
+\`\`\`
+- Put metadata in the JSON block and put the stylesheet only in the CSS block.
+- Do not include a "css" property in the JSON.
+- Do not include any prose before, between, or after the two blocks.
+- The CSS block must contain only valid CSS, with no JSON escaping and no markdown inside it.
+- For "replace", return the full replacement stylesheet in the CSS block.
+- For "insert", return only the CSS snippet to add.`
 
             const userPrompt = `User request:
 ${prompt.trim()}

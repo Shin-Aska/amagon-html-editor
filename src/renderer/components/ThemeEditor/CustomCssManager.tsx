@@ -5,12 +5,35 @@ import type { CssFile, ProjectTheme } from '../../store/types'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
 import AiCssAssistModal, { type AiCssProposal } from './AiCssAssistModal'
+import type * as MonacoType from 'monaco-editor'
 import './CustomCssManager.css'
 
 interface PendingCssReview {
     proposal: AiCssProposal
     sourceCss: string
     previewCss: string
+}
+
+const AI_DIFF_THEME = 'amagon-ai-review'
+
+function ensureAiDiffTheme(monaco: typeof MonacoType): void {
+    monaco.editor.defineTheme(AI_DIFF_THEME, {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+            'diffEditor.insertedTextBackground': '#86efac44',
+            'diffEditor.insertedLineBackground': '#22c55e33',
+            'diffEditor.removedTextBackground': '#fca5a544',
+            'diffEditor.removedLineBackground': '#ef444429',
+            'editorGutter.addedBackground': '#4ade80',
+            'editorGutter.deletedBackground': '#f87171',
+            'minimapGutter.addedBackground': '#4ade80',
+            'minimapGutter.deletedBackground': '#f87171',
+            'editorOverviewRuler.insertedForeground': '#4ade80cc',
+            'editorOverviewRuler.deletedForeground': '#f87171cc'
+        }
+    })
 }
 
 function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
@@ -266,14 +289,15 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                 </div>
                             </div>
                         )}
-                        <div className="css-manager-editor-body">
+                        <div className={`css-manager-editor-body ${pendingCssReview && selectedFileId === selectedFile.id ? 'is-reviewing' : ''}`}>
                             {pendingCssReview && selectedFileId === selectedFile.id ? (
                                 <DiffEditor
                                     height="100%"
                                     original={pendingCssReview.sourceCss}
                                     modified={pendingCssReview.previewCss}
                                     language="css"
-                                    theme="vs-dark"
+                                    beforeMount={ensureAiDiffTheme}
+                                    theme={AI_DIFF_THEME}
                                     options={{
                                         renderSideBySide: false,
                                         readOnly: true,
