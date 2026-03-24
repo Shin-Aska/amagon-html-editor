@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { getApi } from '../../utils/api'
 import './MediaSearchPanel.css'
+import { AlertTriangle, Search, Settings, Image, Play } from 'lucide-react'
 
 export interface MediaSearchResult {
   id: string
@@ -244,7 +245,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
 
           {!encryptionSecure && (
             <div className="msp-config-warning">
-              <span className="msp-config-warning-icon">⚠️</span>
+              <span className="msp-config-warning-icon"><AlertTriangle size={16} /></span>
               <span>
                 OS keyring is unavailable. Your API key will be encrypted with a machine-derived key.
                 For stronger protection, install a keyring service (e.g. <code>gnome-keyring</code> or <code>seahorse</code>).
@@ -272,7 +273,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
   if (!config?.enabled) {
     return (
       <div className="msp-disabled-state">
-        <div className="msp-disabled-icon">🔍</div>
+        <div className="msp-disabled-icon"><Search size={32} /></div>
         <p>Web search is not enabled.</p>
         <button className="msp-btn-primary" onClick={() => setShowConfig(true)}>
           Configure Media Search
@@ -298,7 +299,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
           </button>
         </form>
         <button className="msp-settings-btn" onClick={() => setShowConfig(true)} title="Settings">
-          ⚙️
+          <Settings size={16} />
         </button>
       </div>
 
@@ -315,14 +316,14 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
 
       {results.length === 0 && !loading && !error && query && (
         <div className="msp-empty">
-          <div className="msp-empty-icon">🔍</div>
+          <div className="msp-empty-icon"><Search size={32} /></div>
           <p>No results found for "{query}"</p>
         </div>
       )}
 
       {results.length === 0 && !loading && !error && !query && (
         <div className="msp-empty">
-          <div className="msp-empty-icon">🖼️</div>
+          <div className="msp-empty-icon"><Image size={32} /></div>
           <p>Enter a search term to find {mode === 'video' ? 'videos' : 'images'} from {PROVIDER_LABELS[config.provider]}</p>
         </div>
       )}
@@ -362,7 +363,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
                   <span className="msp-result-photographer">by {result.photographer}</span>
                 )}
               </div>
-              {mode === 'video' && <div className="msp-result-video-badge">▶</div>}
+              {mode === 'video' && <div className="msp-result-video-badge"><Play size={12} fill="currentColor" /></div>}
             </div>
           )
         })}

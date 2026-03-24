@@ -4,6 +4,7 @@ import type { Asset } from './AssetManager'
 import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
 import './AssetManager.css'
 import './AssetPicker.css'
+import { Play } from 'lucide-react'
 
 export type AssetPickerMode = 'single-image' | 'single-video' | 'multi-image'
 
@@ -187,7 +188,7 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
                             {asset.type === 'video' ? (
                               <div className="am-video-thumbnail">
                                 <video src={asset.path} preload="metadata" />
-                                <div className="am-play-icon">▶</div>
+                                <div className="am-play-icon"><Play size={16} fill="currentColor" /></div>
                               </div>
                             ) : (
                               <img src={asset.path} alt={asset.name} loading="lazy" />

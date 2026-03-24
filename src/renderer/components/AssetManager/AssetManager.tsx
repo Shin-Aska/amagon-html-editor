@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { getApi } from '../../utils/api'
 import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
 import './AssetManager.css'
+import { Play } from 'lucide-react'
 
 export interface Asset {
   name: string
@@ -258,7 +259,7 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
                         {asset.type === 'video' ? (
                           <div className="am-video-thumbnail">
                             <video src={asset.path} preload="metadata" />
-                            <div className="am-play-icon">▶</div>
+                            <div className="am-play-icon"><Play size={16} fill="currentColor" /></div>
                           </div>
                         ) : (
                           <img src={asset.path} alt={asset.name} loading="lazy" />
