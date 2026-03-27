@@ -35,6 +35,7 @@ const AssetManager = lazy(() => import('./components/AssetManager/AssetManager')
 const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'))
 const ExportDialog = lazy(() => import('./components/ExportDialog/ExportDialog'))
 const ThemeEditor = lazy(() => import('./components/ThemeEditor/ThemeEditor'))
+const PublishDialog = lazy(() => import('./components/PublishDialog/PublishDialog'))
 const AboutAmagon = lazy(() => import('./components/AboutAmagon/AboutAmagon'))
 
 // Loading fallback component
@@ -64,6 +65,7 @@ function App(): JSX.Element {
   const [showNewProject, setShowNewProject] = useState(false)
   const [showAssetManager, setShowAssetManager] = useState(false)
   const [showExport, setShowExport] = useState(false)
+  const [showPublish, setShowPublish] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showThemeEditor, setShowThemeEditor] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -160,17 +162,15 @@ function App(): JSX.Element {
     const projectState = useProjectStore.getState()
     const pageId = projectState.currentPageId
 
+    const baseProjectData = projectState.getProjectData()
     const pages = projectState.pages.map((p) =>
       pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
     )
 
     const content = JSON.stringify(
       {
-        projectSettings: projectState.settings,
+        ...baseProjectData,
         pages,
-        folders: projectState.folders,
-        userBlocks: projectState.userBlocks,
-        customPresets: projectState.customPresets,
         customCss: editorState.customCss
       },
       null,
@@ -206,17 +206,15 @@ function App(): JSX.Element {
     const projectState = useProjectStore.getState()
     const pageId = projectState.currentPageId
 
+    const baseProjectData = projectState.getProjectData()
     const pages = projectState.pages.map((p) =>
       pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
     )
 
     const content = JSON.stringify(
       {
-        projectSettings: projectState.settings,
+        ...baseProjectData,
         pages,
-        folders: projectState.folders,
-        userBlocks: projectState.userBlocks,
-        customPresets: projectState.customPresets,
         customCss: editorState.customCss
       },
       null,
@@ -343,6 +341,7 @@ function App(): JSX.Element {
         case 'save': handleSave(); break
         case 'save-as': handleSaveAs(); break
         case 'export': handleExport(); break
+        case 'publish': setShowPublish(true); break
         case 'undo': useEditorStore.getState().undo(); break
         case 'redo': useEditorStore.getState().redo(); break
         case 'cut':
@@ -521,6 +520,7 @@ function App(): JSX.Element {
             onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
             onSetEditorLayout={setEditorLayout}
             onOpenThemeEditor={() => setShowThemeEditor(true)}
+            onOpenPublish={() => setShowPublish(true)}
           />
           <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
             {showSidebar && (
@@ -607,6 +607,10 @@ function App(): JSX.Element {
         {showExport && (
           <ExportDialog onClose={() => setShowExport(false)} />
         )}
+      </Suspense>
+
+      <Suspense fallback={<DialogLoader />}>
+        <PublishDialog open={showPublish} onClose={() => setShowPublish(false)} />
       </Suspense>
 
       <KeyboardShortcutsHelp

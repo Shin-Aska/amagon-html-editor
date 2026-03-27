@@ -450,6 +450,96 @@ const mockApi: ElectronApi = {
     }
   },
 
+  publish: {
+    getProviders: async (): Promise<any> => {
+      return [
+        {
+          id: 'neocities',
+          displayName: 'Neocities',
+          description: 'Indie-friendly static site hosting with a simple upload API',
+          credentialFields: [
+            {
+              key: 'apiKey',
+              label: 'API Key',
+              placeholder: 'your-neocities-api-key',
+              helpUrl: 'https://neocities.org/settings#api_key',
+              sensitive: true
+            }
+          ]
+        },
+        {
+          id: 'cloudflare-pages',
+          displayName: 'Cloudflare Pages',
+          description: 'Fast, scalable static hosting with global CDN',
+          credentialFields: [
+            { key: 'apiToken', label: 'API Token', sensitive: true },
+            { key: 'accountId', label: 'Account ID', sensitive: false },
+            { key: 'projectName', label: 'Project Name', sensitive: false }
+          ]
+        },
+        {
+          id: 'github-pages',
+          displayName: 'GitHub Pages',
+          description: 'Free static hosting from a GitHub repository branch',
+          credentialFields: [
+            { key: 'pat', label: 'Personal Access Token', sensitive: true },
+            { key: 'owner', label: 'GitHub Username / Org', sensitive: false },
+            { key: 'repo', label: 'Repository Name', sensitive: false },
+            { key: 'branch', label: 'Branch (e.g. gh-pages)', sensitive: false }
+          ]
+        }
+      ]
+    },
+
+    getCredentials: async (_providerId: string): Promise<any> => {
+      return {}
+    },
+
+    saveCredentials: async (_providerId: string, _credentials: Record<string, string>): Promise<any> => {
+      return { success: true }
+    },
+
+    deleteCredentials: async (_providerId: string): Promise<any> => {
+      return { success: true }
+    },
+
+    validate: async (
+      _providerId: string,
+      _files: { path: string; content: string | Uint8Array }[],
+      _credentials?: Record<string, string>
+    ): Promise<any> => {
+      return {
+        ok: false,
+        issues: [
+          {
+            severity: 'error',
+            message: 'Publish validation is only available in Electron mode.'
+          }
+        ]
+      }
+    },
+
+    publish: async (
+      _providerId: string,
+      _files: { path: string; content: string | Uint8Array }[],
+      _credentials?: Record<string, string>
+    ): Promise<any> => {
+      return {
+        success: false,
+        error: 'Publishing is only available in Electron mode.',
+        warnings: []
+      }
+    },
+
+    onProgress: (_callback: (progress: { phase: 'validating' | 'exporting' | 'uploading' | 'done'; percent: number; message: string }) => void) => {
+      return () => { }
+    },
+
+    offProgress: (_callback: (progress: { phase: 'validating' | 'exporting' | 'uploading' | 'done'; percent: number; message: string }) => void) => {
+      // No-op in browser mode
+    }
+  },
+
   app: {
     getVersion: async (): Promise<any> => {
       return { success: true, version: packageJson.version }
@@ -463,10 +553,75 @@ const mockApi: ElectronApi = {
         success: true,
         secure: true,
         credentials: [
-          { id: 'ai', label: 'AI Assistant', source: 'ai', provider: 'openai', maskedKey: '', hasKey: false },
-          { id: 'media-search', label: 'Media Search', source: 'media-search', provider: 'unsplash', maskedKey: '', hasKey: false }
+          {
+            id: 'ai:openai',
+            category: 'ai',
+            categoryLabel: 'AI',
+            label: 'OpenAI',
+            source: 'ai',
+            providerId: 'openai',
+            provider: 'OpenAI',
+            description: 'Credential for OpenAI in the AI Assistant.',
+            fields: [{ key: 'apiKey', label: 'API Key', sensitive: true }],
+            values: { apiKey: '' },
+            maskedKey: '',
+            hasKey: false
+          },
+          {
+            id: 'multimedia:unsplash',
+            category: 'multimedia',
+            categoryLabel: 'Multimedia',
+            label: 'Unsplash',
+            source: 'multimedia',
+            providerId: 'unsplash',
+            provider: 'Unsplash',
+            description: 'Credential for Unsplash media search.',
+            fields: [{ key: 'apiKey', label: 'Access Key', sensitive: true }],
+            values: { apiKey: '' },
+            maskedKey: '',
+            hasKey: false
+          }
+        ],
+        definitions: [
+          {
+            id: 'ai:openai',
+            category: 'ai',
+            categoryLabel: 'AI',
+            providerId: 'openai',
+            label: 'OpenAI',
+            description: 'Credential for OpenAI in the AI Assistant.',
+            fields: [{ key: 'apiKey', label: 'API Key', sensitive: true }]
+          },
+          {
+            id: 'multimedia:unsplash',
+            category: 'multimedia',
+            categoryLabel: 'Multimedia',
+            providerId: 'unsplash',
+            label: 'Unsplash',
+            description: 'Credential for Unsplash media search.',
+            fields: [{ key: 'apiKey', label: 'Access Key', sensitive: true }]
+          },
+          {
+            id: 'publisher:neocities',
+            category: 'publisher',
+            categoryLabel: 'Publisher',
+            providerId: 'neocities',
+            label: 'Neocities',
+            description: 'Indie-friendly static site hosting with a simple upload API',
+            fields: [{ key: 'apiKey', label: 'API Key', sensitive: true }]
+          }
         ]
       }
+    },
+    getCredentialDefinitions: async (): Promise<any> => {
+      const result = await mockApi.app.getCredentials()
+      return { success: true, definitions: result.definitions }
+    },
+    getCredentialValues: async (_id: string): Promise<any> => {
+      return { success: true, values: {} }
+    },
+    saveCredential: async (_id: string, _values: Record<string, string>): Promise<any> => {
+      return { success: true }
     },
     deleteCredential: async (_id: string): Promise<any> => {
       return { success: true }

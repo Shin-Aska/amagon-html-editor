@@ -4,11 +4,15 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
-import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, loadAllProviderCredentials, clearApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type AiProvider, type ChatMessage } from './aiService'
+import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
 import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
 import { isEncryptionSecure } from './cryptoHelpers'
 import { buildAppMenu } from './menu'
 import { createWelcomeBlocks } from '../shared/welcomeBlocks'
+import '../publish/providers/index'
+import { getAllPublishers, getPublisher, type ExportedFile, type PublishCredentials, type PublishProgress, type PublishResult, type ValidationResult } from '../publish'
+import { deletePublishCredentials, loadPublishCredentials, savePublishCredentials } from './publishCredentials'
+import { deleteCredentialRecord, getCredentialDefinitions, getCredentialValues, listCredentialRecords, resolveSensitiveValues, saveCredentialRecord } from './credentialCatalog'
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron
 const BrowserWindowCtor = electron.BrowserWindow
@@ -248,6 +252,47 @@ function stopAutoSave(): void {
     clearInterval(autoSaveTimer)
     autoSaveTimer = null
   }
+}
+
+// ---------------------------------------------------------------------------
+// Publish credential helpers
+// ---------------------------------------------------------------------------
+
+function buildMaskedCredentials(providerId: string): PublishCredentials {
+  const publisher = getPublisher(providerId)
+  if (!publisher) {
+    return {}
+  }
+
+  return publisher.credentialFields.reduce<PublishCredentials>((acc, field) => {
+    acc[field.key] = ''
+    return acc
+  }, {})
+}
+
+async function getMaskedPublishCredentials(providerId: string): Promise<PublishCredentials> {
+  const publisher = getPublisher(providerId)
+  if (!publisher) {
+    return {}
+  }
+
+  const storedCredentials = await loadPublishCredentials(providerId)
+  const masked: PublishCredentials = {}
+
+  for (const field of publisher.credentialFields) {
+    const value = storedCredentials[field.key] ?? ''
+    masked[field.key] = field.sensitive ? maskApiKey(value) : value
+  }
+
+  return masked
+}
+
+function getPublisherOrThrow(providerId: string) {
+  const publisher = getPublisher(providerId)
+  if (!publisher) {
+    throw new Error(`Unknown publish provider: ${providerId}`)
+  }
+  return publisher
 }
 
 // ---------------------------------------------------------------------------
@@ -1094,42 +1139,33 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('app:getCredentials', async () => {
     try {
-      const aiProviderCreds = await loadAllProviderCredentials()
-      const mediaConfig = await mediaSearchLoadConfig()
+      const credentials = await listCredentialRecords()
+      return { success: true, credentials, definitions: getCredentialDefinitions(), secure: isEncryptionSecure() }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
 
-      const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
-        openai: 'OpenAI',
-        anthropic: 'Anthropic',
-        google: 'Google Gemini',
-        ollama: 'Ollama',
-        mistral: 'Mistral'
-      }
+  ipcMain.handle('app:getCredentialDefinitions', async () => {
+    try {
+      return { success: true, definitions: getCredentialDefinitions() }
+    } catch (error: any) {
+      return { success: false, error: error.message, definitions: [] }
+    }
+  })
 
-      const credentials: { id: string; label: string; source: string; provider: string; maskedKey: string; hasKey: boolean }[] = []
+  ipcMain.handle('app:getCredentialValues', async (_, id: string) => {
+    try {
+      return { success: true, values: await getCredentialValues(id) }
+    } catch (error: any) {
+      return { success: false, error: error.message, values: {} }
+    }
+  })
 
-      for (const { provider, hasKey, maskedKey } of aiProviderCreds) {
-        credentials.push({
-          id: `ai:${provider}`,
-          label: 'AI Assistant',
-          source: 'ai',
-          provider: AI_PROVIDER_LABELS[provider] ?? provider,
-          maskedKey,
-          hasKey
-        })
-      }
-
-      if (mediaConfig.apiKey) {
-        credentials.push({
-          id: 'media-search',
-          label: 'Media Search',
-          source: 'media-search',
-          provider: mediaConfig.provider,
-          maskedKey: maskMediaApiKey(mediaConfig.apiKey),
-          hasKey: true
-        })
-      }
-
-      return { success: true, credentials, secure: isEncryptionSecure() }
+  ipcMain.handle('app:saveCredential', async (_, data: { id: string; values: PublishCredentials }) => {
+    try {
+      await saveCredentialRecord(data.id, data.values)
+      return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
@@ -1137,19 +1173,118 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle('app:deleteCredential', async (_, id: string) => {
     try {
-      if (id.startsWith('ai:')) {
-        const provider = id.slice(3) as AiProvider
-        await clearApiKeyForProvider(provider)
-      } else if (id === 'media-search') {
-        await mediaSearchSaveConfig({ apiKey: '' })
-      } else {
-        return { success: false, error: `Unknown credential: ${id}` }
-      }
+      await deleteCredentialRecord(id)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
   })
+
+  // ── Publish ───────────────────────────────────────────────────────────────
+
+  ipcMain.handle('publish:getProviders', () => {
+    return getAllPublishers().map((publisher) => ({
+      id: publisher.meta.id,
+      displayName: publisher.meta.displayName,
+      description: publisher.meta.description,
+      credentialFields: publisher.credentialFields.map((field) => ({ ...field }))
+    }))
+  })
+
+  ipcMain.handle('publish:getCredentials', async (_, providerId: string) => {
+    try {
+      return await getMaskedPublishCredentials(providerId)
+    } catch {
+      return buildMaskedCredentials(providerId)
+    }
+  })
+
+  ipcMain.handle(
+    'publish:saveCredentials',
+    async (_, data: { providerId: string; credentials: PublishCredentials }) => {
+      try {
+        getPublisherOrThrow(data.providerId)
+        await savePublishCredentials(data.providerId, data.credentials)
+        return { success: true }
+      } catch (error: any) {
+        return { success: false, error: error.message }
+      }
+    }
+  )
+
+  ipcMain.handle('publish:deleteCredentials', async (_, providerId: string) => {
+    try {
+      getPublisherOrThrow(providerId)
+      await deletePublishCredentials(providerId)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle(
+    'publish:validate',
+    async (
+      _,
+      data: {
+        providerId: string
+        files: ExportedFile[]
+        credentials?: PublishCredentials
+      }
+    ): Promise<ValidationResult> => {
+      const publisher = getPublisher(data.providerId)
+      if (!publisher) {
+        return {
+          ok: false,
+          issues: [
+            {
+              severity: 'error',
+              message: `Unknown publish provider: ${data.providerId}`
+            }
+          ]
+        }
+      }
+
+      const storedCredentials = await loadPublishCredentials(data.providerId)
+      const credentials = resolveSensitiveValues(
+        publisher.credentialFields,
+        storedCredentials,
+        data.credentials || {}
+      )
+      return publisher.validate(data.files, credentials)
+    }
+  )
+
+  ipcMain.handle(
+    'publish:publish',
+    async (
+      event,
+      data: {
+        providerId: string
+        files: ExportedFile[]
+        credentials?: PublishCredentials
+      }
+    ): Promise<PublishResult> => {
+      const publisher = getPublisher(data.providerId)
+      if (!publisher) {
+        return {
+          success: false,
+          error: `Unknown publish provider: ${data.providerId}`,
+          warnings: []
+        }
+      }
+
+      const storedCredentials = await loadPublishCredentials(data.providerId)
+      const credentials = resolveSensitiveValues(
+        publisher.credentialFields,
+        storedCredentials,
+        data.credentials || {}
+      )
+      return publisher.publish(data.files, credentials, (progress: PublishProgress) => {
+        event.sender.send('publish:progress', progress)
+      })
+    }
+  )
 
   // ── AI Assistant ─────────────────────────────────────────────────────
 

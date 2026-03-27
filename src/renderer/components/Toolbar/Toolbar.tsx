@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Save,
   Download,
+  Upload,
   Undo,
   Redo,
   Scissors,
@@ -54,6 +55,7 @@ interface ToolbarProps {
   onToggleCodeEditor: () => void
   onSetEditorLayout: (layout: EditorLayout) => void
   onOpenThemeEditor: () => void
+  onOpenPublish: () => void
 }
 
 export default function Toolbar({
@@ -65,7 +67,8 @@ export default function Toolbar({
   onToggleRightPanel,
   onToggleCodeEditor,
   onSetEditorLayout,
-  onOpenThemeEditor
+  onOpenThemeEditor,
+  onOpenPublish
 }: ToolbarProps): JSX.Element {
   const api = getApi()
 
@@ -77,6 +80,7 @@ export default function Toolbar({
   const filePath = useProjectStore((s) => s.filePath)
   const setFilePath = useProjectStore((s) => s.setFilePath)
   const currentPageId = useProjectStore((s) => s.currentPageId)
+  const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded)
   const projectName = useProjectStore((s) => s.settings.name)
   const pageThemePreviewMode = useProjectStore((s) => s.settings.themes?.previewMode ?? 'device')
   const updateSettings = useProjectStore((s) => s.updateSettings)
@@ -179,17 +183,15 @@ export default function Toolbar({
       const projectState = useProjectStore.getState()
       const pageId = projectState.currentPageId
 
+      const baseProjectData = projectState.getProjectData()
       const pages = projectState.pages.map((p) =>
         pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
       )
 
       const content = JSON.stringify(
         {
-          projectSettings: projectState.settings,
+          ...baseProjectData,
           pages,
-          folders: projectState.folders,
-          userBlocks: projectState.userBlocks,
-          customPresets: projectState.customPresets,
           customCss: editorState.customCss
         },
         null,
@@ -438,6 +440,15 @@ export default function Toolbar({
           </button>
           <button className="toolbar-btn" onClick={handleExport} title="Export" aria-label="Export project">
             <Download size={16} aria-hidden="true" />
+          </button>
+          <button
+            className="toolbar-btn"
+            onClick={onOpenPublish}
+            disabled={!isProjectLoaded}
+            title="Publish to Web"
+            aria-label="Publish to web"
+          >
+            <Upload size={16} aria-hidden="true" />
           </button>
           
           <div className="toolbar-divider" />
