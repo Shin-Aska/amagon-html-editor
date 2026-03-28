@@ -40,6 +40,8 @@ src/
 │   ├── index.ts            # Entry point, IPC handlers, file I/O
 │   ├── aiService.ts        # Multi-provider AI adapter
 │   ├── cryptoHelpers.ts    # API key encryption (safeStorage / AES-256-GCM)
+│   ├── credentialCatalog.ts # Credential definition registry for all providers
+│   ├── publishCredentials.ts # Publish credential storage helpers
 │   ├── mediaSearchService.ts # Pexels/Pixabay image search
 │   └── menu.ts             # Native app menu
 │
@@ -49,12 +51,22 @@ src/
 ├── preview/
 │   └── runtime.ts          # Runs inside the canvas iframe
 │
+├── publish/                # Publish-to-web extension system
+│   ├── index.ts            # Public entry point
+│   ├── registry.ts         # Publisher registration and lookup
+│   ├── types/              # PublisherExtension, PublishResult, ValidationResult, etc.
+│   ├── providers/
+│   │   ├── github/         # GitHub Pages adapter
+│   │   ├── cloudflare/     # Cloudflare Pages adapter
+│   │   └── neocities/      # Neocities adapter
+│   └── validators/         # Per-provider credential + file validators
+│
 ├── renderer/               # React app (Vite-bundled)
 │   ├── App.tsx             # Root component, layout orchestration
 │   ├── canvas.html         # Iframe shell for live preview
 │   ├── canvasRuntime.ts    # Canvas initialisation
 │   │
-│   ├── components/         # ~25 top-level components
+│   ├── components/         # ~30 top-level components
 │   │   ├── AiAssistant/    # AI chat panel + AiProposalReviewPanel (diff editor for AI proposals)
 │   │   ├── Canvas/         # Iframe wrapper for visual editing
 │   │   ├── CodeEditor/     # Monaco editor wrapper
@@ -64,21 +76,34 @@ src/
 │   │   ├── Toolbar/        # Action buttons
 │   │   ├── CommandPalette/ # Cmd+K search
 │   │   ├── ExportDialog/   # Export configuration
+│   │   ├── PublishDialog/  # Publish-to-web UI (provider selection, credentials, progress)
 │   │   ├── NewProjectWizard/
-│   │   ├── SettingsDialog/
+│   │   ├── SettingsDialog/ # Includes CredentialEditModal for per-service credential editing
 │   │   ├── AssetManager/   # Media/asset UI
-│   │   ├── CredentialManager/ # API key management UI
+│   │   ├── CredentialManager/ # API key overview popover in toolbar
 │   │   ├── BlockTree/      # DOM tree visualisation
 │   │   ├── ContextMenu/
-│   │   ├── StatusBar/
+│   │   ├── StatusBar/      # Status bar with tutorial progress feedback
 │   │   ├── Toast/          # Notifications
+│   │   ├── Tutorial/       # Interactive onboarding overlay system
+│   │   │   ├── TutorialOverlay.tsx   # Main overlay controller
+│   │   │   ├── TutorialInfoBox.tsx   # Step info box with choices
+│   │   │   ├── SpotlightMask.tsx     # Spotlight highlight mask
+│   │   │   ├── TutorialArrow.tsx     # Directional pointer arrow
+│   │   │   ├── WelcomeTourDialog.tsx # Initial welcome / tutorial launch dialog
+│   │   │   ├── tutorialSteps.ts      # Core step definitions
+│   │   │   └── branches/            # Branching tutorial paths
+│   │   │       ├── aiAssistanceTutorial.ts
+│   │   │       ├── publishTutorial.ts
+│   │   │       └── webMediaSearchTutorial.ts
 │   │   └── …others (WelcomeScreen, AboutAmagon, PageModal, etc.)
 │   │
 │   ├── store/              # Zustand stores
 │   │   ├── editorStore.ts  # Blocks, selection, history, clipboard
 │   │   ├── projectStore.ts # Project settings, pages, themes, user blocks
 │   │   ├── aiStore.ts      # AI chat state and config
-│   │   ├── appSettingsStore.ts # UI preferences (theme, layout)
+│   │   ├── appSettingsStore.ts # UI preferences (theme, layout, tutorial state)
+│   │   ├── tutorialStore.ts    # Interactive tutorial step state and action listener
 │   │   ├── toastStore.ts   # Notification state
 │   │   └── types.ts        # Shared TypeScript types
 │   │
@@ -92,6 +117,9 @@ src/
 │   │   ├── exportEngine.ts # Export to file(s)
 │   │   ├── api.ts          # IPC bridge wrapper
 │   │   └── …helpers
+│   │
+│   ├── constants/
+│   │   └── tutorialEvents.ts # Tutorial action type constants
 │   │
 │   ├── hooks/
 │   │   └── useKeyboardShortcuts.ts
@@ -167,6 +195,18 @@ interface Block {
   folders: PageFolder[]  // organisational grouping
   userBlocks: UserBlock[] // saved reusable blocks
   customPresets?: ProjectTheme[]
+  publisherConfig?: PublisherConfig  // selected provider + last publish metadata
+}
+```
+
+### PublisherConfig
+
+```typescript
+interface PublisherConfig {
+  providerId: string          // e.g. 'github-pages', 'cloudflare-pages', 'neocities'
+  encryptedCredentials?: string
+  lastPublishedUrl?: string
+  lastPublishedAt?: string
 }
 ```
 
@@ -193,9 +233,10 @@ Themes compile to `--theme-*` CSS custom properties. Light/dark variants are sup
 | Store | File | Responsibility |
 |-------|------|---------------|
 | `editorStore` | `store/editorStore.ts` | Current page blocks, selection, 50-step undo/redo, clipboard, drag state, layout |
-| `projectStore` | `store/projectStore.ts` | Project settings, pages, folders, theme variants, user blocks, custom presets |
+| `projectStore` | `store/projectStore.ts` | Project settings, pages, folders, theme variants, user blocks, custom presets, publisher config |
 | `aiStore` | `store/aiStore.ts` | AI chat messages, loading state, provider config, model lists |
-| `appSettingsStore` | `store/appSettingsStore.ts` | App-level UI preferences (light/dark theme, default layout) |
+| `appSettingsStore` | `store/appSettingsStore.ts` | App-level UI preferences (light/dark theme, default layout, tutorial enabled flag) |
+| `tutorialStore` | `store/tutorialStore.ts` | Interactive tutorial step state, branching paths, reactive action listener |
 | `toastStore` | `store/toastStore.ts` | Notification display |
 
 ---
@@ -224,9 +265,10 @@ API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an
 | `assets` | `selectImage`, `selectSingleImage`, `selectVideo`, `list`, `delete`, `readAsset`, `readFileAsBase64`, `import` |
 | `autosave` | `start`, `stop` + `auto-save-tick` event |
 | `menu` | `setProjectLoaded` + `menu:action` event |
-| `app` | `getVersion`, `isEncryptionSecure`, `getCredentials`, `deleteCredential`, `getSettings`, `saveSettings` |
+| `app` | `getVersion`, `isEncryptionSecure`, `getCredentials`, `getCredentialDefinitions`, `getCredentialValues`, `saveCredential`, `deleteCredential`, `getSettings`, `saveSettings` |
 | `ai` | `chat`, `getConfig`, `setConfig`, `getModels`, `fetchModelsForProvider` |
 | `mediaSearch` | `getConfig`, `setConfig`, `search`, `downloadAndImport` |
+| `publish` | `getProviders`, `getCredentials`, `saveCredentials`, `deleteCredentials`, `validate`, `publish` + `publish:progress` event |
 
 **Canvas ↔ Renderer:** `postMessage` with `source: 'canvas-runtime'` and types: `clicked`, `contextMenu`, `moveBlock`, `updateText`, `keydown`, `hovered`.
 
@@ -280,11 +322,44 @@ npm run dist:linux   # Linux AppImage + deb
 
 ---
 
-## 12. Key Files to Read First
+## 12. Publish-to-Web System
+
+The publish system is a self-contained package at `src/publish/` with a versioned extension API.
+
+**Architecture:**
+- **`PublisherExtension`** interface (`src/publish/types/PublisherExtension.ts`) — contracts each provider must satisfy: `meta`, `credentialFields`, `validate()`, `publish()`.
+- **Registry** (`src/publish/registry.ts`) — `registerPublisher()` / `getPublisher()` / `getAllPublishers()`. Throws on version mismatch or duplicate ID.
+- **Built-in providers:** `github-pages`, `cloudflare-pages`, `neocities` — each in its own `src/publish/providers/<name>/` folder.
+- **Validators** (`src/publish/validators/`) — per-provider credential and file validation returning `ValidationResult` with typed `ValidationIssue[]`.
+
+**IPC flow:** The renderer calls `window.api.publish.*` → main process (`src/main/index.ts`) → resolves the provider via the registry → streams `publish:progress` events back to the renderer → returns `PublishResult`.
+
+**Credential storage:** Publish credentials are stored separately from AI keys via `src/main/publishCredentials.ts` (encrypted with `safeStorage` / AES-256-GCM fallback).
+
+**UI:** `PublishDialog` component handles provider selection, credential entry, validation display, progress tracking, and the final published URL.
+
+---
+
+## 13. Interactive Tutorial System
+
+The tutorial system provides a branching, spotlight-driven onboarding experience for new users.
+
+**Architecture:**
+- **`tutorialStore`** (`src/renderer/store/tutorialStore.ts`) — Zustand store holding the active step list, current step index, branch state, and the `dispatchTutorialAction()` function that drives reactive step advancement.
+- **`TutorialOverlay`** — Renders the spotlight mask (`SpotlightMask`), the floating info box (`TutorialInfoBox`), and the pointer arrow (`TutorialArrow`). Resolves `data-tutorial="<marker>"` attributes on DOM elements as spotlight targets.
+- **`WelcomeTourDialog`** — Initial dialog shown to first-time users; launches the tutorial.
+- **`TutorialStep`** — Each step defines: `target` (CSS selector or `data-tutorial` marker), `placement`, `action` (the `TutorialActionType` that auto-advances the step), `choices` (optional branching), `onEnter`/`onExit` callbacks.
+- **Branches** (`src/renderer/components/Tutorial/branches/`) — Three optional deep-dive paths: AI Assistance, Publish Workflow, Web Media Search.
+- **`data-tutorial` markers** — Added to key UI elements (`data-tutorial="toolbar-publish"`, `data-tutorial="theme-editor-colors"`, etc.) so tutorial steps can target them without fragile CSS selectors.
+- **Action dispatch** — Components call `dispatchTutorialAction({ type, targetValue })` after meaningful interactions; the store checks if it matches the current step's expected action and auto-advances.
+
+---
+
+## 14. Key Files to Read First
 
 If you need deeper context, start with these:
 
-1. **`src/renderer/store/types.ts`** — All TypeScript interfaces (Block, Page, ProjectSettings, Theme, etc.)
+1. **`src/renderer/store/types.ts`** — All TypeScript interfaces (Block, Page, ProjectSettings, Theme, PublisherConfig, etc.)
 2. **`src/renderer/registry/registerBlocks.ts`** — Every block type definition
 3. **`src/renderer/store/editorStore.ts`** — Core editing logic
 4. **`src/renderer/store/projectStore.ts`** — Project and theme management
@@ -292,7 +367,10 @@ If you need deeper context, start with these:
 6. **`src/main/aiService.ts`** — AI provider integration
 7. **`src/renderer/utils/blockToHtml.ts`** + **`htmlToBlocks.ts`** — Serialisation layer
 8. **`src/preload/index.ts`** — The `window.api` bridge definition
+9. **`src/publish/types/index.ts`** — Publisher extension API types
+10. **`src/publish/registry.ts`** — Publisher registration/lookup
+11. **`src/renderer/store/tutorialStore.ts`** — Tutorial step state and action listener system
 
 ---
 
-*Last updated: 2026-03-24*
+*Last updated: 2026-03-29*
