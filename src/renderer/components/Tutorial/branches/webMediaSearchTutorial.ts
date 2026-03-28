@@ -71,31 +71,32 @@ export const webMediaSearchSteps: TutorialStep[] = [
   {
     id: 'open-asset-manager',
     target: '[data-tutorial="asset-manager-btn"]',
+    dynamicTarget: '[data-tutorial="asset-manager-modal"]',
     title: 'Open Asset Manager',
     body: 'Click to open the Asset Manager where you can browse and import media.',
     placement: 'bottom',
     arrowDirection: 'bottom',
-    action: { type: 'click' },
+    action: { type: 'open-asset-manager-modal' },
     autoAdvance: true,
     onEnter: () => ensureToolbarMenuOpen()
   },
   {
     id: 'asset-manager-web-search',
-    target: '[data-tutorial="am-web-search-tab"]',
+    target: '[data-tutorial="asset-manager-modal"]',
     title: 'Web Search',
-    body: 'Click the Web Search tab to search for images online.',
-    placement: 'bottom',
-    arrowDirection: 'bottom',
+    body: 'Click the <strong>Web Search</strong> tab to search for images online.',
+    placement: 'left',
+    arrowDirection: 'left',
     action: { type: 'click' },
     autoAdvance: true
   },
   {
     id: 'media-search-key-check',
-    target: '[data-tutorial="media-search-settings-btn"]',
+    target: '[data-tutorial="asset-manager-modal"]',
     title: 'Configure Media Search',
-    body: 'Set up an API key for your preferred image provider (Unsplash, Pexels, or Pixabay) to enable web search.',
-    placement: 'right',
-    arrowDirection: 'right',
+    body: 'Set up an API key for your preferred image provider (Unsplash, Pexels, or Pixabay). Click the settings icon to configure.',
+    placement: 'left',
+    arrowDirection: 'left',
     action: { type: 'none' },
     autoAdvance: false,
     onEnter: () => {
@@ -104,23 +105,23 @@ export const webMediaSearchSteps: TutorialStep[] = [
   },
   {
     id: 'media-search-dog',
-    target: '[data-tutorial="media-search-input"]',
+    target: '[data-tutorial="asset-manager-modal"]',
     title: 'Search for Images',
     body: 'Type <code>dog</code> in the search box and click Search.',
-    placement: 'bottom',
-    arrowDirection: 'bottom',
-    action: { type: 'none' },
-    autoAdvance: false
+    placement: 'left',
+    arrowDirection: 'left',
+    action: { type: 'media-search-results-loaded' },
+    autoAdvance: true
   },
   {
     id: 'media-search-select',
-    target: '[data-tutorial="media-search-results"]',
+    target: '[data-tutorial="asset-manager-modal"]',
     title: 'Select Images',
-    body: 'Click on the first 3 images to select them, then click <strong>Insert Selected</strong> to add them to your project.',
+    body: 'Click on a few images, then click <strong>Insert Selected</strong> to import them into your project assets.',
     placement: 'left',
     arrowDirection: 'left',
-    action: { type: 'none' },
-    autoAdvance: false
+    action: { type: 'asset-manager-assets-increased' },
+    autoAdvance: true
   },
   {
     id: 'close-asset-manager',
@@ -129,12 +130,13 @@ export const webMediaSearchSteps: TutorialStep[] = [
     body: 'Close the Asset Manager to return to the editor.',
     placement: 'left',
     arrowDirection: 'left',
-    action: { type: 'click' },
+    action: { type: 'asset-manager-closed' },
     autoAdvance: true
   },
   {
     id: 'drag-carousel-widget',
-    target: '[data-tutorial="widget-grid"]',
+    target: '[data-tutorial="sidebar-tab-widgets"]',
+    dynamicTarget: '[data-tutorial="widget-grid"]',
     title: 'Add a Carousel',
     body: 'Drag a Carousel widget onto the canvas.',
     placement: 'right',

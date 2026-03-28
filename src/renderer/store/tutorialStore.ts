@@ -4,6 +4,7 @@ import { useAppSettingsStore } from './appSettingsStore'
 import { useEditorStore } from './editorStore'
 import { useAiStore } from './aiStore'
 import { useProjectStore } from './projectStore'
+import { getApi } from '../utils/api'
 
 export type TutorialPlacement = 'top' | 'bottom' | 'left' | 'right'
 
@@ -23,7 +24,13 @@ export type TutorialActionType =
   | 'preset-created'
   | 'open-create-preset-modal'
   | 'open-ai-css-modal'
+  | 'open-asset-manager-modal'
+  | 'asset-manager-assets-increased'
+  | 'asset-manager-closed'
+  | 'open-publish-modal'
+  | 'media-search-results-loaded'
   | 'css-file-changed'
+  | 'ai-provider-configured'
   | 'none'
 
 export interface TutorialAction {
@@ -461,6 +468,69 @@ function startActionListener(step?: TutorialStep): void {
       if (isOpen()) { maybeAdvance(); return }
       const intervalId = window.setInterval(() => { if (isOpen()) maybeAdvance() }, 200)
       actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'open-asset-manager-modal': {
+      const isOpen = () => !!document.querySelector('[data-tutorial="asset-manager-modal"]')
+      if (isOpen()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => { if (isOpen()) maybeAdvance() }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'asset-manager-assets-increased': {
+      const getAssetCount = () => document.querySelectorAll('.am-asset-item').length
+      const baseline = getAssetCount()
+      const intervalId = window.setInterval(() => {
+        if (getAssetCount() > baseline) maybeAdvance()
+      }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'asset-manager-closed': {
+      const isClosed = () => !document.querySelector('[data-tutorial="asset-manager-modal"]')
+      if (isClosed()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => {
+        if (isClosed()) maybeAdvance()
+      }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'open-publish-modal': {
+      const isOpen = () => !!document.querySelector('[data-tutorial="publish-modal"]')
+      if (isOpen()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => { if (isOpen()) maybeAdvance() }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'media-search-results-loaded': {
+      const hasResults = () => document.querySelectorAll('[data-tutorial="media-search-result-item"]').length > 0
+      if (hasResults()) {
+        maybeAdvance()
+        return
+      }
+
+      const intervalId = window.setInterval(() => {
+        if (hasResults()) maybeAdvance()
+      }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'ai-provider-configured': {
+      const check = async () => {
+        try {
+          const result = await getApi().app.getCredentials()
+          const credentials = Array.isArray(result?.credentials) ? result.credentials : []
+          return credentials.some((c: any) => c?.source === 'ai' && c?.hasKey)
+        } catch {
+          return false
+        }
+      }
+      const intervalId = window.setInterval(async () => {
+        if (await check()) maybeAdvance()
+      }, 1000)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      // Also check immediately in case it's already set
+      void check().then((has) => { if (has) maybeAdvance() })
       return
     }
     case 'css-file-changed': {

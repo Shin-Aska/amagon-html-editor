@@ -81,25 +81,16 @@ export const aiAssistanceSteps: TutorialStep[] = [
   {
     id: 'ai-api-key-check',
     target: '[data-tutorial="global-settings-btn"]',
+    dynamicTarget: '[data-tutorial="settings-dialog"]',
     title: 'Set up an AI Provider',
-    body: "To use AI features, you need an API key. <a href='#' data-action='open-ai-keys'>Open Settings -> Credentials</a> to add one, or click Next if you've already set it up.",
+    body: "To use AI features, you need an API key. Click the settings button, go to the <strong>Credentials</strong> tab, and add a key for any AI provider. The tutorial will continue automatically once a key is saved.",
     placement: 'bottom',
     arrowDirection: 'bottom',
-    action: { type: 'none' },
-    autoAdvance: false,
+    action: { type: 'ai-provider-configured' },
+    autoAdvance: true,
     onEnter: () => {
       ensureToolbarMenuOpen()
       installAiKeyLinkHandler()
-
-      void (async () => {
-        const hasKey = await hasConfiguredAiProvider()
-        if (!hasKey) return
-
-        const state = useTutorialStore.getState()
-        const currentStep = state.steps[state.currentStepIndex]
-        if (!state.isActive || currentStep?.id !== 'ai-api-key-check') return
-        state.nextStep()
-      })()
     },
     onExit: () => {
       clearAiKeyLinkHandler()

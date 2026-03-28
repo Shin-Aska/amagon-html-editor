@@ -193,7 +193,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
 
   return (
     <div className="publish-overlay" onClick={onClose}>
-      <div className="publish-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="publish-modal" data-tutorial="publish-modal" onClick={(e) => e.stopPropagation()}>
 
         {/* ── Header ── */}
         <div className="publish-header">
