@@ -583,6 +583,13 @@ function registerIpcHandlers(): void {
     try {
       const target = String(filePath || '')
       if (!target) return { success: false, error: 'No file path provided' }
+
+      const isExternalUrl = /^https?:\/\//i.test(target)
+      if (isExternalUrl) {
+        await shell.openExternal(target)
+        return { success: true }
+      }
+
       const err = await shell.openPath(target)
       if (err) return { success: false, error: err }
       return { success: true }

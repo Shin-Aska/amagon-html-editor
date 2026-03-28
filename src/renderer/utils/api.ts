@@ -170,8 +170,13 @@ const mockApi: ElectronApi = {
       }
     },
 
-    openInBrowser: async (_filePath: string): Promise<IpcResult> => {
-      // Not supported in browser mode
+    openInBrowser: async (target: string): Promise<IpcResult> => {
+      if (/^https?:\/\//i.test(target)) {
+        window.open(target, '_blank', 'noopener,noreferrer')
+        return { success: true }
+      }
+
+      // Local file open is not supported in browser mode.
       return { success: false, error: 'Not supported in browser mode' }
     },
 
