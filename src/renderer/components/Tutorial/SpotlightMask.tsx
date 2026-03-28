@@ -9,6 +9,7 @@ interface SpotlightRect {
 
 export interface SpotlightMaskProps {
   targetRect: SpotlightRect | null
+  additionalRects?: SpotlightRect[]
   padding?: number
   borderRadius?: number
   overlayOpacity?: number
@@ -20,6 +21,7 @@ function clamp(value: number, min: number, max: number): number {
 
 export default function SpotlightMask({
   targetRect,
+  additionalRects = [],
   padding = 8,
   borderRadius = 6,
   overlayOpacity = 0.65
@@ -29,22 +31,26 @@ export default function SpotlightMask({
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
 
-  const cutout = targetRect
-    ? {
-        x: clamp(targetRect.x - padding, 0, viewportWidth),
-        y: clamp(targetRect.y - padding, 0, viewportHeight),
-        width: clamp(targetRect.width + padding * 2, 0, viewportWidth),
-        height: clamp(targetRect.height + padding * 2, 0, viewportHeight)
-      }
-    : null
+  const createCutout = (rect: SpotlightRect): SpotlightRect => ({
+    x: clamp(rect.x - padding, 0, viewportWidth),
+    y: clamp(rect.y - padding, 0, viewportHeight),
+    width: clamp(rect.width + padding * 2, 0, viewportWidth),
+    height: clamp(rect.height + padding * 2, 0, viewportHeight)
+  })
+
+  const cutouts = [
+    ...(targetRect ? [createCutout(targetRect)] : []),
+    ...additionalRects.map(createCutout)
+  ]
 
   return (
     <svg className="tutorial-spotlight-mask" width={viewportWidth} height={viewportHeight} aria-hidden="true">
       <defs>
         <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width={viewportWidth} height={viewportHeight}>
           <rect x="0" y="0" width={viewportWidth} height={viewportHeight} fill="white" />
-          {cutout && (
+          {cutouts.map((cutout, index) => (
             <rect
+              key={index}
               className="tutorial-spotlight-cutout"
               x={cutout.x}
               y={cutout.y}
@@ -54,7 +60,7 @@ export default function SpotlightMask({
               ry={borderRadius}
               fill="black"
             />
-          )}
+          ))}
         </mask>
       </defs>
       <rect

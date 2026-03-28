@@ -36,6 +36,11 @@
   cursor: default;
 }
 
+/* Raise dropdowns above interaction guards during tutorial */
+body[data-tutorial-active] .event-actions-dropdown {
+  z-index: 10002;
+}
+
 .tutorial-arrow {
   position: fixed;
   width: 14px;
@@ -326,8 +331,15 @@
 }
 
 .tutorial-choice-icon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+}
+
+.tutorial-choice-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 .tutorial-choice-label {

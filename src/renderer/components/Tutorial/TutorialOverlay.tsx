@@ -43,6 +43,17 @@ function areRectsEqual(a: SpotlightRect | null, b: SpotlightRect | null): boolea
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
 }
 
+function areRectListsEqual(a: SpotlightRect[], b: SpotlightRect[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+
+  for (let index = 0; index < a.length; index += 1) {
+    if (!areRectsEqual(a[index], b[index])) return false
+  }
+
+  return true
+}
+
 function areCoordinatesEqual(a: Coordinates, b: Coordinates): boolean {
   return a.left === b.left && a.top === b.top
 }
@@ -173,27 +184,58 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
   const nextStep = useTutorialStore((s) => s.nextStep)
   const prevStep = useTutorialStore((s) => s.prevStep)
   const skipTutorial = useTutorialStore((s) => s.skipTutorial)
+  const isActionCompleted = useTutorialStore((s) => s.isActionCompleted)
   const editorLayout = useEditorStore((s) => s.editorLayout)
 
   const infoBoxElementRef = useRef<HTMLDivElement | null>(null)
   const skippedMissingStepRef = useRef<string | null>(null)
+  const lastNavDirectionRef = useRef<'forward' | 'backward' | null>(null)
   const [ariaAnnouncement, setAriaAnnouncement] = useState('')
 
   const [targetRect, setTargetRect] = useState<SpotlightRect | null>(null)
+  const [additionalTargetRects, setAdditionalTargetRects] = useState<SpotlightRect[]>([])
   const [infoBoxPosition, setInfoBoxPosition] = useState<Coordinates>({ left: 0, top: 0 })
   const [resolvedPlacement, setResolvedPlacement] = useState<TutorialPlacement>('bottom')
+  const [isDynamicTargetActive, setIsDynamicTargetActive] = useState(false)
+
+  const handleNext = useCallback(() => {
+    lastNavDirectionRef.current = 'forward'
+    nextStep()
+  }, [nextStep])
+
+  const handleBack = useCallback(() => {
+    lastNavDirectionRef.current = 'backward'
+    prevStep()
+  }, [prevStep])
 
   const step = steps[currentStepIndex]
   const cutoutRect = useMemo(() => {
     if (!targetRect) return null
-    const padding = step?.spotlightPadding ?? 8
+
+    const padding = isDynamicTargetActive ? 8 : (step?.spotlightPadding ?? 8)
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+    const allRects = [targetRect, ...additionalTargetRects]
+
+    const paddedRects = allRects.map((rect) => ({
+      left: clamp(rect.x - padding, 0, viewportWidth),
+      top: clamp(rect.y - padding, 0, viewportHeight),
+      right: clamp(rect.x + rect.width + padding, 0, viewportWidth),
+      bottom: clamp(rect.y + rect.height + padding, 0, viewportHeight)
+    }))
+
+    const left = Math.min(...paddedRects.map((rect) => rect.left))
+    const top = Math.min(...paddedRects.map((rect) => rect.top))
+    const right = Math.max(...paddedRects.map((rect) => rect.right))
+    const bottom = Math.max(...paddedRects.map((rect) => rect.bottom))
+
     return {
-      x: clamp(targetRect.x - padding, 0, window.innerWidth),
-      y: clamp(targetRect.y - padding, 0, window.innerHeight),
-      width: clamp(targetRect.width + padding * 2, 0, window.innerWidth),
-      height: clamp(targetRect.height + padding * 2, 0, window.innerHeight)
+      x: left,
+      y: top,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top)
     }
-  }, [step?.spotlightPadding, targetRect])
+  }, [additionalTargetRects, isDynamicTargetActive, step?.spotlightPadding, targetRect])
 
   const recalculate = useCallback(() => {
     if (!isActive || !step) return
@@ -207,6 +249,7 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
       }
 
       setTargetRect((previousRect) => (previousRect === null ? previousRect : null))
+      setAdditionalTargetRects((previousRects) => (previousRects.length === 0 ? previousRects : []))
       setResolvedPlacement((previousPlacement) => (previousPlacement === 'bottom' ? previousPlacement : 'bottom'))
       setInfoBoxPosition((previousPosition) => (
         areCoordinatesEqual(previousPosition, centeredPosition) ? previousPosition : centeredPosition
@@ -214,9 +257,22 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
       return
     }
 
-    const resolvedTarget = resolveTarget(step.target, queryElement)
+    // Check if a dynamicTarget exists and should override the primary target
+    let activeTargetSelector = step.target
+    let dynamicActive = false
+    if (step.dynamicTarget) {
+      const dynamicEl = queryElement(step.dynamicTarget) ?? findElementInWindow(step.dynamicTarget, window)
+      if (dynamicEl) {
+        activeTargetSelector = step.dynamicTarget
+        dynamicActive = true
+      }
+    }
+    setIsDynamicTargetActive(dynamicActive)
+
+    const resolvedTarget = activeTargetSelector ? resolveTarget(activeTargetSelector, queryElement) : null
     if (!resolvedTarget) {
       setTargetRect((previousRect) => (previousRect === null ? previousRect : null))
+      setAdditionalTargetRects((previousRects) => (previousRects.length === 0 ? previousRects : []))
       return
     }
 
@@ -236,7 +292,15 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
       height: elementRect.height
     }
 
+    const resolvedAdditionalRects = (step.additionalTargets ?? [])
+      .map((selector) => resolveTarget(selector, queryElement))
+      .filter((resolved): resolved is TargetResolution => resolved !== null)
+      .map((resolved) => resolved.rect)
+
     setTargetRect((previousRect) => (areRectsEqual(previousRect, spotlightRect) ? previousRect : spotlightRect))
+    setAdditionalTargetRects((previousRects) => (
+      areRectListsEqual(previousRects, resolvedAdditionalRects) ? previousRects : resolvedAdditionalRects
+    ))
 
     const infoBoxWidth = infoBoxElementRef.current?.offsetWidth ?? INFOBOX_DEFAULT_WIDTH
     const infoBoxHeight = infoBoxElementRef.current?.offsetHeight ?? INFOBOX_DEFAULT_HEIGHT
@@ -270,6 +334,13 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
 
     if (skippedMissingStepRef.current === step.id) return
 
+    // Don't auto-skip when the user is navigating backward
+    if (lastNavDirectionRef.current === 'backward') {
+      lastNavDirectionRef.current = null
+      return
+    }
+
+    lastNavDirectionRef.current = null
     skippedMissingStepRef.current = step.id
     window.setTimeout(() => {
       nextStep()
@@ -284,6 +355,17 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
     if (!isActive || !step) return
     setAriaAnnouncement(`Step ${currentStepIndex + 1} of ${steps.length}. ${step.title}`)
   }, [currentStepIndex, isActive, step, steps.length])
+
+  useEffect(() => {
+    if (isActive) {
+      document.body.dataset.tutorialActive = 'true'
+    } else {
+      delete document.body.dataset.tutorialActive
+    }
+    return () => {
+      delete document.body.dataset.tutorialActive
+    }
+  }, [isActive])
 
   useEffect(() => {
     if (!isActive) return
@@ -316,18 +398,18 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
 
       if (event.key === 'ArrowLeft') {
         event.preventDefault()
-        prevStep()
+        handleBack()
       }
 
       if (event.key === 'ArrowRight' && step?.action.type === 'none') {
         event.preventDefault()
-        nextStep()
+        handleNext()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, nextStep, prevStep, skipTutorial, step?.action.type])
+  }, [isActive, handleNext, handleBack, skipTutorial, step?.action.type])
 
   const arrowStyle = useMemo(() => {
     if (!targetRect || !infoBoxElementRef.current || !step?.target) return undefined
@@ -413,7 +495,11 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
         </>
       )}
 
-      <SpotlightMask targetRect={targetRect} padding={step.spotlightPadding ?? 8} />
+      <SpotlightMask
+        targetRect={targetRect}
+        additionalRects={additionalTargetRects}
+        padding={step.spotlightPadding ?? 8}
+      />
       <span className="tutorial-sr-only" aria-live="polite" aria-atomic="true">
         {ariaAnnouncement}
       </span>
@@ -428,14 +514,14 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
         step={step}
         currentIndex={currentStepIndex}
         totalSteps={steps.length}
-        onNext={nextStep}
-        onBack={prevStep}
+        onNext={handleNext}
+        onBack={handleBack}
         onSkip={skipTutorial}
         style={{ left: infoBoxPosition.left, top: infoBoxPosition.top }}
         infoBoxRef={(element) => {
           infoBoxElementRef.current = element
         }}
-        nextDisabled={step.action.type !== 'none'}
+        nextDisabled={step.action.type !== 'none' && !isActionCompleted}
       />
     </div>
   )

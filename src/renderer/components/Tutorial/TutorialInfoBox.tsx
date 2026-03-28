@@ -37,11 +37,17 @@ export default function TutorialInfoBox({
   const primaryActionRef = useRef<HTMLButtonElement | null>(null)
   const loadBranchSteps = useTutorialStore((state) => state.loadBranchSteps)
   const completeTutorial = useTutorialStore((state) => state.completeTutorial)
+  const branchLabel = useTutorialStore((state) => state.branchLabel)
+  const branchStartIndex = useTutorialStore((state) => state.branchStartIndex)
+  const branchStepCount = useTutorialStore((state) => state.branchStepCount)
+
+  const isInBranch = branchStartIndex !== null && currentIndex > branchStartIndex
+  const branchPosition = isInBranch ? currentIndex - branchStartIndex : 0
 
   const handleChoiceSelect = (choice: TutorialChoice) => {
     onChoiceSelect?.(choice)
     if (choice.steps.length > 0) {
-      loadBranchSteps(choice.steps)
+      loadBranchSteps(choice.steps, choice.label)
     }
   }
 
@@ -128,7 +134,7 @@ export default function TutorialInfoBox({
       <p id={`tutorial-step-body-${step.id}`} className="tutorial-body" dangerouslySetInnerHTML={{ __html: step.body }} />
 
       {isBranchChoice && step.choices ? (
-        <div className="tutorial-choices">
+        <div className="tutorial-choices" role="group" aria-label="Choose a tutorial path">
           {step.choices.map((choice) => (
             <button
               key={choice.id}
@@ -154,17 +160,22 @@ export default function TutorialInfoBox({
         <>
           <div className="tutorial-progress-row">
             <span className="tutorial-step-counter">
-              {currentIndex + 1} of {totalSteps}
+              {isInBranch
+                ? `${branchPosition} of ${branchStepCount}${branchLabel ? ` — ${branchLabel}` : ''}`
+                : `${currentIndex + 1} of ${totalSteps}`}
             </span>
             <div className="tutorial-progress-dots" aria-hidden="true">
-              {Array.from({ length: totalSteps }).map((_, index) => (
-                <span
-                  key={`${step.id}-dot-${index}`}
-                  className={`tutorial-progress-dot ${
-                    index < currentIndex ? 'is-complete' : index === currentIndex ? 'is-current' : ''
-                  }`}
-                />
-              ))}
+              {Array.from({ length: isInBranch ? branchStepCount : totalSteps }).map((_, index) => {
+                const activeIndex = isInBranch ? branchPosition - 1 : currentIndex
+                return (
+                  <span
+                    key={`${step.id}-dot-${index}`}
+                    className={`tutorial-progress-dot ${
+                      index < activeIndex ? 'is-complete' : index === activeIndex ? 'is-current' : ''
+                    }`}
+                  />
+                )
+              })}
             </div>
           </div>
 
