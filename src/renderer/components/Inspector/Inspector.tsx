@@ -37,7 +37,7 @@ function Inspector(): JSX.Element {
 
   if (!block || !definition) {
     return (
-      <div className="inspector">
+      <div className="inspector" data-tutorial="inspector">
         <div className="inspector-header">
           <h3>Properties</h3>
         </div>
@@ -337,7 +337,7 @@ function Inspector(): JSX.Element {
   })
 
   return (
-    <div className="inspector">
+    <div className="inspector" data-tutorial="inspector">
       <div className="inspector-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <BlockIcon name={block.type} className="inspector-icon" />

@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Save,
   Download,
+  Upload,
   Undo,
   Redo,
   Scissors,
@@ -27,6 +28,7 @@ import {
   PanelRight,
   Palette,
   KeyRound,
+  HelpCircle,
   Menu as MenuIcon,
   ChevronDown
 } from 'lucide-react'
@@ -54,6 +56,8 @@ interface ToolbarProps {
   onToggleCodeEditor: () => void
   onSetEditorLayout: (layout: EditorLayout) => void
   onOpenThemeEditor: () => void
+  onOpenPublish: () => void
+  onOpenKeyboardShortcuts: () => void
 }
 
 export default function Toolbar({
@@ -65,7 +69,9 @@ export default function Toolbar({
   onToggleRightPanel,
   onToggleCodeEditor,
   onSetEditorLayout,
-  onOpenThemeEditor
+  onOpenThemeEditor,
+  onOpenPublish,
+  onOpenKeyboardShortcuts
 }: ToolbarProps): JSX.Element {
   const api = getApi()
 
@@ -77,6 +83,7 @@ export default function Toolbar({
   const filePath = useProjectStore((s) => s.filePath)
   const setFilePath = useProjectStore((s) => s.setFilePath)
   const currentPageId = useProjectStore((s) => s.currentPageId)
+  const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded)
   const projectName = useProjectStore((s) => s.settings.name)
   const pageThemePreviewMode = useProjectStore((s) => s.settings.themes?.previewMode ?? 'device')
   const updateSettings = useProjectStore((s) => s.updateSettings)
@@ -179,17 +186,15 @@ export default function Toolbar({
       const projectState = useProjectStore.getState()
       const pageId = projectState.currentPageId
 
+      const baseProjectData = projectState.getProjectData()
       const pages = projectState.pages.map((p) =>
         pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
       )
 
       const content = JSON.stringify(
         {
-          projectSettings: projectState.settings,
+          ...baseProjectData,
           pages,
-          folders: projectState.folders,
-          userBlocks: projectState.userBlocks,
-          customPresets: projectState.customPresets,
           customCss: editorState.customCss
         },
         null,
@@ -439,15 +444,28 @@ export default function Toolbar({
           <button className="toolbar-btn" onClick={handleExport} title="Export" aria-label="Export project">
             <Download size={16} aria-hidden="true" />
           </button>
+          <button
+            className="toolbar-btn"
+            onClick={onOpenPublish}
+            disabled={!isProjectLoaded}
+            title="Publish to Web"
+            aria-label="Publish to web"
+            data-tutorial="publish-btn"
+          >
+            <Upload size={16} aria-hidden="true" />
+          </button>
           
           <div className="toolbar-divider" />
-          
-          <button className="toolbar-btn" onClick={undo} title="Undo (Ctrl+Z)" aria-label="Undo last action">
-            <Undo size={16} aria-hidden="true" />
-          </button>
-          <button className="toolbar-btn" onClick={redo} title="Redo (Ctrl+Y)" aria-label="Redo last undone action">
-            <Redo size={16} aria-hidden="true" />
-          </button>
+
+          <div className="toolbar-group" data-tutorial="toolbar-undo-redo">
+            <button className="toolbar-btn" onClick={undo} title="Undo (Ctrl+Z)" aria-label="Undo last action">
+              <Undo size={16} aria-hidden="true" />
+            </button>
+            <button className="toolbar-btn" onClick={redo} title="Redo (Ctrl+Y)" aria-label="Redo last undone action">
+              <Redo size={16} aria-hidden="true" />
+            </button>
+          </div>
+
           <button className="toolbar-btn" onClick={handleCut} disabled={!selectedBlockId} title="Cut" aria-label="Cut selected block">
             <Scissors size={16} aria-hidden="true" />
           </button>
@@ -464,7 +482,7 @@ export default function Toolbar({
 
         {/* CENTER: Viewport & Zoom */}
         <div className="toolbar-section toolbar-center">
-          <div className="toolbar-group">
+          <div className="toolbar-group" data-tutorial="toolbar-viewport">
             <button
               className={`toolbar-btn ${viewportMode === 'desktop' ? 'active' : ''}`}
               onClick={() => setViewportMode('desktop')}
@@ -535,61 +553,69 @@ export default function Toolbar({
               <FileType size={16} aria-hidden="true" />
             </button>
             <div className="toolbar-divider" />
-            <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out" aria-label="Zoom out">
-              <ZoomOut size={16} aria-hidden="true" />
-            </button>
-            {editingZoom ? (
-              <div
-                className="toolbar-zoom-controls"
-                style={{ display: 'flex', alignItems: 'center' }}
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget)) {
-                    commitZoom()
-                  }
-                }}
-              >
-                <input
-                  className="toolbar-zoom-input"
-                  type="text"
-                  value={tempZoom}
-                  onChange={(e) => setTempZoom(e.target.value.replace(/[^0-9]/g, ''))}
-                  onKeyDown={handleZoomKeyDown}
-                  autoFocus
-                  aria-label="Zoom percentage"
-                />
-                <input
-                  type="range"
-                  className="toolbar-zoom-slider"
-                  min={25}
-                  max={200}
-                  step={5}
-                  value={zoom}
-                  onChange={(e) => { setZoom(Number(e.target.value)); setTempZoom(e.target.value) }}
-                  title={`Zoom: ${zoom}%`}
-                  aria-label="Zoom slider"
-                />
-              </div>
-            ) : (
-              <span
-                className="toolbar-text toolbar-zoom-text"
-                onClick={() => { setTempZoom(String(zoom)); setEditingZoom(true) }}
-                title="Click to edit zoom"
-                aria-live="polite"
-                role="button"
-                tabIndex={0}
-              >
-                {zoom}%
-              </span>
-            )}
-            <button className="toolbar-btn" onClick={() => setZoom(zoom + 10)} title="Zoom In" aria-label="Zoom in">
-              <ZoomIn size={16} aria-hidden="true" />
-            </button>
+            <div className="toolbar-zoom-group" data-tutorial="toolbar-zoom" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button className="toolbar-btn" onClick={() => setZoom(zoom - 10)} title="Zoom Out" aria-label="Zoom out">
+                <ZoomOut size={16} aria-hidden="true" />
+              </button>
+              {editingZoom ? (
+                <div
+                  className="toolbar-zoom-controls"
+                  style={{ display: 'flex', alignItems: 'center' }}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                      commitZoom()
+                    }
+                  }}
+                >
+                  <input
+                    className="toolbar-zoom-input"
+                    type="text"
+                    value={tempZoom}
+                    onChange={(e) => setTempZoom(e.target.value.replace(/[^0-9]/g, ''))}
+                    onKeyDown={handleZoomKeyDown}
+                    autoFocus
+                    aria-label="Zoom percentage"
+                  />
+                  <input
+                    type="range"
+                    className="toolbar-zoom-slider"
+                    min={25}
+                    max={200}
+                    step={5}
+                    value={zoom}
+                    onChange={(e) => { setZoom(Number(e.target.value)); setTempZoom(e.target.value) }}
+                    title={`Zoom: ${zoom}%`}
+                    aria-label="Zoom slider"
+                  />
+                </div>
+              ) : (
+                <span
+                  className="toolbar-text toolbar-zoom-text"
+                  onClick={() => { setTempZoom(String(zoom)); setEditingZoom(true) }}
+                  title="Click to edit zoom"
+                  aria-live="polite"
+                  role="button"
+                  tabIndex={0}
+                >
+                  {zoom}%
+                </span>
+              )}
+              <button className="toolbar-btn" onClick={() => setZoom(zoom + 10)} title="Zoom In" aria-label="Zoom in">
+                <ZoomIn size={16} aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* RIGHT: Tools, Theme, Panels */}
         <div className="toolbar-section toolbar-right">
-          <button className="toolbar-btn" onClick={() => setShowAssetManager(true)} title="Asset Manager" aria-label="Open asset manager">
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowAssetManager(true)}
+            title="Asset Manager"
+            aria-label="Open asset manager"
+            data-tutorial="asset-manager-btn"
+          >
             <ImageIcon size={16} aria-hidden="true" />
           </button>
 
@@ -627,12 +653,13 @@ export default function Toolbar({
             onClick={onOpenThemeEditor}
             title="Theme Editor"
             aria-label="Open theme editor"
+            data-tutorial="theme-editor-btn"
           >
             <Palette size={16} aria-hidden="true" />
           </button>
 
           {/* Layout Switcher */}
-          <div className="toolbar-layout-switcher" style={{ position: 'relative' }}>
+          <div className="toolbar-layout-switcher" data-tutorial="toolbar-layout" style={{ position: 'relative' }}>
             <button
               className="toolbar-btn"
               onClick={() => setShowLayoutMenu(!showLayoutMenu)}
@@ -712,8 +739,19 @@ export default function Toolbar({
             title="Global Settings"
             aria-label="Open global settings"
             aria-pressed={showSettings}
+            data-tutorial="global-settings-btn"
           >
             <Settings size={16} aria-hidden="true" />
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={onOpenKeyboardShortcuts}
+            title="Help - Keyboard Shortcuts"
+            aria-label="Open keyboard shortcuts help"
+            data-tutorial="help-menu-btn"
+          >
+            <HelpCircle size={16} aria-hidden="true" />
           </button>
         </div>
 

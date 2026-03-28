@@ -20,6 +20,7 @@ interface MediaSearchPanelProps {
   onSelect: (results: MediaSearchResult[]) => void
   onCancel: () => void
   multiSelect?: boolean
+  confirmLabel?: string
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -44,7 +45,13 @@ function mergeResults(existing: MediaSearchResult[], incoming: MediaSearchResult
   return merged
 }
 
-export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect = false }: MediaSearchPanelProps): JSX.Element {
+export default function MediaSearchPanel({
+  mode,
+  onSelect,
+  onCancel,
+  multiSelect = false,
+  confirmLabel = 'Confirm Selection'
+}: MediaSearchPanelProps): JSX.Element {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<MediaSearchResult[]>([])
   const [loading, setLoading] = useState(false)
@@ -275,7 +282,11 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
       <div className="msp-disabled-state">
         <div className="msp-disabled-icon"><Search size={32} /></div>
         <p>Web search is not enabled.</p>
-        <button className="msp-btn-primary" onClick={() => setShowConfig(true)}>
+        <button
+          className="msp-btn-primary"
+          onClick={() => setShowConfig(true)}
+          data-tutorial="media-search-settings-btn"
+        >
           Configure Media Search
         </button>
       </div>
@@ -290,6 +301,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
             ref={searchInputRef}
             type="text"
             className="msp-search-input"
+            data-tutorial="media-search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search ${mode === 'video' ? 'videos' : 'images'} on ${PROVIDER_LABELS[config.provider]}...`}
@@ -298,7 +310,12 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
             {loading ? '...' : 'Search'}
           </button>
         </form>
-        <button className="msp-settings-btn" onClick={() => setShowConfig(true)} title="Settings">
+        <button
+          className="msp-settings-btn"
+          onClick={() => setShowConfig(true)}
+          title="Settings"
+          data-tutorial="media-search-settings-btn"
+        >
           <Settings size={16} />
         </button>
       </div>
@@ -328,13 +345,14 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
         </div>
       )}
 
-      <div className="msp-results-grid">
+      <div className="msp-results-grid" data-tutorial="media-search-results">
         {visibleResults.map((result) => {
           const isSelected = selectedIds.has(result.id)
           return (
             <div
               key={result.id}
               className={`msp-result-item ${isSelected ? 'selected' : ''}`}
+              data-tutorial="media-search-result-item"
               onClick={() => handleResultClick(result)}
               onDoubleClick={() => handleResultDoubleClick(result)}
               onKeyDown={(e) => handleKeyDown(e, result)}
@@ -408,7 +426,7 @@ export default function MediaSearchPanel({ mode, onSelect, onCancel, multiSelect
         <div className="msp-selection-bar">
           <span>{selectedIds.size} selected</span>
           <button className="msp-btn-primary" onClick={handleConfirmSelection}>
-            Confirm Selection
+            {confirmLabel}
           </button>
         </div>
       )}

@@ -7,9 +7,15 @@ import './CredentialManager.css'
 
 interface Credential {
   id: string
+  category: 'ai' | 'multimedia' | 'publisher'
+  categoryLabel: string
   label: string
   source: string
+  providerId: string
   provider: string
+  description: string
+  fields: Array<{ key: string; label: string; sensitive: boolean }>
+  values: Record<string, string>
   maskedKey: string
   hasKey: boolean
 }
@@ -90,7 +96,8 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
   const sourceIcon = (source: string) => {
     switch (source) {
       case 'ai': return <Sparkles size={14} />
-      case 'media-search': return <ImageIcon size={14} />
+      case 'multimedia': return <ImageIcon size={14} />
+      case 'publisher': return <KeyRound size={14} />
       default: return <KeyRound size={14} />
     }
   }
@@ -183,7 +190,7 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
                 <span className="cred-item-provider">{cred.provider}</span>
               </div>
               <div className={`cred-item-key ${!cred.hasKey ? 'not-set' : ''}`}>
-                {cred.hasKey ? cred.maskedKey : 'Not configured'}
+                {cred.hasKey ? (cred.maskedKey || cred.description) : 'Not configured'}
               </div>
             </div>
             {cred.hasKey && (
@@ -209,7 +216,7 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
             onClose()
           }}
         >
-          Manage API Keys
+          Manage Credentials
         </button>
       </div>
     </div>

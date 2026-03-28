@@ -77,7 +77,24 @@ Amagon ships with a built-in AI assistant that understands your project's block 
 - **Centralized Key Overview**: View all stored API keys from a single popover accessible in the toolbar, with masked values and per-service labels
 - **Encryption Status**: A banner shows whether your keys are protected by the OS keyring or by machine-derived AES encryption (fallback for Linux systems without a keyring)
 - **Security Info Modal**: When running in fallback mode, a detailed modal explains what the machine-derived encryption does, its limitations, and how to set up a proper keyring for stronger protection
+- **Per-Key Editing**: Edit individual credentials inline from the Settings → Credentials table via a dedicated edit modal
 - **Per-Key Deletion**: Remove individual API keys directly from the credential manager
+
+### Publish to Web
+
+- **One-Click Publishing**: Deploy your site directly from the editor to GitHub Pages, Cloudflare Pages, or Neocities
+- **Extensible Provider System**: Built-in providers ship with a versioned `PublisherExtension` API — new hosting targets can be added without touching core editor code
+- **Credential Management**: Publish credentials are stored encrypted (OS keyring / AES-256-GCM fallback) and managed separately from AI keys; view, edit, or delete them from Settings
+- **Pre-Publish Validation**: Each provider validates credentials and file structure before upload and surfaces actionable warnings in the UI
+- **Live Progress**: A progress panel streams phase-by-phase feedback (`validating → exporting → uploading → done`) and shows the final published URL
+
+### Interactive Tutorial
+
+- **Welcome Tour**: First-time users are greeted with a guided tour of core editor features via a spotlight overlay system
+- **Branching Paths**: After the core walkthrough, users can choose a deep-dive branch: **AI Assistance**, **Publish Workflow**, or **Web Media Search**
+- **Reactive Step Advancement**: Tutorial steps auto-advance when the user completes the expected action (e.g. drag a block, open the theme editor, send an AI message) — no "Next" button required for action steps
+- **Spotlight Highlights**: Key UI elements are highlighted with a focused mask; a floating info box with a directional arrow explains each step
+- **Restartable**: The tutorial can be restarted at any time from Settings
 
 ### Project Management
 
@@ -195,9 +212,16 @@ Open the AI panel from the sidebar, click the settings icon, select your provide
 ```
 src/
 ├── main/                 # Electron main process
-│   └── aiService.ts      # AI provider adapters + secure key storage
+│   ├── aiService.ts      # AI provider adapters + secure key storage
+│   ├── credentialCatalog.ts  # Credential definition registry
+│   └── publishCredentials.ts # Publish credential storage
 ├── preload/             # Electron preload scripts
 ├── preview/             # Canvas runtime (iframe content)
+├── publish/             # Publish-to-web extension system
+│   ├── registry.ts      # Publisher registration
+│   ├── types/           # Extension API types
+│   ├── providers/       # GitHub Pages, Cloudflare Pages, Neocities
+│   └── validators/      # Per-provider validators
 ├── renderer/            # React app
 │   ├── components/      # React components
 │   │   ├── AiAssistant/ # AI chat panel + settings
@@ -205,10 +229,12 @@ src/
 │   │   ├── CodeEditor/  # Monaco code editor
 │   │   ├── Inspector/   # Property/style inspector
 │   │   ├── ThemeEditor/ # Visual theme customization
+│   │   ├── PublishDialog/ # Publish-to-web UI
+│   │   ├── Tutorial/    # Interactive onboarding overlay
 │   │   └── ...          # Toolbar, Sidebar, CommandPalette, etc.
 │   ├── hooks/           # Custom React hooks
 │   ├── registry/        # Block definitions (50+ types)
-│   ├── store/           # Zustand stores
+│   ├── store/           # Zustand stores (includes tutorialStore)
 │   ├── styles/          # CSS styles
 │   └── utils/           # Utility functions
 └── types/               # TypeScript types

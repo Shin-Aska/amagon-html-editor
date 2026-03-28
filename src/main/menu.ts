@@ -51,6 +51,12 @@ export function buildAppMenu(mainWindow: BrowserWindow, isProjectLoaded: boolean
           enabled: isProjectLoaded,
           click: () => send('export')
         },
+        {
+          label: 'Publish to Web...',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          enabled: isProjectLoaded,
+          click: () => send('publish')
+        },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' }
       ]

@@ -282,6 +282,7 @@ function PresetsTab({
         <div className="theme-section-title">Theme Presets for {editingMode === 'light' ? 'Light Page' : 'Dark Page'}</div>
         <button
           className="theme-btn theme-btn-small"
+          data-tutorial="preset-create-btn"
           onClick={() => setIsCreateModalOpen(true)}
           title="Save current theme as preset"
         >
@@ -521,7 +522,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
 
   return (
     <div className="theme-editor-overlay" onClick={onClose}>
-      <div className="theme-editor-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="theme-editor-dialog" data-tutorial="theme-editor-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="theme-editor-header">
           <h2><Palette size={18} /> Theme Editor — {selectedTheme.name}</h2>
           <button className="theme-editor-close" onClick={onClose} aria-label="Close">
@@ -535,6 +536,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
               key={tab.id}
               className={`theme-editor-tab ${activeTab === tab.id ? 'active' : ''}`}
               onClick={() => setActiveTab(tab.id)}
+              data-tutorial={tab.id === 'colors' ? 'theme-colors-tab' : tab.id === 'customCss' ? 'theme-custom-css-tab' : tab.id === 'presets' ? 'theme-presets-tab' : undefined}
             >
               {tab.label}
             </button>

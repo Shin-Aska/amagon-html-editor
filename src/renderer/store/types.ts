@@ -507,6 +507,13 @@ export interface ProjectSettings {
   globalStyles: Record<string, string>
 }
 
+export interface PublisherConfig {
+  providerId: string
+  encryptedCredentials?: string
+  lastPublishedUrl?: string
+  lastPublishedAt?: string
+}
+
 export interface ProjectData {
   projectSettings: ProjectSettings
   pages: Page[]
@@ -514,6 +521,7 @@ export interface ProjectData {
   userBlocks: UserBlock[]
   customPresets?: ProjectTheme[]
   isProjectLoaded?: boolean
+  publisherConfig?: PublisherConfig
 }
 
 // ─── Editor State Types ──────────────────────────────────────────────────────

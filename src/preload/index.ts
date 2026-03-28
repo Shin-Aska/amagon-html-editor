@@ -98,10 +98,62 @@ const api = {
     }
   },
 
+  publish: (() => {
+    const progressListeners = new WeakMap<Function, (...args: any[]) => void>()
+
+    return {
+      getProviders: () => ipcRenderer.invoke('publish:getProviders'),
+
+      getCredentials: (providerId: string) =>
+        ipcRenderer.invoke('publish:getCredentials', providerId),
+
+      saveCredentials: (providerId: string, credentials: Record<string, string>) =>
+        ipcRenderer.invoke('publish:saveCredentials', { providerId, credentials }),
+
+      deleteCredentials: (providerId: string) =>
+        ipcRenderer.invoke('publish:deleteCredentials', providerId),
+
+      validate: (
+        providerId: string,
+        files: { path: string; content: string | Uint8Array }[],
+        credentials?: Record<string, string>
+      ) => ipcRenderer.invoke('publish:validate', { providerId, files, credentials }),
+
+      publish: (
+        providerId: string,
+        files: { path: string; content: string | Uint8Array }[],
+        credentials?: Record<string, string>
+      ) => ipcRenderer.invoke('publish:publish', { providerId, files, credentials }),
+
+      onProgress: (callback: (progress: { phase: string; percent: number; message: string }) => void) => {
+        const handler = (_event: any, progress: { phase: string; percent: number; message: string }) => {
+          callback(progress)
+        }
+        progressListeners.set(callback, handler)
+        ipcRenderer.on('publish:progress', handler)
+        return () => {
+          ipcRenderer.removeListener('publish:progress', handler)
+          progressListeners.delete(callback)
+        }
+      },
+
+      offProgress: (callback: (progress: { phase: string; percent: number; message: string }) => void) => {
+        const handler = progressListeners.get(callback)
+        if (handler) {
+          ipcRenderer.removeListener('publish:progress', handler)
+          progressListeners.delete(callback)
+        }
+      }
+    }
+  })(),
+
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     isEncryptionSecure: () => ipcRenderer.invoke('app:isEncryptionSecure'),
     getCredentials: () => ipcRenderer.invoke('app:getCredentials'),
+    getCredentialDefinitions: () => ipcRenderer.invoke('app:getCredentialDefinitions'),
+    getCredentialValues: (id: string) => ipcRenderer.invoke('app:getCredentialValues', id),
+    saveCredential: (id: string, values: Record<string, string>) => ipcRenderer.invoke('app:saveCredential', { id, values }),
     deleteCredential: (id: string) => ipcRenderer.invoke('app:deleteCredential', id),
     getSettings: () => ipcRenderer.invoke('app:getSettings'),
     saveSettings: (settings: any) => ipcRenderer.invoke('app:saveSettings', settings)

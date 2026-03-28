@@ -384,7 +384,7 @@ ${themeVariables}`
 
     return (
         <div className="ai-css-assist-overlay" onClick={onClose}>
-            <div className="ai-css-assist-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="ai-css-assist-dialog" data-tutorial="ai-css-assist-dialog" onClick={(e) => e.stopPropagation()}>
                 <div className="ai-css-assist-header">
                     <div>
                         <div className="ai-css-assist-title">Assist with AI <Sparkles size={14} /></div>

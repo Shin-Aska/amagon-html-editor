@@ -30,7 +30,7 @@ export default function CssClassesEditor({ classes, onChange }: CssClassesEditor
   }
 
   return (
-    <div className="css-classes-editor">
+    <div className="css-classes-editor" data-tutorial="css-classes-editor">
       <div className="classes-input-container">
         <input
           type="text"

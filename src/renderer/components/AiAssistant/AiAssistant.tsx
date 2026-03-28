@@ -291,6 +291,7 @@ function AiMessageBubble({
                 {msg.role === 'assistant' && !msg.isError && hasBlocks && parsed?.blocks && (
                     <button
                         className="ai-action-btn ai-action-insert"
+                        data-tutorial="ai-insert-blocks-btn"
                         onClick={() => onInsertBlocks(parsed.blocks!)}
                         title={`Insert into ${insertTargetLabel}`}
                     >
@@ -480,6 +481,7 @@ export default function AiAssistant(): JSX.Element {
                 <textarea
                     ref={inputRef}
                     className="ai-input"
+                    data-tutorial="ai-input"
                     value={input}
                     onChange={(e) => {
                         setInput(e.target.value)
@@ -493,6 +495,7 @@ export default function AiAssistant(): JSX.Element {
                 />
                 <button
                     className="ai-send-btn"
+                    data-tutorial="ai-send-btn"
                     onClick={handleSend}
                     disabled={!input.trim() || isLoading || !aiEnabled}
                     title="Send message"

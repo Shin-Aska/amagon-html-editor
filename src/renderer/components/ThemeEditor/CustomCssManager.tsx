@@ -206,11 +206,16 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
     }, [selectedFile])
 
     return (
-        <div className="css-manager">
+        <div className="css-manager" data-tutorial="custom-css-area">
             <div className="css-manager-sidebar">
                 <div className="css-manager-sidebar-header">
                     <span className="css-manager-sidebar-title">CSS Files</span>
-                    <button className="css-manager-add-btn" onClick={handleAddFile} title="Add CSS file">
+                    <button
+                        className="css-manager-add-btn"
+                        data-tutorial="css-add-file-btn"
+                        onClick={handleAddFile}
+                        title="Add CSS file"
+                    >
                         +
                     </button>
                 </div>
@@ -255,6 +260,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                             <div className="css-manager-file-actions" onClick={(e) => e.stopPropagation()}>
                                 <button
                                     className="css-manager-icon-btn ai"
+                                    data-tutorial={file.id === selectedFileId ? 'css-ai-assist-btn' : undefined}
                                     onClick={() => {
                                         if (!hasConfiguredAiProvider || pendingCssReview) return
                                         setSelectedFileId(file.id)

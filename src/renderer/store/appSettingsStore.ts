@@ -6,6 +6,8 @@ export interface AppSettings {
   theme: 'light' | 'dark'
   defaultLayout: EditorLayout
   showTabChildSelectionWarning: boolean
+  tutorialEnabled: boolean
+  tutorialCompleted: boolean
 }
 
 interface AppSettingsState extends AppSettings {
@@ -18,6 +20,8 @@ interface AppSettingsActions {
   setTheme: (theme: 'light' | 'dark') => void
   setDefaultLayout: (layout: EditorLayout) => void
   setShowTabChildSelectionWarning: (show: boolean) => void
+  setTutorialEnabled: (enabled: boolean) => void
+  setTutorialCompleted: (completed: boolean) => void
 }
 
 type AppSettingsStore = AppSettingsState & AppSettingsActions
@@ -25,7 +29,9 @@ type AppSettingsStore = AppSettingsState & AppSettingsActions
 const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   defaultLayout: 'standard',
-  showTabChildSelectionWarning: true
+  showTabChildSelectionWarning: true,
+  tutorialEnabled: true,
+  tutorialCompleted: false
 }
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
@@ -59,7 +65,9 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
     const nextSettings: AppSettings = {
       theme: patch.theme ?? current.theme,
       defaultLayout: patch.defaultLayout ?? current.defaultLayout,
-      showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning
+      showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
+      tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
+      tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted
     }
     set({ ...nextSettings })
 
@@ -89,5 +97,15 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   setShowTabChildSelectionWarning: (show: boolean) => {
     set({ showTabChildSelectionWarning: show })
     get().saveSettings({ showTabChildSelectionWarning: show })
+  },
+
+  setTutorialEnabled: (enabled: boolean) => {
+    set({ tutorialEnabled: enabled })
+    get().saveSettings({ tutorialEnabled: enabled })
+  },
+
+  setTutorialCompleted: (completed: boolean) => {
+    set({ tutorialCompleted: completed })
+    get().saveSettings({ tutorialCompleted: completed })
   }
 }))

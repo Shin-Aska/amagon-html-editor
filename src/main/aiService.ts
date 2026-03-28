@@ -174,6 +174,25 @@ export async function clearApiKeyForProvider(provider: AiProvider): Promise<void
     }, null, 2), 'utf-8')
 }
 
+/** Saves or clears the API key for a specific provider without changing the active provider/model. */
+export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string): Promise<void> {
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+    const updatedKeys = { ...encryptedApiKeys }
+
+    if (apiKey) {
+        updatedKeys[provider] = encryptApiKey(apiKey)
+    } else {
+        delete updatedKeys[provider]
+    }
+
+    await fs.writeFile(getConfigPath(), JSON.stringify({
+        provider: persisted.provider ?? DEFAULT_CONFIG.provider,
+        model: persisted.model ?? DEFAULT_CONFIG.model,
+        encryptedApiKeys: updatedKeys,
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+    }, null, 2), 'utf-8')
+}
+
 export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
     const { persisted, encryptedApiKeys } = await loadPersistedRaw()
 

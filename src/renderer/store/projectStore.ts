@@ -35,6 +35,9 @@ interface ProjectState {
   currentPageId: string | null
   filePath: string | null
   isProjectLoaded: boolean
+  boundPublisherId?: string
+  lastPublishedUrl?: string
+  lastPublishedAt?: string
 }
 
 interface ProjectActions {
@@ -44,6 +47,8 @@ interface ProjectActions {
   updateSettings: (patch: Partial<ProjectSettings>) => void
   setFramework: (framework: FrameworkChoice) => void
   setFilePath: (path: string | null) => void
+  setPublisherBinding: (providerId: string | null) => void
+  setPublishResult: (url: string, date: string) => void
   getProjectData: () => ProjectData
 
   // Theme management
@@ -212,6 +217,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     currentPageId: defaultPage.id,
     filePath: null,
     isProjectLoaded: false,
+    boundPublisherId: undefined,
+    lastPublishedUrl: undefined,
+    lastPublishedAt: undefined,
 
     // ─── Project-level ───────────────────────────────────────────────
 
@@ -267,7 +275,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
         filePath: filePath ?? null,
-        isProjectLoaded: true
+        isProjectLoaded: true,
+        boundPublisherId: data.publisherConfig?.providerId,
+        lastPublishedUrl: data.publisherConfig?.lastPublishedUrl,
+        lastPublishedAt: data.publisherConfig?.lastPublishedAt
       })
     },
 
@@ -284,7 +295,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
         currentPageId: newDefault.id,
         filePath: null,
-        isProjectLoaded: false
+        isProjectLoaded: false,
+        boundPublisherId: undefined,
+        lastPublishedUrl: undefined,
+        lastPublishedAt: undefined
       })
     },
 
@@ -306,6 +320,21 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set({ filePath: path })
     },
 
+    setPublisherBinding: (providerId) => {
+      set({
+        boundPublisherId: providerId ?? undefined
+      })
+      markProjectDirty()
+    },
+
+    setPublishResult: (url, date) => {
+      set({
+        lastPublishedUrl: url,
+        lastPublishedAt: date
+      })
+      markProjectDirty()
+    },
+
     getProjectData: () => {
       const state = get()
       return {
@@ -313,7 +342,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         pages: state.pages,
         folders: state.folders,
         userBlocks: state.userBlocks,
-        customPresets: state.customPresets
+        customPresets: state.customPresets,
+        publisherConfig:
+          state.boundPublisherId || state.lastPublishedUrl || state.lastPublishedAt
+            ? {
+                providerId: state.boundPublisherId ?? '',
+                lastPublishedUrl: state.lastPublishedUrl,
+                lastPublishedAt: state.lastPublishedAt
+              }
+            : undefined
       }
     },
 
