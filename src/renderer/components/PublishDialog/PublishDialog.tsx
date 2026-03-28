@@ -13,6 +13,16 @@ interface PublishDialogProps {
 
 type Step = 'select' | 'credentials' | 'validating' | 'validated' | 'publishing' | 'result'
 
+const STEPPER_LABELS = ['Select', 'Configure', 'Validate', 'Publish']
+const STEP_TO_INDEX: Record<Step, number> = {
+  select: 0,
+  credentials: 1,
+  validating: 2,
+  validated: 2,
+  publishing: 3,
+  result: 3,
+}
+
 export default function PublishDialog({ open, onClose }: PublishDialogProps): JSX.Element | null {
   const api = getApi()
 
@@ -170,7 +180,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
   }
 
   const handleOpenUrl = (url: string): void => {
-    window.open(url, '_blank', 'noopener,noreferrer')
+    api.project.openInBrowser(url).catch(() => {})
   }
 
   if (!open) return null
@@ -179,41 +189,79 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
     ? validationResult.issues.some((issue) => issue.severity === 'error')
     : false
 
+  const activeStepIndex = STEP_TO_INDEX[step]
+
   return (
     <div className="publish-overlay" onClick={onClose}>
       <div className="publish-modal" onClick={(e) => e.stopPropagation()}>
+
+        {/* ── Header ── */}
         <div className="publish-header">
-          <h2>Publish to Web</h2>
-          <button className="publish-close-btn" onClick={onClose}>&times;</button>
+          <h2 className="publish-header-title">Publish to Web</h2>
+          <button className="publish-close-btn" onClick={onClose} aria-label="Close">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="2" y1="2" x2="14" y2="14" /><line x1="14" y1="2" x2="2" y2="14" />
+            </svg>
+          </button>
         </div>
 
+        {/* ── Step progress indicator ── */}
+        <div className="publish-stepper">
+          {STEPPER_LABELS.map((label, i) => (
+            <div key={label} className={`publish-stepper-item${i < activeStepIndex ? ' is-done' : ''}${i === activeStepIndex ? ' is-current' : ''}`}>
+              {i > 0 && <div className={`publish-stepper-connector${i <= activeStepIndex ? ' is-active' : ''}`} />}
+              <div className="publish-stepper-bubble">
+                {i < activeStepIndex ? (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1,5 4,8 9,2" />
+                  </svg>
+                ) : (
+                  <span>{i + 1}</span>
+                )}
+              </div>
+              <span className="publish-stepper-label">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Content ── */}
         <div className="publish-content">
+
+          {/* Step: Select provider */}
           {step === 'select' && (
             <div className="publish-step">
-              <p className="publish-step-hint">Choose a hosting provider:</p>
-              <div className="publish-provider-list">
+              <p className="publish-step-hint">Choose a hosting provider to publish your project:</p>
+              <div className="publish-provider-grid">
                 {providers.map((provider) => (
                   <button
                     key={provider.id}
-                    className={`publish-provider-card ${boundPublisherId === provider.id ? 'is-bound' : ''}`}
+                    className={`publish-provider-card${boundPublisherId === provider.id ? ' is-bound' : ''}`}
                     onClick={() => handleSelectProvider(provider)}
                   >
-                    <div className="publish-provider-name-row">
-                      <div className="publish-provider-name">{provider.displayName}</div>
-                      {boundPublisherId === provider.id && (
-                        <span className="publish-provider-badge">Bound</span>
-                      )}
+                    <div className="publish-provider-icon-area">
+                      <div className="publish-provider-icon-placeholder">
+                        {provider.displayName.charAt(0).toUpperCase()}
+                      </div>
                     </div>
-                    <div className="publish-provider-desc">{provider.description}</div>
+                    <div className="publish-provider-body">
+                      <div className="publish-provider-name-row">
+                        <span className="publish-provider-name">{provider.displayName}</span>
+                        {boundPublisherId === provider.id && (
+                          <span className="publish-provider-badge">Bound</span>
+                        )}
+                      </div>
+                      <p className="publish-provider-desc">{provider.description}</p>
+                    </div>
                   </button>
                 ))}
                 {providers.length === 0 && (
-                  <p className="publish-empty">Loading providers...</p>
+                  <p className="publish-empty">Loading providers…</p>
                 )}
               </div>
             </div>
           )}
 
+          {/* Step: Credentials */}
           {step === 'credentials' && selectedProvider && (
             <div className="publish-step">
               <p className="publish-step-hint">
@@ -230,6 +278,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
                           href={field.helpUrl}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title="Help"
                         >
                           ?
                         </a>
@@ -253,7 +302,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
               </div>
 
               <div className="publish-binding-card">
-                <label className="publish-checkbox-row">
+                <label className="publish-checkbox-styled">
                   <input
                     type="checkbox"
                     checked={bindToProject}
@@ -263,19 +312,22 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
                       if (!checked) setSaveCredentialToApp(false)
                     }}
                   />
-                  <span>Bind this provider to this project</span>
+                  <span className="publish-checkbox-mark" />
+                  <span className="publish-checkbox-text">Bind this provider to this project</span>
                 </label>
                 <p className="publish-binding-copy">
                   Keep this publishing destination attached to the current project so the workflow opens with the right provider next time.
                 </p>
-                <label className={`publish-checkbox-row ${!bindToProject ? 'disabled' : ''}`}>
+                <div className="publish-binding-separator" />
+                <label className={`publish-checkbox-styled publish-checkbox-indented${!bindToProject ? ' is-disabled' : ''}`}>
                   <input
                     type="checkbox"
                     checked={saveCredentialToApp}
                     disabled={!bindToProject}
                     onChange={(e) => setSaveCredentialToApp(e.target.checked)}
                   />
-                  <span>Save credentials securely to the app</span>
+                  <span className="publish-checkbox-mark" />
+                  <span className="publish-checkbox-text">Save credentials securely to the app</span>
                 </label>
                 <p className="publish-binding-copy">
                   Saved credentials will appear in Credentials and Global Settings for reuse across projects.
@@ -286,27 +338,43 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
             </div>
           )}
 
+          {/* Step: Validating */}
           {step === 'validating' && (
             <div className="publish-step publish-center">
-              <div className="publish-spinner" />
-              <p className="publish-step-hint">Validating...</p>
+              <div className="publish-spinner-wrap">
+                <div className="publish-spinner" />
+              </div>
+              <p className="publish-validating-label">
+                Validating with {selectedProvider?.displayName ?? 'provider'}
+                <span className="publish-validating-dots" />
+              </p>
             </div>
           )}
 
+          {/* Step: Validated */}
           {step === 'validated' && validationResult && (
             <div className="publish-step">
               {validationResult.issues.length === 0 ? (
-                <p className="publish-step-hint publish-ok">All checks passed. Ready to publish.</p>
+                <div className="publish-success-banner">
+                  <svg className="publish-success-banner-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="2,9 7,14 16,4" />
+                  </svg>
+                  <span>All checks passed — ready to publish.</span>
+                </div>
               ) : (
                 <>
-                  <p className="publish-step-hint">Validation issues:</p>
+                  <p className="publish-step-hint">Validation issues found:</p>
                   <ul className="publish-issues">
                     {validationResult.issues.map((issue, index) => (
                       <li key={index} className={`publish-issue publish-issue--${issue.severity}`}>
-                        <span className="publish-issue-badge">{issue.severity}</span>
-                        {issue.filePath && (
-                          <span className="publish-issue-file">{issue.filePath}</span>
-                        )}
+                        <div className="publish-issue-header">
+                          <span className={`publish-issue-pill publish-issue-pill--${issue.severity}`}>
+                            {issue.severity}
+                          </span>
+                          {issue.filePath && (
+                            <span className="publish-issue-file">{issue.filePath}</span>
+                          )}
+                        </div>
                         <span className="publish-issue-msg">{issue.message}</span>
                         {issue.suggestion && (
                           <span className="publish-issue-suggestion">{issue.suggestion}</span>
@@ -319,49 +387,65 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
             </div>
           )}
 
+          {/* Step: Publishing */}
           {step === 'publishing' && (
-            <div className="publish-step">
-              <p className="publish-step-hint">{progress?.message ?? 'Publishing...'}</p>
-              <div className="publish-progress-bar-track">
+            <div className="publish-step publish-center">
+              <p className="publish-step-hint">{progress?.message ?? 'Publishing…'}</p>
+              <div className="publish-progress-track">
                 <div
-                  className="publish-progress-bar-fill"
+                  className="publish-progress-fill"
                   style={{ width: `${progress?.percent ?? 0}%` }}
                 />
+                <span className="publish-progress-pct-label">
+                  {progress?.percent ?? 0}%
+                </span>
               </div>
-              <p className="publish-progress-pct">{progress?.percent ?? 0}%</p>
             </div>
           )}
 
+          {/* Step: Result */}
           {step === 'result' && publishResult && (
             <div className="publish-step publish-center">
               {publishResult.success ? (
                 <>
-                  <div className="publish-result-icon publish-result-icon--success">✓</div>
-                  <p className="publish-result-title">Published successfully.</p>
+                  <div className="publish-result-circle publish-result-circle--success">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6,16 13,23 26,9" />
+                    </svg>
+                  </div>
+                  <p className="publish-result-heading">Published Successfully</p>
                   {publishResult.url && (
-                    <div className="publish-result-url-row">
-                      <span className="publish-result-url">{publishResult.url}</span>
-                      <button
-                        className="publish-btn-secondary"
-                        onClick={() => handleCopyUrl(publishResult.url!)}
-                      >
-                        Copy
-                      </button>
-                      <button
-                        className="publish-btn-secondary"
-                        onClick={() => handleOpenUrl(publishResult.url!)}
-                      >
-                        Open
-                      </button>
-                    </div>
+                    <>
+                      <div className="publish-result-url-pill">
+                        <span className="publish-result-url-text">{publishResult.url}</span>
+                      </div>
+                      <div className="publish-result-actions">
+                        <button
+                          className="publish-btn-secondary"
+                          onClick={() => handleCopyUrl(publishResult.url!)}
+                        >
+                          Copy URL
+                        </button>
+                        <button
+                          className="publish-btn-secondary"
+                          onClick={() => handleOpenUrl(publishResult.url!)}
+                        >
+                          Open in Browser
+                        </button>
+                      </div>
+                    </>
                   )}
                 </>
               ) : (
                 <>
-                  <div className="publish-result-icon publish-result-icon--error">✕</div>
-                  <p className="publish-result-title">Publish failed</p>
+                  <div className="publish-result-circle publish-result-circle--error">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="10" y1="10" x2="22" y2="22" /><line x1="22" y1="10" x2="10" y2="22" />
+                    </svg>
+                  </div>
+                  <p className="publish-result-heading">Publish Failed</p>
                   {publishResult.error && (
-                    <p className="publish-error">{publishResult.error}</p>
+                    <div className="publish-error publish-result-error">{publishResult.error}</div>
                   )}
                 </>
               )}
@@ -369,6 +453,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
           )}
         </div>
 
+        {/* ── Footer ── */}
         <div className="publish-footer">
           {(step === 'credentials' || step === 'validated') && (
             <button
@@ -384,15 +469,15 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
 
           {step === 'result' && !publishResult?.success && (
             <button className="publish-btn-secondary" onClick={() => setStep('credentials')}>
-              Back
+              Try Again
             </button>
           )}
 
-          <div style={{ flex: 1 }} />
+          <div className="publish-footer-spacer" />
 
           {step === 'result' && (
             <button className="publish-btn-secondary" onClick={onClose}>
-              Close
+              Done
             </button>
           )}
 
@@ -404,7 +489,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
 
           {step === 'validated' && (
             <button
-              className="publish-btn-primary"
+              className={`publish-btn-primary${hasErrors ? ' is-disabled' : ''}`}
               onClick={handlePublish}
               disabled={hasErrors}
             >
