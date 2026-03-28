@@ -527,17 +527,10 @@ function startActionListener(step?: TutorialStep): void {
       return
     }
     case 'publish-action-taken': {
-      const tryAttach = (): boolean => {
-        const el = document.querySelector('[data-tutorial="publish-action-btn"]') as HTMLButtonElement | null
-        if (!el) return false
-        const handler = () => { maybeAdvance() }
-        el.addEventListener('click', handler, { once: true })
-        actionListenerCleanup = () => el.removeEventListener('click', handler)
-        return true
-      }
-      if (tryAttach()) return
-      const pollId = window.setInterval(() => { if (tryAttach()) window.clearInterval(pollId) }, 100)
-      actionListenerCleanup = () => window.clearInterval(pollId)
+      const isComplete = () => !!document.querySelector('[data-tutorial="publish-result"]')
+      if (isComplete()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => { if (isComplete()) maybeAdvance() }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
       return
     }
     case 'media-search-results-loaded': {

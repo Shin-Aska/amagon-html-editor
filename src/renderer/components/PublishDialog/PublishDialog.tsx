@@ -405,7 +405,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
 
           {/* Step: Result */}
           {step === 'result' && publishResult && (
-            <div className="publish-step publish-center">
+            <div className="publish-step publish-center" data-tutorial="publish-result">
               {publishResult.success ? (
                 <>
                   <div className="publish-result-circle publish-result-circle--success">
