@@ -212,7 +212,7 @@ export default function CreatePresetModal({
 
   return (
     <div className="create-preset-overlay" onClick={onClose}>
-      <div className="create-preset-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className="create-preset-dialog" data-tutorial="create-preset-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="create-preset-header">
           <h3>Create Theme Preset</h3>
         </div>
