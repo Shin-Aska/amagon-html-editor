@@ -3,8 +3,10 @@ import { X, Settings, Image as ImageIcon, Sparkles, KeyRound, Monitor, Moon, Sun
 import { getApi } from '../../utils/api'
 import { useAppSettingsStore } from '../../store/appSettingsStore'
 import { useAiStore } from '../../store/aiStore'
+import { useTutorialStore } from '../../store/tutorialStore'
 import type { EditorLayout } from '../../store/types'
 import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
+import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import './SettingsDialog.css'
 
@@ -29,6 +31,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled)
   const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
   const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
+  const startTutorial = useTutorialStore((s) => s.startTutorial)
 
   const aiConfig = useAiStore((s) => s.config)
   const providerModels = useAiStore((s) => s.providerModels)
@@ -141,6 +144,13 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
     setModalOpen(true)
   }
 
+  const handleRestartTutorial = () => {
+    setTutorialEnabled(true)
+    setTutorialCompleted(false)
+    onClose()
+    startTutorial(tutorialSteps)
+  }
+
   if (!open) return null
 
   const availableModels = providerModels[aiProvider] || []
@@ -148,7 +158,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   return (
     <>
       <div className="settings-dialog-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-        <div className="settings-dialog settings-dialog--wide">
+        <div className="settings-dialog settings-dialog--wide" data-tutorial="settings-dialog">
           <div className="settings-dialog-header">
             <div className="settings-dialog-title">
               <Settings size={18} />
@@ -285,7 +295,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                       <button
                         type="button"
                         className="settings-btn-secondary"
-                        onClick={() => setTutorialCompleted(false)}
+                        onClick={handleRestartTutorial}
                       >
                         Restart Tutorial
                       </button>
