@@ -569,6 +569,7 @@ function Sidebar(): JSX.Element {
         <div
           className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
           onClick={() => setActiveTab('ai')}
+          data-tutorial="sidebar-tab-ai"
         >
           AI
         </div>

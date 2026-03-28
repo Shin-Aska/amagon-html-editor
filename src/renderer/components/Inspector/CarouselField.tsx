@@ -60,11 +60,12 @@ function CarouselField({ value = [], onChange }: CarouselFieldProps): JSX.Elemen
   }
 
   return (
-    <div className="carousel-field">
+    <div className="carousel-field" data-tutorial="carousel-field">
       <div className="carousel-field-header">
         <button
           className="carousel-add-btn"
           onClick={handleAddSlides}
+          data-tutorial="carousel-add-btn"
         >
           + Add Slides
         </button>

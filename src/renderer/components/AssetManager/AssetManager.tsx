@@ -181,6 +181,7 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
           <button
             className={`am-tab ${activeTab === 'web' ? 'active' : ''}`}
             onClick={openWebTab}
+            data-tutorial="am-web-search-tab"
           >
             Web Search
           </button>
@@ -316,6 +317,8 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
               mode={webSearchMode}
               onSelect={handleWebResultsSelect}
               onCancel={() => setActiveTab('project')}
+              multiSelect
+              confirmLabel="Insert Selected"
             />
           )}
         </div>

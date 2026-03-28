@@ -231,7 +231,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
           {step === 'select' && (
             <div className="publish-step">
               <p className="publish-step-hint">Choose a hosting provider to publish your project:</p>
-              <div className="publish-provider-grid">
+              <div className="publish-provider-grid" data-tutorial="publish-providers">
                 {providers.map((provider) => (
                   <button
                     key={provider.id}
@@ -267,7 +267,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
               <p className="publish-step-hint">
                 Enter credentials for <strong>{selectedProvider.displayName}</strong>:
               </p>
-              <div className="publish-fields">
+              <div className="publish-fields" data-tutorial="publish-credentials">
                 {selectedProvider.credentialFields.map((field) => (
                   <div key={field.key} className="publish-field-row">
                     <label className="publish-field-label">
@@ -482,7 +482,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
           )}
 
           {step === 'credentials' && (
-            <button className="publish-btn-primary" onClick={handleValidate}>
+            <button className="publish-btn-primary" onClick={handleValidate} data-tutorial="publish-validate-btn">
               Validate
             </button>
           )}
@@ -492,6 +492,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
               className={`publish-btn-primary${hasErrors ? ' is-disabled' : ''}`}
               onClick={handlePublish}
               disabled={hasErrors}
+              data-tutorial="publish-action-btn"
             >
               Publish
             </button>

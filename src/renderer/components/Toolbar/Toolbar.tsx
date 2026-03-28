@@ -450,6 +450,7 @@ export default function Toolbar({
             disabled={!isProjectLoaded}
             title="Publish to Web"
             aria-label="Publish to web"
+            data-tutorial="publish-btn"
           >
             <Upload size={16} aria-hidden="true" />
           </button>
@@ -608,7 +609,13 @@ export default function Toolbar({
 
         {/* RIGHT: Tools, Theme, Panels */}
         <div className="toolbar-section toolbar-right">
-          <button className="toolbar-btn" onClick={() => setShowAssetManager(true)} title="Asset Manager" aria-label="Open asset manager">
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowAssetManager(true)}
+            title="Asset Manager"
+            aria-label="Open asset manager"
+            data-tutorial="asset-manager-btn"
+          >
             <ImageIcon size={16} aria-hidden="true" />
           </button>
 
@@ -646,6 +653,7 @@ export default function Toolbar({
             onClick={onOpenThemeEditor}
             title="Theme Editor"
             aria-label="Open theme editor"
+            data-tutorial="theme-editor-btn"
           >
             <Palette size={16} aria-hidden="true" />
           </button>
@@ -731,6 +739,7 @@ export default function Toolbar({
             title="Global Settings"
             aria-label="Open global settings"
             aria-pressed={showSettings}
+            data-tutorial="global-settings-btn"
           >
             <Settings size={16} aria-hidden="true" />
           </button>

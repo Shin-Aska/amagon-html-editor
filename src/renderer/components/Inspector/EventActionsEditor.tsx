@@ -361,7 +361,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     }, [])
 
     return (
-        <div className="event-actions-editor">
+        <div className="event-actions-editor" data-tutorial="event-actions-editor">
             {eventEntries.length === 0 && (
                 <p className="event-actions-empty">No events configured. Add an event to attach JavaScript behavior.</p>
             )}
@@ -421,7 +421,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
             {editingEvent && (
                 <>
                     <div className="event-editor-overlay" onClick={handleCancelEdit}>
-                        <div className="event-editor-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="event-editor-modal" data-tutorial="event-editor-modal" onClick={(e) => e.stopPropagation()}>
                             <div className="event-editor-header">
                                 <div className="event-editor-header-left">
                                     <h4>Edit: {getEventLabel(editingEvent)}</h4>
@@ -479,6 +479,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                             <div className="event-editor-footer">
                                 <button
                                     className="event-editor-btn ai"
+                                    data-tutorial="event-ai-assist-btn"
                                     onClick={() => {
                                         if (!hasConfiguredAiProvider) return
                                         setShowAiAssist((prev) => !prev)
