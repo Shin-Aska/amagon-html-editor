@@ -29,6 +29,17 @@ export interface TutorialStep {
   autoAdvance: boolean
   onEnter?: () => void
   onExit?: () => void
+  choices?: TutorialChoice[]
+  hideSkip?: boolean
+  hidePrimaryAction?: boolean
+}
+
+export interface TutorialChoice {
+  id: string
+  label: string
+  description: string
+  icon?: string
+  steps: TutorialStep[]
 }
 
 interface TutorialState {
@@ -47,6 +58,7 @@ interface TutorialActions {
   completeTutorial: () => void
   setTutorialEnabled: (enabled: boolean) => void
   setTutorialCompleted: (completed: boolean) => void
+  loadBranchSteps: (branchSteps: TutorialStep[]) => void
 }
 
 type TutorialStore = TutorialState & TutorialActions
@@ -142,6 +154,22 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
 
   setTutorialCompleted: (completed: boolean) => {
     set({ hasCompletedTutorial: completed })
+  },
+
+  loadBranchSteps: (branchSteps: TutorialStep[]) => {
+    const { steps, currentStepIndex } = get()
+    if (!steps.length || !branchSteps.length) return
+
+    // Insert branch steps after the current step
+    const newSteps = [
+      ...steps.slice(0, currentStepIndex + 1),
+      ...branchSteps,
+      ...steps.slice(currentStepIndex + 1)
+    ]
+    set({ steps: newSteps })
+
+    // Advance to the first branch step
+    get().nextStep()
   }
 }))
 

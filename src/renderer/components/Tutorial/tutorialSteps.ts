@@ -1,5 +1,6 @@
 import type { TutorialStep } from '../../store/tutorialStore'
 import { useEditorStore } from '../../store/editorStore'
+import { OPEN_KEYBOARD_SHORTCUTS_EVENT } from '../../constants/tutorialEvents'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')
@@ -24,6 +25,29 @@ const ensureToolbarMenuOpen = () => {
 
   if (collapsible.classList.contains('open')) return
   toggleButton.click()
+}
+
+let keyboardShortcutsLinkCleanup: (() => void) | null = null
+
+const clearKeyboardShortcutsLinkHandler = () => {
+  if (!keyboardShortcutsLinkCleanup) return
+  keyboardShortcutsLinkCleanup()
+  keyboardShortcutsLinkCleanup = null
+}
+
+const installKeyboardShortcutsLinkHandler = () => {
+  clearKeyboardShortcutsLinkHandler()
+
+  const handler = (event: Event) => {
+    const target = event.target as HTMLElement | null
+    const link = target?.closest('[data-action="open-shortcuts"]') as HTMLAnchorElement | null
+    if (!link) return
+    event.preventDefault()
+    window.dispatchEvent(new CustomEvent(OPEN_KEYBOARD_SHORTCUTS_EVENT))
+  }
+
+  document.addEventListener('click', handler)
+  keyboardShortcutsLinkCleanup = () => document.removeEventListener('click', handler)
 }
 
 export const tutorialSteps: TutorialStep[] = [
@@ -52,6 +76,17 @@ export const tutorialSteps: TutorialStep[] = [
     onEnter: () => openSidebarTab('[data-tutorial="sidebar-tab-pages"]')
   },
   {
+    id: 'page-context-menu',
+    target: '[data-tutorial="page-list-item"]',
+    title: 'Page options',
+    body: 'Right-click a page to see options like Page Properties, Move to Folder, and more.',
+    placement: 'right',
+    arrowDirection: 'right',
+    action: { type: 'none' },
+    autoAdvance: false,
+    onEnter: () => openSidebarTab('[data-tutorial="sidebar-tab-pages"]')
+  },
+  {
     id: 'sidebar-widgets',
     target: '[data-tutorial="sidebar-tab-widgets"]',
     title: 'Widgets',
@@ -66,12 +101,15 @@ export const tutorialSteps: TutorialStep[] = [
     id: 'drag-widget',
     target: '[data-tutorial="widget-grid"]',
     title: 'Drag a widget to the canvas',
-    body: 'Try it now - grab any widget and drop it onto the canvas on the right.',
+    body: "Grab any widget from the list and drag it onto the canvas area to the right. If the widget appears on the page, you're good to go!",
     placement: 'right',
     arrowDirection: 'right',
     action: { type: 'drag-to-canvas' },
     autoAdvance: true,
-    onEnter: () => openSidebarTab('[data-tutorial="sidebar-tab-widgets"]')
+    onEnter: () => {
+      ensureStandardLayout()
+      openSidebarTab('[data-tutorial="sidebar-tab-widgets"]')
+    }
   },
   {
     id: 'canvas-select',
@@ -91,11 +129,11 @@ export const tutorialSteps: TutorialStep[] = [
     id: 'inspector',
     target: '[data-tutorial="inspector"]',
     title: 'Edit properties',
-    body: 'The Inspector shows all properties for the selected block. Change text, colors, spacing, and more.',
+    body: 'The Inspector shows all properties for the selected block. You can change text, colors, spacing, and more. Click Next to continue.',
     placement: 'left',
     arrowDirection: 'left',
-    action: { type: 'edit-property' },
-    autoAdvance: true,
+    action: { type: 'none' },
+    autoAdvance: false,
     onEnter: () => ensureStandardLayout()
   },
   {
@@ -113,11 +151,11 @@ export const tutorialSteps: TutorialStep[] = [
     id: 'toolbar-viewport',
     target: '[data-tutorial="toolbar-viewport"]',
     title: 'Responsive preview',
-    body: 'Switch between Desktop, Tablet, and Mobile views to check how your page looks at each breakpoint.',
+    body: 'Switch between Desktop, Tablet, and Mobile views to see how your page looks at each breakpoint. Click Next to continue.',
     placement: 'bottom',
     arrowDirection: 'bottom',
-    action: { type: 'change-viewport' },
-    autoAdvance: true,
+    action: { type: 'none' },
+    autoAdvance: false,
     onEnter: () => ensureToolbarMenuOpen()
   },
   {
@@ -155,22 +193,65 @@ export const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'keyboard-shortcuts',
-    target: null,
+    target: '[data-tutorial="help-menu-btn"]',
     title: 'Keyboard shortcuts',
-    body: 'Press <kbd>?</kbd> or click the <strong>Help</strong> menu to view all keyboard shortcuts.',
+    body: "Click <strong>Help &rarr; Keyboard Shortcuts</strong> to view all shortcuts. <a href='#' data-action='open-shortcuts'>Open Keyboard Shortcuts</a>",
     placement: 'bottom',
-    arrowDirection: 'none',
+    arrowDirection: 'bottom',
     action: { type: 'none' },
-    autoAdvance: false
+    autoAdvance: false,
+    onEnter: () => {
+      ensureToolbarMenuOpen()
+      installKeyboardShortcutsLinkHandler()
+    },
+    onExit: () => {
+      clearKeyboardShortcutsLinkHandler()
+    }
   },
   {
-    id: 'completion',
+    id: 'branch-choice',
     target: null,
-    title: "You're all set!",
-    body: "That's the tour. Explore Amagon and build something great. You can restart this tutorial any time from Settings - General.",
+    title: "You're all set with the basics!",
+    body: 'Amagon offers more. Want to dive deeper into one of these features?',
     placement: 'bottom',
     arrowDirection: 'none',
     action: { type: 'none' },
-    autoAdvance: false
+    autoAdvance: false,
+    hideSkip: true,
+    hidePrimaryAction: true,
+    choices: [
+      {
+        id: 'ai-assistance',
+        label: 'AI Assistance',
+        description: 'Learn to use AI providers for chat, code generation, and styling',
+        icon: '🤖',
+        steps: []
+      },
+      {
+        id: 'web-media-search',
+        label: 'Web Media Search',
+        description: 'Search and import images from Unsplash, Pexels, and Pixabay',
+        icon: '🖼️',
+        steps: []
+      },
+      {
+        id: 'publish',
+        label: 'Publish Your Site',
+        description: 'Deploy to GitHub Pages, Cloudflare, or Neocities',
+        icon: '🚀',
+        steps: []
+      }
+    ]
   }
 ]
+
+export const completionStep: TutorialStep = {
+  id: 'completion',
+  target: null,
+  title: 'Tutorial complete!',
+  body: "You've finished the tutorial. You can restart any tutorial from Settings → General.",
+  placement: 'bottom',
+  arrowDirection: 'none',
+  action: { type: 'none' },
+  autoAdvance: false
+}

@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
-import type { TutorialStep } from '../../store/tutorialStore'
+import type { TutorialStep, TutorialChoice } from '../../store/tutorialStore'
+import { useTutorialStore } from '../../store/tutorialStore'
 
 export interface TutorialInfoBoxProps {
   step: TutorialStep
@@ -13,6 +14,7 @@ export interface TutorialInfoBoxProps {
   style: CSSProperties
   infoBoxRef?: (element: HTMLDivElement | null) => void
   nextDisabled?: boolean
+  onChoiceSelect?: (choice: TutorialChoice) => void
 }
 
 export default function TutorialInfoBox({
@@ -24,13 +26,28 @@ export default function TutorialInfoBox({
   onSkip,
   style,
   infoBoxRef,
-  nextDisabled = false
+  nextDisabled = false,
+  onChoiceSelect
 }: TutorialInfoBoxProps): JSX.Element {
   const isFirstStep = currentIndex === 0
   const isLastStep = currentIndex === totalSteps - 1
   const isCompletion = step.id === 'completion'
+  const isBranchChoice = step.id === 'branch-choice'
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const primaryActionRef = useRef<HTMLButtonElement | null>(null)
+  const loadBranchSteps = useTutorialStore((state) => state.loadBranchSteps)
+  const completeTutorial = useTutorialStore((state) => state.completeTutorial)
+
+  const handleChoiceSelect = (choice: TutorialChoice) => {
+    onChoiceSelect?.(choice)
+    if (choice.steps.length > 0) {
+      loadBranchSteps(choice.steps)
+    }
+  }
+
+  const handleDecline = () => {
+    completeTutorial()
+  }
 
   useEffect(() => {
     const focusTarget = primaryActionRef.current ?? dialogRef.current?.querySelector<HTMLElement>('[data-tutorial-focus="true"]') ?? dialogRef.current
@@ -101,49 +118,82 @@ export default function TutorialInfoBox({
           ))}
         </div>
       )}
-      <button type="button" className="tutorial-close" aria-label="Skip tutorial" onClick={onSkip}>
-        <X size={16} />
-      </button>
+      {!step.hideSkip && (
+        <button type="button" className="tutorial-close" aria-label="Skip tutorial" onClick={onSkip}>
+          <X size={16} />
+        </button>
+      )}
 
       <h3 id={`tutorial-step-title-${step.id}`} className="tutorial-title">{step.title}</h3>
       <p id={`tutorial-step-body-${step.id}`} className="tutorial-body" dangerouslySetInnerHTML={{ __html: step.body }} />
 
-      <div className="tutorial-progress-row">
-        <span className="tutorial-step-counter">
-          {currentIndex + 1} of {totalSteps}
-        </span>
-        <div className="tutorial-progress-dots" aria-hidden="true">
-          {Array.from({ length: totalSteps }).map((_, index) => (
-            <span
-              key={`${step.id}-dot-${index}`}
-              className={`tutorial-progress-dot ${
-                index < currentIndex ? 'is-complete' : index === currentIndex ? 'is-current' : ''
-              }`}
-            />
+      {isBranchChoice && step.choices ? (
+        <div className="tutorial-choices">
+          {step.choices.map((choice) => (
+            <button
+              key={choice.id}
+              type="button"
+              className="tutorial-choice-card"
+              onClick={() => handleChoiceSelect(choice)}
+              aria-label={choice.label}
+            >
+              {choice.icon && <span className="tutorial-choice-icon">{choice.icon}</span>}
+              <span className="tutorial-choice-label">{choice.label}</span>
+              <span className="tutorial-choice-description">{choice.description}</span>
+            </button>
           ))}
+          <button
+            type="button"
+            className="tutorial-choice-decline"
+            onClick={handleDecline}
+          >
+            No thanks, I'll explore on my own
+          </button>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="tutorial-progress-row">
+            <span className="tutorial-step-counter">
+              {currentIndex + 1} of {totalSteps}
+            </span>
+            <div className="tutorial-progress-dots" aria-hidden="true">
+              {Array.from({ length: totalSteps }).map((_, index) => (
+                <span
+                  key={`${step.id}-dot-${index}`}
+                  className={`tutorial-progress-dot ${
+                    index < currentIndex ? 'is-complete' : index === currentIndex ? 'is-current' : ''
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
 
-      <div className="tutorial-actions">
-        <button type="button" className="tutorial-btn tutorial-btn-secondary" onClick={onBack} disabled={isFirstStep}>
-          <ChevronLeft size={14} />
-          Back
-        </button>
-        <button
-          type="button"
-          className="tutorial-btn tutorial-btn-primary"
-          onClick={onNext}
-          disabled={nextDisabled}
-          ref={primaryActionRef}
-          data-tutorial-focus="true"
-        >
-          {isLastStep ? 'Explore on your own' : 'Next'}
-          <ChevronRight size={14} />
-        </button>
-        <button type="button" className="tutorial-btn tutorial-btn-ghost" onClick={onSkip}>
-          Skip
-        </button>
-      </div>
+          <div className="tutorial-actions">
+            <button type="button" className="tutorial-btn tutorial-btn-secondary" onClick={onBack} disabled={isFirstStep}>
+              <ChevronLeft size={14} />
+              Back
+            </button>
+            {!step.hidePrimaryAction && (
+              <button
+                type="button"
+                className="tutorial-btn tutorial-btn-primary"
+                onClick={onNext}
+                disabled={nextDisabled}
+                ref={primaryActionRef}
+                data-tutorial-focus="true"
+              >
+                {isLastStep ? 'Explore on your own' : 'Next'}
+                <ChevronRight size={14} />
+              </button>
+            )}
+            {!step.hideSkip && (
+              <button type="button" className="tutorial-btn tutorial-btn-ghost" onClick={onSkip}>
+                Skip
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -498,6 +498,7 @@ function Sidebar(): JSX.Element {
       <div
         key={page.id}
         className={`page-item ${page.id === currentPageId ? 'active' : ''} ${indented ? 'indented' : ''} ${dropClass} ${isDragging ? 'dragging' : ''}`}
+        data-tutorial="page-list-item"
         onClick={() => handleSwitchPage(page.id)}
         onContextMenu={(e) => handlePageContextMenu(e, page.id)}
         draggable

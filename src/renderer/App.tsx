@@ -33,6 +33,7 @@ import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardSh
 import WelcomeTourDialog from './components/Tutorial/WelcomeTourDialog'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 import { tutorialSteps } from './components/Tutorial/tutorialSteps'
+import { OPEN_KEYBOARD_SHORTCUTS_EVENT } from './constants/tutorialEvents'
 
 // Lazy load heavy components for performance
 const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'))
@@ -387,6 +388,15 @@ function App(): JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  useEffect(() => {
+    const handleOpenKeyboardShortcuts = () => {
+      setShowKeyboardShortcuts(true)
+    }
+
+    window.addEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts)
+    return () => window.removeEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts)
+  }, [])
+
   // Electron menu action listener
   useEffect(() => {
     const cleanup = api.menu.onAction((action: string) => {
@@ -581,6 +591,7 @@ function App(): JSX.Element {
             onSetEditorLayout={setEditorLayout}
             onOpenThemeEditor={() => setShowThemeEditor(true)}
             onOpenPublish={() => setShowPublish(true)}
+            onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
           />
           <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
             {showSidebar && (

@@ -28,6 +28,7 @@ import {
   PanelRight,
   Palette,
   KeyRound,
+  HelpCircle,
   Menu as MenuIcon,
   ChevronDown
 } from 'lucide-react'
@@ -56,6 +57,7 @@ interface ToolbarProps {
   onSetEditorLayout: (layout: EditorLayout) => void
   onOpenThemeEditor: () => void
   onOpenPublish: () => void
+  onOpenKeyboardShortcuts: () => void
 }
 
 export default function Toolbar({
@@ -68,7 +70,8 @@ export default function Toolbar({
   onToggleCodeEditor,
   onSetEditorLayout,
   onOpenThemeEditor,
-  onOpenPublish
+  onOpenPublish,
+  onOpenKeyboardShortcuts
 }: ToolbarProps): JSX.Element {
   const api = getApi()
 
@@ -730,6 +733,16 @@ export default function Toolbar({
             aria-pressed={showSettings}
           >
             <Settings size={16} aria-hidden="true" />
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={onOpenKeyboardShortcuts}
+            title="Help - Keyboard Shortcuts"
+            aria-label="Open keyboard shortcuts help"
+            data-tutorial="help-menu-btn"
+          >
+            <HelpCircle size={16} aria-hidden="true" />
           </button>
         </div>
 

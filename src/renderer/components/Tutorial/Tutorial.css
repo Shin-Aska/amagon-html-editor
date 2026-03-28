@@ -291,6 +291,92 @@
   border-color: rgba(226, 232, 240, 0.25);
 }
 
+.tutorial-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.tutorial-choice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #c5ccda);
+  border-radius: 8px;
+  background: var(--color-bg-primary, #f8fafc);
+  color: var(--tutorial-fg, #111827);
+  cursor: pointer;
+  transition: all 180ms ease;
+  text-align: left;
+}
+
+.tutorial-choice-card:hover {
+  border-color: var(--color-accent, #3b82f6);
+  background: color-mix(in srgb, var(--color-accent, #3b82f6) 8%, #ffffff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.tutorial-choice-card:focus-visible {
+  outline: 2px solid var(--color-accent, #3b82f6);
+  outline-offset: 2px;
+}
+
+.tutorial-choice-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.tutorial-choice-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--tutorial-fg, #111827);
+}
+
+.tutorial-choice-description {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #5f6979);
+  line-height: 1.4;
+}
+
+.dark .tutorial-choice-card {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.dark .tutorial-choice-card:hover {
+  border-color: var(--color-accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.tutorial-choice-decline {
+  align-self: center;
+  margin-top: 8px;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #5f6979);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 180ms ease;
+}
+
+.tutorial-choice-decline:hover {
+  color: var(--tutorial-fg, #111827);
+}
+
+.dark .tutorial-choice-decline {
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.dark .tutorial-choice-decline:hover {
+  color: var(--tutorial-fg, #e7ecf7);
+}
+
 @media (max-width: 720px) {
   .tutorial-info-box {
     width: min(320px, calc(100vw - 24px));
