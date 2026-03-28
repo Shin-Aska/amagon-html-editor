@@ -1,6 +1,9 @@
 import { create } from 'zustand'
+import type { ReactNode } from 'react'
 import { useAppSettingsStore } from './appSettingsStore'
 import { useEditorStore } from './editorStore'
+import { useAiStore } from './aiStore'
+import { useProjectStore } from './projectStore'
 
 export type TutorialPlacement = 'top' | 'bottom' | 'left' | 'right'
 
@@ -10,6 +13,17 @@ export type TutorialActionType =
   | 'select-block'
   | 'change-viewport'
   | 'edit-property'
+  | 'add-class'
+  | 'add-event'
+  | 'ai-message-sent'
+  | 'ai-message-reply-received'
+  | 'open-event-editor'
+  | 'open-theme-editor'
+  | 'change-theme-color'
+  | 'preset-created'
+  | 'open-create-preset-modal'
+  | 'open-ai-css-modal'
+  | 'css-file-changed'
   | 'none'
 
 export interface TutorialAction {
@@ -20,6 +34,8 @@ export interface TutorialAction {
 export interface TutorialStep {
   id: string
   target: string | null
+  additionalTargets?: string[]
+  dynamicTarget?: string
   title: string
   body: string
   placement: TutorialPlacement
@@ -38,7 +54,7 @@ export interface TutorialChoice {
   id: string
   label: string
   description: string
-  icon?: string
+  icon?: ReactNode
   steps: TutorialStep[]
 }
 
@@ -48,6 +64,10 @@ interface TutorialState {
   steps: TutorialStep[]
   hasCompletedTutorial: boolean
   isTutorialEnabled: boolean
+  branchLabel: string
+  branchStartIndex: number | null
+  branchStepCount: number
+  isActionCompleted: boolean
 }
 
 interface TutorialActions {
@@ -58,7 +78,7 @@ interface TutorialActions {
   completeTutorial: () => void
   setTutorialEnabled: (enabled: boolean) => void
   setTutorialCompleted: (completed: boolean) => void
-  loadBranchSteps: (branchSteps: TutorialStep[]) => void
+  loadBranchSteps: (branchSteps: TutorialStep[], label?: string) => void
 }
 
 type TutorialStore = TutorialState & TutorialActions
@@ -69,6 +89,10 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
   steps: [],
   hasCompletedTutorial: false,
   isTutorialEnabled: true,
+  branchLabel: '',
+  branchStartIndex: null,
+  branchStepCount: 0,
+  isActionCompleted: false,
 
   startTutorial: (steps: TutorialStep[]) => {
     if (steps.length === 0) {
@@ -76,7 +100,10 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
       set({
         isActive: false,
         currentStepIndex: 0,
-        steps: []
+        steps: [],
+        branchLabel: '',
+        branchStartIndex: null,
+        branchStepCount: 0
       })
       return
     }
@@ -85,7 +112,10 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
     set({
       isActive: true,
       currentStepIndex: 0,
-      steps
+      steps,
+      branchLabel: '',
+      branchStartIndex: null,
+      branchStepCount: 0
     })
     startActionListener(steps[0])
   },
@@ -129,7 +159,10 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
     set({
       isActive: false,
       currentStepIndex: 0,
-      steps: []
+      steps: [],
+      branchLabel: '',
+      branchStartIndex: null,
+      branchStepCount: 0
     })
   },
 
@@ -142,7 +175,10 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
       isActive: false,
       currentStepIndex: 0,
       steps: [],
-      hasCompletedTutorial: true
+      hasCompletedTutorial: true,
+      branchLabel: '',
+      branchStartIndex: null,
+      branchStepCount: 0
     })
 
     useAppSettingsStore.getState().setTutorialCompleted(true)
@@ -156,7 +192,7 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
     set({ hasCompletedTutorial: completed })
   },
 
-  loadBranchSteps: (branchSteps: TutorialStep[]) => {
+  loadBranchSteps: (branchSteps: TutorialStep[], label?: string) => {
     const { steps, currentStepIndex } = get()
     if (!steps.length || !branchSteps.length) return
 
@@ -166,7 +202,12 @@ export const useTutorialStore = create<TutorialStore>((set, get) => ({
       ...branchSteps,
       ...steps.slice(currentStepIndex + 1)
     ]
-    set({ steps: newSteps })
+    set({
+      steps: newSteps,
+      branchLabel: label ?? '',
+      branchStartIndex: currentStepIndex,
+      branchStepCount: branchSteps.length
+    })
 
     // Advance to the first branch step
     get().nextStep()
@@ -184,6 +225,7 @@ function clearActionListener(): void {
 
 function startActionListener(step?: TutorialStep): void {
   clearActionListener()
+  useTutorialStore.setState({ isActionCompleted: false })
   if (!step || step.action.type === 'none') return
 
   let handled = false
@@ -195,6 +237,8 @@ function startActionListener(step?: TutorialStep): void {
     if (!state.isActive || !currentStep || currentStep.id !== step.id) return
     if (currentStep.autoAdvance) {
       state.nextStep()
+    } else {
+      useTutorialStore.setState({ isActionCompleted: true })
     }
   }
 
@@ -240,13 +284,194 @@ function startActionListener(step?: TutorialStep): void {
     }
     case 'click': {
       if (!step.target) return
-      const element = document.querySelector(step.target)
-      if (!element) return
-      const handler = () => {
-        maybeAdvance()
+      const target = step.target
+      const tryAttach = (): boolean => {
+        const element = document.querySelector(target)
+        if (!element) return false
+        const handler = () => { maybeAdvance() }
+        element.addEventListener('click', handler, { once: true })
+        actionListenerCleanup = () => element.removeEventListener('click', handler)
+        return true
       }
-      element.addEventListener('click', handler, { once: true })
-      actionListenerCleanup = () => element.removeEventListener('click', handler)
+      if (tryAttach()) return
+      // Target not in DOM yet (e.g. onEnter triggered a tab switch that hasn't rendered) — poll
+      const pollId = window.setInterval(() => {
+        if (tryAttach()) window.clearInterval(pollId)
+      }, 100)
+      actionListenerCleanup = () => window.clearInterval(pollId)
+      return
+    }
+    case 'add-class': {
+      const targetClass = step.action.targetValue?.trim()
+      const hasClass = (): boolean => {
+        const state = useEditorStore.getState()
+        const selectedBlockId = state.selectedBlockId
+        if (!selectedBlockId) return false
+        const selectedBlock = state.getBlockById(selectedBlockId)
+        if (!selectedBlock) return false
+        if (!targetClass) return selectedBlock.classes.length > 0
+        return selectedBlock.classes.includes(targetClass)
+      }
+
+      if (hasClass()) {
+        maybeAdvance()
+        return
+      }
+
+      actionListenerCleanup = useEditorStore.subscribe(() => {
+        if (hasClass()) maybeAdvance()
+      })
+      return
+    }
+    case 'add-event': {
+      const targetEvent = step.action.targetValue?.trim() || 'onclick'
+      const hasEvent = (): boolean => {
+        const state = useEditorStore.getState()
+        const selectedBlockId = state.selectedBlockId
+
+        if (selectedBlockId) {
+          const selectedBlock = state.getBlockById(selectedBlockId)
+          const eventCode = selectedBlock?.events?.[targetEvent]
+          return typeof eventCode === 'string' && eventCode.trim().length > 0
+        }
+
+        return false
+      }
+
+      if (hasEvent()) {
+        maybeAdvance()
+        return
+      }
+
+      actionListenerCleanup = useEditorStore.subscribe(() => {
+        if (hasEvent()) maybeAdvance()
+      })
+      return
+    }
+    case 'ai-message-sent': {
+      const getUserMessageCount = () => {
+        const messages = useAiStore.getState().messages
+        return messages.filter((message) => message.role === 'user').length
+      }
+
+      const baseline = getUserMessageCount()
+      actionListenerCleanup = useAiStore.subscribe((nextState) => {
+        const nextCount = nextState.messages.filter((message) => message.role === 'user').length
+        if (nextCount > baseline) {
+          maybeAdvance()
+        }
+      })
+      return
+    }
+    case 'ai-message-reply-received': {
+      const getUserMessageCount = () => {
+        const messages = useAiStore.getState().messages
+        return messages.filter((message) => message.role === 'user').length
+      }
+
+      const baseline = getUserMessageCount()
+      let userMessageSent = false
+      let sawLoadingAfterSend = false
+
+      actionListenerCleanup = useAiStore.subscribe((nextState) => {
+        if (!userMessageSent) {
+          const nextCount = nextState.messages.filter((message) => message.role === 'user').length
+          if (nextCount > baseline) {
+            userMessageSent = true
+            if (nextState.isLoading) {
+              sawLoadingAfterSend = true
+            }
+          }
+          return
+        }
+
+        if (nextState.isLoading) {
+          sawLoadingAfterSend = true
+          return
+        }
+
+        if (sawLoadingAfterSend && !nextState.isLoading) {
+          maybeAdvance()
+        }
+      })
+      return
+    }
+    case 'open-theme-editor': {
+      const isThemeEditorOpen = () => !!document.querySelector('.theme-editor-dialog')
+      if (isThemeEditorOpen()) {
+        maybeAdvance()
+        return
+      }
+
+      const intervalId = window.setInterval(() => {
+        if (isThemeEditorOpen()) {
+          maybeAdvance()
+        }
+      }, 200)
+
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'open-event-editor': {
+      const isEventEditorOpen = () => !!document.querySelector('[data-tutorial="event-editor-modal"]')
+      if (isEventEditorOpen()) {
+        maybeAdvance()
+        return
+      }
+
+      const intervalId = window.setInterval(() => {
+        if (isEventEditorOpen()) {
+          maybeAdvance()
+        }
+      }, 200)
+
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'change-theme-color': {
+      const baseline = { ...useProjectStore.getState().settings?.theme?.colors }
+      actionListenerCleanup = useProjectStore.subscribe((nextState) => {
+        const nextColors = nextState.settings?.theme?.colors
+        if (!nextColors) return
+        const keys = Object.keys(nextColors) as (keyof typeof nextColors)[]
+        if (keys.some((key) => nextColors[key] !== baseline[key])) {
+          maybeAdvance()
+        }
+      })
+      return
+    }
+    case 'preset-created': {
+      const baseline = useProjectStore.getState().customPresets.length
+      actionListenerCleanup = useProjectStore.subscribe((nextState) => {
+        if (nextState.customPresets.length > baseline) {
+          maybeAdvance()
+        }
+      })
+      return
+    }
+    case 'open-create-preset-modal': {
+      const isOpen = () => !!document.querySelector('[data-tutorial="create-preset-dialog"]')
+      if (isOpen()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => { if (isOpen()) maybeAdvance() }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'open-ai-css-modal': {
+      const isOpen = () => !!document.querySelector('[data-tutorial="ai-css-assist-dialog"]')
+      if (isOpen()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => { if (isOpen()) maybeAdvance() }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'css-file-changed': {
+      const snapshot = () => {
+        const files = useProjectStore.getState().settings?.theme?.customCssFiles ?? []
+        return files.map((f) => f.css).join('\x00')
+      }
+      const baseline = snapshot()
+      actionListenerCleanup = useProjectStore.subscribe(() => {
+        if (snapshot() !== baseline) maybeAdvance()
+      })
       return
     }
     default:

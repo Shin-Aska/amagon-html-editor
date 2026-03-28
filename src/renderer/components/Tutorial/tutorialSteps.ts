@@ -1,6 +1,11 @@
+import { createElement } from 'react'
+import { Bot, Image, Rocket } from 'lucide-react'
 import type { TutorialStep } from '../../store/tutorialStore'
 import { useEditorStore } from '../../store/editorStore'
 import { OPEN_KEYBOARD_SHORTCUTS_EVENT } from '../../constants/tutorialEvents'
+import { aiAssistanceSteps } from './branches/aiAssistanceTutorial'
+import { publishSteps } from './branches/publishTutorial'
+import { webMediaSearchSteps } from './branches/webMediaSearchTutorial'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')
@@ -65,6 +70,18 @@ export const tutorialSteps: TutorialStep[] = [
     }
   },
   {
+    id: 'canvas-intro',
+    target: '[data-tutorial="canvas"]',
+    title: 'The Canvas',
+    body: "This is the canvas — the main editing area where your page comes to life. You'll drag widgets here, select blocks, and see your design in real time.",
+    placement: 'left',
+    arrowDirection: 'left',
+    action: { type: 'none' },
+    autoAdvance: false,
+    spotlightPadding: 0,
+    onEnter: () => ensureStandardLayout()
+  },
+  {
     id: 'sidebar-pages',
     target: '[data-tutorial="sidebar-tab-pages"]',
     title: 'Pages',
@@ -79,7 +96,7 @@ export const tutorialSteps: TutorialStep[] = [
     id: 'page-context-menu',
     target: '[data-tutorial="page-list-item"]',
     title: 'Page options',
-    body: 'Right-click a page to see options like Page Properties, Move to Folder, and more.',
+    body: 'You can right-click any page to see options like Page Properties, Move to Folder, and more. Try it after the tutorial!',
     placement: 'right',
     arrowDirection: 'right',
     action: { type: 'none' },
@@ -100,8 +117,9 @@ export const tutorialSteps: TutorialStep[] = [
   {
     id: 'drag-widget',
     target: '[data-tutorial="widget-grid"]',
+    additionalTargets: ['[data-tutorial="canvas"]'],
     title: 'Drag a widget to the canvas',
-    body: "Grab any widget from the list and drag it onto the canvas area to the right. If the widget appears on the page, you're good to go!",
+    body: "Grab any widget from the list and drag it onto the highlighted canvas area. If the widget appears on the page, you're good to go!",
     placement: 'right',
     arrowDirection: 'right',
     action: { type: 'drag-to-canvas' },
@@ -224,22 +242,22 @@ export const tutorialSteps: TutorialStep[] = [
         id: 'ai-assistance',
         label: 'AI Assistance',
         description: 'Learn to use AI providers for chat, code generation, and styling',
-        icon: '🤖',
-        steps: []
+        icon: createElement(Bot, { size: 24 }),
+        steps: aiAssistanceSteps
       },
       {
         id: 'web-media-search',
         label: 'Web Media Search',
         description: 'Search and import images from Unsplash, Pexels, and Pixabay',
-        icon: '🖼️',
-        steps: []
+        icon: createElement(Image, { size: 24 }),
+        steps: webMediaSearchSteps
       },
       {
         id: 'publish',
         label: 'Publish Your Site',
         description: 'Deploy to GitHub Pages, Cloudflare, or Neocities',
-        icon: '🚀',
-        steps: []
+        icon: createElement(Rocket, { size: 24 }),
+        steps: publishSteps
       }
     ]
   }
