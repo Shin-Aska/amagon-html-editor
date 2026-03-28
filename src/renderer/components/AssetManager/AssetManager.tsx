@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { getApi } from '../../utils/api'
 import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
 import './AssetManager.css'
@@ -163,9 +164,9 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
     setActiveTab('web')
   }
 
-  return (
+  const overlay = (
     <div className="asset-manager-overlay" onClick={onClose}>
-      <div className="asset-manager-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="asset-manager-modal" data-tutorial="asset-manager-modal" onClick={(e) => e.stopPropagation()}>
         <div className="asset-manager-header">
           <h2>Asset Manager</h2>
           <button className="am-close-btn" onClick={onClose}>&times;</button>
@@ -325,4 +326,10 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
       </div>
     </div>
   )
+
+  if (typeof document === 'undefined') {
+    return overlay
+  }
+
+  return createPortal(overlay, document.body)
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import SpotlightMask from './SpotlightMask'
 import TutorialArrow from './TutorialArrow'
 import TutorialInfoBox from './TutorialInfoBox'
@@ -451,58 +452,60 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
 
-  return (
-    <div className="tutorial-overlay" aria-live="polite" aria-label="Tutorial overlay">
-      {showFullScreenBlocker ? (
-        <div className="tutorial-interaction-blocker" aria-hidden="true" />
-      ) : (
-        <>
-          <div
-            className="tutorial-interaction-guard"
-            aria-hidden="true"
-            style={{ left: 0, top: 0, width: viewportWidth, height: cutoutRect.y }}
-          />
-          <div
-            className="tutorial-interaction-guard"
-            aria-hidden="true"
-            style={{
-              left: 0,
-              top: cutoutRect.y + cutoutRect.height,
-              width: viewportWidth,
-              height: Math.max(0, viewportHeight - (cutoutRect.y + cutoutRect.height))
-            }}
-          />
-          <div
-            className="tutorial-interaction-guard"
-            aria-hidden="true"
-            style={{
-              left: 0,
-              top: cutoutRect.y,
-              width: cutoutRect.x,
-              height: cutoutRect.height
-            }}
-          />
-          <div
-            className="tutorial-interaction-guard"
-            aria-hidden="true"
-            style={{
-              left: cutoutRect.x + cutoutRect.width,
-              top: cutoutRect.y,
-              width: Math.max(0, viewportWidth - (cutoutRect.x + cutoutRect.width)),
-              height: cutoutRect.height
-            }}
-          />
-        </>
-      )}
+  const overlay = (
+    <>
+      <div className="tutorial-overlay" aria-live="polite" aria-label="Tutorial overlay">
+        {showFullScreenBlocker ? (
+          <div className="tutorial-interaction-blocker" aria-hidden="true" />
+        ) : (
+          <>
+            <div
+              className="tutorial-interaction-guard"
+              aria-hidden="true"
+              style={{ left: 0, top: 0, width: viewportWidth, height: cutoutRect.y }}
+            />
+            <div
+              className="tutorial-interaction-guard"
+              aria-hidden="true"
+              style={{
+                left: 0,
+                top: cutoutRect.y + cutoutRect.height,
+                width: viewportWidth,
+                height: Math.max(0, viewportHeight - (cutoutRect.y + cutoutRect.height))
+              }}
+            />
+            <div
+              className="tutorial-interaction-guard"
+              aria-hidden="true"
+              style={{
+                left: 0,
+                top: cutoutRect.y,
+                width: cutoutRect.x,
+                height: cutoutRect.height
+              }}
+            />
+            <div
+              className="tutorial-interaction-guard"
+              aria-hidden="true"
+              style={{
+                left: cutoutRect.x + cutoutRect.width,
+                top: cutoutRect.y,
+                width: Math.max(0, viewportWidth - (cutoutRect.x + cutoutRect.width)),
+                height: cutoutRect.height
+              }}
+            />
+          </>
+        )}
 
-      <SpotlightMask
-        targetRect={targetRect}
-        additionalRects={additionalTargetRects}
-        padding={step.spotlightPadding ?? 8}
-      />
-      <span className="tutorial-sr-only" aria-live="polite" aria-atomic="true">
-        {ariaAnnouncement}
-      </span>
+        <SpotlightMask
+          targetRect={targetRect}
+          additionalRects={additionalTargetRects}
+          padding={step.spotlightPadding ?? 8}
+        />
+        <span className="tutorial-sr-only" aria-live="polite" aria-atomic="true">
+          {ariaAnnouncement}
+        </span>
+      </div>
 
       <TutorialArrow
         direction={step.target ? getArrowDirection(resolvedPlacement) : 'none'}
@@ -523,6 +526,12 @@ export default function TutorialOverlay({ queryElement = defaultQueryElement }: 
         }}
         nextDisabled={step.action.type !== 'none' && !isActionCompleted}
       />
-    </div>
+    </>
   )
+
+  if (typeof document === 'undefined') {
+    return overlay
+  }
+
+  return createPortal(overlay, document.body)
 }
