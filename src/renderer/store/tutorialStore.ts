@@ -28,6 +28,9 @@ export type TutorialActionType =
   | 'asset-manager-assets-increased'
   | 'asset-manager-closed'
   | 'open-publish-modal'
+  | 'publish-provider-selected'
+  | 'publish-validated'
+  | 'publish-action-taken'
   | 'media-search-results-loaded'
   | 'css-file-changed'
   | 'ai-provider-configured'
@@ -500,6 +503,41 @@ function startActionListener(step?: TutorialStep): void {
       if (isOpen()) { maybeAdvance(); return }
       const intervalId = window.setInterval(() => { if (isOpen()) maybeAdvance() }, 200)
       actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'publish-provider-selected': {
+      const isVisible = () => !!document.querySelector('[data-tutorial="publish-credentials"]')
+      if (isVisible()) { maybeAdvance(); return }
+      const intervalId = window.setInterval(() => { if (isVisible()) maybeAdvance() }, 200)
+      actionListenerCleanup = () => window.clearInterval(intervalId)
+      return
+    }
+    case 'publish-validated': {
+      const tryAttach = (): boolean => {
+        const el = document.querySelector('[data-tutorial="publish-validate-btn"]') as HTMLButtonElement | null
+        if (!el) return false
+        const handler = () => { maybeAdvance() }
+        el.addEventListener('click', handler, { once: true })
+        actionListenerCleanup = () => el.removeEventListener('click', handler)
+        return true
+      }
+      if (tryAttach()) return
+      const pollId = window.setInterval(() => { if (tryAttach()) window.clearInterval(pollId) }, 100)
+      actionListenerCleanup = () => window.clearInterval(pollId)
+      return
+    }
+    case 'publish-action-taken': {
+      const tryAttach = (): boolean => {
+        const el = document.querySelector('[data-tutorial="publish-action-btn"]') as HTMLButtonElement | null
+        if (!el) return false
+        const handler = () => { maybeAdvance() }
+        el.addEventListener('click', handler, { once: true })
+        actionListenerCleanup = () => el.removeEventListener('click', handler)
+        return true
+      }
+      if (tryAttach()) return
+      const pollId = window.setInterval(() => { if (tryAttach()) window.clearInterval(pollId) }, 100)
+      actionListenerCleanup = () => window.clearInterval(pollId)
       return
     }
     case 'media-search-results-loaded': {

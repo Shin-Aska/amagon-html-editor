@@ -41,8 +41,8 @@ export const publishSteps: TutorialStep[] = [
     body: "Select where you'd like to deploy your site — GitHub Pages, Cloudflare Pages, or Neocities.",
     placement: 'left',
     arrowDirection: 'left',
-    action: { type: 'none' },
-    autoAdvance: false
+    action: { type: 'publish-provider-selected' },
+    autoAdvance: true
   },
   {
     id: 'publish-credentials',
@@ -51,8 +51,8 @@ export const publishSteps: TutorialStep[] = [
     body: 'Fill in the required credentials for your chosen provider. These are stored securely on your machine.',
     placement: 'left',
     arrowDirection: 'left',
-    action: { type: 'none' },
-    autoAdvance: false
+    action: { type: 'publish-validated' },
+    autoAdvance: true
   },
   {
     id: 'publish-validate',
@@ -61,8 +61,8 @@ export const publishSteps: TutorialStep[] = [
     body: 'Click <strong>Validate</strong> to verify your credentials, then click <strong>Publish</strong> to deploy your site live.',
     placement: 'left',
     arrowDirection: 'left',
-    action: { type: 'none' },
-    autoAdvance: false
+    action: { type: 'publish-action-taken' },
+    autoAdvance: true
   },
   {
     id: 'completion',
