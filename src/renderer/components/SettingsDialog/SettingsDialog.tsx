@@ -26,6 +26,9 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout)
   const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning)
   const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning)
+  const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled)
+  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
+  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
 
   const aiConfig = useAiStore((s) => s.config)
   const providerModels = useAiStore((s) => s.providerModels)
@@ -253,6 +256,39 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                         />
                         <span>{showTabChildSelectionWarning ? 'On' : 'Off'}</span>
                       </label>
+                    </div>
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="settings-label">
+                      <span className="settings-label-title">Show Tutorial on Startup</span>
+                      <span className="settings-label-desc">Show the quick onboarding prompt after a project is loaded</span>
+                    </div>
+                    <div className="settings-control">
+                      <label className="settings-toggle">
+                        <input
+                          type="checkbox"
+                          checked={tutorialEnabled}
+                          onChange={(e) => setTutorialEnabled(e.target.checked)}
+                        />
+                        <span>{tutorialEnabled ? 'On' : 'Off'}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="settings-label">
+                      <span className="settings-label-title">Tutorial Progress</span>
+                      <span className="settings-label-desc">Reset progress so the tutorial prompt appears again on next project load</span>
+                    </div>
+                    <div className="settings-control">
+                      <button
+                        type="button"
+                        className="settings-btn-secondary"
+                        onClick={() => setTutorialCompleted(false)}
+                      >
+                        Restart Tutorial
+                      </button>
                     </div>
                   </div>
                 </div>

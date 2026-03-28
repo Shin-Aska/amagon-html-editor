@@ -21,6 +21,8 @@ import Toast from './components/Toast/Toast'
 import { useEditorStore } from './store/editorStore'
 import { useProjectStore } from './store/projectStore'
 import { useToastStore } from './store/toastStore'
+import { useAppSettingsStore } from './store/appSettingsStore'
+import { useTutorialStore } from './store/tutorialStore'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import type { Block } from './store/types'
 import { createBlock } from './store/types'
@@ -28,6 +30,9 @@ import { buildDefaultBlockProps, componentRegistry } from './registry/ComponentR
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
 import { getApi } from './utils/api'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
+import WelcomeTourDialog from './components/Tutorial/WelcomeTourDialog'
+import TutorialOverlay from './components/Tutorial/TutorialOverlay'
+import { tutorialSteps } from './components/Tutorial/tutorialSteps'
 
 // Lazy load heavy components for performance
 const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'))
@@ -69,6 +74,7 @@ function App(): JSX.Element {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showThemeEditor, setShowThemeEditor] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [showWelcomeTour, setShowWelcomeTour] = useState(false)
 
   const addBlock = useEditorStore((s) => s.addBlock)
   const selectBlock = useEditorStore((s) => s.selectBlock)
@@ -82,8 +88,19 @@ function App(): JSX.Element {
   const userBlocks = useProjectStore((s) => s.userBlocks)
   const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded)
   const currentPageId = useProjectStore((s) => s.currentPageId)
+  const settingsLoaded = useAppSettingsStore((s) => s.loaded)
+  const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled)
+  const tutorialCompleted = useAppSettingsStore((s) => s.tutorialCompleted)
+  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
+  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
+  const startTutorial = useTutorialStore((s) => s.startTutorial)
+  const isTutorialActive = useTutorialStore((s) => s.isActive)
+  const syncTutorialEnabled = useTutorialStore((s) => s.setTutorialEnabled)
+  const syncTutorialCompleted = useTutorialStore((s) => s.setTutorialCompleted)
 
   const prevPageIdRef = useRef<string | null>(null)
+  const prevProjectLoadedRef = useRef(false)
+  const shouldEvaluateWelcomeRef = useRef(true)
 
   useEffect(() => {
     if (!isProjectLoaded) {
@@ -110,6 +127,49 @@ function App(): JSX.Element {
 
     prevPageIdRef.current = nextPageId
   }, [currentPageId, isProjectLoaded])
+
+  useEffect(() => {
+    syncTutorialEnabled(tutorialEnabled)
+  }, [syncTutorialEnabled, tutorialEnabled])
+
+  useEffect(() => {
+    syncTutorialCompleted(tutorialCompleted)
+  }, [syncTutorialCompleted, tutorialCompleted])
+
+  useEffect(() => {
+    if (!isProjectLoaded) {
+      shouldEvaluateWelcomeRef.current = true
+      setShowWelcomeTour(false)
+    } else if (!prevProjectLoadedRef.current && isProjectLoaded) {
+      shouldEvaluateWelcomeRef.current = true
+    }
+
+    prevProjectLoadedRef.current = isProjectLoaded
+  }, [isProjectLoaded])
+
+  useEffect(() => {
+    if (!isProjectLoaded || !settingsLoaded || !shouldEvaluateWelcomeRef.current) return
+
+    shouldEvaluateWelcomeRef.current = false
+    if (tutorialEnabled && !tutorialCompleted) {
+      setShowWelcomeTour(true)
+    }
+  }, [isProjectLoaded, settingsLoaded, tutorialEnabled, tutorialCompleted])
+
+  const handleStartWelcomeTour = useCallback(() => {
+    setShowWelcomeTour(false)
+    startTutorial(tutorialSteps)
+  }, [startTutorial])
+
+  const handleSkipWelcomeTour = useCallback(() => {
+    setShowWelcomeTour(false)
+  }, [])
+
+  const handleDontShowTourAgain = useCallback(() => {
+    setTutorialCompleted(true)
+    setTutorialEnabled(false)
+    setShowWelcomeTour(false)
+  }, [setTutorialCompleted, setTutorialEnabled])
 
   // Sync menu state with the main process based on project load status
   useEffect(() => {
@@ -576,6 +636,15 @@ function App(): JSX.Element {
       {renderEditorContent()}
 
       <Toast />
+
+      <WelcomeTourDialog
+        open={showWelcomeTour}
+        onStartTour={handleStartWelcomeTour}
+        onSkipForNow={handleSkipWelcomeTour}
+        onDontShowAgain={handleDontShowTourAgain}
+      />
+
+      {isTutorialActive && <TutorialOverlay />}
 
       {commandPaletteOpen && (
         <CommandPalette

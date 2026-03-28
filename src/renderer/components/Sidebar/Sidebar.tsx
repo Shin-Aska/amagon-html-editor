@@ -547,18 +547,21 @@ function Sidebar(): JSX.Element {
         <div
           className={`sidebar-tab ${activeTab === 'pages' ? 'active' : ''}`}
           onClick={() => setActiveTab('pages')}
+          data-tutorial="sidebar-tab-pages"
         >
           Pages
         </div>
         <div
           className={`sidebar-tab ${activeTab === 'widgets' ? 'active' : ''}`}
           onClick={() => setActiveTab('widgets')}
+          data-tutorial="sidebar-tab-widgets"
         >
           Widgets
         </div>
         <div
           className={`sidebar-tab ${activeTab === 'layers' ? 'active' : ''}`}
           onClick={() => setActiveTab('layers')}
+          data-tutorial="sidebar-tab-layers"
         >
           Layers
         </div>
@@ -692,17 +695,19 @@ function Sidebar(): JSX.Element {
                 </button>
               )}
             </div>
-            {allCategories.map((category) => (
-              <WidgetCategory
-                key={category}
-                title={category}
-                widgets={filteredWidgetsByCategory[category] || []}
-                onWidgetContextMenu={handleWidgetContextMenu}
-              />
-            ))}
-            {widgetSearch && allCategories.every((c) => (filteredWidgetsByCategory[c] || []).length === 0) && (
-              <div className="widget-search-empty">No widgets match "{widgetSearch}"</div>
-            )}
+            <div data-tutorial="widget-grid">
+              {allCategories.map((category) => (
+                <WidgetCategory
+                  key={category}
+                  title={category}
+                  widgets={filteredWidgetsByCategory[category] || []}
+                  onWidgetContextMenu={handleWidgetContextMenu}
+                />
+              ))}
+              {widgetSearch && allCategories.every((c) => (filteredWidgetsByCategory[c] || []).length === 0) && (
+                <div className="widget-search-empty">No widgets match "{widgetSearch}"</div>
+              )}
+            </div>
           </>
         )}
         {activeTab === 'layers' && <BlockTree />}

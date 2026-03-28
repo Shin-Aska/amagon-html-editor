@@ -424,6 +424,7 @@ function Canvas(): JSX.Element {
       )}
       <div
         className="canvas-viewport"
+        data-tutorial="canvas"
         style={{
           width: viewportWidth,
           maxWidth: viewportWidth,
