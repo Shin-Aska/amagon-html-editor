@@ -151,3 +151,31 @@ Now produce the plan.
 - Every plan step has an assigned agent, recorded outcome, and validation notes.
 - Code/tests/docs are merged or staged per plan.
 - Outstanding risks are documented for the next planning cycle.
+
+---
+
+## Final Step: Update Project Documentation
+
+After all phases are complete, update the living documentation to reflect what changed.
+
+**Files to update:**
+- `GUIDELINES.md` — project structure, IPC channels, Zustand stores, data models, key files
+- `.aiassistant/rules/project-context.md` — project structure, key new systems
+
+**What to check and update in each file:**
+
+1. **Project structure tree** — add/remove/rename any `src/` directories or key files introduced in this plan
+2. **Zustand stores table** — add any new stores; update responsibilities if existing stores changed significantly
+3. **IPC channels table** — add any new namespaces or channels; update existing entries if signatures changed
+4. **Data models** — add new interfaces or extend existing ones documented there (e.g. new fields on project file schema)
+5. **Key systems sections** — if a new major subsystem was introduced, add a dedicated section explaining its architecture (similar to the Publish-to-Web or Tutorial sections)
+6. **Key Files to Read First** — add any new entry-point files that future AI assistants or developers should read
+7. **Last updated date** — bump to today's date in `GUIDELINES.md`
+
+**Agent assignment:** Assign this step to **Claude Haiku 4.5** unless the changes are architectural (new subsystem, significant restructuring) — in that case use **Claude Sonnet 4.6**.
+
+**Handoff prompt template:**
+```
+[Active settings: PASTE FLAGS]
+Review the changes made in this plan and update GUIDELINES.md and .aiassistant/rules/project-context.md to reflect them. Check: project structure tree, Zustand stores, IPC channels, data models, new system sections, key files list, and last-updated date. Only update what actually changed.
+```
