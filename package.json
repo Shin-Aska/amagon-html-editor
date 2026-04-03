@@ -26,16 +26,16 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@monaco-editor/react": "^4.7.0",
+    "fflate": "^0.8.2",
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.7.0",
-    "monaco-editor": "^0.55.1",
+    "monaco-editor": "^0.53.0",
     "parse5": "^8.0.0",
     "prettier": "^3.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-resizable-panels": "^4.9.0",
-    "zustand": "^5.0.12",
-    "fflate": "^0.8.2"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
