@@ -150,7 +150,7 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
   const mediaCredentials = await loadAllMediaProviderCredentials()
   const publishProviders = await listConfiguredProviders()
   const publishRecords = await Promise.all(
-    publishProviders.map(async (providerId) => {
+    publishProviders.map(async (providerId): Promise<CredentialRecord | null> => {
       const definition = definitions.find((item) => item.id === `publisher:${providerId}`)
       if (!definition) return null
 
@@ -173,10 +173,10 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
   )
 
   const aiRecords: CredentialRecord[] = aiCredentials
-    .map((credential) => {
+    .map((credential): CredentialRecord | null => {
       const definition = definitions.find((item) => item.id === `ai:${credential.provider}`)
       if (!definition) return null
-      const values = { apiKey: credential.maskedKey }
+      const values: PublishCredentials = { apiKey: credential.maskedKey }
       return {
         ...definition,
         source: definition.category,
@@ -189,10 +189,10 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
     .filter((record): record is CredentialRecord => record !== null)
 
   const mediaRecords: CredentialRecord[] = mediaCredentials
-    .map((credential) => {
+    .map((credential): CredentialRecord | null => {
       const definition = definitions.find((item) => item.id === `multimedia:${credential.provider}`)
       if (!definition) return null
-      const values = { apiKey: credential.maskedKey }
+      const values: PublishCredentials = { apiKey: credential.maskedKey }
       return {
         ...definition,
         source: definition.category,
