@@ -67,6 +67,19 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
 // Re-export for the IPC handler to use as a baseline
 export { FALLBACK_MODELS as PROVIDER_MODELS }
 
+function getDefaultModelForProvider(provider: AiProvider, preferredModel?: string): string {
+    const providerModels = FALLBACK_MODELS[provider]
+    if (preferredModel && (provider === 'ollama' || providerModels.includes(preferredModel))) {
+        return preferredModel
+    }
+    return providerModels[0] ?? ''
+}
+
+function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>): AiProvider | null {
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral']
+    return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
+}
+
 // ---------------------------------------------------------------------------
 // Config persistence (JSON file in userData)
 // ---------------------------------------------------------------------------
@@ -164,20 +177,37 @@ export async function loadAllProviderCredentials(): Promise<{ provider: AiProvid
 export async function clearApiKeyForProvider(provider: AiProvider): Promise<void> {
     const { persisted, encryptedApiKeys } = await loadPersistedRaw()
     const updatedKeys = { ...encryptedApiKeys }
+    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider
     delete updatedKeys[provider]
+    const nextProvider = currentProvider === provider
+        ? (getFirstConfiguredAiProvider(updatedKeys) ?? DEFAULT_CONFIG.provider)
+        : currentProvider
+    const nextModel = nextProvider === currentProvider
+        ? (persisted.model ?? DEFAULT_CONFIG.model)
+        : getDefaultModelForProvider(nextProvider)
 
     await fs.writeFile(getConfigPath(), JSON.stringify({
-        provider: persisted.provider ?? DEFAULT_CONFIG.provider,
-        model: persisted.model ?? DEFAULT_CONFIG.model,
+        provider: nextProvider,
+        model: nextModel,
         encryptedApiKeys: updatedKeys,
         ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
     }, null, 2), 'utf-8')
 }
 
-/** Saves or clears the API key for a specific provider without changing the active provider/model. */
+/**
+ * Saves or clears a provider API key and promotes that provider when the current
+ * active provider has no key yet (or when editing the active provider itself).
+ */
 export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string): Promise<void> {
     const { persisted, encryptedApiKeys } = await loadPersistedRaw()
     const updatedKeys = { ...encryptedApiKeys }
+    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider
+    const currentModel = persisted.model ?? DEFAULT_CONFIG.model
+    const shouldPromoteProvider = Boolean(apiKey) && (!updatedKeys[currentProvider] || currentProvider === provider)
+    const nextProvider = shouldPromoteProvider ? provider : currentProvider
+    const nextModel = shouldPromoteProvider
+        ? getDefaultModelForProvider(nextProvider, currentProvider === provider ? currentModel : undefined)
+        : currentModel
 
     if (apiKey) {
         updatedKeys[provider] = encryptApiKey(apiKey)
@@ -186,8 +216,8 @@ export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string
     }
 
     await fs.writeFile(getConfigPath(), JSON.stringify({
-        provider: persisted.provider ?? DEFAULT_CONFIG.provider,
-        model: persisted.model ?? DEFAULT_CONFIG.model,
+        provider: nextProvider,
+        model: nextModel,
         encryptedApiKeys: updatedKeys,
         ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
     }, null, 2), 'utf-8')

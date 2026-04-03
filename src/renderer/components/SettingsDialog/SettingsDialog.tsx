@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { X, Settings, Image as ImageIcon, Sparkles, KeyRound, Monitor, Moon, Sun, LayoutPanelLeft } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useAppSettingsStore } from '../../store/appSettingsStore'
@@ -55,7 +55,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   const [modalCredential, setModalCredential] = useState<CredentialRecordInfo | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const refreshCredentials = async (): Promise<void> => {
+  const refreshCredentials = useCallback(async (): Promise<void> => {
     setCredentialLoading(true)
     try {
       const api = getApi()
@@ -67,25 +67,29 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
     } finally {
       setCredentialLoading(false)
     }
-  }
+  }, [])
+
+  const refreshFeatureConfigs = useCallback(async (): Promise<void> => {
+    const api = getApi()
+    await loadAiConfig()
+    await loadAiModels()
+
+    const result = await api.mediaSearch.getConfig()
+    if (result.success && result.config) {
+      setMediaProvider(result.config.provider || 'unsplash')
+    }
+  }, [loadAiConfig, loadAiModels])
+
+  const refreshCredentialsAndFeatureConfigs = useCallback(async (): Promise<void> => {
+    await Promise.all([refreshCredentials(), refreshFeatureConfigs()])
+  }, [refreshCredentials, refreshFeatureConfigs])
 
   useEffect(() => {
     if (open) {
       setActiveTab(initialTab)
-      loadAiConfig().then(() => {
-        loadAiModels()
-      })
-
-      const api = getApi()
-      api.mediaSearch.getConfig().then((result) => {
-        if (result.success && result.config) {
-          setMediaProvider(result.config.provider || 'unsplash')
-        }
-      })
-
-      void refreshCredentials()
+      void refreshCredentialsAndFeatureConfigs()
     }
-  }, [open, initialTab, loadAiConfig, loadAiModels])
+  }, [open, initialTab, refreshCredentialsAndFeatureConfigs])
 
   useEffect(() => {
     if (aiConfig) {
@@ -128,7 +132,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
       return
     }
     dispatchAiAvailabilityChanged()
-    await refreshCredentials()
+    await refreshCredentialsAndFeatureConfigs()
     setConfirmDeleteId(null)
   }
 
@@ -487,7 +491,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
         credential={modalCredential}
         definitions={definitions}
         onClose={() => setModalOpen(false)}
-        onSaved={refreshCredentials}
+        onSaved={refreshCredentialsAndFeatureConfigs}
       />
     </>
   )

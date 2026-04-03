@@ -191,9 +191,18 @@ export async function loadApiKeyForProvider(provider: MediaSearchProvider): Prom
   return encrypted ? decryptApiKey(encrypted) : ''
 }
 
+function getFirstConfiguredMediaProvider(
+  encryptedApiKeys: Partial<Record<MediaSearchProvider, string>>
+): MediaSearchProvider | null {
+  const providers: MediaSearchProvider[] = ['unsplash', 'pexels', 'pixabay']
+  return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
+}
+
 export async function saveApiKeyForProvider(provider: MediaSearchProvider, apiKey: string): Promise<void> {
   const { persisted, encryptedApiKeys } = await loadPersistedConfig()
   const updatedKeys = { ...encryptedApiKeys }
+  const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider
+  const shouldPromoteProvider = Boolean(apiKey) && (!updatedKeys[currentProvider] || currentProvider === provider)
 
   if (apiKey) {
     updatedKeys[provider] = encryptApiKey(apiKey)
@@ -201,9 +210,16 @@ export async function saveApiKeyForProvider(provider: MediaSearchProvider, apiKe
     delete updatedKeys[provider]
   }
 
+  const nextProvider = shouldPromoteProvider
+    ? provider
+    : getFirstConfiguredMediaProvider(updatedKeys) ?? currentProvider
+  const nextEnabled = Object.keys(updatedKeys).length > 0
+    ? persisted.enabled || shouldPromoteProvider
+    : false
+
   await fs.writeFile(getConfigPath(), JSON.stringify({
-    enabled: persisted.enabled,
-    provider: persisted.provider ?? provider,
+    enabled: nextEnabled,
+    provider: nextProvider,
     encryptedApiKeys: updatedKeys
   }, null, 2), 'utf-8')
 }
