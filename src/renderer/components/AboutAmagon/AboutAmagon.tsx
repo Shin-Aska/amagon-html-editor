@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { X, Info, Github, Heart, Star } from 'lucide-react'
+import { X, Info, ExternalLink, Heart, Star } from 'lucide-react'
 import appLogo from '../../../../assets/app.png'
 import './AboutAmagon.css'
 
@@ -53,7 +53,7 @@ export default function AboutAmagon({ isOpen, onClose }: AboutAmagonProps): JSX.
                     <div className="about-author">
                         <h4>Maintained by Richard Orilla</h4>
                         <a href="https://github.com/Shin-Aska" target="_blank" rel="noopener noreferrer" className="about-link">
-                            <Github size={16} /> GitHub Profile
+                            <ExternalLink size={16} /> GitHub Profile
                         </a>
                     </div>
 

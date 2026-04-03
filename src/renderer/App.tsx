@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useRef, useEffect, lazy, Suspense } from 'react'
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import {
   DndContext,
   DragOverlay,
@@ -593,20 +593,31 @@ function App(): JSX.Element {
             onOpenPublish={() => setShowPublish(true)}
             onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
           />
-          <PanelGroup id="html-editor-layout" autoSaveId="html-editor-layout" direction="horizontal" className="editor-layout" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <PanelGroup
+            id="html-editor-layout"
+            orientation="horizontal"
+            className="editor-layout"
+            style={{ display: 'flex', flex: 1, overflow: 'hidden' }}
+          >
             {showSidebar && (
               <>
-                <Panel defaultSize={20} minSize={15} maxSize={40} className="panel panel-left" id="panel-left" order={1}>
+                <Panel
+                  defaultSize="20%"
+                  minSize="15%"
+                  maxSize="40%"
+                  className="panel panel-left"
+                  id="panel-left"
+                >
                   <Sidebar />
                 </Panel>
                 <PanelResizeHandle className="panel-resize-handle" />
               </>
             )}
 
-            <Panel className="panel panel-center" id="panel-center" order={2}>
-              <PanelGroup id="html-editor-center" autoSaveId="html-editor-center" direction="vertical">
+            <Panel className="panel panel-center" id="panel-center" defaultSize="55%">
+              <PanelGroup id="html-editor-center" orientation="vertical">
                 {showCanvas && (
-                  <Panel className="canvas-area" id="panel-canvas" order={1}>
+                  <Panel className="canvas-area" id="panel-canvas" defaultSize="70%">
                     <Canvas />
                     <DragOverlayManager onDropTargetChange={setDropHint} />
                   </Panel>
@@ -617,7 +628,13 @@ function App(): JSX.Element {
                 )}
 
                 {showCodeEditor && (
-                  <Panel defaultSize={30} minSize={10} maxSize={80} className="code-editor-area" id="panel-code" order={2}>
+                  <Panel
+                    defaultSize="30%"
+                    minSize="10%"
+                    maxSize="80%"
+                    className="code-editor-area"
+                    id="panel-code"
+                  >
                     <Suspense fallback={<div style={{ padding: 20 }}>Loading editor...</div>}>
                       <CodeEditor />
                     </Suspense>
@@ -629,7 +646,13 @@ function App(): JSX.Element {
             {showInspector && (
               <>
                 <PanelResizeHandle className="panel-resize-handle" />
-                <Panel defaultSize={25} minSize={20} maxSize={45} className="panel panel-right" id="panel-right" order={3}>
+                <Panel
+                  defaultSize="25%"
+                  minSize="20%"
+                  maxSize="45%"
+                  className="panel panel-right"
+                  id="panel-right"
+                >
                   <Inspector />
                 </Panel>
               </>
