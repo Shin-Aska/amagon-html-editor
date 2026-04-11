@@ -31,7 +31,7 @@ src/
 │   ├── components/       # AiAssistant, Canvas, CodeEditor, Inspector, ThemeEditor,
 │   │                     # PublishDialog, Tutorial (interactive onboarding overlay)
 │   ├── hooks/            # Custom React hooks
-│   ├── registry/         # Block definitions (50+ types)
+│   ├── registry/         # Block definitions (63 types across 7 categories)
 │   ├── store/            # Zustand stores (EditorStore, ProjectStore, AiStore,
 │   │                     # TutorialStore, AppSettingsStore, ToastStore)
 │   ├── styles/           # CSS styles

@@ -703,7 +703,10 @@ function getFrameworkHead(framework: FrameworkChoice, includeJs: boolean): strin
         : `    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">`
     case 'tailwind':
-      return includeJs ? `    <script src="https://cdn.tailwindcss.com"><\/script>` : ''
+      return includeJs
+        ? `    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"><\/script>`
+        : `    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">`
     case 'vanilla':
     default:
       return ''

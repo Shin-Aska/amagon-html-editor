@@ -36,7 +36,35 @@ import {
   AppWindow,
   FileCode,
   Globe,
-  Newspaper
+  Newspaper,
+  Bell,
+  Badge,
+  ChartColumn,
+  CircleDot,
+  Clock,
+  FileInput,
+  Footprints,
+  Images,
+  ListOrdered,
+  Map,
+  PanelLeft,
+  Radio,
+  SlidersHorizontal,
+  Table,
+  TableProperties,
+  Timer,
+  Users,
+  Workflow,
+  Building2,
+  Mail,
+  Cookie,
+  ArrowUp,
+  SquareChartGantt,
+  Rocket,
+  Circle,
+  Search,
+  Wrench,
+  Trophy
 } from 'lucide-react'
 
 function normalizeLucideKey(value: string): string {
@@ -80,7 +108,12 @@ const genericLucideIcons: Record<string, LucideIcon> = {
   appwindow: AppWindow,
   filecode: FileCode,
   globe: Globe,
-  newspaper: Newspaper
+  newspaper: Newspaper,
+  rocket: Rocket,
+  circle: Circle,
+  search: Search,
+  wrench: Wrench,
+  trophy: Trophy
 }
 
 const blockAliasIcons: Record<string, LucideIcon> = {
@@ -114,6 +147,39 @@ const blockAliasIcons: Record<string, LucideIcon> = {
   'page-list': Newspaper,
   'raw-html': FileCode,
   iframe: Globe,
+  alert: Bell,
+  badge: Badge,
+  progress: ChartColumn,
+  spinner: Timer,
+  radio: Radio,
+  range: SlidersHorizontal,
+  'file-input': FileInput,
+  breadcrumb: Footprints,
+  pagination: ListOrdered,
+  table: Table,
+  dropdown: ChevronDown,
+  offcanvas: PanelLeft,
+  card: CreditCard,
+  'stats-section': ChartColumn,
+  'team-grid': Users,
+  gallery: Images,
+  timeline: Clock,
+  'logo-cloud': Building2,
+  'process-steps': Workflow,
+  newsletter: Mail,
+  'comparison-table': TableProperties,
+  'contact-card': Badge,
+  'social-links': Link,
+  'cookie-banner': Cookie,
+  'back-to-top': ArrowUp,
+  countdown: Timer,
+  'before-after': SquareChartGantt,
+  'map-embed': Map,
+  spacer: ChevronsUpDown,
+  list: List,
+  link: Link,
+  page: Newspaper,
+  item: CircleDot,
   'user-block': Puzzle,
   default: BoxSelect
 }
@@ -150,7 +216,12 @@ export const lucidePickerIcons = [
   'chevrondown',
   'checksquare',
   'list',
-  'quote'
+  'quote',
+  'rocket',
+  'circle',
+  'search',
+  'wrench',
+  'trophy'
 ]
 
 export function getLucideIconComponent(name: string): LucideIcon | null {

@@ -328,6 +328,221 @@ describe('blockToHtml', () => {
     const lines = html.split('\n')
     expect(lines.length).toBeGreaterThanOrEqual(3)
   })
+
+  it('renders phase 2 medium blocks with composite Bootstrap markup', () => {
+    const blocks: Block[] = [
+      createBlock('table', {
+        props: {
+          headers: ['Name', 'Role'],
+          rows: [['Jane', 'Admin'], ['John', 'Editor']],
+          striped: true,
+          bordered: true,
+          hover: true,
+          responsive: true,
+          size: 'sm',
+          variant: 'dark'
+        }
+      }),
+      createBlock('dropdown', {
+        props: {
+          label: 'Actions',
+          variant: 'secondary',
+          items: [
+            { label: 'Edit', href: '#edit', divider: false, disabled: false },
+            { label: '', href: '#', divider: true, disabled: false },
+            { label: 'Delete', href: '#delete', divider: false, disabled: true }
+          ],
+          direction: 'down',
+          split: true
+        }
+      }),
+      createBlock('offcanvas', {
+        props: { id: 'settings-panel', title: 'Settings', placement: 'end', backdrop: false, scroll: true },
+        children: [createBlock('paragraph', { props: { text: 'Panel content' } })]
+      }),
+      createBlock('card', {
+        props: {
+          title: 'Card title',
+          subtitle: 'Card subtitle',
+          text: 'Card body copy',
+          imageUrl: 'https://example.com/card.jpg',
+          imagePosition: 'top',
+          headerText: 'Header',
+          footerText: 'Footer',
+          variant: 'primary',
+          outline: false
+        }
+      })
+    ]
+
+    const html = blockToHtml(blocks, { includeDataAttributes: false, framework: 'bootstrap-5' })
+
+    expect(html).toContain('<table class="table table-striped table-bordered table-hover table-sm table-dark"')
+    expect(html).toContain('<thead>')
+    expect(html).toContain('<tbody>')
+    expect(html).toContain('data-amagon-dropdown="true"')
+    expect(html).toContain('dropdown-menu')
+    expect(html).toContain('data-bs-toggle="offcanvas"')
+    expect(html).toContain('offcanvas offcanvas-end')
+    expect(html).toContain('data-amagon-card="true"')
+    expect(html).toContain('card-header')
+    expect(html).toContain('card-body')
+    expect(html).toContain('card-footer')
+  })
+
+  it('renders phase 2 medium blocks with composite Tailwind markup', () => {
+    const blocks: Block[] = [
+      createBlock('dropdown', {
+        props: {
+          label: 'Menu',
+          variant: 'primary',
+          items: [{ label: 'Open', href: '#', divider: false, disabled: false }],
+          direction: 'end',
+          split: false
+        }
+      }),
+      createBlock('offcanvas', {
+        props: { id: 'tw-panel', title: 'Tailwind Panel', placement: 'start', backdrop: true, scroll: false },
+        children: [createBlock('paragraph', { props: { text: 'Tailwind body' } })]
+      }),
+      createBlock('card', {
+        props: {
+          title: 'Tailwind card',
+          subtitle: 'Details',
+          text: 'Tailwind text',
+          imageUrl: 'https://example.com/tw-card.jpg',
+          imagePosition: 'overlay',
+          variant: 'dark',
+          outline: false
+        }
+      })
+    ]
+
+    const html = blockToHtml(blocks, { includeDataAttributes: false, framework: 'tailwind' })
+
+    expect(html).toContain('data-tw-dropdown-menu')
+    expect(html).toContain('data-tw-offcanvas-panel="true"')
+    expect(html).toContain('data-amagon-card="true"')
+    expect(html).toContain('data-card-overlay="true"')
+  })
+
+  it('renders phase 3 enhanced media/form/interactive blocks', () => {
+    const blocks: Block[] = [
+      createBlock('image', {
+        props: {
+          src: 'hero.jpg',
+          alt: 'Hero',
+          caption: 'Hero caption',
+          captionPosition: 'overlay-bottom',
+          objectFit: 'contain',
+          aspectRatio: '16:9',
+          lazyLoad: true,
+          lightbox: true
+        }
+      }),
+      createBlock('video', {
+        props: {
+          src: 'clip.mp4',
+          controls: true,
+          autoplay: true,
+          loop: true,
+          muted: true,
+          preload: 'metadata',
+          poster: 'poster.jpg',
+          aspectRatio: '21:9'
+        }
+      }),
+      createBlock('button', {
+        props: {
+          text: 'Submit',
+          variant: 'btn-primary',
+          iconLeft: 'lucide:check',
+          outline: true,
+          block: true,
+          loading: true,
+          loadingText: 'Saving...'
+        },
+        classes: ['btn']
+      }),
+      createBlock('input', {
+        props: {
+          type: 'text',
+          label: 'Email',
+          prepend: '@',
+          append: '.com',
+          floatingLabel: true,
+          validationState: 'invalid',
+          validationMessage: 'Invalid email',
+          helpText: 'Use your work email'
+        },
+        classes: ['form-control']
+      }),
+      createBlock('checkbox', {
+        props: { label: 'Enable beta', switch: true, inline: true },
+        classes: ['form-check-input']
+      }),
+      createBlock('select', {
+        props: {
+          name: 'country',
+          multiple: true,
+          size: 5,
+          optgroups: true,
+          items: [
+            {
+              group: 'Asia',
+              options: [
+                { label: 'Japan', value: 'jp' },
+                { label: 'Philippines', value: 'ph' }
+              ]
+            }
+          ]
+        },
+        classes: ['form-select']
+      }),
+      createBlock('code-block', {
+        props: {
+          code: 'const x = 1;',
+          language: 'javascript',
+          showLineNumbers: true,
+          filename: 'main.ts',
+          copyButton: true
+        }
+      }),
+      createBlock('icon', {
+        props: { iconClass: 'lucide:loader', size: 'xl', color: '#ff9900', spin: true, fixedWidth: true }
+      }),
+      createBlock('iframe', {
+        props: {
+          src: 'https://example.com/embed',
+          title: 'Embed',
+          aspectRatio: '4:3',
+          allowFullscreen: true,
+          lazy: true
+        }
+      })
+    ]
+
+    const html = blockToHtml(blocks, { framework: 'bootstrap-5', includeDataAttributes: false })
+
+    expect(html).toContain('<figure')
+    expect(html).toContain('<figcaption')
+    expect(html).toContain('data-amagon-lightbox="true"')
+    expect(html).toContain('loading="lazy"')
+    expect(html).toContain('data-amagon-media-ratio="21:9"')
+    expect(html).toContain('poster="poster.jpg"')
+    expect(html).toContain('data-amagon-button-loading="true"')
+    expect(html).toContain('input-group')
+    expect(html).toContain('form-floating')
+    expect(html).toContain('invalid-feedback')
+    expect(html).toContain('form-switch')
+    expect(html).toContain('<optgroup label="Asia">')
+    expect(html).toContain('data-amagon-code-block="true"')
+    expect(html).toContain('data-code-show-line-numbers="true"')
+    expect(html).toContain('fa-spin')
+    expect(html).toContain('fa-fw')
+    expect(html).toContain('data-amagon-embed-ratio="4:3"')
+    expect(html).toContain('allowfullscreen')
+  })
 })
 
 describe('pageToHtml', () => {
@@ -542,5 +757,274 @@ describe('event actions', () => {
     const html = blockToHtml([block])
     expect(html).not.toContain('onclick=')
     expect(html).not.toContain('onchange=')
+  })
+})
+
+describe('Phase 4 — layout and component block enhancements', () => {
+  it('renders heading with anchorId as id attribute', () => {
+    const block = createBlock('heading', { props: { text: 'About Us', level: 2, anchorId: 'about-us' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('id="about-us"')
+    expect(html).toContain('About Us')
+  })
+
+  it('renders heading with decorative underline class', () => {
+    const block = createBlock('heading', { props: { text: 'Title', level: 1, decorative: 'underline' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('amagon-heading-underline')
+  })
+
+  it('renders heading with gradient-underline class', () => {
+    const block = createBlock('heading', { props: { text: 'Title', level: 2, decorative: 'gradient-underline' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('amagon-heading-gradient-underline')
+  })
+
+  it('renders paragraph with dropCap attribute', () => {
+    const block = createBlock('paragraph', { props: { text: 'Once upon a time.', dropCap: true } })
+    const html = blockToHtml([block])
+    expect(html).toContain('data-drop-cap="true"')
+    expect(html).toContain('amagon-drop-cap')
+  })
+
+  it('renders paragraph with 2-column layout', () => {
+    const block = createBlock('paragraph', { props: { text: 'Long text.', columns: '2' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('column-count: 2')
+  })
+
+  it('renders link with button=true as styled anchor', () => {
+    const block = createBlock('link', { props: { text: 'Get Started', href: '/start', button: true, variant: 'primary' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('<a')
+    expect(html).toContain('btn btn-primary')
+    expect(html).toContain('href="/start"')
+    expect(html).toContain('Get Started')
+  })
+
+  it('renders link with newTab adds target and rel', () => {
+    const block = createBlock('link', { props: { text: 'External', href: 'https://example.com', newTab: true } })
+    const html = blockToHtml([block])
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
+  })
+
+  it('renders blockquote with author and source as footer', () => {
+    const block = createBlock('blockquote', { props: { text: 'Quote text', author: 'Jane Doe', source: 'Famous Book' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('Quote text')
+    expect(html).toContain('blockquote-footer')
+    expect(html).toContain('Jane Doe')
+    expect(html).toContain('<cite>Famous Book</cite>')
+  })
+
+  it('renders list with horizontal prop as list-inline', () => {
+    const block = createBlock('list', { props: { items: ['A', 'B', 'C'], horizontal: true } })
+    const html = blockToHtml([block])
+    expect(html).toContain('list-inline-item')
+  })
+
+  it('renders divider with center text', () => {
+    const block = createBlock('divider', { props: { withText: 'OR', style: 'solid' } })
+    const html = blockToHtml([block])
+    expect(html).toContain('OR')
+    expect(html).toContain('flex')
+  })
+
+  it('renders container with bgColor as inline style', () => {
+    const block = createBlock('container', { props: { bgColor: '#ff0000' }, classes: ['container'] })
+    const html = blockToHtml([block])
+    expect(html).toContain('background-color: #ff0000')
+  })
+
+  it('renders container with bgImage as background-image style', () => {
+    const block = createBlock('container', { props: { bgImage: 'hero.jpg' }, classes: ['container'] })
+    const html = blockToHtml([block])
+    expect(html).toContain("background-image: url('hero.jpg')")
+    expect(html).toContain('background-size: cover')
+  })
+
+  it('renders column with responsive breakpoint classes', () => {
+    const block = createBlock('column', { props: { colSm: 12, colMd: 6, colLg: 4, offset: 1 }, classes: ['col'] })
+    const html = blockToHtml([block])
+    expect(html).toContain('col-sm-12')
+    expect(html).toContain('col-md-6')
+    expect(html).toContain('col-lg-4')
+    expect(html).toContain('offset-1')
+  })
+
+  it('renders hero with background image and overlay', () => {
+    const block = createBlock('hero', {
+      props: { bgImage: 'bg.jpg', overlay: true, overlayColor: '#000', overlayOpacity: 50, alignment: 'center', fullHeight: true },
+      classes: ['hero']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain("url('bg.jpg')")
+    expect(html).toContain('position-absolute')
+    expect(html).toContain('min-height: 100vh')
+  })
+
+  it('renders hero with CTA buttons', () => {
+    const block = createBlock('hero', {
+      props: {
+        ctaButtons: [
+          { label: 'Learn More', href: '/learn', variant: 'primary' },
+          { label: 'Contact', href: '/contact', variant: 'outline-light' }
+        ]
+      },
+      classes: ['hero']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('Learn More')
+    expect(html).toContain('/learn')
+    expect(html).toContain('Contact')
+  })
+
+  it('renders navbar with sticky class', () => {
+    const block = createBlock('navbar', { props: { sticky: true }, classes: ['navbar', 'navbar-expand-lg'] })
+    const html = blockToHtml([block])
+    expect(html).toContain('position-sticky')
+    expect(html).toContain('top-0')
+  })
+
+  it('renders navbar with transparent class', () => {
+    const block = createBlock('navbar', { props: { transparent: true }, classes: ['navbar', 'navbar-expand-lg'] })
+    const html = blockToHtml([block])
+    expect(html).toContain('navbar-transparent')
+  })
+
+  it('renders footer with copyright and back-to-top', () => {
+    const block = createBlock('footer', {
+      props: {
+        copyrightText: '© 2024 Acme Corp',
+        showBackToTop: true,
+        showSocialLinks: false
+      },
+      classes: ['footer', 'py-5']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('© 2024 Acme Corp')
+    expect(html).toContain('Back to top')
+  })
+
+  it('renders footer with social links', () => {
+    const block = createBlock('footer', {
+      props: {
+        showSocialLinks: true,
+        socialLinks: [
+          { platform: 'twitter', url: 'https://x.com/test' },
+          { platform: 'github', url: 'https://github.com/test' }
+        ]
+      },
+      classes: ['footer', 'py-5']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('https://x.com/test')
+    expect(html).toContain('https://github.com/test')
+  })
+
+  it('renders modal with size class', () => {
+    const block = createBlock('modal', {
+      props: { id: 'test-modal', title: 'Big Modal', buttonText: 'Open', size: 'modal-lg' }
+    })
+    const html = blockToHtml([block], { includeDataAttributes: false })
+    expect(html).toContain('modal-lg')
+  })
+
+  it('renders modal with scrollable and centered', () => {
+    const block = createBlock('modal', {
+      props: { id: 'test-modal2', title: 'Centered Modal', buttonText: 'Open', scrollable: true, centered: true }
+    })
+    const html = blockToHtml([block], { includeDataAttributes: false })
+    expect(html).toContain('modal-dialog-scrollable')
+    expect(html).toContain('modal-dialog-centered')
+  })
+
+  it('renders accordion with flush class', () => {
+    const block = createBlock('accordion', {
+      props: {
+        id: 'acc-1',
+        items: [{ title: 'Q1', content: 'A1' }],
+        flush: true,
+        alwaysOpen: false
+      },
+      classes: ['accordion']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('accordion-flush')
+  })
+
+  it('renders accordion with alwaysOpen removes data-bs-parent', () => {
+    const block = createBlock('accordion', {
+      props: {
+        id: 'acc-2',
+        items: [{ title: 'Q1', content: 'A1' }, { title: 'Q2', content: 'A2' }],
+        flush: false,
+        alwaysOpen: true
+      },
+      classes: ['accordion']
+    })
+    const html = blockToHtml([block])
+    expect(html).not.toContain('data-bs-parent')
+  })
+
+  it('renders tabs with pills variant', () => {
+    const block = createBlock('tabs', {
+      props: {
+        id: 'tabs-pills',
+        variant: 'pills',
+        tabs: [{ label: 'Tab1', content: 'Content 1' }]
+      },
+      classes: []
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('nav-pills')
+  })
+
+  it('renders tabs with vertical layout', () => {
+    const block = createBlock('tabs', {
+      props: {
+        id: 'tabs-vert',
+        vertical: true,
+        tabs: [{ label: 'Item', content: 'Body' }]
+      },
+      classes: []
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('flex-column')
+  })
+
+  it('renders carousel with fade and thumbnails', () => {
+    const block = createBlock('carousel', {
+      props: {
+        id: 'carousel-test',
+        fade: true,
+        thumbnails: true,
+        interval: 3000,
+        slides: [
+          { src: 'img1.jpg', alt: 'Slide 1', caption: '' },
+          { src: 'img2.jpg', alt: 'Slide 2', caption: '' }
+        ]
+      },
+      classes: ['carousel', 'slide']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('carousel-fade')
+    expect(html).toContain('data-bs-interval="3000"')
+    // thumbnails: should include a thumbnail button row
+    expect(html).toContain('img1.jpg')
+    expect(html).toContain('img2.jpg')
+  })
+
+  it('renders form with horizontal layout', () => {
+    const block = createBlock('form', { props: { layout: 'horizontal', validated: false }, classes: [] })
+    const html = blockToHtml([block])
+    expect(html).toContain('class="row"')
+  })
+
+  it('renders form with was-validated class when validated=true', () => {
+    const block = createBlock('form', { props: { layout: 'vertical', validated: true }, classes: [] })
+    const html = blockToHtml([block])
+    expect(html).toContain('was-validated')
   })
 })
