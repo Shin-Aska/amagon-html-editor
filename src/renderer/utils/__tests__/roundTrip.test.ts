@@ -325,4 +325,599 @@ describe('round-trip: blocks → HTML → blocks', () => {
       { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
     ])
   })
+
+  it('preserves phase 2 medium blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('table', {
+        props: {
+          headers: ['Name', 'Role'],
+          rows: [['Jane', 'Admin'], ['John', 'Editor']],
+          striped: true,
+          bordered: true,
+          hover: true,
+          responsive: true,
+          size: 'sm',
+          variant: 'dark'
+        }
+      }),
+      createBlock('dropdown', {
+        props: {
+          label: 'Actions',
+          variant: 'secondary',
+          items: [
+            { label: 'Edit', href: '#edit', divider: false, disabled: false },
+            { label: '', href: '#', divider: true, disabled: false },
+            { label: 'Delete', href: '#delete', divider: false, disabled: true }
+          ],
+          size: 'default',
+          direction: 'down',
+          split: true
+        }
+      }),
+      createBlock('offcanvas', {
+        props: {
+          id: 'settings-panel',
+          title: 'Settings',
+          placement: 'end',
+          backdrop: false,
+          scroll: true
+        },
+        children: [createBlock('paragraph', { props: { text: 'Panel content' } })]
+      }),
+      createBlock('card', {
+        props: {
+          title: 'Card title',
+          subtitle: 'Card subtitle',
+          text: 'Card body copy',
+          imageUrl: 'https://example.com/card.jpg',
+          imagePosition: 'top',
+          headerText: 'Header',
+          footerText: 'Footer',
+          variant: 'primary',
+          outline: false
+        }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(4)
+    expect(blocks[0].type).toBe('table')
+    expect(blocks[0].props.headers).toEqual(['Name', 'Role'])
+    expect(blocks[1].type).toBe('dropdown')
+    expect(blocks[1].props.label).toBe('Actions')
+    expect(blocks[1].props.split).toBe(true)
+    expect(blocks[2].type).toBe('offcanvas')
+    expect(blocks[2].props.id).toBe('settings-panel')
+    expect(blocks[2].props.placement).toBe('end')
+    expect(blocks[3].type).toBe('card')
+    expect(blocks[3].props.title).toBe('Card title')
+    expect(blocks[3].props.variant).toBe('primary')
+  })
+
+  it('preserves phase 2 medium blocks through Tailwind HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('table', {
+        props: {
+          headers: ['Feature', 'Value'],
+          rows: [['Theme', 'Tailwind']],
+          striped: false,
+          bordered: false,
+          hover: false,
+          responsive: true,
+          size: 'default',
+          variant: 'default'
+        }
+      }),
+      createBlock('dropdown', {
+        props: {
+          label: 'Menu',
+          variant: 'primary',
+          items: [{ label: 'Open', href: '#open', divider: false, disabled: false }],
+          size: 'sm',
+          direction: 'end',
+          split: false
+        }
+      }),
+      createBlock('offcanvas', {
+        props: {
+          id: 'tw-panel',
+          title: 'Tailwind Panel',
+          placement: 'start',
+          backdrop: true,
+          scroll: false
+        },
+        children: [createBlock('paragraph', { props: { text: 'Tailwind body' } })]
+      }),
+      createBlock('card', {
+        props: {
+          title: 'Tailwind card',
+          subtitle: 'Details',
+          text: 'Tailwind body',
+          imageUrl: 'https://example.com/tw-card.jpg',
+          imagePosition: 'overlay',
+          headerText: '',
+          footerText: '',
+          variant: 'dark',
+          outline: false
+        }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'tailwind', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(4)
+    expect(blocks[0].type).toBe('table')
+    expect(blocks[1].type).toBe('dropdown')
+    expect(blocks[1].props.direction).toBe('end')
+    expect(blocks[2].type).toBe('offcanvas')
+    expect(blocks[2].props.id).toBe('tw-panel')
+    expect(blocks[3].type).toBe('card')
+    expect(blocks[3].props.imagePosition).toBe('overlay')
+    expect(blocks[3].props.variant).toBe('dark')
+  })
+
+  it('preserves phase 3 enhanced blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('image', {
+        props: {
+          src: 'hero.jpg',
+          alt: 'Hero',
+          caption: 'Hero caption',
+          captionPosition: 'overlay-bottom',
+          objectFit: 'cover',
+          aspectRatio: '16:9',
+          lazyLoad: true,
+          lightbox: true
+        },
+        classes: ['img-fluid']
+      }),
+      createBlock('video', {
+        props: {
+          src: 'clip.mp4',
+          controls: true,
+          autoplay: true,
+          loop: true,
+          muted: true,
+          preload: 'metadata',
+          poster: 'poster.jpg',
+          aspectRatio: '21:9'
+        },
+        classes: ['w-100']
+      }),
+      createBlock('button', {
+        props: {
+          text: 'Submit',
+          variant: 'btn-primary',
+          outline: true,
+          block: true,
+          loading: true,
+          loadingText: 'Saving...'
+        },
+        classes: ['btn', 'btn-primary']
+      }),
+      createBlock('input', {
+        props: {
+          type: 'text',
+          label: 'Email',
+          prepend: '@',
+          append: '.com',
+          validationState: 'invalid',
+          validationMessage: 'Invalid email',
+          helpText: 'Use your work email'
+        },
+        classes: ['form-control']
+      }),
+      createBlock('checkbox', {
+        props: { label: 'Enable beta', checked: true, switch: true, inline: true },
+        classes: ['form-check-input']
+      }),
+      createBlock('select', {
+        props: {
+          optgroups: true,
+          multiple: true,
+          size: 4,
+          items: [
+            {
+              group: 'Asia',
+              options: [{ label: 'Japan', value: 'jp' }]
+            }
+          ]
+        },
+        classes: ['form-select']
+      }),
+      createBlock('code-block', {
+        props: {
+          code: 'const x = 1;',
+          language: 'javascript',
+          showLineNumbers: true,
+          filename: 'main.ts',
+          copyButton: true
+        }
+      }),
+      createBlock('icon', {
+        props: { iconClass: 'lucide:loader', size: 'xl', color: '#ff9900', spin: true, fixedWidth: true }
+      }),
+      createBlock('iframe', {
+        props: {
+          src: 'https://example.com/embed',
+          title: 'Embed',
+          aspectRatio: '4:3',
+          allowFullscreen: true,
+          lazy: true
+        },
+        classes: ['w-100', 'border']
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks.map((block) => block.type)).toEqual([
+      'image',
+      'video',
+      'button',
+      'input',
+      'checkbox',
+      'select',
+      'code-block',
+      'icon',
+      'iframe'
+    ])
+    expect(blocks[0].props.caption).toBe('Hero caption')
+    expect(blocks[0].props.lightbox).toBe(true)
+    expect(blocks[1].props.aspectRatio).toBe('21:9')
+    expect(blocks[2].props.loading).toBe(true)
+    expect(blocks[3].props.prepend).toBe('@')
+    expect(blocks[4].props.switch).toBe(true)
+    expect(blocks[5].props.optgroups).toBe(true)
+    expect(blocks[6].props.showLineNumbers).toBe(true)
+    expect(blocks[7].props.spin).toBe(true)
+    expect(blocks[8].props.aspectRatio).toBe('4:3')
+  })
+
+  it('preserves phase 4 layout/component blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('heading', { props: { text: 'Section Title', level: 2, anchorId: 'section-title', decorative: 'underline' } }),
+      createBlock('paragraph', { props: { text: 'Lead paragraph.', lead: true, dropCap: true, columns: '2' } }),
+      createBlock('blockquote', { props: { text: 'Wisdom quote', author: 'Aristotle', source: 'Nicomachean Ethics', decorative: 'border-left' }, classes: ['blockquote'] }),
+      createBlock('list', { props: { items: ['Item A', 'Item B', 'Item C'], horizontal: true }, classes: ['list-inline'] }),
+      createBlock('accordion', {
+        props: { id: 'faq', items: [{ title: 'Q1', content: 'A1' }, { title: 'Q2', content: 'A2' }], flush: true, alwaysOpen: true },
+        classes: ['accordion']
+      }),
+      createBlock('tabs', {
+        props: { id: 'demo-tabs', variant: 'pills', vertical: false, tabs: [{ label: 'Tab A', content: 'Tab A content' }] },
+        classes: []
+      }),
+      createBlock('carousel', {
+        props: {
+          id: 'carousel-rt',
+          fade: true,
+          thumbnails: true,
+          interval: 4000,
+          slides: [{ src: 'a.jpg', alt: 'A', caption: '' }, { src: 'b.jpg', alt: 'B', caption: '' }]
+        },
+        classes: ['carousel', 'slide']
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: true })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks.map((b) => b.type)).toEqual([
+      'heading', 'paragraph', 'blockquote', 'list', 'accordion', 'tabs', 'carousel'
+    ])
+
+    // heading anchorId + decorative
+    expect(blocks[0].props.anchorId).toBe('section-title')
+    expect(blocks[0].props.decorative).toBe('underline')
+
+    // paragraph lead + dropCap + columns
+    expect(blocks[1].props.lead).toBe(true)
+    expect(blocks[1].props.dropCap).toBe(true)
+    expect(blocks[1].props.columns).toBe('2')
+
+    // blockquote author + source + decorative
+    expect(blocks[2].props.text).toBe('Wisdom quote')
+    expect(blocks[2].props.author).toBe('Aristotle')
+    expect(blocks[2].props.source).toBe('Nicomachean Ethics')
+    expect(blocks[2].props.decorative).toBe('border-left')
+
+    // list horizontal
+    expect(blocks[3].props.horizontal).toBe(true)
+
+    // accordion flush + alwaysOpen
+    expect(Array.isArray((blocks[4].props.items as unknown[]))).toBe(true)
+    expect((blocks[4].props.items as unknown[]).length).toBe(2)
+
+    // tabs variant
+    expect(blocks[5].type).toBe('tabs')
+
+    // carousel fade + interval
+    expect(blocks[6].type).toBe('carousel')
+  })
+
+  it('preserves modal size/scrollable/centered through export-mode round-trip', () => {
+    // Export mode renders the actual Bootstrap modal markup (button + .modal div)
+    // which tryParseBootstrapModal can recover size/scrollable/centered from
+    const original: Block[] = [
+      createBlock('modal', {
+        props: { id: 'rt-modal', title: 'RT Modal', buttonText: 'Open', size: 'modal-lg', scrollable: true, centered: true },
+        children: [createBlock('paragraph', { props: { text: 'Modal content' } })]
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks[0].type).toBe('modal')
+    expect(blocks[0].props.size).toBe('modal-lg')
+    expect(blocks[0].props.scrollable).toBe(true)
+    expect(blocks[0].props.centered).toBe(true)
+  })
+
+  it('preserves link-as-button through editor-mode round-trip', () => {
+    const original: Block[] = [
+      createBlock('link', {
+        props: { text: 'Get Started', href: '/start', button: true, variant: 'primary', newTab: false, iconLeft: '', iconRight: '' }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: true })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].type).toBe('link')
+    expect(blocks[0].props.button).toBe(true)
+    expect(blocks[0].props.href).toBe('/start')
+    expect(blocks[0].props.text).toBe('Get Started')
+  })
+
+  it('preserves phase 1 simple blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('alert', {
+        props: { text: 'Important notice', variant: 'alert-warning', dismissible: false, icon: '' },
+        classes: ['alert', 'alert-warning']
+      }),
+      createBlock('badge', {
+        props: { text: 'New', variant: 'bg-success', pill: false },
+        classes: ['badge', 'bg-success']
+      }),
+      createBlock('progress', {
+        props: { value: 75, variant: 'bg-success', striped: true, animated: false, label: '' },
+        classes: ['progress']
+      }),
+      createBlock('spinner', {
+        props: { variant: 'text-primary', type: 'border', size: 'default' },
+        classes: ['spinner-border', 'text-primary']
+      }),
+      createBlock('breadcrumb', {
+        props: {
+          items: [
+            { label: 'Home', href: '/', active: false },
+            { label: 'Products', href: '/products', active: false },
+            { label: 'Widget', href: '#', active: true }
+          ],
+          divider: 'slash'
+        }
+      }),
+      createBlock('pagination', {
+        props: { pages: 5, activePage: 2, size: 'default', alignment: 'center', showPrevNext: true, showFirstLast: false }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(6)
+    expect(blocks[0].type).toBe('alert')
+    expect(blocks[0].props.text).toContain('Important notice')
+    expect(blocks[1].type).toBe('badge')
+    expect(blocks[1].props.text).toBe('New')
+    expect(blocks[2].type).toBe('progress')
+    expect(blocks[2].props.value).toBe(75)
+    expect(blocks[3].type).toBe('spinner')
+    expect(blocks[4].type).toBe('breadcrumb')
+    expect(blocks[4].props.items).toHaveLength(3)
+    expect(blocks[5].type).toBe('pagination')
+    expect(blocks[5].props.pages).toBe(5)
+    expect(blocks[5].props.showPrevNext).toBe(true)
+  })
+
+  it('preserves phase 1 form blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('radio', {
+        props: { name: 'color', label: 'Red', value: 'red', checked: false, inline: false, disabled: false }
+      }),
+      createBlock('range', {
+        props: { label: 'Volume', min: 0, max: 100, step: 5, value: 40, disabled: false }
+      }),
+      createBlock('file-input', {
+        props: { label: 'Upload CSV', accept: '.csv', multiple: false, disabled: false, size: 'default' }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(3)
+    expect(blocks[0].type).toBe('radio')
+    expect(blocks[0].props.name).toBe('color')
+    expect(blocks[0].props.value).toBe('red')
+    expect(blocks[1].type).toBe('range')
+    expect(blocks[1].props.min).toBe(0)
+    expect(blocks[1].props.max).toBe(100)
+    expect(blocks[2].type).toBe('file-input')
+    expect(blocks[2].props.accept).toBe('.csv')
+  })
+
+  it('preserves phase 5 section blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('stats-section', {
+        props: {
+          items: [{ value: '99', label: 'Uptime', prefix: '', suffix: '%', icon: '✅' }],
+          columns: '3',
+          variant: 'cards',
+          alignment: 'center'
+        }
+      }),
+      createBlock('team-grid', {
+        props: {
+          members: [{ name: 'Ada', role: 'Engineer', imageUrl: '', bio: '', socialLinks: {} }],
+          columns: '2',
+          cardStyle: 'simple',
+          showSocial: false
+        }
+      }),
+      createBlock('gallery', {
+        props: {
+          images: [{ url: 'a.jpg', caption: 'Photo A', category: 'Art' }],
+          columns: '3',
+          gap: 'md',
+          lightbox: false,
+          filterable: false,
+          layout: 'grid'
+        }
+      }),
+      createBlock('timeline', {
+        props: {
+          items: [{ date: '2024', title: 'Launch', description: 'We shipped.', icon: '🚀', variant: 'primary' }],
+          orientation: 'vertical',
+          alternating: false,
+          lineColor: '#999'
+        }
+      }),
+      createBlock('logo-cloud', {
+        props: {
+          title: 'Trusted by',
+          logos: [{ imageUrl: 'logo.png', altText: 'Acme', href: '#' }],
+          columns: '4',
+          grayscale: true,
+          variant: 'simple'
+        }
+      }),
+      createBlock('process-steps', {
+        props: {
+          steps: [{ number: '1', title: 'Plan', description: 'Define scope.', icon: '📋' }],
+          layout: 'horizontal',
+          connectorStyle: 'arrow',
+          variant: 'both'
+        }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(6)
+    expect(blocks[0].type).toBe('stats-section')
+    expect(blocks[1].type).toBe('team-grid')
+    expect(blocks[2].type).toBe('gallery')
+    expect(blocks[3].type).toBe('timeline')
+    expect(blocks[4].type).toBe('logo-cloud')
+    expect(blocks[5].type).toBe('process-steps')
+  })
+
+  it('preserves phase 6 utility blocks through Bootstrap HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('newsletter', {
+        props: {
+          title: 'Stay updated',
+          description: 'Get the latest news',
+          placeholder: 'your@email.com',
+          buttonText: 'Subscribe',
+          buttonVariant: 'primary',
+          showNameField: false
+        }
+      }),
+      createBlock('contact-card', {
+        props: {
+          name: 'Jane Doe',
+          title: 'Support Lead',
+          email: 'jane@example.com',
+          phone: '+1-800-555-0199',
+          address: '123 Main St',
+          showMap: false
+        }
+      }),
+      createBlock('social-links', {
+        props: {
+          links: [{ platform: 'twitter', url: 'https://twitter.com/example' }],
+          style: 'icons',
+          colorful: false
+        }
+      }),
+      createBlock('back-to-top', {
+        props: { position: 'bottom-right', variant: 'primary' }
+      }),
+      createBlock('countdown', {
+        props: {
+          targetDate: '2025-12-31T00:00:00',
+          labels: { days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds' },
+          showDays: true,
+          showSeconds: true,
+          expiredMessage: 'Event has ended'
+        }
+      }),
+      createBlock('map-embed', {
+        props: { embedUrl: 'https://maps.google.com/?q=123+Main+St', title: 'Office Location', height: '400px', borderRadius: '0' }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(6)
+    expect(blocks[0].type).toBe('newsletter')
+    expect(blocks[1].type).toBe('contact-card')
+    expect(blocks[2].type).toBe('social-links')
+    expect(blocks[3].type).toBe('back-to-top')
+    expect(blocks[4].type).toBe('countdown')
+    expect(blocks[5].type).toBe('map-embed')
+  })
+
+  it('preserves phase 1 blocks through Tailwind HTML round-trip (editor mode)', () => {
+    // Editor mode (includeDataAttributes: true) embeds data-block-type so all blocks
+    // are re-parseable regardless of which CSS framework classes are present.
+    const original: Block[] = [
+      createBlock('alert', {
+        props: { text: 'Watch out!', variant: 'alert-danger', dismissible: true, icon: '' },
+        classes: ['alert', 'alert-danger', 'alert-dismissible']
+      }),
+      createBlock('badge', {
+        props: { text: 'Hot', variant: 'bg-danger', pill: true },
+        classes: ['badge', 'bg-danger', 'rounded-pill']
+      }),
+      createBlock('progress', {
+        props: { value: 60, variant: 'bg-info', striped: false, animated: false, label: '60%' },
+        classes: ['progress']
+      }),
+      createBlock('breadcrumb', {
+        props: {
+          items: [
+            { label: 'Home', href: '/', active: false },
+            { label: 'Docs', href: '/docs', active: true }
+          ],
+          divider: 'chevron'
+        }
+      }),
+      createBlock('pagination', {
+        props: { pages: 3, activePage: 1, size: 'sm', alignment: 'end', showPrevNext: false, showFirstLast: true }
+      })
+    ]
+
+    const html = blockToHtml(original, { framework: 'tailwind', includeDataAttributes: true })
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(5)
+    expect(blocks[0].type).toBe('alert')
+    expect(blocks[1].type).toBe('badge')
+    expect(blocks[2].type).toBe('progress')
+    expect(blocks[3].type).toBe('breadcrumb')
+    expect(blocks[3].props.items).toHaveLength(2)
+    expect(blocks[4].type).toBe('pagination')
+  })
 })

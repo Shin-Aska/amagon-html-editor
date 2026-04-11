@@ -318,4 +318,275 @@ describe('htmlToBlocks', () => {
     expect(result.blocks[0].children).toHaveLength(1)
     expect(result.blocks[0].children[0].type).toBe('paragraph')
   })
+
+  it('parses table markup as a table block', () => {
+    const result = htmlToBlocks(`
+      <div class="table-responsive" data-amagon-table="true" data-table-striped="true" data-table-bordered="true" data-table-hover="true" data-table-responsive="true" data-table-size="sm" data-table-variant="dark">
+        <table class="table table-striped table-bordered table-hover table-sm table-dark" data-amagon-table-inner="true">
+          <thead>
+            <tr><th>Name</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Jane</td><td>Admin</td></tr>
+            <tr><td>John</td><td>Editor</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('table')
+    expect(result.blocks[0].props.headers).toEqual(['Name', 'Role'])
+    expect(result.blocks[0].props.rows).toEqual([
+      ['Jane', 'Admin'],
+      ['John', 'Editor']
+    ])
+    expect(result.blocks[0].props.striped).toBe(true)
+    expect(result.blocks[0].props.bordered).toBe(true)
+    expect(result.blocks[0].props.hover).toBe(true)
+    expect(result.blocks[0].props.responsive).toBe(true)
+    expect(result.blocks[0].props.size).toBe('sm')
+    expect(result.blocks[0].props.variant).toBe('dark')
+  })
+
+  it('parses dropdown markup as a dropdown block', () => {
+    const result = htmlToBlocks(`
+      <div class="btn-group dropdown" data-amagon-dropdown="true" data-dropdown-variant="secondary" data-dropdown-size="default" data-dropdown-direction="down" data-dropdown-split="true">
+        <button type="button" class="btn btn-secondary">Actions</button>
+        <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="#edit">Edit</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item disabled" href="#delete" tabindex="-1" aria-disabled="true">Delete</a></li>
+        </ul>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('dropdown')
+    expect(result.blocks[0].props.label).toBe('Actions')
+    expect(result.blocks[0].props.variant).toBe('secondary')
+    expect(result.blocks[0].props.split).toBe(true)
+    expect(result.blocks[0].props.items).toEqual([
+      { label: 'Edit', href: '#edit', divider: false, disabled: false },
+      { label: '', href: '#', divider: true, disabled: false },
+      { label: 'Delete', href: '#delete', divider: false, disabled: true }
+    ])
+  })
+
+  it('parses offcanvas markup as an offcanvas block', () => {
+    const result = htmlToBlocks(`
+      <div data-amagon-offcanvas="true" data-offcanvas-placement="end" data-offcanvas-backdrop="false" data-offcanvas-scroll="true">
+        <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#settings-panel">Toggle panel</button>
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="settings-panel" aria-labelledby="settings-panelLabel" data-bs-backdrop="false" data-bs-scroll="true">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="settings-panelLabel">Settings</h5>
+          </div>
+          <div class="offcanvas-body">
+            <p>Panel content</p>
+          </div>
+        </div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('offcanvas')
+    expect(result.blocks[0].props.title).toBe('Settings')
+    expect(result.blocks[0].props.placement).toBe('end')
+    expect(result.blocks[0].props.backdrop).toBe(false)
+    expect(result.blocks[0].props.scroll).toBe(true)
+    expect(result.blocks[0].props.id).toBe('settings-panel')
+    expect(result.blocks[0].children).toHaveLength(1)
+    expect(result.blocks[0].children[0].type).toBe('paragraph')
+  })
+
+  it('parses card markup as a card block', () => {
+    const result = htmlToBlocks(`
+      <div class="card text-bg-primary" data-amagon-card="true" data-card-variant="primary" data-card-outline="false" data-card-image-position="top">
+        <div class="card-header" data-card-header="true">Header</div>
+        <img src="https://example.com/card.jpg" class="card-img-top" alt="Card image" data-card-image="true">
+        <div class="card-body" data-card-body="true">
+          <div data-card-content="true">
+            <h5 class="card-title">Card title</h5>
+            <h6 class="card-subtitle mb-2 text-body-secondary">Card subtitle</h6>
+            <p class="card-text">Card body copy</p>
+          </div>
+        </div>
+        <div class="card-footer" data-card-footer="true">Footer</div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('card')
+    expect(result.blocks[0].props.title).toBe('Card title')
+    expect(result.blocks[0].props.subtitle).toBe('Card subtitle')
+    expect(result.blocks[0].props.text).toBe('Card body copy')
+    expect(result.blocks[0].props.imageUrl).toBe('https://example.com/card.jpg')
+    expect(result.blocks[0].props.imagePosition).toBe('top')
+    expect(result.blocks[0].props.headerText).toBe('Header')
+    expect(result.blocks[0].props.footerText).toBe('Footer')
+    expect(result.blocks[0].props.variant).toBe('primary')
+    expect(result.blocks[0].props.outline).toBe(false)
+  })
+
+  it('parses phase 3 enhanced block markup', () => {
+    const result = htmlToBlocks(`
+      <figure class="position-relative">
+        <a href="hero.jpg" data-amagon-lightbox="true">
+          <img class="img-fluid object-cover" src="hero.jpg" alt="Hero" loading="lazy" style="aspect-ratio: 16 / 9; object-fit: cover" />
+        </a>
+        <figcaption class="position-absolute bottom-0 start-0 end-0">Hero caption</figcaption>
+      </figure>
+      <div class="ratio ratio-21x9" data-amagon-media-ratio="21:9">
+        <video class="w-100 h-100" src="clip.mp4" controls autoplay loop muted preload="metadata" poster="poster.jpg"></video>
+      </div>
+      <button class="btn btn-outline-primary w-100 d-block"
+        data-amagon-button-variant="primary"
+        data-amagon-button-size=""
+        data-amagon-button-outline="true"
+        data-amagon-button-block="true"
+        data-amagon-button-loading="true"
+        data-amagon-button-loading-text="Saving..."
+        disabled>
+        <span class="spinner-border spinner-border-sm"></span>
+        <span class="amagon-btn-label">Saving...</span>
+      </button>
+      <div class="mb-3">
+        <label for="email-field" class="form-label">Email</label>
+        <div class="input-group">
+          <span class="input-group-text">@</span>
+          <input class="form-control is-invalid" id="email-field" type="email" />
+          <span class="input-group-text">.com</span>
+        </div>
+        <div class="invalid-feedback d-block">Invalid email</div>
+        <div class="form-text">Use your work email</div>
+      </div>
+      <div class="form-check form-switch form-check-inline">
+        <input class="form-check-input" type="checkbox" id="beta" checked>
+        <label class="form-check-label" for="beta">Enable beta</label>
+      </div>
+      <div class="mb-3">
+        <label for="country">Country</label>
+        <select class="form-select" id="country" multiple size="5">
+          <optgroup label="Asia">
+            <option value="jp">Japan</option>
+            <option value="ph">Philippines</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="bg-dark text-light p-3 rounded position-relative"
+        data-amagon-code-block="true"
+        data-code-language="javascript"
+        data-code-show-line-numbers="true"
+        data-code-filename="main.ts"
+        data-code-copy-button="true"
+        data-code-content="const%20x%20%3D%201%3B">
+        <pre><code class="hljs language-javascript" data-amagon-code-source>const x = 1;</code></pre>
+      </div>
+      <span class="fa-xl fa-spin fa-fw" style="color: #ff9900;" data-amagon-component="icon" data-amagon-icon-class="lucide:loader"></span>
+      <div class="ratio ratio-4x3" data-amagon-embed-ratio="4:3">
+        <iframe class="w-100 border" src="https://example.com/embed" title="Embed" allowfullscreen loading="lazy"></iframe>
+      </div>
+    `)
+
+    expect(result.blocks.map((block) => block.type)).toEqual([
+      'image',
+      'video',
+      'button',
+      'input',
+      'checkbox',
+      'select',
+      'code-block',
+      'icon',
+      'iframe'
+    ])
+
+    expect(result.blocks[0].props.caption).toBe('Hero caption')
+    expect(result.blocks[0].props.lightbox).toBe(true)
+    expect(result.blocks[1].props.aspectRatio).toBe('21:9')
+    expect(result.blocks[2].props.loading).toBe(true)
+    expect(result.blocks[2].props.outline).toBe(true)
+    expect(result.blocks[3].props.prepend).toBe('@')
+    expect(result.blocks[3].props.append).toBe('.com')
+    expect(result.blocks[3].props.validationState).toBe('invalid')
+    expect(result.blocks[4].props.switch).toBe(true)
+    expect(result.blocks[4].props.inline).toBe(true)
+    expect(result.blocks[5].props.optgroups).toBe(true)
+    expect(Array.isArray(result.blocks[5].props.items)).toBe(true)
+    expect(result.blocks[6].props.showLineNumbers).toBe(true)
+    expect(result.blocks[6].props.filename).toBe('main.ts')
+    expect(result.blocks[7].props.spin).toBe(true)
+    expect(result.blocks[7].props.fixedWidth).toBe(true)
+    expect(result.blocks[8].props.aspectRatio).toBe('4:3')
+    expect(result.blocks[8].props.allowFullscreen).toBe(true)
+  })
+
+  it('parses phase 4 layout and component block markup', () => {
+    // heading with anchorId
+    const headingResult = htmlToBlocks('<h2 id="about-us">About Us</h2>')
+    expect(headingResult.blocks[0].type).toBe('heading')
+    expect(headingResult.blocks[0].props.anchorId).toBe('about-us')
+    expect(headingResult.blocks[0].props.level).toBe(2)
+
+    // heading with decorative classes
+    const decorResult = htmlToBlocks('<h1 class="amagon-heading-underline">Title</h1>')
+    expect(decorResult.blocks[0].props.decorative).toBe('underline')
+
+    const gradResult = htmlToBlocks('<h1 class="amagon-heading-gradient-underline">Title</h1>')
+    expect(gradResult.blocks[0].props.decorative).toBe('gradient-underline')
+
+    // paragraph with dropCap
+    const dropCapResult = htmlToBlocks('<p data-drop-cap="true" class="amagon-drop-cap">Story text</p>')
+    expect(dropCapResult.blocks[0].type).toBe('paragraph')
+    expect(dropCapResult.blocks[0].props.dropCap).toBe(true)
+
+    // paragraph with column-count style
+    const colsResult = htmlToBlocks('<p style="column-count: 3;">Multi col text</p>')
+    expect(colsResult.blocks[0].props.columns).toBe('3')
+
+    // paragraph with lead class
+    const leadResult = htmlToBlocks('<p class="lead">Lead text</p>')
+    expect(leadResult.blocks[0].props.lead).toBe(true)
+
+    // list with horizontal
+    const listResult = htmlToBlocks('<ul class="list-inline"><li class="list-inline-item">A</li><li class="list-inline-item">B</li></ul>')
+    expect(listResult.blocks[0].type).toBe('list')
+    expect(listResult.blocks[0].props.horizontal).toBe(true)
+  })
+
+  it('parses blockquote with author and source from footer', () => {
+    const html = `<blockquote class="blockquote">Quote text<footer class="blockquote-footer mt-2">Jane Doe, <cite>Famous Book</cite></footer></blockquote>`
+    const result = htmlToBlocks(html)
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('blockquote')
+    expect(result.blocks[0].props.text).toBe('Quote text')
+    expect(result.blocks[0].props.author).toBe('Jane Doe')
+    expect(result.blocks[0].props.source).toBe('Famous Book')
+  })
+
+  it('parses blockquote with decorative class', () => {
+    const html = `<blockquote class="blockquote amagon-bq-border-left">Some quote</blockquote>`
+    const result = htmlToBlocks(html)
+    expect(result.blocks[0].type).toBe('blockquote')
+    expect(result.blocks[0].props.decorative).toBe('border-left')
+    expect(result.blocks[0].classes).not.toContain('amagon-bq-border-left')
+  })
+
+  it('parses link with data-block-type="link" and btn class as link (not button)', () => {
+    const html = `<a class="btn btn-primary" href="/start" data-block-type="link">Get Started</a>`
+    const result = htmlToBlocks(html)
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('link')
+    expect(result.blocks[0].props.button).toBe(true)
+    expect(result.blocks[0].props.href).toBe('/start')
+    expect(result.blocks[0].props.text).toBe('Get Started')
+  })
+
+  it('parses link with newTab (target=_blank)', () => {
+    const html = `<a class="btn btn-secondary" href="/page" target="_blank" rel="noopener noreferrer" data-block-type="link">External</a>`
+    const result = htmlToBlocks(html)
+    expect(result.blocks[0].type).toBe('link')
+    expect(result.blocks[0].props.newTab).toBe(true)
+    expect(result.blocks[0].props.href).toBe('/page')
+  })
 })
