@@ -242,7 +242,10 @@ async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): 
   }
 
   if (framework === 'tailwind') {
-    await upsertFrameworkScript('editor-framework-tailwind-js', 'https://cdn.tailwindcss.com')
+    await Promise.all([
+      upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'),
+      upsertFrameworkScript('editor-framework-tailwind-js', 'https://cdn.tailwindcss.com')
+    ])
   }
 }
 

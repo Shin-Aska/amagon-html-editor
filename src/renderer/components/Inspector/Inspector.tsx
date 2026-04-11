@@ -17,10 +17,164 @@ import VideoField from './VideoField'
 import CarouselField from './CarouselField'
 import IconField from './IconField'
 import { useProjectStore } from '../../store/projectStore'
-import ArrayField from './ArrayField'
+import ArrayField, { type ArrayRecordField } from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
 import { Check, Clipboard } from 'lucide-react'
+
+interface ArrayEditorConfig {
+  itemFields: ArrayRecordField[]
+  itemLabelKey?: string
+}
+
+const variantOptions = [
+  { label: 'Primary', value: 'primary' },
+  { label: 'Secondary', value: 'secondary' },
+  { label: 'Success', value: 'success' },
+  { label: 'Danger', value: 'danger' },
+  { label: 'Warning', value: 'warning' },
+  { label: 'Info', value: 'info' },
+  { label: 'Light', value: 'light' },
+  { label: 'Dark', value: 'dark' }
+]
+
+const socialPlatformOptions = [
+  { label: 'Twitter', value: 'twitter' },
+  { label: 'LinkedIn', value: 'linkedin' },
+  { label: 'GitHub', value: 'github' },
+  { label: 'Facebook', value: 'facebook' },
+  { label: 'Instagram', value: 'instagram' },
+  { label: 'YouTube', value: 'youtube' },
+  { label: 'Website', value: 'website' }
+]
+
+const arrayEditorConfigs: Record<string, Record<string, ArrayEditorConfig>> = {
+  breadcrumb: {
+    items: {
+      itemLabelKey: 'label',
+      itemFields: [
+        { key: 'label', label: 'Label', default: 'Item' },
+        { key: 'href', label: 'URL', type: 'url', default: '#' },
+        { key: 'active', label: 'Active', type: 'boolean', default: false }
+      ]
+    }
+  },
+  dropdown: {
+    items: {
+      itemLabelKey: 'label',
+      itemFields: [
+        { key: 'label', label: 'Label', default: 'Action' },
+        { key: 'href', label: 'URL', type: 'url', default: '#' },
+        { key: 'divider', label: 'Divider', type: 'boolean', default: false },
+        { key: 'disabled', label: 'Disabled', type: 'boolean', default: false }
+      ]
+    }
+  },
+  'stats-section': {
+    items: {
+      itemLabelKey: 'label',
+      itemFields: [
+        { key: 'value', label: 'Value', default: '120' },
+        { key: 'label', label: 'Label', default: 'Projects' },
+        { key: 'prefix', label: 'Prefix', default: '' },
+        { key: 'suffix', label: 'Suffix', default: '+' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'lucide:rocket' }
+      ]
+    }
+  },
+  'team-grid': {
+    members: {
+      itemLabelKey: 'name',
+      itemFields: [
+        { key: 'name', label: 'Name', default: 'Team Member' },
+        { key: 'role', label: 'Role', default: 'Role' },
+        { key: 'imageUrl', label: 'Image URL', type: 'image', default: '' },
+        { key: 'bio', label: 'Bio', type: 'textarea', rows: 3, default: '' },
+        { key: 'socialLinks', label: 'Social Links', type: 'social-map', default: { twitter: '', linkedin: '', github: '' } }
+      ]
+    }
+  },
+  gallery: {
+    images: {
+      itemLabelKey: 'caption',
+      itemFields: [
+        { key: 'url', label: 'Image URL', type: 'image', default: '' },
+        { key: 'caption', label: 'Caption', default: 'Gallery item' },
+        { key: 'category', label: 'Category', default: '' }
+      ]
+    }
+  },
+  timeline: {
+    items: {
+      itemLabelKey: 'title',
+      itemFields: [
+        { key: 'date', label: 'Date', default: '2024' },
+        { key: 'title', label: 'Title', default: 'Milestone' },
+        { key: 'description', label: 'Description', type: 'textarea', rows: 3, default: '' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'lucide:circle' },
+        { key: 'variant', label: 'Variant', type: 'select', options: variantOptions, default: 'primary' }
+      ]
+    }
+  },
+  'logo-cloud': {
+    logos: {
+      itemLabelKey: 'altText',
+      itemFields: [
+        { key: 'imageUrl', label: 'Image URL', type: 'image', default: '' },
+        { key: 'altText', label: 'Alt Text', default: 'Logo' },
+        { key: 'href', label: 'URL', type: 'url', default: '#' }
+      ]
+    }
+  },
+  'process-steps': {
+    steps: {
+      itemLabelKey: 'title',
+      itemFields: [
+        { key: 'number', label: 'Number', default: '1' },
+        { key: 'title', label: 'Title', default: 'Step' },
+        { key: 'description', label: 'Description', type: 'textarea', rows: 3, default: '' },
+        { key: 'icon', label: 'Icon', type: 'icon', default: 'lucide:circle' }
+      ]
+    }
+  },
+  'comparison-table': {
+    plans: {
+      itemLabelKey: 'name',
+      itemFields: [
+        { key: 'name', label: 'Name', default: 'Plan' },
+        { key: 'price', label: 'Price', default: '$0' },
+        { key: 'period', label: 'Period', default: '/mo' },
+        { key: 'features', label: 'Features', type: 'feature-list', default: [{ text: 'Feature', included: true }] },
+        { key: 'ctaText', label: 'CTA Text', default: 'Select' },
+        { key: 'ctaHref', label: 'CTA URL', type: 'url', default: '#' },
+        { key: 'highlighted', label: 'Highlighted', type: 'boolean', default: false }
+      ]
+    }
+  },
+  'social-links': {
+    links: {
+      itemLabelKey: 'label',
+      itemFields: [
+        { key: 'platform', label: 'Platform', type: 'select', options: socialPlatformOptions, default: 'twitter' },
+        { key: 'url', label: 'URL', type: 'url', default: '#' },
+        { key: 'label', label: 'Label', default: 'Twitter' }
+      ]
+    }
+  },
+  footer: {
+    socialLinks: {
+      itemLabelKey: 'platform',
+      itemFields: [
+        { key: 'platform', label: 'Platform', type: 'select', options: socialPlatformOptions, default: 'twitter' },
+        { key: 'url', label: 'URL', type: 'url', default: '#' }
+      ]
+    }
+  }
+}
+
+function getArrayEditorConfig(blockType: string, key: string): ArrayEditorConfig | undefined {
+  return arrayEditorConfigs[blockType]?.[key]
+}
 
 function Inspector(): JSX.Element {
   const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
@@ -287,18 +441,22 @@ function Inspector(): JSX.Element {
         )
       }
       case 'array': {
+        const arrayConfig = getArrayEditorConfig(block.type, key)
         // Determine the item type based on the current value or block type
-        const determineItemType = (): 'string' | 'tab' | 'accordion' => {
+        const determineItemType = (): 'string' | 'tab' | 'accordion' | 'record' => {
+          if (arrayConfig) return 'record'
           // Check if we have existing items to infer the type
           if (Array.isArray(val) && val.length > 0) {
             const firstItem = val[0]
             if (typeof firstItem === 'object' && firstItem !== null) {
+              if (Array.isArray(firstItem)) return 'string'
               if ('label' in firstItem && 'content' in firstItem) {
                 return 'tab'
               }
               if ('title' in firstItem && 'content' in firstItem) {
                 return 'accordion'
               }
+              return 'record'
             }
           }
           // Infer from the prop key name as fallback
@@ -314,6 +472,8 @@ function Inspector(): JSX.Element {
             value={val || []}
             onChange={(v) => handlePropChange(key, v)}
             itemType={resolvedItemType}
+            itemFields={arrayConfig?.itemFields}
+            itemLabelKey={arrayConfig?.itemLabelKey}
             defaultIndex={resolvedItemType === 'tab' ? (typeof block.props.defaultTab === 'number' ? block.props.defaultTab : 0) : undefined}
             onDefaultChange={resolvedItemType === 'tab' ? (i) => handlePropChange('defaultTab', i) : undefined}
             onChangeBoth={resolvedItemType === 'tab' ? (newTabs, newDefault) => updateBlock(block.id, { props: { ...block.props, [key]: newTabs, defaultTab: newDefault } }) : undefined}

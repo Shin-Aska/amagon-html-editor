@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import BlockIcon from '../BlockIcon/BlockIcon'
 import { getLucideIconComponent, isRenderableGlyph, lucidePickerIcons, mapLegacyBootstrapIcon } from '../../utils/iconCatalog'
 import './IconField.css'
@@ -9,6 +9,7 @@ interface IconFieldProps {
 }
 
 function IconField({ value, onChange }: IconFieldProps): JSX.Element {
+  const [pickerOpen, setPickerOpen] = useState(false)
   const trimmed = String(value || '').trim()
   const lucideName = trimmed.startsWith('lucide:') ? trimmed.replace(/^lucide:/, '') : ''
   const legacyLucideName = mapLegacyBootstrapIcon(trimmed)
@@ -40,6 +41,9 @@ function IconField({ value, onChange }: IconFieldProps): JSX.Element {
       </div>
 
       <div className="icon-field-actions">
+        <button type="button" className="icon-field-action-btn" onClick={() => setPickerOpen(true)}>
+          Choose Icon
+        </button>
         <button type="button" className="icon-field-action-btn" onClick={() => onChange('')}>
           Clear
         </button>
@@ -48,23 +52,47 @@ function IconField({ value, onChange }: IconFieldProps): JSX.Element {
         </button>
       </div>
 
-      <div className="icon-field-grid" role="list">
-        {lucidePickerIcons.map((iconName) => {
-          const iconValue = `lucide:${iconName}`
-          const active = trimmed === iconValue
-          return (
-            <button
-              key={iconValue}
-              type="button"
-              className={`icon-field-grid-btn ${active ? 'active' : ''}`}
-              onClick={() => onChange(iconValue)}
-              title={`Use ${iconValue}`}
-            >
-              <BlockIcon name={iconName} />
-            </button>
-          )
-        })}
-      </div>
+      {pickerOpen && (
+        <div className="icon-field-modal-backdrop" role="presentation" onMouseDown={() => setPickerOpen(false)}>
+          <div
+            className="icon-field-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose icon"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="icon-field-modal-header">
+              <div>
+                <h4>Choose Icon</h4>
+                <p>Select a Lucide icon for this property.</p>
+              </div>
+              <button type="button" className="icon-field-modal-close" onClick={() => setPickerOpen(false)} aria-label="Close icon picker">
+                x
+              </button>
+            </div>
+            <div className="icon-field-grid" role="list">
+              {lucidePickerIcons.map((iconName) => {
+                const iconValue = `lucide:${iconName}`
+                const active = trimmed === iconValue
+                return (
+                  <button
+                    key={iconValue}
+                    type="button"
+                    className={`icon-field-grid-btn ${active ? 'active' : ''}`}
+                    onClick={() => {
+                      onChange(iconValue)
+                      setPickerOpen(false)
+                    }}
+                    title={`Use ${iconValue}`}
+                  >
+                    <BlockIcon name={iconName} />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -18,6 +18,7 @@ import StatusBar from './components/StatusBar/StatusBar'
 import DragOverlayManager, { type DropTargetHint } from './components/DragOverlayManager/DragOverlayManager'
 import CommandPalette from './components/CommandPalette/CommandPalette'
 import Toast from './components/Toast/Toast'
+import BlockIcon from './components/BlockIcon/BlockIcon'
 import { useEditorStore } from './store/editorStore'
 import { useProjectStore } from './store/projectStore'
 import { useToastStore } from './store/toastStore'
@@ -564,9 +565,16 @@ function App(): JSX.Element {
 
   const dragOverlayPreview = useMemo(() => {
     if (!activeWidget) return null
+    const iconString = typeof activeWidget.icon === 'string' ? activeWidget.icon.trim() : ''
+    const previewIcon = iconString.startsWith('lucide:')
+      ? <BlockIcon name={iconString.replace(/^lucide:/, '')} />
+      : activeWidget.widgetType.startsWith('user:')
+        ? (iconString || <BlockIcon name="user-block" />)
+        : <BlockIcon name={activeWidget.widgetType} />
+
     return (
       <div className="widget-drag-preview">
-        <div className="widget-drag-preview__icon">{activeWidget.icon ?? '▢'}</div>
+        <div className="widget-drag-preview__icon">{previewIcon}</div>
         <div className="widget-drag-preview__label">{activeWidget.label ?? activeWidget.widgetType}</div>
       </div>
     )

@@ -436,6 +436,31 @@ function renderInlineIcon(value: unknown): string {
   return ''
 }
 
+const SOCIAL_PLATFORM_ICON_CLASSES: Record<string, string> = {
+  x: 'bi-twitter-x',
+  twitter: 'bi-twitter-x',
+  facebook: 'bi-facebook',
+  instagram: 'bi-instagram',
+  linkedin: 'bi-linkedin',
+  github: 'bi-github',
+  youtube: 'bi-youtube',
+  tiktok: 'bi-tiktok',
+  discord: 'bi-discord',
+  dribbble: 'bi-dribbble',
+  behance: 'bi-behance',
+  email: 'bi-envelope-fill',
+  mail: 'bi-envelope-fill',
+  website: 'bi-globe2',
+  web: 'bi-globe2',
+  link: 'bi-link-45deg'
+}
+
+function renderSocialPlatformIcon(platform: unknown): string {
+  const key = String(platform ?? '').trim().toLowerCase()
+  const iconClass = SOCIAL_PLATFORM_ICON_CLASSES[key] || 'bi-link-45deg'
+  return `<i class="bi ${iconClass}" aria-hidden="true"></i>`
+}
+
 function normalizeIconSizeToken(value: unknown): 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' {
   const raw = String(value ?? 'md').trim()
   if (raw === 'xs' || raw === 'sm' || raw === 'lg' || raw === 'xl' || raw === '2xl') return raw
@@ -2747,13 +2772,16 @@ ${pad}</div>`
           ? 'stats-item rounded-lg border border-[var(--theme-border)] p-6'
           : 'stats-item p-4'
       const alignClass = alignment === 'left' ? 'text-left items-start' : 'text-center items-center'
-      const itemsHtml = normalizedItems.map((item) => `${pad}    <div class="${itemClass}" data-stats-item="true" data-stat-value="${escapeAttrValue(item.value)}" data-stat-label="${escapeAttrValue(item.label)}" data-stat-prefix="${escapeAttrValue(item.prefix)}" data-stat-suffix="${escapeAttrValue(item.suffix)}" data-stat-icon="${escapeAttrValue(item.icon)}">
-${pad}      ${item.icon ? `<div class="mb-2 text-2xl">${escapeAttrValue(item.icon)}</div>` : ''}
+      const itemsHtml = normalizedItems.map((item) => {
+        const iconMarkup = renderInlineIcon(item.icon)
+        return `${pad}    <div class="${itemClass}" data-stats-item="true" data-stat-value="${escapeAttrValue(item.value)}" data-stat-label="${escapeAttrValue(item.label)}" data-stat-prefix="${escapeAttrValue(item.prefix)}" data-stat-suffix="${escapeAttrValue(item.suffix)}" data-stat-icon="${escapeAttrValue(item.icon)}">
+${pad}      ${iconMarkup ? `<div class="mb-2 text-2xl">${iconMarkup}</div>` : ''}
 ${pad}      <div class="flex ${alignClass} gap-2">
 ${pad}        <h3 class="text-4xl font-bold leading-tight">${escapeAttrValue(`${item.prefix}${item.value}${item.suffix}`)}</h3>
 ${pad}      </div>
 ${pad}      <p class="mt-2 text-sm text-[var(--theme-text-muted)]">${escapeAttrValue(item.label)}</p>
-${pad}    </div>`).join('\n')
+${pad}    </div>`
+      }).join('\n')
 
       return `${pad}<section class="stats-section py-12" ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
@@ -2771,15 +2799,18 @@ ${pad}</section>`
       : variant === 'bordered'
         ? 'stats-item h-100 border rounded-3 p-4'
         : 'stats-item h-100 p-3'
-    const itemsHtml = normalizedItems.map((item) => `${pad}      <div class="col">
+    const itemsHtml = normalizedItems.map((item) => {
+      const iconMarkup = renderInlineIcon(item.icon)
+      return `${pad}      <div class="col">
 ${pad}        <div class="${itemClass}" data-stats-item="true" data-stat-value="${escapeAttrValue(item.value)}" data-stat-label="${escapeAttrValue(item.label)}" data-stat-prefix="${escapeAttrValue(item.prefix)}" data-stat-suffix="${escapeAttrValue(item.suffix)}" data-stat-icon="${escapeAttrValue(item.icon)}">
 ${pad}          ${variant === 'cards' ? '<div class="card-body">' : ''}
-${pad}          ${item.icon ? `<div class="mb-2">${escapeAttrValue(item.icon)}</div>` : ''}
+${pad}          ${iconMarkup ? `<div class="mb-2">${iconMarkup}</div>` : ''}
 ${pad}          <h3 class="display-5 fw-bold mb-1">${escapeAttrValue(`${item.prefix}${item.value}${item.suffix}`)}</h3>
 ${pad}          <p class="text-muted mb-0">${escapeAttrValue(item.label)}</p>
 ${pad}          ${variant === 'cards' ? '</div>' : ''}
 ${pad}        </div>
-${pad}      </div>`).join('\n')
+${pad}      </div>`
+    }).join('\n')
 
     return `${pad}<section class="stats-section py-5 ${alignClass}" ${dataAttrs}>
 ${pad}  <div class="container">
@@ -2930,14 +2961,17 @@ ${pad}</section>`
     if (framework === 'tailwind') {
       const containerClass = orientation === 'horizontal' ? 'grid grid-cols-1 gap-4 md:grid-cols-3' : 'space-y-4'
       const alignBase = orientation === 'vertical' && alternating ? 'md:[&:nth-child(even)]:ml-10' : ''
-      const itemsHtml = normalizedItems.map((item) => `${pad}    <article class="timeline-item relative rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 ${alignBase}" data-timeline-item="true" data-timeline-date="${escapeAttrValue(item.date)}" data-timeline-title="${escapeAttrValue(item.title)}" data-timeline-description="${escapeAttrValue(item.description)}" data-timeline-icon="${escapeAttrValue(item.icon)}" data-timeline-variant="${escapeAttrValue(item.variant)}">
+      const itemsHtml = normalizedItems.map((item) => {
+        const iconMarkup = renderInlineIcon(item.icon) || escapeAttrValue(item.icon || '•')
+        return `${pad}    <article class="timeline-item relative rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 ${alignBase}" data-timeline-item="true" data-timeline-date="${escapeAttrValue(item.date)}" data-timeline-title="${escapeAttrValue(item.title)}" data-timeline-description="${escapeAttrValue(item.description)}" data-timeline-icon="${escapeAttrValue(item.icon)}" data-timeline-variant="${escapeAttrValue(item.variant)}">
 ${pad}      <div class="mb-2 flex items-center gap-2 text-sm text-[var(--theme-text-muted)]">
-${pad}        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--theme-border)]">${escapeAttrValue(item.icon || '•')}</span>
+${pad}        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--theme-border)]">${iconMarkup}</span>
 ${pad}        <span>${escapeAttrValue(item.date)}</span>
 ${pad}      </div>
 ${pad}      <h3 class="text-lg font-semibold">${escapeAttrValue(item.title)}</h3>
 ${pad}      <p class="mt-2 text-sm text-[var(--theme-text)]">${escapeAttrValue(item.description)}</p>
-${pad}    </article>`).join('\n')
+${pad}    </article>`
+      }).join('\n')
 
       return `${pad}<section class="timeline py-12" style="--timeline-line-color: ${escapeAttrValue(lineColor)};" ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
@@ -2949,15 +2983,18 @@ ${pad}</section>`
     }
 
     const containerClass = orientation === 'horizontal' ? 'row row-cols-1 row-cols-md-3 g-4' : 'd-flex flex-column gap-3'
-    const itemsHtml = normalizedItems.map((item, index) => `${orientation === 'horizontal' ? `${pad}      <div class="col">` : ''}${pad}        <article class="timeline-item p-4 rounded-3 border${orientation === 'vertical' && alternating && index % 2 === 1 ? ' ms-md-5' : ''}" data-timeline-item="true" data-timeline-date="${escapeAttrValue(item.date)}" data-timeline-title="${escapeAttrValue(item.title)}" data-timeline-description="${escapeAttrValue(item.description)}" data-timeline-icon="${escapeAttrValue(item.icon)}" data-timeline-variant="${escapeAttrValue(item.variant)}">
+    const itemsHtml = normalizedItems.map((item, index) => {
+      const iconMarkup = renderInlineIcon(item.icon) || escapeAttrValue(item.icon || '•')
+      return `${orientation === 'horizontal' ? `${pad}      <div class="col">` : ''}${pad}        <article class="timeline-item p-4 rounded-3 border${orientation === 'vertical' && alternating && index % 2 === 1 ? ' ms-md-5' : ''}" data-timeline-item="true" data-timeline-date="${escapeAttrValue(item.date)}" data-timeline-title="${escapeAttrValue(item.title)}" data-timeline-description="${escapeAttrValue(item.description)}" data-timeline-icon="${escapeAttrValue(item.icon)}" data-timeline-variant="${escapeAttrValue(item.variant)}">
 ${pad}          <div class="d-flex align-items-center gap-2 text-muted small mb-2">
-${pad}            <span class="d-inline-flex align-items-center justify-content-center rounded-circle border" style="width:1.75rem;height:1.75rem;">${escapeAttrValue(item.icon || '•')}</span>
+${pad}            <span class="d-inline-flex align-items-center justify-content-center rounded-circle border" style="width:1.75rem;height:1.75rem;">${iconMarkup}</span>
 ${pad}            <span>${escapeAttrValue(item.date)}</span>
 ${pad}          </div>
 ${pad}          <h3 class="h5 mb-2">${escapeAttrValue(item.title)}</h3>
 ${pad}          <p class="mb-0">${escapeAttrValue(item.description)}</p>
 ${pad}        </article>${orientation === 'horizontal' ? `
-${pad}      </div>` : ''}`).join('\n')
+${pad}      </div>` : ''}`
+    }).join('\n')
 
     return `${pad}<section class="timeline py-5" style="--timeline-line-color: ${escapeAttrValue(lineColor)};" ${dataAttrs}>
 ${pad}  <div class="container">
@@ -3039,14 +3076,17 @@ ${pad}</section>`
         : connectorStyle === 'dotted'
           ? 'after:absolute after:right-[-10px] after:top-1/2 after:h-px after:w-5 after:-translate-y-1/2 after:border-t after:border-dotted after:border-[var(--theme-border)] after:content-[\'\']'
           : 'after:absolute after:right-[-10px] after:top-1/2 after:h-px after:w-5 after:-translate-y-1/2 after:bg-[var(--theme-border)] after:content-[\'\']'
-      const stepsHtml = normalizedSteps.map((step, index) => `${pad}    <article class="process-step relative rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 ${layout === 'horizontal' && index < normalizedSteps.length - 1 ? connectorClass : ''}" data-process-step="true" data-step-number="${escapeAttrValue(step.number)}" data-step-title="${escapeAttrValue(step.title)}" data-step-description="${escapeAttrValue(step.description)}" data-step-icon="${escapeAttrValue(step.icon)}">
+      const stepsHtml = normalizedSteps.map((step, index) => {
+        const iconMarkup = renderInlineIcon(step.icon) || escapeAttrValue(step.icon || '•')
+        return `${pad}    <article class="process-step relative rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 ${layout === 'horizontal' && index < normalizedSteps.length - 1 ? connectorClass : ''}" data-process-step="true" data-step-number="${escapeAttrValue(step.number)}" data-step-title="${escapeAttrValue(step.title)}" data-step-description="${escapeAttrValue(step.description)}" data-step-icon="${escapeAttrValue(step.icon)}">
 ${pad}      <div class="mb-2 flex items-center gap-2">
 ${pad}        ${(variant === 'numbered' || variant === 'both') ? `<span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--theme-primary)] text-sm font-semibold text-white">${escapeAttrValue(step.number)}</span>` : ''}
-${pad}        ${(variant === 'icon' || variant === 'both') ? `<span class="text-xl">${escapeAttrValue(step.icon || '•')}</span>` : ''}
+${pad}        ${(variant === 'icon' || variant === 'both') ? `<span class="text-xl">${iconMarkup}</span>` : ''}
 ${pad}      </div>
 ${pad}      <h3 class="text-lg font-semibold">${escapeAttrValue(step.title)}</h3>
 ${pad}      <p class="mt-2 text-sm text-[var(--theme-text-muted)]">${escapeAttrValue(step.description)}</p>
-${pad}    </article>`).join('\n')
+${pad}    </article>`
+      }).join('\n')
 
       return `${pad}<section class="process-steps py-12" ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
@@ -3058,15 +3098,18 @@ ${pad}</section>`
     }
 
     const containerClass = layout === 'vertical' ? 'd-flex flex-column gap-3' : 'row row-cols-1 row-cols-md-3 g-4'
-    const stepsHtml = normalizedSteps.map((step, index) => `${layout === 'horizontal' ? `${pad}      <div class="col">` : ''}${pad}        <article class="process-step position-relative rounded-3 border p-4 ${layout === 'horizontal' && index < normalizedSteps.length - 1 ? 'process-step-connector' : ''}" data-process-step="true" data-step-number="${escapeAttrValue(step.number)}" data-step-title="${escapeAttrValue(step.title)}" data-step-description="${escapeAttrValue(step.description)}" data-step-icon="${escapeAttrValue(step.icon)}">
+    const stepsHtml = normalizedSteps.map((step, index) => {
+      const iconMarkup = renderInlineIcon(step.icon) || escapeAttrValue(step.icon || '•')
+      return `${layout === 'horizontal' ? `${pad}      <div class="col">` : ''}${pad}        <article class="process-step position-relative rounded-3 border p-4 ${layout === 'horizontal' && index < normalizedSteps.length - 1 ? 'process-step-connector' : ''}" data-process-step="true" data-step-number="${escapeAttrValue(step.number)}" data-step-title="${escapeAttrValue(step.title)}" data-step-description="${escapeAttrValue(step.description)}" data-step-icon="${escapeAttrValue(step.icon)}">
 ${pad}          <div class="d-flex align-items-center gap-2 mb-2">
 ${pad}            ${(variant === 'numbered' || variant === 'both') ? `<span class="badge bg-primary rounded-pill">${escapeAttrValue(step.number)}</span>` : ''}
-${pad}            ${(variant === 'icon' || variant === 'both') ? `<span>${escapeAttrValue(step.icon || '•')}</span>` : ''}
+${pad}            ${(variant === 'icon' || variant === 'both') ? `<span>${iconMarkup}</span>` : ''}
 ${pad}          </div>
 ${pad}          <h3 class="h5 mb-2">${escapeAttrValue(step.title)}</h3>
 ${pad}          <p class="mb-0 text-muted">${escapeAttrValue(step.description)}</p>
 ${pad}        </article>${layout === 'horizontal' ? `
-${pad}      </div>` : ''}`).join('\n')
+${pad}      </div>` : ''}`
+    }).join('\n')
 
     return `${pad}<section class="process-steps py-5" ${dataAttrs}>
 ${pad}  <div class="container">
@@ -3240,8 +3283,8 @@ ${pad}</section>`
     if (framework === 'tailwind') {
       const sizeClass = size === 'sm' ? 'text-sm gap-2' : size === 'lg' ? 'text-xl gap-6' : 'text-base gap-4'
       const linksHtml = links.map(link => `
-${pad}    <a href="${escapeAttrValue(link.url || '#')}" class="inline-flex items-center gap-2 hover:text-[var(--theme-primary)] transition-colors" title="${escapeAttrValue(link.platform || 'Social')}">
-${pad}      ${style !== 'text-only' ? `<span>✦</span>` : ''}
+${pad}    <a href="${escapeAttrValue(link.url || '#')}" class="inline-flex items-center gap-2 hover:text-[var(--theme-primary)] transition-colors" title="${escapeAttrValue(link.platform || 'Social')}" data-social-platform="${escapeAttrValue(link.platform || '')}">
+${pad}      ${style !== 'text-only' ? `<span class="social-link-icon">${renderSocialPlatformIcon(link.platform)}</span>` : ''}
 ${pad}      ${style !== 'icons-only' ? `<span>${escapeAttrValue(link.label || link.platform || 'Link')}</span>` : ''}
 ${pad}    </a>`).join('')
       return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} flex flex-wrap justify-center ${sizeClass}">
@@ -3251,8 +3294,8 @@ ${pad}</div>`
 
     const sizeClass = size === 'sm' ? 'fs-6 gap-2' : size === 'lg' ? 'fs-4 gap-4' : 'fs-5 gap-3'
     const linksHtml = links.map(link => `
-${pad}    <a href="${escapeAttrValue(link.url || '#')}" class="text-decoration-none text-body d-inline-flex align-items-center gap-2" title="${escapeAttrValue(link.platform || 'Social')}">
-${pad}      ${style !== 'text-only' ? `<span>✦</span>` : ''}
+${pad}    <a href="${escapeAttrValue(link.url || '#')}" class="text-decoration-none text-body d-inline-flex align-items-center gap-2" title="${escapeAttrValue(link.platform || 'Social')}" data-social-platform="${escapeAttrValue(link.platform || '')}">
+${pad}      ${style !== 'text-only' ? `<span class="social-link-icon">${renderSocialPlatformIcon(link.platform)}</span>` : ''}
 ${pad}      ${style !== 'icons-only' ? `<span>${escapeAttrValue(link.label || link.platform || 'Link')}</span>` : ''}
 ${pad}    </a>`).join('')
     return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} d-flex flex-wrap justify-content-center ${sizeClass}">
@@ -3897,21 +3940,10 @@ ${pad}</div>`
       const styleStr = stylesToString(block.styles)
       const styleAttr = styleStr ? ` style="${styleStr}"` : ''
 
-      const socialPlatformIcons: Record<string, string> = {
-        twitter: '𝕏',
-        x: '𝕏',
-        facebook: 'f',
-        instagram: '◎',
-        linkedin: 'in',
-        github: '⎇',
-        youtube: '▶'
-      }
-
       const socialHtml = showSocialLinks && socialLinks.length > 0
         ? `${pad}  <div class="${framework === 'tailwind' ? 'flex gap-4 mt-4' : 'd-flex gap-3 mt-3'}">
 ${socialLinks.map((sl) => {
-  const icon = socialPlatformIcons[String(sl.platform || '').toLowerCase()] || '🔗'
-  return `${pad}    <a href="${escapeAttrValue(sl.url || '#')}" class="${framework === 'tailwind' ? 'text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]' : 'text-muted'}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttrValue(sl.platform || 'Social link')}">${icon}</a>`
+  return `${pad}    <a href="${escapeAttrValue(sl.url || '#')}" class="${framework === 'tailwind' ? 'text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]' : 'text-muted'}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttrValue(sl.platform || 'Social link')}">${renderSocialPlatformIcon(sl.platform)}</a>`
 }).join('\n')}
 ${pad}  </div>`
         : ''
@@ -4583,7 +4615,7 @@ ${pad}</div>`
       const styles: Record<string, string> = { ...block.styles }
       if (columns === '2') styles.columnCount = '2'
       else if (columns === '3') styles.columnCount = '3'
-      if (dropCap) styles.setProperty?.('--drop-cap', '1') // marker for CSS
+      if (dropCap) styles['--drop-cap'] = '1'
       const styleStr = stylesToString(styles)
       const styleAttr = styleStr ? ` style="${styleStr}"` : ''
       const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="paragraph"` : ''
