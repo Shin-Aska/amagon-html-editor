@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import './ArrayField.css'
 import { useEditorStore } from '../../store/editorStore'
-import { Star, Palette } from 'lucide-react'
+import { Star, Palette, ChevronRight, ChevronDown, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react'
 import IconField from './IconField'
 import ImageField from './ImageField'
 import UrlField from './UrlField'
@@ -283,6 +283,7 @@ function ArrayField({
   onChangeBoth
 }: ArrayFieldProps): JSX.Element {
   const [newItemText, setNewItemText] = useState('')
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
 
   const normalizeValue = useCallback((): ArrayItem[] => {
     if (!Array.isArray(value)) return []
@@ -298,12 +299,17 @@ function ArrayField({
 
   const handleAddObjectItem = useCallback(() => {
     const current = normalizeValue()
+    let newItem;
     if (itemType === 'tab') {
-      onChange([...current, { label: 'New Tab', content: '' }])
+      newItem = { label: 'New Tab', content: '' }
     } else if (itemType === 'accordion') {
-      onChange([...current, { title: 'New Item', content: '' }])
+      newItem = { title: 'New Item', content: '' }
     } else if (itemType === 'record') {
-      onChange([...current, createRecordItem(itemFields)])
+      newItem = createRecordItem(itemFields)
+    }
+    if (newItem) {
+      onChange([...current, newItem])
+      setExpandedIndex(current.length)
     }
   }, [itemFields, itemType, normalizeValue, onChange])
 
@@ -345,6 +351,12 @@ function ArrayField({
     if (defaultIndex === index) newDefault = newIndex
     else if (defaultIndex === newIndex) newDefault = index
 
+    if (expandedIndex === index) {
+      setExpandedIndex(newIndex)
+    } else if (expandedIndex === newIndex) {
+      setExpandedIndex(index)
+    }
+
     if (onChangeBoth && newDefault !== defaultIndex) {
       onChangeBoth(next, newDefault)
     } else {
@@ -359,6 +371,12 @@ function ArrayField({
     const next = [...normalizeValue()]
     next.splice(index, 1)
     onChange(next)
+    
+    if (expandedIndex === index) {
+      setExpandedIndex(null)
+    } else if (expandedIndex !== null && expandedIndex > index) {
+      setExpandedIndex(expandedIndex - 1)
+    }
 
     if (onDefaultChange) {
       if (defaultIndex === index) {
@@ -545,12 +563,12 @@ function ArrayField({
               onClick={handleAddStringItem}
               disabled={!newItemText.trim()}
             >
-              + Add
+              <Plus size={14} /> Add
             </button>
           </div>
         ) : (
           <button className="array-add-btn" onClick={handleAddObjectItem}>
-            + Add {addLabel}
+            <Plus size={14} /> Add {addLabel}
           </button>
         )}
       </div>
@@ -559,115 +577,152 @@ function ArrayField({
         {items.length === 0 ? (
           <div className="array-empty">No items added.</div>
         ) : (
-          items.map((item, index) => (
-            <div key={index} className="array-item">
-              {isStringArray ? (
-                <div className="array-item-string">
-                  <input
-                    type="text"
-                    className="array-input"
-                    value={String(item)}
-                    onChange={(e) => updateStringItem(index, e.target.value)}
-                  />
-                </div>
-              ) : (
-                <div className="array-item-object">
-                  {isTabArray && (
-                    <>
-                      <div className="array-tab-label-row">
-                        <input
-                          type="text"
-                          className="array-input"
-                          placeholder="Tab label"
-                          value={(item as TabItem).label || ''}
-                          onChange={(e) => updateItem(index, { label: e.target.value })}
-                        />
-                        {onDefaultChange && (
-                          <button
-                            className={`array-default-btn${index === defaultIndex ? ' active' : ''}`}
-                            onClick={() => onDefaultChange(index)}
-                            title={index === defaultIndex ? 'Default tab' : 'Set as default tab'}
-                          >
-                            <Star size={12} fill={index === defaultIndex ? 'currentColor' : 'none'} />
-                          </button>
+          items.map((item, index) => {
+            const isExpanded = expandedIndex === index;
+            return (
+              <div key={index} className={`array-item ${isExpanded ? 'expanded' : ''}`}>
+                {isStringArray ? (
+                  <div className="array-item-string">
+                    <input
+                      type="text"
+                      className="array-input"
+                      value={String(item)}
+                      onChange={(e) => updateStringItem(index, e.target.value)}
+                    />
+                    <div className="array-item-actions">
+                      <button
+                        className="array-action-btn"
+                        onClick={() => moveItem(index, 'up')}
+                        disabled={index === 0}
+                        title="Move up"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        className="array-action-btn"
+                        onClick={() => moveItem(index, 'down')}
+                        disabled={index === items.length - 1}
+                        title="Move down"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                      <button
+                        className="array-action-btn delete"
+                        onClick={() => removeItem(index)}
+                        title="Remove"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="array-item-object">
+                    <div 
+                      className="array-item-header" 
+                      onClick={() => setExpandedIndex(isExpanded ? null : index)}
+                    >
+                      <div className="array-item-title">
+                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        <span>{formatRecordSummary(isRecordItem(item) ? item : {}, index, itemLabelKey)}</span>
+                      </div>
+                      <div className="array-item-actions" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="array-action-btn"
+                          onClick={() => moveItem(index, 'up')}
+                          disabled={index === 0}
+                          title="Move up"
+                        >
+                          <ArrowUp size={14} />
+                        </button>
+                        <button
+                          className="array-action-btn"
+                          onClick={() => moveItem(index, 'down')}
+                          disabled={index === items.length - 1}
+                          title="Move down"
+                        >
+                          <ArrowDown size={14} />
+                        </button>
+                        <button
+                          className="array-action-btn delete"
+                          onClick={() => removeItem(index)}
+                          title="Remove"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {isExpanded && (
+                      <div className="array-item-body">
+                        {isTabArray && (
+                          <>
+                            <div className="array-tab-label-row">
+                              <input
+                                type="text"
+                                className="array-input"
+                                placeholder="Tab label"
+                                value={(item as TabItem).label || ''}
+                                onChange={(e) => updateItem(index, { label: e.target.value })}
+                              />
+                              {onDefaultChange && (
+                                <button
+                                  className={`array-default-btn${index === defaultIndex ? ' active' : ''}`}
+                                  onClick={() => onDefaultChange(index)}
+                                  title={index === defaultIndex ? 'Default tab' : 'Set as default tab'}
+                                >
+                                  <Star size={12} fill={index === defaultIndex ? 'currentColor' : 'none'} />
+                                </button>
+                              )}
+                            </div>
+                            {blockId && (
+                              <button
+                                className="array-edit-canvas-btn"
+                                onClick={() => useEditorStore.getState().enterTabEditMode(blockId, index)}
+                                title="Edit tab content visually in the canvas"
+                              >
+                                <Palette size={12} /> Edit tab content in Canvas
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {isAccordionArray && (
+                          <>
+                            <input
+                              type="text"
+                              className="array-input"
+                              placeholder="Item title"
+                              value={(item as AccordionItem).title || ''}
+                              onChange={(e) => updateItem(index, { title: e.target.value })}
+                            />
+                            <textarea
+                              className="array-textarea"
+                              placeholder="Item content"
+                              value={(item as AccordionItem).content || ''}
+                              onChange={(e) => updateItem(index, { content: e.target.value })}
+                              rows={2}
+                            />
+                          </>
+                        )}
+                        {isRecordArray && (
+                          <div className="array-record-grid">
+                            {(itemFields || Object.keys(isRecordItem(item) ? item : {}).map((fieldKey) => ({
+                              key: fieldKey,
+                              label: labelizeKey(fieldKey),
+                              type: isRecordItem(item) && typeof item[fieldKey] === 'boolean'
+                                ? 'boolean'
+                                : isRecordItem(item) && (Array.isArray(item[fieldKey]) || isRecordItem(item[fieldKey]))
+                                  ? 'json'
+                                  : 'text'
+                            } satisfies ArrayRecordField))).map((field) => renderRecordField(item, index, field))}
+                          </div>
                         )}
                       </div>
-                      {blockId && (
-                        <button
-                          className="array-edit-canvas-btn"
-                          onClick={() => useEditorStore.getState().enterTabEditMode(blockId, index)}
-                          title="Edit tab content visually in the canvas"
-                        >
-                          <Palette size={12} /> Edit tab content in Canvas
-                        </button>
-                      )}
-                    </>
-                  )}
-                  {isAccordionArray && (
-                    <>
-                      <input
-                        type="text"
-                        className="array-input"
-                        placeholder="Item title"
-                        value={(item as AccordionItem).title || ''}
-                        onChange={(e) => updateItem(index, { title: e.target.value })}
-                      />
-                      <textarea
-                        className="array-textarea"
-                        placeholder="Item content"
-                        value={(item as AccordionItem).content || ''}
-                        onChange={(e) => updateItem(index, { content: e.target.value })}
-                        rows={2}
-                      />
-                    </>
-                  )}
-                  {isRecordArray && (
-                    <>
-                      <div className="array-item-summary">
-                        {formatRecordSummary(isRecordItem(item) ? item : {}, index, itemLabelKey)}
-                      </div>
-                      <div className="array-record-grid">
-                        {(itemFields || Object.keys(isRecordItem(item) ? item : {}).map((fieldKey) => ({
-                          key: fieldKey,
-                          label: labelizeKey(fieldKey),
-                          type: isRecordItem(item) && typeof item[fieldKey] === 'boolean'
-                            ? 'boolean'
-                            : isRecordItem(item) && (Array.isArray(item[fieldKey]) || isRecordItem(item[fieldKey]))
-                              ? 'json'
-                              : 'text'
-                        } satisfies ArrayRecordField))).map((field) => renderRecordField(item, index, field))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="array-item-actions">
-                <button
-                  className="array-action-btn"
-                  onClick={() => moveItem(index, 'up')}
-                  disabled={index === 0}
-                  title="Move up"
-                >
-                  ^
-                </button>
-                <button
-                  className="array-action-btn"
-                  onClick={() => moveItem(index, 'down')}
-                  disabled={index === items.length - 1}
-                  title="Move down"
-                >
-                  v
-                </button>
-                <button
-                  className="array-action-btn delete"
-                  onClick={() => removeItem(index)}
-                  title="Remove"
-                >
-                  x
-                </button>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>

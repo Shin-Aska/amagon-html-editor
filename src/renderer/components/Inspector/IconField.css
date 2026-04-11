@@ -1,26 +1,61 @@
 .icon-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.icon-field-row {
+.icon-field-controls {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
 }
 
-.icon-field-preview {
-  width: 40px;
-  height: 40px;
+.icon-field-button {
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
   border: 1px solid var(--color-border);
-  background: var(--color-bg-primary);
+  background-color: var(--color-bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  cursor: pointer;
   color: var(--color-text-primary);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.icon-field-button:hover {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-hover, rgba(255,255,255,0.02));
+}
+
+.icon-field-button.empty {
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.icon-field-button.empty:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background-color: var(--color-bg-primary);
+}
+
+.icon-field-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-field-clear:hover {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: var(--color-danger, #dc3545);
 }
 
 .icon-field-lucide {
@@ -36,25 +71,6 @@
 
 .icon-field-empty {
   color: var(--color-text-secondary);
-}
-
-.icon-field-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.icon-field-action-btn {
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.icon-field-action-btn:hover {
-  border-color: var(--color-accent);
 }
 
 .icon-field-grid {
@@ -127,6 +143,9 @@
 }
 
 .icon-field-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
   border: 1px solid var(--color-border);
@@ -134,8 +153,29 @@
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   cursor: pointer;
+  transition: border-color 0.2s;
 }
 
 .icon-field-modal-close:hover {
+  border-color: var(--color-accent);
+}
+
+.icon-field-search-row {
+  margin-bottom: 16px;
+}
+
+.icon-field-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  transition: border-color 0.2s;
+}
+
+.icon-field-search-input:focus {
+  outline: none;
   border-color: var(--color-accent);
 }
