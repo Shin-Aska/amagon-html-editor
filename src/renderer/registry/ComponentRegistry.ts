@@ -17,6 +17,7 @@ export type PropType =
   | 'multi-combobox' // multi-select dropdown with checkboxes
   | 'sortable-list'
   | 'url' // URL input with page suggestions
+  | 'object' // For structured key-value pairs
 
 export interface PropSchema {
   type: PropType
