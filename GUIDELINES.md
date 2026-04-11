@@ -276,19 +276,55 @@ API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an
 
 ## 9. Block Registry
 
-Defined in `src/renderer/registry/registerBlocks.ts`. There are **50+ block types** including:
+Defined in `src/renderer/registry/registerBlocks.ts`. There are **63 block types** organized into 7 categories:
 
-**Layout:** `container`, `row`, `column`, `section`, `grid`
-**Content:** `heading`, `paragraph`, `text`, `blockquote`, `list`, `table`
-**Media:** `image`, `video`, `icon`, `carousel`
-**Interactive:** `button`, `link`, `accordion`, `tabs`, `modal`, `dropdown`
-**Forms:** `form`, `input`, `textarea`, `select`, `checkbox`, `radio`, `range`, `file-input`
-**Navigation:** `navbar`, `breadcrumb`, `pagination`
-**Feedback:** `alert`, `badge`, `progress`, `spinner`, `toast-container`
-**Cards:** `card`, `card-header`, `card-body`, `card-footer`
-**Misc:** `hr`, `embed`, `raw-html`, `offcanvas`
+**Layout (6):** `container`, `row`, `column`, `section`, `divider`, `spacer`
+
+**Typography (5):** `heading`, `paragraph`, `blockquote`, `list`, `code-block`
+
+**Media (4):** `image`, `video`, `icon`, `carousel`
+
+**Components (24):** `navbar`, `hero`, `feature-card`, `footer`, `accordion`, `tabs`, `pricing-table`, `testimonial`, `cta-section`, `modal`, `page-list`, `alert`, `badge`, `progress`, `spinner`, `breadcrumb`, `pagination`, `table`, `dropdown`, `offcanvas`, `card`, `social-links`, `cookie-banner`, `back-to-top`
+
+**Interactive (13):** `button`, `link`, `form`, `input`, `textarea`, `checkbox`, `select`, `radio`, `range`, `file-input`, `countdown`, `before-after`, `map-embed`
+
+**Sections (9):** `stats-section`, `team-grid`, `gallery`, `timeline`, `logo-cloud`, `process-steps`, `newsletter`, `comparison-table`, `contact-card`
+
+**Embed (2):** `raw-html`, `iframe`
 
 Each registration defines: label, icon, default props schema, allowed children, and HTML rendering rules.
+
+### Category Descriptions
+
+- **Layout** — Structure and spacing elements that organize content flow
+- **Typography** — Text and content presentation blocks
+- **Media** — Image, video, and icon display elements
+- **Components** — Complex reusable widgets (navbars, modals, tables, cards, etc.)
+- **Interactive** — User interaction elements (forms, buttons, dropdowns, and interactive widgets like countdowns and sliders)
+- **Sections** — Full-width composite sections with multiple sub-elements (hero sections, stats displays, team grids, galleries, etc.)
+- **Embed** — Raw HTML and iframe embedding for custom content
+
+### PropType Reference
+
+Each block's props are typed using one of these PropTypes (defined in `src/renderer/registry/ComponentRegistry.ts`):
+
+- **text** — Plain text input
+- **textarea** — Multi-line text input
+- **number** — Numeric input with optional min/max
+- **boolean** — Checkbox/toggle
+- **select** — Dropdown with predefined options
+- **color** — Color picker
+- **image** — Image file upload/selection
+- **video** — Video URL or upload
+- **icon** — Icon picker (lucide-react)
+- **url** — URL input with page link suggestions
+- **carousel** — Carousel item (used for nested carousel content)
+- **array** — Array of items (for collections like carousel items, nav links, etc.)
+- **combobox** — Editable dropdown with auto-complete suggestions (commonly used for tag filtering)
+- **multi-combobox** — Multi-select dropdown with checkboxes (new in v1.8.0)
+- **measurement** — CSS measurement input (e.g., "10px", "1rem") (new in v1.8.0)
+- **sortable-list** — Array with drag-and-drop reordering capability (new in v1.8.0)
+- **object** — Structured key-value pairs (new in v1.8.0)
 
 ---
 
@@ -373,4 +409,4 @@ If you need deeper context, start with these:
 
 ---
 
-*Last updated: 2026-03-29*
+*Last updated: 2026-04-11*
