@@ -142,6 +142,7 @@ Amagon's AI assistant works with any of the following providers:
 | **Anthropic** | Enter your API key in the AI settings panel |
 | **Google (Gemini)** | Enter your API key in the AI settings panel |
 | **Ollama** (local) | Install [Ollama](https://ollama.com/), pull a model, and it auto-connects at `localhost:11434`. No API key needed |
+| **Codex** (local/cli) | Install [Codex](https://github.com/openai/codex) and authenticate your account and the app will make use of it |
 
 Open the AI panel from the sidebar, click the settings icon, select your provider, and enter your API key. For Ollama, just select it for local inference. The AI will automatically discover available models.
 
