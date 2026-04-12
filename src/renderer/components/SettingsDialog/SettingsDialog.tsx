@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Settings, Image as ImageIcon, Sparkles, KeyRound, Monitor, Moon, Sun, LayoutPanelLeft } from 'lucide-react'
+import { X, Settings, Image as ImageIcon, Sparkles, KeyRound, Monitor, Moon, Sun, LayoutPanelLeft, Info } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useAppSettingsStore } from '../../store/appSettingsStore'
 import { useAiStore } from '../../store/aiStore'
@@ -31,6 +31,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled)
   const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
   const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
+  const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures)
+  const setEnableDangerousFeatures = useAppSettingsStore((s) => s.setEnableDangerousFeatures)
   const startTutorial = useTutorialStore((s) => s.startTutorial)
 
   const aiConfig = useAiStore((s) => s.config)
@@ -192,6 +194,14 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
 
   if (!open) return null
 
+  const CLI_PROVIDERS = ['claude-cli', 'gemini-cli']
+  const DANGEROUS_CRED_IDS = CLI_PROVIDERS.map((p) => `ai:${p}`)
+  const visibleCredentials = enableDangerousFeatures
+    ? credentials
+    : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id))
+  const visibleDefinitions = enableDangerousFeatures
+    ? definitions
+    : definitions.filter((d) => !DANGEROUS_CRED_IDS.includes(d.id))
   const availableModels = providerModels[aiProvider] || []
   const selectedAiModel = aiModel || availableModels[0] || ''
   const isCliProvider = aiProvider.endsWith('-cli')
@@ -357,9 +367,9 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                     </button>
                   </div>
 
-                  {credentialLoading && credentials.length === 0 ? (
+                  {credentialLoading && visibleCredentials.length === 0 ? (
                     <p className="settings-subcopy">Loading credentials…</p>
-                  ) : credentials.length === 0 ? (
+                  ) : visibleCredentials.length === 0 ? (
                     <p className="settings-subcopy">No credentials saved yet.</p>
                   ) : (
                     <table className="cred-table">
@@ -371,7 +381,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                         </tr>
                       </thead>
                       <tbody>
-                        {credentials.map((cred) => (
+                        {visibleCredentials.map((cred) => (
                           <tr key={cred.id}>
                             <td>
                               <span className={`cred-pill cred-pill--${cred.category}`}>
@@ -421,7 +431,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                     </table>
                   )}
 
-                  {credentialLoading && credentials.length > 0 && (
+                  {credentialLoading && visibleCredentials.length > 0 && (
                     <p className="settings-subcopy">Refreshing credentials…</p>
                   )}
                 </div>
@@ -455,9 +465,13 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                         </optgroup>
                         <optgroup label="Local / CLI">
                           <option value="ollama">Ollama (Local)</option>
-                          <option value="claude-cli">Claude CLI</option>
                           <option value="codex-cli">Codex CLI</option>
-                          <option value="gemini-cli">Gemini CLI</option>
+                          {enableDangerousFeatures && (
+                            <>
+                              <option value="claude-cli">Claude CLI</option>
+                              <option value="gemini-cli">Gemini CLI</option>
+                            </>
+                          )}
                         </optgroup>
                       </select>
                     </div>
@@ -477,9 +491,9 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                               ✗ Not found
                             </span>
                           )}
-                          <button 
-                            type="button" 
-                            className="settings-btn-secondary" 
+                          <button
+                            type="button"
+                            className="settings-btn-secondary"
                             style={{ padding: '2px 8px', fontSize: '12px' }}
                             onClick={refreshCliAvailability}
                             disabled={checkingCli}
@@ -532,6 +546,50 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                       <button className="settings-notice-link" onClick={() => setActiveTab('keys')}>Credentials tab</button>
                     </div>
                   </div>
+
+                  <div className="settings-row settings-row--danger">
+                    <div className="settings-label">
+                      <span className="settings-label-title settings-label-title--danger">
+                        Enable Dangerous Features
+                        <span className="settings-danger-info-wrap">
+                          <Info size={13} className="settings-danger-info-icon" />
+                          <span className="settings-danger-tooltip">
+                            <strong>Dangerous features (disabled by default):</strong>
+                            <ul>
+                              <li>Claude CLI — AI provider via local Claude CLI tool</li>
+                              <li>Gemini CLI — AI provider via local Gemini CLI tool</li>
+                            </ul>
+                            These features interact with local system tools and may expose your environment to risk. Additionally some of these features may
+                            cause your accounts to be banned. Use at your own risk.
+                          </span>
+                        </span>
+                      </span>
+                      <span className="settings-label-desc">Use at your own risk. Powerful features but may have unintended side-effects and/or consequences.</span>
+                    </div>
+                    <div className="settings-control">
+                      <label className="settings-toggle">
+                        <input
+                          type="checkbox"
+                          checked={enableDangerousFeatures}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                            setEnableDangerousFeatures(next)
+                            if (!next && CLI_PROVIDERS.includes(aiProvider)) {
+                              const fallback = 'openai'
+                              setAiProvider(fallback)
+                              setAiModel('')
+                              fetchModelsForProvider(fallback, '', aiOllamaUrl).then((models) => {
+                                const nextModel = models[0] ?? ''
+                                setAiModel(nextModel)
+                                saveAiConfig({ provider: fallback as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
+                              })
+                            }
+                          }}
+                        />
+                        <span>{enableDangerousFeatures ? 'On' : 'Off'}</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -570,7 +628,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
         open={modalOpen}
         mode={modalMode}
         credential={modalCredential}
-        definitions={definitions}
+        definitions={visibleDefinitions}
         onClose={() => setModalOpen(false)}
         onSaved={refreshCredentialsAndFeatureConfigs}
       />
