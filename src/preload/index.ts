@@ -167,6 +167,8 @@ const api = {
       themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
     }) => ipcRenderer.invoke('ai:chat', data),
 
+    checkCliAvailability: () => ipcRenderer.invoke('ai:checkCliAvailability'),
+
     getConfig: () => ipcRenderer.invoke('ai:getConfig'),
 
     setConfig: (config: any) => ipcRenderer.invoke('ai:setConfig', config),
