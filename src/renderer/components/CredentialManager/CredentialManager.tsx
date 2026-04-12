@@ -3,6 +3,7 @@ import { KeyRound, X, Trash2, ShieldCheck, ShieldAlert, Sparkles, Image as Image
 import { getApi } from '../../utils/api'
 import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
 import './CredentialManager.css'
 
 interface Credential {
@@ -31,6 +32,12 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
   const [loading, setLoading] = useState(false)
   const [showSecurityInfo, setShowSecurityInfo] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures)
+
+  const DANGEROUS_CRED_IDS = ['ai:claude-cli', 'ai:gemini-cli']
+  const visibleCredentials = enableDangerousFeatures
+    ? credentials
+    : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id))
 
   const fetchCredentials = useCallback(async () => {
     setLoading(true)
@@ -171,15 +178,15 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
       )}
 
       <div className="cred-manager-list">
-        {loading && credentials.length === 0 && (
+        {loading && visibleCredentials.length === 0 && (
           <div className="cred-manager-empty">Loading...</div>
         )}
 
-        {!loading && credentials.length === 0 && (
+        {!loading && visibleCredentials.length === 0 && (
           <div className="cred-manager-empty">No credentials configured.</div>
         )}
 
-        {credentials.map((cred) => (
+        {visibleCredentials.map((cred) => (
           <div key={cred.id} className="cred-item">
             <div className={`cred-item-icon ${cred.source}`}>
               {sourceIcon(cred.source)}

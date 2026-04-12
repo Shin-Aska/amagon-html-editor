@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useAiStore, type AiProvider } from '../../store/aiStore'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
 import './AiProviderSelector.css'
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
@@ -20,6 +21,7 @@ export default function AiProviderSelector(): JSX.Element {
     const loadConfig = useAiStore((s) => s.loadConfig)
     const loadModels = useAiStore((s) => s.loadModels)
     const saveConfig = useAiStore((s) => s.saveConfig)
+    const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures)
 
     useEffect(() => {
         if (!configLoaded) {
@@ -29,11 +31,15 @@ export default function AiProviderSelector(): JSX.Element {
 
     const models = providerModels[config.provider] || []
 
+    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli']
+
     // Only show providers that have been configured (have models loaded), plus
     // always include the currently active provider so the selector is never blank.
-    const visibleProviders = (Object.keys(PROVIDER_LABELS) as AiProvider[]).filter(
-        (p) => p === config.provider || (providerModels[p] && providerModels[p].length > 0)
-    )
+    // Dangerous providers (claude-cli, gemini-cli) are hidden unless the flag is on.
+    const visibleProviders = (Object.keys(PROVIDER_LABELS) as AiProvider[]).filter((p) => {
+        if (DANGEROUS_PROVIDERS.includes(p) && !enableDangerousFeatures) return false
+        return p === config.provider || (providerModels[p] && providerModels[p].length > 0)
+    })
 
     const handleProviderChange = (provider: AiProvider) => {
         const firstModel = (providerModels[provider] || [])[0] || ''
