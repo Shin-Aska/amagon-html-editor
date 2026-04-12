@@ -55,7 +55,10 @@ const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
   anthropic: 'Anthropic',
   google: 'Google Gemini',
   ollama: 'Ollama',
-  mistral: 'Mistral'
+  mistral: 'Mistral',
+  'claude-cli': 'Claude CLI',
+  'codex-cli': 'Codex CLI',
+  'gemini-cli': 'Gemini CLI'
 }
 
 const MEDIA_PROVIDER_LABELS: Record<MediaSearchProvider, string> = {
@@ -86,41 +89,51 @@ function createDefinition(
 }
 
 export function getCredentialDefinitions(): CredentialDefinition[] {
-  const aiDefinitions: CredentialDefinition[] = (Object.entries(AI_PROVIDER_LABELS) as [AiProvider, string][])
-    .map(([providerId, label]) =>
-      createDefinition(
-        'ai',
-        providerId,
-        label,
-        `Credential for ${label} in the AI Assistant.`,
-        [
-          {
-            key: 'apiKey',
-            label: providerId === 'ollama' ? 'API Key (Optional)' : 'API Key',
-            placeholder: providerId === 'ollama' ? 'Leave blank if your Ollama server is open' : 'Enter API key',
-            sensitive: true
-          }
-        ]
-      )
+  const aiDefinitions: CredentialDefinition[] = (
+    Object.entries(AI_PROVIDER_LABELS) as [AiProvider, string][]
+  ).map(([providerId, label]) => {
+    const isCliProvider = providerId.endsWith('-cli')
+    return createDefinition(
+      'ai',
+      providerId,
+      label,
+      isCliProvider
+        ? `Authenticated via the ${label}. No API key needed.`
+        : `Credential for ${label} in the AI Assistant.`,
+      isCliProvider
+        ? []
+        : [
+            {
+              key: 'apiKey',
+              label: providerId === 'ollama' ? 'API Key (Optional)' : 'API Key',
+              placeholder:
+                providerId === 'ollama'
+                  ? 'Leave blank if your Ollama server is open'
+                  : 'Enter API key',
+              sensitive: true
+            }
+          ]
     )
+  })
 
-  const mediaDefinitions: CredentialDefinition[] = (Object.entries(MEDIA_PROVIDER_LABELS) as [MediaSearchProvider, string][])
-    .map(([providerId, label]) =>
-      createDefinition(
-        'multimedia',
-        providerId,
-        label,
-        `Credential for ${label} media search.`,
-        [
-          {
-            key: 'apiKey',
-            label: label === 'Unsplash' ? 'Access Key' : 'API Key',
-            placeholder: `Enter ${label} API key`,
-            sensitive: true
-          }
-        ]
-      )
+  const mediaDefinitions: CredentialDefinition[] = (
+    Object.entries(MEDIA_PROVIDER_LABELS) as [MediaSearchProvider, string][]
+  ).map(([providerId, label]) =>
+    createDefinition(
+      'multimedia',
+      providerId,
+      label,
+      `Credential for ${label} media search.`,
+      [
+        {
+          key: 'apiKey',
+          label: label === 'Unsplash' ? 'Access Key' : 'API Key',
+          placeholder: `Enter ${label} API key`,
+          sensitive: true
+        }
+      ]
     )
+  )
 
   const publisherDefinitions: CredentialDefinition[] = getAllPublishers().map((publisher) =>
     createDefinition(
@@ -176,6 +189,7 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
     .map((credential): CredentialRecord | null => {
       const definition = definitions.find((item) => item.id === `ai:${credential.provider}`)
       if (!definition) return null
+      const isCliProvider = credential.provider.endsWith('-cli')
       const values: PublishCredentials = { apiKey: credential.maskedKey }
       return {
         ...definition,
@@ -183,7 +197,7 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
         provider: definition.label,
         values,
         maskedKey: credential.maskedKey,
-        hasKey: credential.hasKey
+        hasKey: isCliProvider ? true : credential.hasKey
       } satisfies CredentialRecord
     })
     .filter((record): record is CredentialRecord => record !== null)
@@ -253,6 +267,9 @@ export async function saveCredentialRecord(id: string, values: PublishCredential
   }
 
   if (definition.category === 'ai') {
+    if (definition.providerId.endsWith('-cli')) {
+      return // No-op for CLI providers
+    }
     const nextApiKey = typeof values.apiKey === 'string' ? values.apiKey : ''
     const existing = { apiKey: await loadAiApiKeyForProvider(definition.providerId as AiProvider) }
     const merged = mergeSensitiveFields(definition.fields, existing, { apiKey: nextApiKey })
@@ -280,6 +297,9 @@ export async function deleteCredentialRecord(id: string): Promise<void> {
   }
 
   if (definition.category === 'ai') {
+    if (definition.providerId.endsWith('-cli')) {
+      return // No-op for CLI providers
+    }
     await clearAiApiKeyForProvider(definition.providerId as AiProvider)
     return
   }

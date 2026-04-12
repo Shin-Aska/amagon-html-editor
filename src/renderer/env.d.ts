@@ -97,6 +97,14 @@ declare global {
         config?: any
         themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
       }) => Promise<any>
+      checkCliAvailability: () => Promise<{
+        success: boolean
+        availability?: Record<
+          'claude-cli' | 'codex-cli' | 'gemini-cli',
+          { available: boolean; path?: string; version?: string }
+        >
+        error?: string
+      }>
       getConfig: () => Promise<any>
       setConfig: (config: any) => Promise<any>
       getModels: () => Promise<any>

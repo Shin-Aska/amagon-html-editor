@@ -8,6 +8,7 @@ export interface AppSettings {
   showTabChildSelectionWarning: boolean
   tutorialEnabled: boolean
   tutorialCompleted: boolean
+  enableDangerousFeatures: boolean
 }
 
 interface AppSettingsState extends AppSettings {
@@ -22,6 +23,7 @@ interface AppSettingsActions {
   setShowTabChildSelectionWarning: (show: boolean) => void
   setTutorialEnabled: (enabled: boolean) => void
   setTutorialCompleted: (completed: boolean) => void
+  setEnableDangerousFeatures: (enabled: boolean) => void
 }
 
 type AppSettingsStore = AppSettingsState & AppSettingsActions
@@ -31,7 +33,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultLayout: 'standard',
   showTabChildSelectionWarning: true,
   tutorialEnabled: true,
-  tutorialCompleted: false
+  tutorialCompleted: false,
+  enableDangerousFeatures: false
 }
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
@@ -67,7 +70,8 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       defaultLayout: patch.defaultLayout ?? current.defaultLayout,
       showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
       tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
-      tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted
+      tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
+      enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures
     }
     set({ ...nextSettings })
 
@@ -107,5 +111,10 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   setTutorialCompleted: (completed: boolean) => {
     set({ tutorialCompleted: completed })
     get().saveSettings({ tutorialCompleted: completed })
+  },
+
+  setEnableDangerousFeatures: (enabled: boolean) => {
+    set({ enableDangerousFeatures: enabled })
+    get().saveSettings({ enableDangerousFeatures: enabled })
   }
 }))
