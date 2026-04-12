@@ -7,6 +7,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { app, net } from 'electron'
 import { encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX } from './cryptoHelpers'
+import { CLI_BINARY_NAMES, fetchCliModels, spawnCliChat } from './cliHelpers'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,7 +18,7 @@ export interface ChatMessage {
     content: string
 }
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral'
+export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli'
 
 export interface AiConfig {
     provider: AiProvider
@@ -30,6 +31,8 @@ interface ProviderResponse {
     content: string
     error?: string
 }
+
+type CliProvider = Extract<AiProvider, 'claude-cli' | 'codex-cli' | 'gemini-cli'>
 
 /** Shape of the config as persisted to disk (API keys are encrypted). */
 interface PersistedAiConfig {
@@ -61,7 +64,10 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
     google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
     ollama: [], // no fallback — models are fetched live from the server
-    mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo']
+    mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo'],
+    'claude-cli': ['sonnet', 'opus', 'haiku'],
+    'codex-cli': ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.2'],
+    'gemini-cli': ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
 }
 
 // Re-export for the IPC handler to use as a baseline
@@ -76,7 +82,7 @@ function getDefaultModelForProvider(provider: AiProvider, preferredModel?: strin
 }
 
 function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>): AiProvider | null {
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral']
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli']
     return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
 }
 
@@ -156,13 +162,17 @@ export async function loadApiKeyForProvider(provider: AiProvider): Promise<strin
     return ''
 }
 
-/** Returns masked credentials for every AI provider that has a stored key. */
+/** Returns masked credentials for key-based providers and credentialless CLI providers. */
 export async function loadAllProviderCredentials(): Promise<{ provider: AiProvider; hasKey: boolean; maskedKey: string }[]> {
     const { encryptedApiKeys } = await loadPersistedRaw()
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral']
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli']
     const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = []
 
     for (const provider of providers) {
+        if (isCliProvider(provider)) {
+            result.push({ provider, hasKey: true, maskedKey: '' })
+            continue
+        }
         if (!encryptedApiKeys[provider]) continue
         let key = ''
         try { key = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted — skip */ }
@@ -503,6 +513,104 @@ async function chatMistral(messages: ChatMessage[], config: AiConfig): Promise<P
     return { content: data.choices?.[0]?.message?.content ?? '' }
 }
 
+function formatPromptForCli(messages: ChatMessage[]): string {
+    return messages
+        .map((message) => {
+            const roleLabel = message.role.charAt(0).toUpperCase() + message.role.slice(1)
+            return `[${roleLabel}]\n${message.content}`
+        })
+        .join('\n\n')
+}
+
+function isCliProvider(provider: AiProvider): provider is CliProvider {
+    return provider === 'claude-cli' || provider === 'codex-cli' || provider === 'gemini-cli'
+}
+
+function getCliInstallInstruction(provider: CliProvider): string {
+    if (provider === 'claude-cli') {
+        return 'Claude CLI is not installed. Install it from https://docs.anthropic.com/en/docs/claude-cli'
+    }
+    if (provider === 'codex-cli') {
+        return 'Codex CLI is not installed. Install it from https://github.com/openai/codex'
+    }
+    return 'Gemini CLI is not installed. Install it from https://github.com/google-gemini/gemini-cli'
+}
+
+function normalizeCliModel(provider: CliProvider, model: string): string {
+    const normalized = model.trim()
+    if (provider !== 'claude-cli') return normalized
+
+    const lower = normalized.toLowerCase()
+    if (!lower || lower === 'default') return 'sonnet'
+    if (lower.includes('opus')) return 'opus'
+    if (lower.includes('haiku')) return 'haiku'
+    if (lower.includes('sonnet')) return 'sonnet'
+    return normalized
+}
+
+function getCliEmptyError(provider: CliProvider, exitCode: number): string {
+    if (provider === 'claude-cli') {
+        return `Claude CLI exited with code ${exitCode}. Try running "claude --print \"hello\"" in a terminal to verify Claude Code is authenticated and can run non-interactively.`
+    }
+    if (provider === 'codex-cli') {
+        return `Codex CLI exited with code ${exitCode}. Try running "codex exec \"hello\"" in a terminal to verify Codex is authenticated.`
+    }
+    return `Gemini CLI exited with code ${exitCode}. Try running "gemini --prompt \"hello\"" in a terminal to verify Gemini is authenticated.`
+}
+
+async function runCliChat(
+    provider: CliProvider,
+    args: string[],
+    messages: ChatMessage[],
+    stdinOverride?: string
+): Promise<ProviderResponse> {
+    const prompt = formatPromptForCli(messages)
+
+    try {
+        const result = await spawnCliChat(CLI_BINARY_NAMES[provider], args, stdinOverride ?? prompt)
+        if (result.exitCode !== 0) {
+            const error = result.stderr.trim() || result.stdout.trim() || getCliEmptyError(provider, result.exitCode)
+            return { content: '', error }
+        }
+
+        const content = result.stdout.trim()
+        if (!content) {
+            const error = result.stderr.trim() || 'CLI returned no output.'
+            return { content: '', error }
+        }
+        return { content }
+    } catch (err: any) {
+        if (err?.code === 'ENOENT') {
+            return { content: '', error: getCliInstallInstruction(provider) }
+        }
+        return { content: '', error: err?.message ?? 'CLI request failed.' }
+    }
+}
+
+async function chatClaudeCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
+    return runCliChat(
+        'claude-cli',
+        ['--print', '--input-format', 'text', '--model', normalizeCliModel('claude-cli', config.model), '--output-format', 'text'],
+        messages
+    )
+}
+
+async function chatCodexCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
+    return runCliChat(
+        'codex-cli',
+        ['exec', '--model', normalizeCliModel('codex-cli', config.model), '-'],
+        messages
+    )
+}
+
+async function chatGeminiCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
+    return runCliChat(
+        'gemini-cli',
+        ['--prompt', ' ', '--model', normalizeCliModel('gemini-cli', config.model)],
+        messages
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Main chat dispatcher
 // ---------------------------------------------------------------------------
@@ -512,7 +620,10 @@ const ADAPTERS: Record<AiProvider, (msgs: ChatMessage[], cfg: AiConfig) => Promi
     anthropic: chatAnthropic,
     google: chatGoogle,
     ollama: chatOllama,
-    mistral: chatMistral
+    mistral: chatMistral,
+    'claude-cli': chatClaudeCli,
+    'codex-cli': chatCodexCli,
+    'gemini-cli': chatGeminiCli
 }
 
 // ---------------------------------------------------------------------------
@@ -621,7 +732,8 @@ export async function fetchModelsForProvider(
     ollamaUrl?: string
 ): Promise<string[]> {
     try {
-        if (provider !== 'ollama' && !apiKey) return []
+        if (isCliProvider(provider)) return await fetchCliModels(provider, FALLBACK_MODELS[provider])
+        if (provider !== 'ollama' && provider !== 'anthropic' && !apiKey) return []
         if (provider === 'openai') return await fetchOpenAIModels(apiKey)
         if (provider === 'google') return await fetchGoogleModels(apiKey)
         if (provider === 'mistral') return await fetchMistralModels(apiKey)
@@ -652,7 +764,10 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         anthropic: [],
         google: [],
         ollama: [],
-        mistral: []
+        mistral: [],
+        'claude-cli': [],
+        'codex-cli': [],
+        'gemini-cli': []
     }
 
     const fetchers: Promise<void>[] = []
@@ -693,6 +808,15 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
             .catch(() => { /* server unreachable — leave empty */ })
     )
 
+    const cliProviders: CliProvider[] = ['claude-cli', 'codex-cli', 'gemini-cli']
+    for (const provider of cliProviders) {
+        fetchers.push(
+            fetchCliModels(provider, FALLBACK_MODELS[provider])
+                .then((models) => { result[provider] = models })
+                .catch(() => { /* leave empty when lookup fails */ })
+        )
+    }
+
     await Promise.allSettled(fetchers)
     return result
 }
@@ -706,7 +830,7 @@ export async function chat(
         : await loadConfig()
 
     // Validate config
-    if (cfg.provider !== 'ollama' && !cfg.apiKey) {
+    if (!isCliProvider(cfg.provider) && cfg.provider !== 'ollama' && !cfg.apiKey) {
         return { content: '', error: `No API key configured for ${cfg.provider}. Please add your API key in the AI settings.` }
     }
 
