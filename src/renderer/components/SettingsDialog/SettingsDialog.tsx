@@ -44,6 +44,22 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   const [aiModel, setAiModel] = useState(aiConfig?.model || '')
   const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434')
 
+  const [cliAvailability, setCliAvailability] = useState<Record<string, { available: boolean; path?: string; version?: string }>>({})
+  const [checkingCli, setCheckingCli] = useState(false)
+
+  const refreshCliAvailability = useCallback(async () => {
+    setCheckingCli(true)
+    try {
+      const api = getApi()
+      const result = await (api as any).ai.checkCliAvailability()
+      if (result.success && result.availability) {
+        setCliAvailability(result.availability)
+      }
+    } finally {
+      setCheckingCli(false)
+    }
+  }, [])
+
   const [mediaProvider, setMediaProvider] = useState('unsplash')
 
   const [credentials, setCredentials] = useState<CredentialRecordInfo[]>([])
@@ -81,8 +97,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   }, [loadAiConfig, loadAiModels])
 
   const refreshCredentialsAndFeatureConfigs = useCallback(async (): Promise<void> => {
-    await Promise.all([refreshCredentials(), refreshFeatureConfigs()])
-  }, [refreshCredentials, refreshFeatureConfigs])
+    await Promise.all([refreshCredentials(), refreshFeatureConfigs(), refreshCliAvailability()])
+  }, [refreshCredentials, refreshFeatureConfigs, refreshCliAvailability])
 
   useEffect(() => {
     if (open) {
@@ -108,6 +124,24 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  useEffect(() => {
+    if (!open || !aiProvider.endsWith('-cli')) return
+
+    let cancelled = false
+    fetchModelsForProvider(aiProvider, '', aiOllamaUrl).then((models) => {
+      if (cancelled || models.length === 0) return
+      if (aiModel && models.includes(aiModel)) return
+
+      const nextModel = models[0]
+      setAiModel(nextModel)
+      void saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, aiProvider, aiOllamaUrl, aiModel, fetchModelsForProvider, saveAiConfig])
+
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) {
       onClose()
@@ -115,7 +149,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   }
 
   const handleSaveAi = async () => {
-    await saveAiConfig({ provider: aiProvider as any, model: aiModel, apiKey: '', ollamaUrl: aiOllamaUrl })
+    const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '')
+    await saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
     fetchModelsForProvider(aiProvider, '', aiOllamaUrl)
   }
 
@@ -158,6 +193,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
   if (!open) return null
 
   const availableModels = providerModels[aiProvider] || []
+  const selectedAiModel = aiModel || availableModels[0] || ''
+  const isCliProvider = aiProvider.endsWith('-cli')
 
   return (
     <>
@@ -402,17 +439,61 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                           const nextProvider = e.target.value as any
                           setAiProvider(nextProvider)
                           setAiModel('')
+                          fetchModelsForProvider(nextProvider, '', aiOllamaUrl).then((models) => {
+                            const nextModel = models[0] ?? ''
+                            setAiModel(nextModel)
+                            saveAiConfig({ provider: nextProvider, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
+                          })
                         }}
-                        onBlur={handleSaveAi}
                         className="settings-input"
                       >
-                        <option value="openai">OpenAI</option>
-                        <option value="anthropic">Anthropic</option>
-                        <option value="google">Google</option>
-                        <option value="mistral">Mistral</option>
-                        <option value="ollama">Ollama (Local)</option>
+                        <optgroup label="API Providers">
+                          <option value="openai">OpenAI</option>
+                          <option value="anthropic">Anthropic</option>
+                          <option value="google">Google</option>
+                          <option value="mistral">Mistral</option>
+                        </optgroup>
+                        <optgroup label="Local / CLI">
+                          <option value="ollama">Ollama (Local)</option>
+                          <option value="claude-cli">Claude CLI</option>
+                          <option value="codex-cli">Codex CLI</option>
+                          <option value="gemini-cli">Gemini CLI</option>
+                        </optgroup>
                       </select>
                     </div>
+
+                    {isCliProvider && (
+                      <div className="settings-field">
+                        <label>CLI Status</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {checkingCli ? (
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Checking...</span>
+                          ) : cliAvailability[aiProvider]?.available ? (
+                            <span style={{ fontSize: '13px', color: 'var(--color-success, #10b981)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              ✓ Installed ({cliAvailability[aiProvider].version || 'Unknown version'})
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '13px', color: 'var(--color-error, #ef4444)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              ✗ Not found
+                            </span>
+                          )}
+                          <button 
+                            type="button" 
+                            className="settings-btn-secondary" 
+                            style={{ padding: '2px 8px', fontSize: '12px' }}
+                            onClick={refreshCliAvailability}
+                            disabled={checkingCli}
+                          >
+                            Refresh
+                          </button>
+                        </div>
+                        {!cliAvailability[aiProvider]?.available && !checkingCli && (
+                          <span className="settings-hint" style={{ color: 'var(--color-error, #ef4444)' }}>
+                            This CLI tool is required. Please install it to use this provider.
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {aiProvider === 'ollama' && (
                       <div className="settings-field">
@@ -432,7 +513,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                     <div className="settings-field">
                       <label>Model</label>
                       <select
-                        value={aiModel}
+                        value={selectedAiModel}
                         onChange={(e) => {
                           const nextModel = e.target.value
                           setAiModel(nextModel)

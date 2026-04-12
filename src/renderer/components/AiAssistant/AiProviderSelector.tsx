@@ -7,7 +7,10 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
     anthropic: 'Anthropic',
     google: 'Gemini',
     mistral: 'Mistral',
-    ollama: 'Ollama'
+    ollama: 'Ollama',
+    'claude-cli': 'Claude CLI',
+    'codex-cli': 'Codex CLI',
+    'gemini-cli': 'Gemini CLI'
 }
 
 export default function AiProviderSelector(): JSX.Element {
