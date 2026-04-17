@@ -100,7 +100,7 @@ declare global {
       checkCliAvailability: () => Promise<{
         success: boolean
         availability?: Record<
-          'claude-cli' | 'codex-cli' | 'gemini-cli',
+          'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli',
           { available: boolean; path?: string; version?: string }
         >
         error?: string

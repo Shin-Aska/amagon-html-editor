@@ -3,8 +3,8 @@ import * as fs from 'fs/promises'
 import * as os from 'os'
 import * as path from 'path'
 
-type CliProvider = 'claude-cli' | 'codex-cli' | 'gemini-cli'
-type CliBinary = 'claude' | 'codex' | 'gemini'
+type CliProvider = 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli'
+type CliBinary = 'claude' | 'codex' | 'gemini' | 'copilot' | 'junie'
 
 const LOOKUP_TIMEOUT_MS = 10_000
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000
@@ -13,7 +13,9 @@ const MAX_CLI_MODELS = 80
 export const CLI_BINARY_NAMES: Record<CliProvider, CliBinary> = {
     'claude-cli': 'claude',
     'codex-cli': 'codex',
-    'gemini-cli': 'gemini'
+    'gemini-cli': 'gemini',
+    'github-cli': 'copilot',
+    'junie-cli': 'junie'
 }
 
 function getNonEmptyLines(value: string): string[] {
@@ -37,6 +39,12 @@ function uniqueNonEmpty(values: Array<string | undefined>): string[] {
         result.push(model)
     }
     return result
+}
+
+function getTrimmedString(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : undefined
 }
 
 async function readJsonFile(filePath: string): Promise<any | null> {
@@ -78,6 +86,26 @@ function modelsWithFallback(models: string[], fallbackModels: string[]): string[
     return uniqueNonEmpty([...models, ...fallbackModels]).slice(0, MAX_CLI_MODELS)
 }
 
+function parseCopilotHelpConfigModels(stdout: string): string[] {
+    const models: string[] = []
+    let inModelSection = false
+
+    for (const rawLine of stdout.split(/\r?\n/)) {
+        const line = rawLine.trim()
+        if (line.startsWith('`model`:')) {
+            inModelSection = true
+            continue
+        }
+        if (!inModelSection) continue
+        if (line.startsWith('`') && !line.startsWith('`model`:')) break
+
+        const match = line.match(/^-\s+"([^"]+)"$/)
+        if (match) models.push(match[1])
+    }
+
+    return uniqueNonEmpty(models)
+}
+
 function pickWindowsBinaryPath(paths: string[]): string | undefined {
     const preferredExtensions = ['.exe', '.cmd', '.bat']
     for (const extension of preferredExtensions) {
@@ -115,6 +143,8 @@ function getProcessInvocation(binary: string, args: string[]): { binary: string;
 
 function getCliChildEnv(): NodeJS.ProcessEnv {
     const env = { ...process.env }
+    env.COLUMNS = '20000'
+    env.NO_COLOR = '1'
     delete env.ELECTRON_RUN_AS_NODE
     delete env.NODE_OPTIONS
     delete env.VSCODE_INSPECTOR_OPTIONS
@@ -213,6 +243,13 @@ export async function detectCli(
     }
 }
 
+export async function detectCliProvider(
+    provider: CliProvider
+): Promise<{ available: boolean; path?: string; version?: string }> {
+    const binary = CLI_BINARY_NAMES[provider]
+    return detectCli(binary)
+}
+
 export async function spawnCliChat(
     binary: string,
     args: string[],
@@ -257,7 +294,47 @@ async function fetchClaudeCliModels(fallbackModels: string[]): Promise<string[]>
 
 async function fetchGeminiCliModels(fallbackModels: string[]): Promise<string[]> {
     const settings = await readJsonFile(path.join(os.homedir(), '.gemini', 'settings.json'))
-    const configuredModel = typeof settings?.model === 'string' ? settings.model : undefined
+    const configuredModel = getTrimmedString(settings?.model)
+
+    return modelsWithFallback(uniqueNonEmpty([configuredModel]), fallbackModels)
+}
+
+async function fetchGithubCliModels(_fallbackModels: string[]): Promise<string[]> {
+    const homeDir = os.homedir()
+    const copilotHome = process.env.COPILOT_HOME?.trim()
+    const configDir = copilotHome || path.join(homeDir, '.copilot')
+    const copilotBinary = await findBinaryPath('copilot') ?? 'copilot'
+
+    const config = await readJsonFile(path.join(configDir, 'config.json'))
+    const helpConfigResult = await runProcess(copilotBinary, ['help', 'config'], undefined, LOOKUP_TIMEOUT_MS)
+        .catch(() => null)
+    const availableModels = helpConfigResult?.exitCode === 0
+        ? parseCopilotHelpConfigModels(helpConfigResult.stdout)
+        : []
+
+    const configuredModel = uniqueNonEmpty([
+        getTrimmedString(process.env.COPILOT_MODEL),
+        getTrimmedString(config?.model)
+    ])[0]
+
+    return modelsWithFallback([configuredModel, ...availableModels], _fallbackModels)
+}
+
+async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> {
+    const homeDir = os.homedir()
+
+    // Junie resolves model precedence as settings -> project config -> user config.
+    const [settings, projectConfig, userConfig] = await Promise.all([
+        readJsonFile(path.join(homeDir, '.junie', 'settings.json')),
+        readJsonFile(path.join(process.cwd(), '.junie', 'config.json')),
+        readJsonFile(path.join(homeDir, '.junie', 'config.json'))
+    ])
+
+    const configuredModel = uniqueNonEmpty([
+        getTrimmedString(settings?.model),
+        getTrimmedString(projectConfig?.model),
+        getTrimmedString(userConfig?.model)
+    ])[0]
 
     return modelsWithFallback([configuredModel], fallbackModels)
 }
@@ -266,11 +343,12 @@ export async function fetchCliModels(
     provider: CliProvider,
     fallbackModels: string[]
 ): Promise<string[]> {
-    const binary = CLI_BINARY_NAMES[provider]
-    const status = await detectCli(binary)
+    const status = await detectCliProvider(provider)
     if (!status.available) return []
 
     if (provider === 'codex-cli') return fetchCodexCliModels(fallbackModels)
     if (provider === 'claude-cli') return fetchClaudeCliModels(fallbackModels)
+    if (provider === 'github-cli') return fetchGithubCliModels(fallbackModels)
+    if (provider === 'junie-cli') return fetchJunieCliModels(fallbackModels)
     return fetchGeminiCliModels(fallbackModels)
 }

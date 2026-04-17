@@ -5,7 +5,7 @@ import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
 import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
-import { CLI_BINARY_NAMES, detectCli } from './cliHelpers'
+import { CLI_BINARY_NAMES, detectCliProvider } from './cliHelpers'
 import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
 import { isEncryptionSecure } from './cryptoHelpers'
 import { buildAppMenu } from './menu'
@@ -1332,8 +1332,8 @@ function registerIpcHandlers(): void {
   ipcMain.handle('ai:checkCliAvailability', async () => {
     try {
       const entries = await Promise.all(
-        (Object.entries(CLI_BINARY_NAMES) as Array<[keyof typeof CLI_BINARY_NAMES, (typeof CLI_BINARY_NAMES)[keyof typeof CLI_BINARY_NAMES]]>).map(
-          async ([providerId, binary]) => [providerId, await detectCli(binary)] as const
+        (Object.keys(CLI_BINARY_NAMES) as Array<keyof typeof CLI_BINARY_NAMES>).map(
+          async (providerId) => [providerId, await detectCliProvider(providerId)] as const
         )
       )
 

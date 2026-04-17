@@ -22,19 +22,99 @@ interface ParsedAiResponse {
     blocks: Block[] | null
 }
 
+function stripCopilotCliDecorations(content: string): string {
+    return content
+        .replace(/^\s*●\s?/, '')
+        .replace(/\n\s*●\s?/g, '\n')
+        .trim()
+}
+
+function findJsonObjectCandidate(content: string): { json: string; start: number; end: number } | null {
+    const blocksIndex = content.indexOf('"blocks"')
+    if (blocksIndex === -1) return null
+
+    const start = content.lastIndexOf('{', blocksIndex)
+    if (start === -1) return null
+
+    let depth = 0
+    let inString = false
+    let escaped = false
+
+    for (let i = start; i < content.length; i += 1) {
+        const char = content[i]
+
+        if (inString) {
+            if (escaped) {
+                escaped = false
+            } else if (char === '\\') {
+                escaped = true
+            } else if (char === '"') {
+                inString = false
+            }
+            continue
+        }
+
+        if (char === '"') {
+            inString = true
+        } else if (char === '{') {
+            depth += 1
+        } else if (char === '}') {
+            depth -= 1
+            if (depth === 0) {
+                return { json: content.slice(start, i + 1), start, end: i + 1 }
+            }
+        }
+    }
+
+    return null
+}
+
+function repairTerminalWrappedJson(json: string): string {
+    let result = ''
+    let inString = false
+    let escaped = false
+
+    for (let i = 0; i < json.length; i += 1) {
+        const char = json[i]
+
+        if (inString && (char === '\n' || char === '\r')) {
+            while (json[i + 1] === ' ' || json[i + 1] === '\t') i += 1
+            escaped = false
+            continue
+        }
+
+        result += char
+
+        if (inString) {
+            if (escaped) {
+                escaped = false
+            } else if (char === '\\') {
+                escaped = true
+            } else if (char === '"') {
+                inString = false
+            }
+        } else if (char === '"') {
+            inString = true
+        }
+    }
+
+    return result
+}
+
 /** Parse an AI response into explanatory text + optional blocks */
 function parseAiResponse(content: string): ParsedAiResponse {
-    try {
-        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\})\s*```/)
-            || content.match(/(\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\})/)
+    const normalizedContent = stripCopilotCliDecorations(content)
 
-        if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0])
+    try {
+        const candidate = findJsonObjectCandidate(normalizedContent)
+
+        if (candidate) {
+            const parsed = JSON.parse(repairTerminalWrappedJson(candidate.json))
             if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
                 // Extract the text portion (everything that isn't the JSON)
-                let text = content
-                    .replace(/```(?:json)?\s*\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\}\s*```/g, '')
-                    .replace(/\{[\s\S]*?"blocks"\s*:\s*\[[\s\S]*?\]\s*\}/g, '')
+                let text = `${normalizedContent.slice(0, candidate.start)}${normalizedContent.slice(candidate.end)}`
+                    .replace(/```(?:json)?/g, '')
+                    .replace(/```/g, '')
                     .trim()
 
                 // Clean up markdown artifacts
@@ -48,7 +128,7 @@ function parseAiResponse(content: string): ParsedAiResponse {
         // Not valid JSON — treat as text-only response
     }
 
-    return { text: content, blocks: null }
+    return { text: normalizedContent, blocks: null }
 }
 
 function buildBlockFromAiData(data: any): Block {

@@ -11,7 +11,9 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
     ollama: 'Ollama',
     'claude-cli': 'Claude CLI',
     'codex-cli': 'Codex CLI',
-    'gemini-cli': 'Gemini CLI'
+    'gemini-cli': 'Gemini CLI',
+    'github-cli': 'GitHub Copilot CLI',
+    'junie-cli': 'Junie CLI'
 }
 
 export default function AiProviderSelector(): JSX.Element {
@@ -31,7 +33,7 @@ export default function AiProviderSelector(): JSX.Element {
 
     const models = providerModels[config.provider] || []
 
-    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli']
+    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli', 'github-cli', 'junie-cli']
 
     // Only show providers that have been configured (have models loaded), plus
     // always include the currently active provider so the selector is never blank.
