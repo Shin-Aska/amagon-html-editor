@@ -739,7 +739,7 @@ async function chatGithubCli(messages: ChatMessage[], config: AiConfig): Promise
     const prompt = formatPromptForCli(messages)
     const model = normalizeCliModel('github-cli', config.model)
     const args = [
-        '--prompt', prompt,
+        '--prompt', ' ',
         '--silent',
         '--output-format', 'text',
         '--stream', 'off',
@@ -755,7 +755,7 @@ async function chatGithubCli(messages: ChatMessage[], config: AiConfig): Promise
         'github-cli',
         args,
         messages,
-        ''
+        prompt
     )
 }
 
