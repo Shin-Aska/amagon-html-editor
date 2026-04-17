@@ -243,7 +243,7 @@ Themes compile to `--theme-*` CSS custom properties. Light/dark variants are sup
 
 ## 7. AI Integration
 
-**Supported providers:** OpenAI, Anthropic, Google Gemini, Ollama (local), Mistral, Claude CLI, Codex CLI, Gemini CLI, GitHub Copilot CLI, Junie CLI.
+**Supported providers:** OpenAI, Anthropic, Google Gemini, Ollama (local), Mistral, Claude CLI, Codex CLI, Gemini CLI, GitHub Copilot CLI, Junie CLI, Opencode CLI.
 
 The AI service lives in `src/main/aiService.ts`. It:
 1. Builds a system prompt from the block registry + current theme context
@@ -253,7 +253,7 @@ The AI service lives in `src/main/aiService.ts`. It:
 
 **IPC channels:** `ai:chat`, `ai:getConfig`, `ai:setConfig`, `ai:getModels`, `ai:fetchModelsForProvider`, `ai:checkCliAvailability`.
 
-**CLI providers** (GitHub Copilot CLI, Junie CLI, Claude CLI, Gemini CLI, Codex CLI) are gated behind the "Enable Dangerous Features" toggle and run local CLI binaries instead of API calls. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; do not integrate it through `gh models`. Its model dropdown is populated from `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json`, because `/model` is an interactive slash command.
+**CLI providers** run local CLI binaries instead of API calls. Claude CLI and Gemini CLI are gated behind the "Enable Dangerous Features" toggle; Codex CLI, GitHub Copilot CLI, Junie CLI, and Opencode CLI are available without that toggle. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; do not integrate it through `gh models`. Its model dropdown is populated from `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json`, because `/model` is an interactive slash command.
 
 API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an AES-256-GCM fallback. Keys are stored per-provider in `ai-config.json` and never leave the main process.
 

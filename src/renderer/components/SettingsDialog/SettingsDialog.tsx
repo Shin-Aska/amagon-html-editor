@@ -194,8 +194,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
 
   if (!open) return null
 
-  const CLI_PROVIDERS = ['claude-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli']
-  const DANGEROUS_CRED_IDS = CLI_PROVIDERS.map((p) => `ai:${p}`)
+  const DANGEROUS_CLI_PROVIDERS = ['claude-cli', 'gemini-cli']
+  const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((p) => `ai:${p}`)
   const visibleCredentials = enableDangerousFeatures
     ? credentials
     : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id))
@@ -466,13 +466,13 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                         <optgroup label="Local / CLI">
                           <option value="ollama">Ollama (Local)</option>
                           <option value="codex-cli">Codex CLI</option>
+                          <option value="github-cli">GitHub Copilot CLI</option>
+                          <option value="junie-cli">Junie CLI</option>
+                          <option value="opencode-cli">Opencode CLI</option>
                           {enableDangerousFeatures && (
                             <>
                               <option value="claude-cli">Claude CLI</option>
                               <option value="gemini-cli">Gemini CLI</option>
-                              <option value="github-cli">GitHub Copilot CLI</option>
-                              <option value="junie-cli">Junie CLI</option>
-                              <option value="opencode-cli">Opencode CLI</option>
                             </>
                           )}
                         </optgroup>
@@ -561,9 +561,6 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                             <ul>
                               <li>Claude CLI — AI provider via local Claude CLI tool</li>
                               <li>Gemini CLI — AI provider via local Gemini CLI tool</li>
-                              <li>GitHub Copilot CLI — AI provider via local Copilot CLI tool</li>
-                              <li>Junie CLI — AI provider via local Junie CLI tool</li>
-                              <li>Opencode CLI — AI provider via local Opencode CLI tool</li>
                             </ul>
                             These features interact with local system tools and may expose your environment to risk. Additionally some of these features may
                             cause your accounts to be banned. Use at your own risk.
@@ -580,7 +577,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                           onChange={(e) => {
                             const next = e.target.checked
                             setEnableDangerousFeatures(next)
-                            if (!next && CLI_PROVIDERS.includes(aiProvider)) {
+                            if (!next && DANGEROUS_CLI_PROVIDERS.includes(aiProvider)) {
                               const fallback = 'openai'
                               setAiProvider(fallback)
                               setAiModel('')

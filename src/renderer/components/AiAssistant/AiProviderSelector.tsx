@@ -33,7 +33,7 @@ export default function AiProviderSelector(): JSX.Element {
         }
     }, [configLoaded, loadConfig, loadModels])
 
-    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli']
+    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli']
 
     const isReady = configLoaded && modelsLoaded
 
