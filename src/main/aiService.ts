@@ -531,6 +531,36 @@ function normalizeCopilotCliOutput(output: string): string {
         .trim()
 }
 
+function stripAnsi(value: string): string {
+    return value.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '')
+}
+
+function normalizeJunieCliOutput(output: string): string {
+    const cleaned = stripAnsi(output).trim()
+    let result = cleaned
+    try {
+        const jsonStart = cleaned.indexOf('{')
+        const jsonEnd = cleaned.lastIndexOf('}')
+        const jsonPayload = jsonStart >= 0 && jsonEnd > jsonStart
+            ? cleaned.slice(jsonStart, jsonEnd + 1)
+            : cleaned
+        const parsed = JSON.parse(jsonPayload)
+        if (typeof parsed?.result === 'string') result = parsed.result
+    } catch {
+        result = cleaned
+    }
+
+    const summaryMatch = result.match(/^### Summary\s*\n([\s\S]*?)(?:\n### \w|$)/)
+    const content = (summaryMatch ? summaryMatch[1] : result)
+        .trim()
+
+    return content
+        .replace(/^\s*●\s?/, '')
+        .replace(/\n\s*●\s?/g, '\n')
+        .replace(/^\s*[-*]\s+([^\n]+)$/, '$1')
+        .trim()
+}
+
 function isCliProvider(provider: AiProvider): provider is CliProvider {
     return provider === 'claude-cli' || provider === 'codex-cli' || provider === 'gemini-cli' || provider === 'github-cli' || provider === 'junie-cli'
 }
@@ -624,12 +654,13 @@ async function runCliChat(
     provider: CliProvider,
     args: string[],
     messages: ChatMessage[],
-    stdinOverride?: string
+    stdinOverride?: string,
+    timeoutMs?: number
 ): Promise<ProviderResponse> {
     const prompt = formatPromptForCli(messages)
 
     try {
-        const result = await spawnCliChat(CLI_BINARY_NAMES[provider], args, stdinOverride ?? prompt)
+        const result = await spawnCliChat(CLI_BINARY_NAMES[provider], args, stdinOverride ?? prompt, timeoutMs)
         if (result.exitCode !== 0) {
             const error = result.stderr.trim() || result.stdout.trim() || getCliEmptyError(provider, result.exitCode)
             return { content: '', error }
@@ -637,7 +668,9 @@ async function runCliChat(
 
         const content = provider === 'github-cli'
             ? normalizeCopilotCliOutput(result.stdout)
-            : result.stdout.trim()
+            : provider === 'junie-cli'
+                ? normalizeJunieCliOutput(result.stdout)
+                : result.stdout.trim()
         if (!content) {
             const error = result.stderr.trim() || 'CLI returned no output.'
             return { content: '', error }
@@ -700,11 +733,24 @@ async function chatGithubCli(messages: ChatMessage[], config: AiConfig): Promise
 }
 
 async function chatJunieCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const prompt = formatPromptForCli(messages)
+    const prompt = [
+        'You are being used by Amagon as a chat/completion provider, not as a code-editing agent.',
+        'Do not inspect, create, modify, delete, or run files.',
+        'Put the complete assistant response in the Summary section of your task result. Do not merely say that you complied.',
+        'Answer only from the request text below.',
+        '',
+        formatPromptForCli(messages)
+    ].join('\n')
     const model = normalizeCliModel('junie-cli', config.model)
-    const args = ['--task', prompt, '--output-format', 'text', '--skip-update-check']
+    const tempProjectDir = await fs.mkdtemp(path.join(app.getPath('temp'), 'amagon-junie-'))
+    const args = ['--project', tempProjectDir, '--input-format', 'text', '--output-format', 'json', '--skip-update-check']
     if (model !== 'default') args.push('--model', model)
-    return runCliChat('junie-cli', args, messages, '')
+
+    try {
+        return await runCliChat('junie-cli', args, messages, prompt, 300_000)
+    } finally {
+        await fs.rm(tempProjectDir, { recursive: true, force: true }).catch(() => undefined)
+    }
 }
 
 // ---------------------------------------------------------------------------

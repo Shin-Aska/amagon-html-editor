@@ -296,7 +296,7 @@ function runProcess(
         let child: ReturnType<typeof execFile>
 
         try {
-            child = execFile(invocation.binary, invocation.args, { env: getCliChildEnv(), windowsHide: true }, (error, stdout, stderr) => {
+            child = execFile(invocation.binary, invocation.args, { env: getCliChildEnv(), maxBuffer: 10 * 1024 * 1024, windowsHide: true }, (error, stdout, stderr) => {
                 if (timeout) clearTimeout(timeout)
                 if (settled) return
                 settled = true
@@ -310,12 +310,21 @@ function runProcess(
                 }
 
                 const err = error as NodeJS.ErrnoException
+                if (err.code === 'ENOENT') {
+                    reject(error)
+                    return
+                }
+
                 if (typeof err.code === 'number') {
                     resolve({ stdout: normalizedStdout, stderr: normalizedStderr, exitCode: err.code })
                     return
                 }
 
-                reject(error)
+                resolve({
+                    stdout: normalizedStdout,
+                    stderr: normalizedStderr || err.message,
+                    exitCode: 1
+                })
             })
         } catch (error) {
             settled = true
