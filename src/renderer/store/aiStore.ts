@@ -13,7 +13,7 @@ import { useProjectStore } from './projectStore'
 // Types
 // ---------------------------------------------------------------------------
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli'
+export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
 
 export interface ChatMessage {
     id: string

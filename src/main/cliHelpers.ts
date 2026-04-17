@@ -3,8 +3,8 @@ import * as fs from 'fs/promises'
 import * as os from 'os'
 import * as path from 'path'
 
-type CliProvider = 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli'
-type CliBinary = 'claude' | 'codex' | 'gemini' | 'copilot' | 'junie'
+type CliProvider = 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
+type CliBinary = 'claude' | 'codex' | 'gemini' | 'copilot' | 'junie' | 'opencode'
 
 const LOOKUP_TIMEOUT_MS = 10_000
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000
@@ -37,7 +37,8 @@ export const CLI_BINARY_NAMES: Record<CliProvider, CliBinary> = {
     'codex-cli': 'codex',
     'gemini-cli': 'gemini',
     'github-cli': 'copilot',
-    'junie-cli': 'junie'
+    'junie-cli': 'junie',
+    'opencode-cli': 'opencode'
 }
 
 function getNonEmptyLines(value: string): string[] {
@@ -151,6 +152,12 @@ function readTopLevelTomlString(content: string, key: string): string | undefine
 
 function modelsWithFallback(models: string[], fallbackModels: string[]): string[] {
     return uniqueNonEmpty([...models, ...fallbackModels]).slice(0, MAX_CLI_MODELS)
+}
+
+function parseOpencodeModels(stdout: string): string[] {
+    return uniqueNonEmpty(
+        getNonEmptyLines(stdout).filter((line) => /^[a-zA-Z0-9_-]+\//.test(line))
+    )
 }
 
 function parseCopilotHelpConfigModels(stdout: string): string[] {
@@ -526,6 +533,30 @@ async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> 
     )
 }
 
+async function fetchOpencodeCliModels(fallbackModels: string[]): Promise<string[]> {
+    const configHome = process.env.XDG_CONFIG_HOME?.trim() || path.join(os.homedir(), '.config')
+    const configPath = process.env.OPENCODE_CONFIG?.trim() || path.join(configHome, 'opencode', 'opencode.json')
+    const opencodeBinary = await findBinaryPath('opencode') ?? 'opencode'
+
+    const [globalConfig, projectConfig, modelsResult] = await Promise.all([
+        readJsonFile(configPath),
+        readJsonFile(path.join(process.cwd(), 'opencode.json')),
+        runProcess(opencodeBinary, ['models'], undefined, LOOKUP_TIMEOUT_MS).catch(() => null)
+    ])
+
+    const configuredModel = uniqueNonEmpty([
+        getTrimmedString(process.env.OPENCODE_MODEL),
+        getTrimmedString(globalConfig?.model),
+        getTrimmedString(projectConfig?.model)
+    ])[0]
+
+    const availableModels = modelsResult?.exitCode === 0
+        ? parseOpencodeModels(modelsResult.stdout)
+        : []
+
+    return modelsWithFallback([configuredModel, ...availableModels], fallbackModels)
+}
+
 export async function fetchCliModels(
     provider: CliProvider,
     fallbackModels: string[]
@@ -537,5 +568,6 @@ export async function fetchCliModels(
     if (provider === 'claude-cli') return fetchClaudeCliModels(fallbackModels)
     if (provider === 'github-cli') return fetchGithubCliModels(fallbackModels)
     if (provider === 'junie-cli') return fetchJunieCliModels(fallbackModels)
+    if (provider === 'opencode-cli') return fetchOpencodeCliModels(fallbackModels)
     return fetchGeminiCliModels(fallbackModels)
 }

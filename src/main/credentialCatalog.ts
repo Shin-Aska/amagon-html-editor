@@ -60,7 +60,8 @@ const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
   'codex-cli': 'Codex CLI',
   'gemini-cli': 'Gemini CLI',
   'github-cli': 'GitHub Copilot CLI',
-  'junie-cli': 'Junie CLI'
+  'junie-cli': 'Junie CLI',
+  'opencode-cli': 'Opencode CLI'
 }
 
 const MEDIA_PROVIDER_LABELS: Record<MediaSearchProvider, string> = {
