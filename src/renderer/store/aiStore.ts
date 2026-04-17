@@ -13,7 +13,7 @@ import { useProjectStore } from './projectStore'
 // Types
 // ---------------------------------------------------------------------------
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli'
+export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
 
 export interface ChatMessage {
     id: string
@@ -36,6 +36,7 @@ interface AiState {
     config: AiConfig
     providerModels: Record<string, string[]>
     configLoaded: boolean
+    modelsLoaded: boolean
     showSettings: boolean
 }
 
@@ -94,6 +95,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
     config: { ...DEFAULT_CONFIG },
     providerModels: {},
     configLoaded: false,
+    modelsLoaded: false,
     showSettings: false,
 
     // ─── Actions ───────────────────────────────────────────────────────
@@ -201,11 +203,13 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const api = getApi()
             const result = await (api as any).ai.getModels()
             if (result.success && result.models) {
-                set({ providerModels: result.models })
+                set({ providerModels: result.models, modelsLoaded: true })
+                return
             }
         } catch {
             // use defaults
         }
+        set({ modelsLoaded: true })
     },
 
     fetchModelsForProvider: async (provider: string, apiKey: string, ollamaUrl?: string): Promise<string[]> => {

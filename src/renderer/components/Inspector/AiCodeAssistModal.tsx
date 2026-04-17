@@ -3,6 +3,7 @@ import { getApi } from '../../utils/api'
 import type { Block } from '../../store/types'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
+import { useAiStore } from '../../store/aiStore'
 import AiProviderSelector from '../AiAssistant/AiProviderSelector'
 import './AiCodeAssistModal.css'
 
@@ -225,6 +226,9 @@ export default function AiCodeAssistModal({
     onClose
 }: AiCodeAssistModalProps): JSX.Element | null {
     const { hasConfiguredAiProvider } = useAiAvailability()
+    const modelsLoaded = useAiStore((s) => s.modelsLoaded)
+    const configLoaded = useAiStore((s) => s.configLoaded)
+    const isReady = configLoaded && modelsLoaded
     const [isGenerating, setIsGenerating] = useState(false)
     const [proposal, setProposal] = useState<AiCodeProposal | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -319,7 +323,7 @@ export default function AiCodeAssistModal({
                     onChange={(e) => onRequestTextChange(e.target.value)}
                     placeholder='Example: "Add a guard clause for disabled buttons, then toggle an active class."'
                     rows={4}
-                    disabled={isGenerating || !hasConfiguredAiProvider}
+                    disabled={isGenerating || !hasConfiguredAiProvider || !isReady}
                 />
 
                 {!hasConfiguredAiProvider && (
@@ -356,7 +360,7 @@ export default function AiCodeAssistModal({
                 <button
                     className="ai-code-assist-btn primary"
                     onClick={handleGenerate}
-                    disabled={isGenerating || !hasConfiguredAiProvider}
+                    disabled={isGenerating || !hasConfiguredAiProvider || !isReady}
                 >
                     {isGenerating ? 'Generating…' : 'Generate'}
                 </button>
