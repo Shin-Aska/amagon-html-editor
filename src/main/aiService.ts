@@ -783,25 +783,17 @@ async function chatJunieCli(messages: ChatMessage[], config: AiConfig): Promise<
 async function chatOpencodeCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
     const prompt = [
         'You are being used by Amagon as a chat/completion provider, not as a code-editing agent.',
-        'Do not inspect, create, modify, delete, or run files except for reading the attached request file.',
-        'Answer only from the request text in the attached file.',
+        'Do not inspect, create, modify, delete, or run files.',
+        'Answer only from the request text below.',
         '',
         formatPromptForCli(messages)
     ].join('\n')
 
     const model = normalizeCliModel('opencode-cli', config.model)
-    const tempDir = await fs.mkdtemp(path.join(app.getPath('temp'), 'amagon-opencode-'))
-    const promptPath = path.join(tempDir, 'request.txt')
     const args = ['run']
     if (model !== 'default') args.push('--model', model)
-    args.push('Read the attached request file and provide the assistant response only.', '--file', promptPath)
 
-    try {
-        await fs.writeFile(promptPath, prompt, 'utf-8')
-        return await runCliChat('opencode-cli', args, messages, '', 300_000)
-    } finally {
-        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined)
-    }
+    return runCliChat('opencode-cli', args, messages, prompt, 300_000)
 }
 
 // ---------------------------------------------------------------------------
