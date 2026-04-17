@@ -70,7 +70,15 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     'gemini-cli': [],
     'github-cli': [],
     'junie-cli': [],
-    'opencode-cli': []
+    'opencode-cli': [
+        'opencode/gpt-5.2',
+        'opencode/gpt-5.1',
+        'opencode/gpt-5',
+        'opencode/claude-sonnet-4-6',
+        'opencode/claude-opus-4-6',
+        'opencode/gemini-3-flash',
+        'opencode/kimi-k2.5'
+    ]
 }
 
 // Re-export for the IPC handler to use as a baseline
@@ -775,18 +783,25 @@ async function chatJunieCli(messages: ChatMessage[], config: AiConfig): Promise<
 async function chatOpencodeCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
     const prompt = [
         'You are being used by Amagon as a chat/completion provider, not as a code-editing agent.',
-        'Do not inspect, create, modify, delete, or run files.',
-        'Answer only from the request text below.',
+        'Do not inspect, create, modify, delete, or run files except for reading the attached request file.',
+        'Answer only from the request text in the attached file.',
         '',
         formatPromptForCli(messages)
     ].join('\n')
 
     const model = normalizeCliModel('opencode-cli', config.model)
+    const tempDir = await fs.mkdtemp(path.join(app.getPath('temp'), 'amagon-opencode-'))
+    const promptPath = path.join(tempDir, 'request.txt')
     const args = ['run']
     if (model !== 'default') args.push('--model', model)
-    args.push(prompt)
+    args.push('Read the attached request file and provide the assistant response only.', '--file', promptPath)
 
-    return runCliChat('opencode-cli', args, messages, '', 300_000)
+    try {
+        await fs.writeFile(promptPath, prompt, 'utf-8')
+        return await runCliChat('opencode-cli', args, messages, '', 300_000)
+    } finally {
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined)
+    }
 }
 
 // ---------------------------------------------------------------------------

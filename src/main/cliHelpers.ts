@@ -1,4 +1,5 @@
 import { execFile } from 'child_process'
+import * as syncFs from 'fs'
 import * as fs from 'fs/promises'
 import * as os from 'os'
 import * as path from 'path'
@@ -7,11 +8,15 @@ type CliProvider = 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'j
 type CliBinary = 'claude' | 'codex' | 'gemini' | 'copilot' | 'junie' | 'opencode'
 
 const LOOKUP_TIMEOUT_MS = 10_000
+const OPENCODE_LOOKUP_TIMEOUT_MS = 45_000
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000
 const MAX_CLI_MODELS = 80
 const JUNIE_MODEL_PROBE_ID = '__amagon_model_probe__'
 const CLI_VERSION_ARGS: Partial<Record<CliBinary, string[]>> = {
     junie: ['--skip-update-check', '--version']
+}
+const CLI_VERSION_TIMEOUTS: Partial<Record<CliBinary, number>> = {
+    opencode: OPENCODE_LOOKUP_TIMEOUT_MS
 }
 const JUNIE_BUILT_IN_MODEL_IDS = [
     'default',
@@ -256,7 +261,7 @@ function normalizeJunieModelId(model: string | undefined): string | undefined {
 }
 
 function pickWindowsBinaryPath(paths: string[]): string | undefined {
-    const preferredExtensions = ['.exe', '.cmd', '.bat']
+    const preferredExtensions = ['.exe', '.cmd', '.bat', '.ps1']
     for (const extension of preferredExtensions) {
         const found = paths.find((item) => path.extname(item).toLowerCase() === extension)
         if (found) return found
@@ -270,6 +275,48 @@ function isWindowsCommandShim(binary: string): boolean {
     return extension === '.cmd' || extension === '.bat'
 }
 
+function isWindowsPowerShellShim(binary: string): boolean {
+    return process.platform === 'win32' && path.extname(binary).toLowerCase() === '.ps1'
+}
+
+function resolveWindowsNodeShim(binary: string): { binary: string; argsPrefix: string[] } | undefined {
+    if (process.platform !== 'win32' || path.extname(binary).toLowerCase() !== '.cmd') return undefined
+
+    let content = ''
+    try {
+        content = syncFs.readFileSync(binary, 'utf-8')
+    } catch {
+        return undefined
+    }
+
+    const shimDir = path.dirname(binary)
+    const localNode = path.join(shimDir, 'node.exe')
+    const nodeBinary = syncFs.existsSync(localNode) ? localNode : 'node.exe'
+
+    for (const rawLine of content.split(/\r?\n/)) {
+        const line = rawLine.trim()
+        if (!/%\*/.test(line) || !/\bnode(?:\.exe)?\b/i.test(line)) continue
+
+        const quotedTokens = [...line.matchAll(/"([^"]+)"/g)].map((match) => match[1])
+        const scriptToken = quotedTokens.find((token) => {
+            const normalized = token.replace(/%~?dp0\\?/ig, '')
+            const basename = path.basename(normalized)
+            return !/^%.*%$/.test(normalized)
+                && !/^(?:node|node\.exe)$/i.test(basename)
+                && /\.(?:[cm]?js)$/i.test(basename)
+        })
+        if (!scriptToken) continue
+
+        const scriptPath = scriptToken
+            .replace(/%~dp0\\?/ig, `${shimDir}${path.sep}`)
+            .replace(/%dp0%\\?/ig, `${shimDir}${path.sep}`)
+
+        return { binary: nodeBinary, argsPrefix: [path.normalize(scriptPath)] }
+    }
+
+    return undefined
+}
+
 function validateWindowsCommandShimArgs(args: string[]): void {
     const unsafe = /["&|<>^%!\r\n]/
     const unsafeArg = args.find((arg) => unsafe.test(arg))
@@ -279,8 +326,23 @@ function validateWindowsCommandShimArgs(args: string[]): void {
 }
 
 function getProcessInvocation(binary: string, args: string[]): { binary: string; args: string[] } {
+    if (isWindowsPowerShellShim(binary)) {
+        return {
+            binary: 'powershell.exe',
+            args: ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', binary, ...args]
+        }
+    }
+
     if (!isWindowsCommandShim(binary)) {
         return { binary, args }
+    }
+
+    const nodeShim = resolveWindowsNodeShim(binary)
+    if (nodeShim) {
+        return {
+            binary: nodeShim.binary,
+            args: [...nodeShim.argsPrefix, ...args]
+        }
     }
 
     validateWindowsCommandShimArgs(args)
@@ -378,9 +440,9 @@ function runProcess(
 async function findBinaryPath(name: string): Promise<string | undefined> {
     const locatorBinary = process.platform === 'win32' ? 'where.exe' : 'which'
     const found = await runProcess(locatorBinary, [name], undefined, LOOKUP_TIMEOUT_MS).catch(() => null)
-    if (!found || found.exitCode !== 0) return undefined
-    const matches = getNonEmptyLines(found.stdout)
-    return process.platform === 'win32' ? pickWindowsBinaryPath(matches) : matches[0]
+    const matches = found?.exitCode === 0 ? getNonEmptyLines(found.stdout) : []
+    const located = process.platform === 'win32' ? pickWindowsBinaryPath(matches) : matches[0]
+    return located ?? findBinaryInCommonLocations(name)
 }
 
 export async function detectCli(
@@ -390,7 +452,7 @@ export async function detectCli(
     if (!path) return { available: false }
 
     const versionArgs = CLI_VERSION_ARGS[name] ?? ['--version']
-    const versionResult = await runProcess(path, versionArgs, undefined, LOOKUP_TIMEOUT_MS).catch(() => null)
+    const versionResult = await runProcess(path, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null)
     const versionLine = versionResult
         ? getFirstNonEmptyLine(versionResult.stdout) ?? getFirstNonEmptyLine(versionResult.stderr)
         : undefined
@@ -418,6 +480,56 @@ export async function spawnCliChat(
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const resolvedBinary = await findBinaryPath(binary)
     return runProcess(resolvedBinary ?? binary, args, stdinContent, timeoutMs)
+}
+
+function getWindowsSearchDirs(): string[] {
+    return uniqueNonEmpty([
+        process.env.APPDATA ? path.join(process.env.APPDATA, 'npm') : undefined,
+        process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'pnpm') : undefined,
+        process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs', 'npm') : undefined,
+        process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Microsoft', 'WindowsApps') : undefined,
+        process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.local', 'bin') : undefined,
+        process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.bun', 'bin') : undefined,
+        process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.cargo', 'bin') : undefined,
+        process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.volta', 'bin') : undefined,
+        process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'scoop', 'shims') : undefined,
+        process.env.ProgramData ? path.join(process.env.ProgramData, 'chocolatey', 'bin') : undefined
+    ])
+}
+
+function getUnixSearchDirs(): string[] {
+    return uniqueNonEmpty([
+        path.join(os.homedir(), '.local', 'bin'),
+        path.join(os.homedir(), '.bun', 'bin'),
+        path.join(os.homedir(), '.cargo', 'bin'),
+        path.join(os.homedir(), '.volta', 'bin'),
+        path.join(os.homedir(), '.asdf', 'shims'),
+        path.join(os.homedir(), '.local', 'share', 'mise', 'shims'),
+        path.join(os.homedir(), '.local', 'share', 'pnpm'),
+        path.join(os.homedir(), '.npm-global', 'bin'),
+        process.env.PNPM_HOME,
+        '/opt/homebrew/bin',
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+        '/snap/bin'
+    ])
+}
+
+function findBinaryInCommonLocations(name: string): string | undefined {
+    const dirs = process.platform === 'win32' ? getWindowsSearchDirs() : getUnixSearchDirs()
+    const names = process.platform === 'win32'
+        ? [`${name}.exe`, `${name}.cmd`, `${name}.bat`, `${name}.ps1`, name]
+        : [name]
+
+    for (const dir of dirs) {
+        for (const candidateName of names) {
+            const candidate = path.join(dir, candidateName)
+            if (syncFs.existsSync(candidate)) return candidate
+        }
+    }
+
+    return undefined
 }
 
 async function fetchCodexCliModels(fallbackModels: string[]): Promise<string[]> {
@@ -555,7 +667,7 @@ async function fetchOpencodeCliModels(fallbackModels: string[]): Promise<string[
     const [globalConfig, projectConfig, modelsResult] = await Promise.all([
         readJsonFile(configPath),
         readJsonFile(path.join(process.cwd(), 'opencode.json')),
-        runProcess(opencodeBinary, ['models'], undefined, LOOKUP_TIMEOUT_MS).catch(() => null)
+        runProcess(opencodeBinary, ['models'], undefined, OPENCODE_LOOKUP_TIMEOUT_MS).catch(() => null)
     ])
 
     const configuredModel = uniqueNonEmpty([
