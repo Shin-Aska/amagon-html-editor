@@ -20,6 +20,7 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
 export default function AiProviderSelector(): JSX.Element {
     const config = useAiStore((s) => s.config)
     const configLoaded = useAiStore((s) => s.configLoaded)
+    const modelsLoaded = useAiStore((s) => s.modelsLoaded)
     const providerModels = useAiStore((s) => s.providerModels)
     const loadConfig = useAiStore((s) => s.loadConfig)
     const loadModels = useAiStore((s) => s.loadModels)
@@ -32,13 +33,15 @@ export default function AiProviderSelector(): JSX.Element {
         }
     }, [configLoaded, loadConfig, loadModels])
 
-    const models = providerModels[config.provider] || []
-
     const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli']
+
+    const isReady = configLoaded && modelsLoaded
+
+    const models = providerModels[config.provider] || []
 
     // Only show providers that have been configured (have models loaded), plus
     // always include the currently active provider so the selector is never blank.
-    // Dangerous providers (claude-cli, gemini-cli) are hidden unless the flag is on.
+    // Dangerous providers are hidden unless the flag is on.
     const visibleProviders = (Object.keys(PROVIDER_LABELS) as AiProvider[]).filter((p) => {
         if (DANGEROUS_PROVIDERS.includes(p) && !enableDangerousFeatures) return false
         return p === config.provider || (providerModels[p] && providerModels[p].length > 0)
@@ -53,7 +56,17 @@ export default function AiProviderSelector(): JSX.Element {
         saveConfig({ model })
     }
 
-    // Nothing to show yet — config hasn't loaded or no providers are configured
+    // Config hasn't loaded yet — show skeleton selects so layout doesn't shift
+    if (!configLoaded) {
+        return (
+            <div className="ai-provider-selector ai-provider-selector--loading">
+                <select className="ai-provider-select" disabled><option>Loading…</option></select>
+                <select className="ai-provider-select ai-model-select" disabled><option>Loading…</option></select>
+            </div>
+        )
+    }
+
+    // Config loaded but no providers configured
     if (visibleProviders.length === 0) return <></>
 
     return (
@@ -63,6 +76,7 @@ export default function AiProviderSelector(): JSX.Element {
                 value={config.provider}
                 onChange={(e) => handleProviderChange(e.target.value as AiProvider)}
                 title="AI Provider"
+                disabled={!isReady}
             >
                 {visibleProviders.map((p) => (
                     <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
@@ -70,12 +84,14 @@ export default function AiProviderSelector(): JSX.Element {
             </select>
             <select
                 className="ai-provider-select ai-model-select"
-                value={config.model}
+                value={isReady ? config.model : ''}
                 onChange={(e) => handleModelChange(e.target.value)}
                 title="AI Model"
-                disabled={models.length === 0}
+                disabled={!isReady || models.length === 0}
             >
-                {models.length === 0 ? (
+                {!isReady ? (
+                    <option value="">Loading…</option>
+                ) : models.length === 0 ? (
                     <option value="">No models</option>
                 ) : (
                     models.map((m) => (

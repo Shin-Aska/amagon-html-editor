@@ -402,7 +402,7 @@ const SUGGESTIONS = [
 ]
 
 export default function AiAssistant(): JSX.Element {
-    const { messages, isLoading, config, configLoaded, sendMessage, clearChat, loadConfig } = useAiStore()
+    const { messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig } = useAiStore()
     const { hasConfiguredAiProvider } = useAiAvailability()
     const addBlock = useEditorStore((s) => s.addBlock)
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
@@ -437,7 +437,7 @@ export default function AiAssistant(): JSX.Element {
 
     const handleSend = () => {
         const text = input.trim()
-        if (!text || isLoading) return
+        if (!text || isLoading || !modelsLoaded || !configLoaded) return
         setInput('')
         // Reset textarea height after sending
         if (inputRef.current) {
@@ -571,13 +571,13 @@ export default function AiAssistant(): JSX.Element {
                     onKeyDown={handleKeyDown}
                     placeholder={aiEnabled ? 'Ask the AI to build something...' : AI_API_KEY_REQUIRED_MESSAGE}
                     rows={1}
-                    disabled={isLoading || !aiEnabled}
+                    disabled={isLoading || !aiEnabled || !modelsLoaded || !configLoaded}
                 />
                 <button
                     className="ai-send-btn"
                     data-tutorial="ai-send-btn"
                     onClick={handleSend}
-                    disabled={!input.trim() || isLoading || !aiEnabled}
+                    disabled={!input.trim() || isLoading || !aiEnabled || !modelsLoaded || !configLoaded}
                     title="Send message"
                 >
                     <Send size={16} />

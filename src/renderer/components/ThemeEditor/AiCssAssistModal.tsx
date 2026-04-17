@@ -3,6 +3,7 @@ import { getApi } from '../../utils/api'
 import type { CssFile, ProjectTheme } from '../../store/types'
 import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
 import { openGlobalSettings } from '../../utils/settingsNavigation'
+import { useAiStore } from '../../store/aiStore'
 import AiProviderSelector from '../AiAssistant/AiProviderSelector'
 import './AiCssAssistModal.css'
 import { Sparkles } from 'lucide-react'
@@ -274,6 +275,9 @@ export default function AiCssAssistModal({
     onProposalGenerated
 }: AiCssAssistModalProps): JSX.Element | null {
     const { hasConfiguredAiProvider } = useAiAvailability()
+    const modelsLoaded = useAiStore((s) => s.modelsLoaded)
+    const configLoaded = useAiStore((s) => s.configLoaded)
+    const isReady = configLoaded && modelsLoaded
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -401,7 +405,7 @@ ${themeVariables}`
                         placeholder="E.g. Create a glassmorphism card style for .pricing-card"
                         value={prompt}
                         onChange={(e) => onPromptChange(e.target.value)}
-                        disabled={!hasConfiguredAiProvider || isGenerating}
+                        disabled={!hasConfiguredAiProvider || isGenerating || !isReady}
                     />
 
                     {error && <div className="ai-css-assist-error">{error}</div>}
@@ -420,7 +424,7 @@ ${themeVariables}`
                     <button
                         className="theme-btn theme-btn-primary"
                         onClick={handleGenerate}
-                        disabled={isGenerating || !hasConfiguredAiProvider}
+                        disabled={isGenerating || !hasConfiguredAiProvider || !isReady}
                     >
                         {isGenerating ? 'Generating...' : 'Generate'}
                     </button>
