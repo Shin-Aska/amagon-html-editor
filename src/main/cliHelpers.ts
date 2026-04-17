@@ -9,6 +9,28 @@ type CliBinary = 'claude' | 'codex' | 'gemini' | 'copilot' | 'junie'
 const LOOKUP_TIMEOUT_MS = 10_000
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000
 const MAX_CLI_MODELS = 80
+const JUNIE_MODEL_PROBE_ID = '__amagon_model_probe__'
+const JUNIE_BUILT_IN_MODEL_IDS = [
+    'default',
+    'claude-opus-4-6',
+    'claude-opus-4-7',
+    'claude-sonnet-4-6',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-3.1-pro-preview',
+    'gemini-flash',
+    'gemini-pro',
+    'gpt',
+    'gpt-5-2025-08-07',
+    'gpt-5.2-2025-12-11',
+    'gpt-5.3-codex',
+    'gpt-5.4',
+    'gpt-codex',
+    'grok',
+    'grok-4-1-fast-reasoning',
+    'opus',
+    'sonnet'
+]
 
 export const CLI_BINARY_NAMES: Record<CliProvider, CliBinary> = {
     'claude-cli': 'claude',
@@ -63,6 +85,51 @@ async function readTextFile(filePath: string): Promise<string> {
     }
 }
 
+async function listJsonFiles(dirPath: string): Promise<string[]> {
+    try {
+        const entries = await fs.readdir(dirPath, { withFileTypes: true })
+        return entries
+            .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.json')
+            .map((entry) => path.join(dirPath, entry.name))
+    } catch {
+        return []
+    }
+}
+
+function getArrayStrings(value: unknown): string[] {
+    if (Array.isArray(value)) {
+        return value.filter((item): item is string => typeof item === 'string')
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(path.delimiter)
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+    }
+    return []
+}
+
+function getConfigArrayStrings(config: any, keys: string[]): string[] {
+    for (const key of keys) {
+        const values = getArrayStrings(config?.[key])
+        if (values.length > 0) return values
+    }
+    return []
+}
+
+function getConfigBoolean(config: any, keys: string[]): boolean | undefined {
+    for (const key of keys) {
+        const value = config?.[key]
+        if (typeof value === 'boolean') return value
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase()
+            if (normalized === 'true') return true
+            if (normalized === 'false') return false
+        }
+    }
+    return undefined
+}
+
 function readTopLevelTomlString(content: string, key: string): string | undefined {
     let inTopLevel = true
     const keyPattern = new RegExp(`^${key}\\s*=\\s*["']([^"']+)["']\\s*$`)
@@ -104,6 +171,69 @@ function parseCopilotHelpConfigModels(stdout: string): string[] {
     }
 
     return uniqueNonEmpty(models)
+}
+
+function parseJunieAvailableModels(output: string): string[] {
+    const models: string[] = []
+    let inModelList = false
+
+    for (const rawLine of output.split(/\r?\n/)) {
+        const line = rawLine.trim()
+        if (line === 'Available models:') {
+            inModelList = true
+            continue
+        }
+        if (!inModelList) continue
+
+        const match = line.match(/^-\s+(.+)$/)
+        if (match) {
+            models.push(match[1])
+            continue
+        }
+        if (models.length > 0 && line.length > 0) break
+    }
+
+    return uniqueNonEmpty(models)
+}
+
+function normalizeJunieModelId(model: string | undefined): string | undefined {
+    const normalized = getTrimmedString(model)
+    if (!normalized) return undefined
+
+    const lower = normalized.toLowerCase()
+    const aliases: Record<string, string> = {
+        'default': 'default',
+        'gemini 3 flash': 'gemini-3-flash-preview',
+        'gemini-3-0-flash': 'gemini-3-flash-preview',
+        'gemini_3_0_flash': 'gemini-3-flash-preview',
+        'gemini 3.1 flash lite': 'gemini-3.1-flash-lite-preview',
+        'gemini-3-1-flash-lite-preview': 'gemini-3.1-flash-lite-preview',
+        'gemini_3_1_flash_lite': 'gemini-3.1-flash-lite-preview',
+        'gemini 3.1 pro preview': 'gemini-3.1-pro-preview',
+        'gemini-3-1-pro-preview': 'gemini-3.1-pro-preview',
+        'gemini_3_1_pro': 'gemini-3.1-pro-preview',
+        'claude opus 4.6': 'claude-opus-4-6',
+        'opus-4.6': 'claude-opus-4-6',
+        'opus_4_6': 'claude-opus-4-6',
+        'claude opus 4.7': 'claude-opus-4-7',
+        'opus-4.7': 'claude-opus-4-7',
+        'opus_4_7': 'claude-opus-4-7',
+        'claude sonnet 4.6': 'claude-sonnet-4-6',
+        'sonnet-4.6': 'claude-sonnet-4-6',
+        'sonnet_4_6': 'claude-sonnet-4-6',
+        'gpt5': 'gpt-5-2025-08-07',
+        'gpt-5': 'gpt-5-2025-08-07',
+        'gpt5_2': 'gpt-5.2-2025-12-11',
+        'gpt-5.2': 'gpt-5.2-2025-12-11',
+        'gpt5_3_codex': 'gpt-5.3-codex',
+        'gpt5-3-codex': 'gpt-5.3-codex',
+        'gpt5_4': 'gpt-5.4',
+        'grok 4.1 fast reasoning': 'grok-4-1-fast-reasoning',
+        'grok-4.1-fast-reasoning': 'grok-4-1-fast-reasoning',
+        'grok_4_1_fast_reasoning': 'grok-4-1-fast-reasoning'
+    }
+
+    return aliases[lower] ?? normalized
 }
 
 function pickWindowsBinaryPath(paths: string[]): string | undefined {
@@ -321,22 +451,70 @@ async function fetchGithubCliModels(_fallbackModels: string[]): Promise<string[]
 }
 
 async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> {
-    const homeDir = os.homedir()
+    const junieHome = process.env.JUNIE_HOME?.trim() || path.join(os.homedir(), '.junie')
+    const junieBinary = await findBinaryPath('junie') ?? 'junie'
 
-    // Junie resolves model precedence as settings -> project config -> user config.
+    // Junie resolves model precedence as environment -> user settings -> project config -> user config.
     const [settings, projectConfig, userConfig] = await Promise.all([
-        readJsonFile(path.join(homeDir, '.junie', 'settings.json')),
+        readJsonFile(path.join(junieHome, 'settings.json')),
         readJsonFile(path.join(process.cwd(), '.junie', 'config.json')),
-        readJsonFile(path.join(homeDir, '.junie', 'config.json'))
+        readJsonFile(path.join(junieHome, 'config.json'))
     ])
 
     const configuredModel = uniqueNonEmpty([
-        getTrimmedString(settings?.model),
-        getTrimmedString(projectConfig?.model),
-        getTrimmedString(userConfig?.model)
+        normalizeJunieModelId(process.env.JUNIE_MODEL),
+        normalizeJunieModelId(settings?.model),
+        normalizeJunieModelId(projectConfig?.model),
+        normalizeJunieModelId(userConfig?.model)
     ])[0]
 
-    return modelsWithFallback([configuredModel], fallbackModels)
+    const probeResult = await runProcess(
+        junieBinary,
+        ['--task', 'model probe', '--output-format', 'text', '--skip-update-check', '--timeout', '1', '--model', JUNIE_MODEL_PROBE_ID],
+        undefined,
+        LOOKUP_TIMEOUT_MS
+    ).catch(() => null)
+    const availableModels = probeResult
+        ? parseJunieAvailableModels(`${probeResult.stdout}\n${probeResult.stderr}`)
+        : []
+
+    const configuredModelLocations = [
+        ...getArrayStrings(process.env.JUNIE_MODEL_LOCATIONS),
+        ...getConfigArrayStrings(projectConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location']),
+        ...getConfigArrayStrings(userConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location'])
+    ]
+    const useDefaultModelLocations = getConfigBoolean(
+        { value: process.env.JUNIE_MODEL_DEFAULT_LOCATIONS },
+        ['value']
+    ) ?? getConfigBoolean(
+        projectConfig,
+        ['modelDefaultLocations', 'modelDefaultLocation', 'model_default_locations', 'model-default-locations']
+    ) ?? getConfigBoolean(
+        userConfig,
+        ['modelDefaultLocations', 'modelDefaultLocation', 'model_default_locations', 'model-default-locations']
+    ) ?? true
+
+    const defaultModelLocationLookups = useDefaultModelLocations
+        ? [
+            listJsonFiles(path.join(junieHome, 'models')),
+            listJsonFiles(path.join(process.cwd(), '.junie', 'models'))
+        ]
+        : []
+
+    const modelFiles = await Promise.all([
+        ...defaultModelLocationLookups,
+        ...configuredModelLocations.map((location) => listJsonFiles(path.resolve(location)))
+    ])
+    const customModels = uniqueNonEmpty(
+        modelFiles
+            .flat()
+            .map((filePath) => `custom:${path.basename(filePath, '.json')}`)
+    )
+
+    return modelsWithFallback(
+        [configuredModel, ...(availableModels.length > 0 ? availableModels : JUNIE_BUILT_IN_MODEL_IDS), ...customModels],
+        fallbackModels
+    )
 }
 
 export async function fetchCliModels(

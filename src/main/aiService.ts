@@ -69,7 +69,7 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     'codex-cli': ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.2'],
     'gemini-cli': ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'],
     'github-cli': ['default'],
-    'junie-cli': ['default', 'sonnet', 'gpt', 'gemini-pro']
+    'junie-cli': ['default', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview', 'gemini-flash', 'gemini-pro', 'gpt', 'gpt-5-2025-08-07', 'gpt-5.2-2025-12-11', 'gpt-5.3-codex', 'gpt-5.4', 'gpt-codex', 'grok', 'grok-4-1-fast-reasoning', 'opus', 'sonnet']
 }
 
 // Re-export for the IPC handler to use as a baseline
@@ -560,7 +560,38 @@ function normalizeCliModel(provider: CliProvider, model: string): string {
 
     if (provider === 'junie-cli') {
         const lower = normalized.toLowerCase()
-        return !lower || lower === 'default' ? 'default' : normalized
+        if (!lower || lower === 'default') return 'default'
+        const aliases: Record<string, string> = {
+            'gemini 3 flash': 'gemini-3-flash-preview',
+            'gemini-3-0-flash': 'gemini-3-flash-preview',
+            'gemini_3_0_flash': 'gemini-3-flash-preview',
+            'gemini 3.1 flash lite': 'gemini-3.1-flash-lite-preview',
+            'gemini-3-1-flash-lite-preview': 'gemini-3.1-flash-lite-preview',
+            'gemini_3_1_flash_lite': 'gemini-3.1-flash-lite-preview',
+            'gemini 3.1 pro preview': 'gemini-3.1-pro-preview',
+            'gemini-3-1-pro-preview': 'gemini-3.1-pro-preview',
+            'gemini_3_1_pro': 'gemini-3.1-pro-preview',
+            'claude opus 4.6': 'claude-opus-4-6',
+            'opus-4.6': 'claude-opus-4-6',
+            'opus_4_6': 'claude-opus-4-6',
+            'claude opus 4.7': 'claude-opus-4-7',
+            'opus-4.7': 'claude-opus-4-7',
+            'opus_4_7': 'claude-opus-4-7',
+            'claude sonnet 4.6': 'claude-sonnet-4-6',
+            'sonnet-4.6': 'claude-sonnet-4-6',
+            'sonnet_4_6': 'claude-sonnet-4-6',
+            'gpt5': 'gpt-5-2025-08-07',
+            'gpt-5': 'gpt-5-2025-08-07',
+            'gpt5_2': 'gpt-5.2-2025-12-11',
+            'gpt-5.2': 'gpt-5.2-2025-12-11',
+            'gpt5_3_codex': 'gpt-5.3-codex',
+            'gpt5-3-codex': 'gpt-5.3-codex',
+            'gpt5_4': 'gpt-5.4',
+            'grok 4.1 fast reasoning': 'grok-4-1-fast-reasoning',
+            'grok-4.1-fast-reasoning': 'grok-4-1-fast-reasoning',
+            'grok_4_1_fast_reasoning': 'grok-4-1-fast-reasoning'
+        }
+        return aliases[lower] ?? normalized
     }
 
     if (provider !== 'claude-cli') return normalized
