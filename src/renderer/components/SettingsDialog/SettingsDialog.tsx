@@ -194,7 +194,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
 
   if (!open) return null
 
-  const DANGEROUS_CLI_PROVIDERS = ['claude-cli', 'gemini-cli']
+  const DANGEROUS_CLI_PROVIDERS = ['claude-cli', 'gemini-cli', 'junie-cli']
   const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((p) => `ai:${p}`)
   const visibleCredentials = enableDangerousFeatures
     ? credentials
@@ -467,12 +467,12 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                           <option value="ollama">Ollama (Local)</option>
                           <option value="codex-cli">Codex CLI</option>
                           <option value="github-cli">GitHub Copilot CLI</option>
-                          <option value="junie-cli">Junie CLI</option>
                           <option value="opencode-cli">Opencode CLI</option>
                           {enableDangerousFeatures && (
                             <>
                               <option value="claude-cli">Claude CLI</option>
                               <option value="gemini-cli">Gemini CLI</option>
+                              <option value="junie-cli">Junie CLI</option>
                             </>
                           )}
                         </optgroup>
@@ -561,6 +561,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                             <ul>
                               <li>Claude CLI — AI provider via local Claude CLI tool</li>
                               <li>Gemini CLI — AI provider via local Gemini CLI tool</li>
+                              <li>Junie CLI — AI provider via local Junie CLI tool</li>
                             </ul>
                             These features interact with local system tools and may expose your environment to risk. Additionally some of these features may
                             cause your accounts to be banned. Use at your own risk.

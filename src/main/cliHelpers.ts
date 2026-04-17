@@ -10,6 +10,9 @@ const LOOKUP_TIMEOUT_MS = 10_000
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000
 const MAX_CLI_MODELS = 80
 const JUNIE_MODEL_PROBE_ID = '__amagon_model_probe__'
+const CLI_VERSION_ARGS: Partial<Record<CliBinary, string[]>> = {
+    junie: ['--skip-update-check', '--version']
+}
 const JUNIE_BUILT_IN_MODEL_IDS = [
     'default',
     'claude-opus-4-6',
@@ -50,6 +53,15 @@ function getNonEmptyLines(value: string): string[] {
 
 function getFirstNonEmptyLine(value: string): string | undefined {
     return getNonEmptyLines(value)[0]
+}
+
+function normalizeCliVersionLine(binary: CliBinary, line: string | undefined): string | undefined {
+    if (!line) return undefined
+    if (binary === 'junie') {
+        const match = line.match(/Junie version:\s*(.+)$/i)
+        return match?.[1]?.trim() || line
+    }
+    return line
 }
 
 function uniqueNonEmpty(values: Array<string | undefined>): string[] {
@@ -377,10 +389,12 @@ export async function detectCli(
     const path = await findBinaryPath(name)
     if (!path) return { available: false }
 
-    const versionResult = await runProcess(path, ['--version'], undefined, LOOKUP_TIMEOUT_MS).catch(() => null)
-    const version = versionResult
+    const versionArgs = CLI_VERSION_ARGS[name] ?? ['--version']
+    const versionResult = await runProcess(path, versionArgs, undefined, LOOKUP_TIMEOUT_MS).catch(() => null)
+    const versionLine = versionResult
         ? getFirstNonEmptyLine(versionResult.stdout) ?? getFirstNonEmptyLine(versionResult.stderr)
         : undefined
+    const version = normalizeCliVersionLine(name, versionLine)
 
     return {
         available: true,
