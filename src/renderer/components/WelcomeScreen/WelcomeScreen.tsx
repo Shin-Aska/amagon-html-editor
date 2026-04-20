@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FilePlus, FolderOpen, Zap, Clock, ChevronRight, X, Settings } from 'lucide-react'
+import { FilePlus, FolderOpen, Clock, ChevronRight, X, Settings } from 'lucide-react'
 import appLogo from '../../../../assets/app.png'
 import { getApi } from '../../utils/api'
 import { useProjectStore } from '../../store/projectStore'
@@ -9,6 +9,18 @@ import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './WelcomeScreen.css'
 
+function getFrameworkLabel(framework?: string): string {
+  if (framework === 'bootstrap-5') return 'B'
+  if (framework === 'tailwind') return 'T'
+  return '<>'
+}
+
+function getFrameworkTitle(framework?: string): string {
+  if (framework === 'bootstrap-5') return 'Bootstrap 5'
+  if (framework === 'tailwind') return 'Tailwind CSS'
+  return 'Vanilla HTML/CSS'
+}
+
 export default function WelcomeScreen(): JSX.Element {
   const api = getApi()
   const setProject = useProjectStore((s) => s.setProject)
@@ -17,10 +29,10 @@ export default function WelcomeScreen(): JSX.Element {
   const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
   const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
 
-  const [recentProjects, setRecentProjects] = useState<{ path: string; name: string }[]>([])
+  const [recentProjects, setRecentProjects] = useState<{ path: string; name: string; framework?: string }[]>([])
   const [appVersion, setAppVersion] = useState('')
 
-  const normalizeRecentProjects = (projects: unknown): Array<{ path: string; name: string }> => {
+  const normalizeRecentProjects = (projects: unknown): Array<{ path: string; name: string; framework?: string }> => {
     if (!Array.isArray(projects)) return []
 
     return projects.flatMap((project) => {
@@ -30,7 +42,8 @@ export default function WelcomeScreen(): JSX.Element {
 
         return [{
           path: trimmedPath,
-          name: trimmedPath.split(/[/\\]/).pop()?.replace(/\.json$/i, '') || 'Untitled'
+          name: trimmedPath.split(/[/\\]/).pop()?.replace(/\.json$/i, '') || 'Untitled',
+          framework: undefined
         }]
       }
 
@@ -45,12 +58,18 @@ export default function WelcomeScreen(): JSX.Element {
         ? (project as { name: string }).name.trim()
         : ''
 
+      const frameworkValue = typeof (project as { framework?: unknown }).framework === 'string'
+        ? (project as { framework: string }).framework
+        : undefined
+
       return [{
         path: pathValue,
-        name: nameValue || pathValue.split(/[/\\]/).pop()?.replace(/\.json$/i, '') || 'Untitled'
+        name: nameValue || pathValue.split(/[/\\]/).pop()?.replace(/\.json$/i, '') || 'Untitled',
+        framework: frameworkValue
       }]
     })
   }
+
   const [showNewProject, setShowNewProject] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -177,7 +196,7 @@ export default function WelcomeScreen(): JSX.Element {
               </div>
               <div className="btn-text">
                 <div className="btn-title">Settings</div>
-                <div className="btn-desc">Global preferences & API keys</div>
+                <div className="btn-desc">Global preferences &amp; API keys</div>
               </div>
               <ChevronRight className="btn-arrow" size={20} />
             </button>
@@ -197,8 +216,12 @@ export default function WelcomeScreen(): JSX.Element {
                 recentProjects.map((project) => {
                   return (
                     <div key={project.path} className="recent-item" onClick={() => handleOpenRecent(project.path)}>
-                      <div className="recent-item-icon">
-                        <Zap size={14} />
+                      <div
+                        className={`recent-item-icon recent-fw-icon fw-icon-${project.framework ?? 'vanilla'}`}
+                        title={getFrameworkTitle(project.framework)}
+                        aria-label={getFrameworkTitle(project.framework)}
+                      >
+                        {getFrameworkLabel(project.framework)}
                       </div>
                       <div className="recent-item-info">
                         <div className="recent-name">{project.name}</div>

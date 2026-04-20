@@ -122,7 +122,7 @@ async function removeRecentProject(projectPath: string): Promise<string[]> {
 
 async function resolveRecentProjects(
   projectPaths: string[]
-): Promise<Array<{ path: string; name: string }>> {
+): Promise<Array<{ path: string; name: string; framework?: string }>> {
   const projects = []
   for (const projectPath of projectPaths) {
     if (!projectPath || !existsSync(projectPath)) continue
@@ -131,11 +131,12 @@ async function resolveRecentProjects(
       const content = await fs.readFile(projectPath, 'utf-8')
       const data = JSON.parse(content)
       const name = data.projectSettings?.name || 'Untitled Project'
-      projects.push({ path: projectPath, name })
+      const framework = data.projectSettings?.framework || 'vanilla'
+      projects.push({ path: projectPath, name, framework })
     } catch {
       // If we can't read/parse the file, still show it with a filename fallback.
       const name = path.basename(projectPath, path.extname(projectPath)) || 'Untitled'
-      projects.push({ path: projectPath, name })
+      projects.push({ path: projectPath, name, framework: undefined })
     }
   }
 

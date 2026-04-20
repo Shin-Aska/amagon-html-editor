@@ -456,9 +456,47 @@
   flex-shrink: 0;
 }
 
-.recent-item:hover .recent-item-icon {
-  background: var(--color-accent);
-  color: var(--color-bg-primary);
+/* Framework-coloured icon variants */
+.recent-fw-icon {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  border: 1px solid transparent;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+/* Bootstrap 5 — purple */
+.fw-icon-bootstrap-5 {
+  background: rgba(121, 82, 179, 0.18);
+  color: #c4a0f5;
+  border-color: rgba(121, 82, 179, 0.3);
+}
+.recent-item:hover .fw-icon-bootstrap-5 {
+  background: rgba(121, 82, 179, 0.32);
+  filter: brightness(1.15);
+}
+
+/* Tailwind — cyan */
+.fw-icon-tailwind {
+  background: rgba(56, 189, 248, 0.14);
+  color: #67d7fb;
+  border-color: rgba(56, 189, 248, 0.28);
+}
+.recent-item:hover .fw-icon-tailwind {
+  background: rgba(56, 189, 248, 0.26);
+  filter: brightness(1.1);
+}
+
+/* Vanilla HTML/CSS — slate */
+.fw-icon-vanilla {
+  background: rgba(108, 117, 125, 0.18);
+  color: #9ba5af;
+  border-color: rgba(108, 117, 125, 0.3);
+}
+.recent-item:hover .fw-icon-vanilla {
+  background: rgba(108, 117, 125, 0.3);
+  filter: brightness(1.1);
 }
 
 .recent-item-info {
