@@ -258,7 +258,7 @@ describe('htmlToBlocks', () => {
 
   it('parses bootstrap carousel markup as a carousel block', () => {
     const result = htmlToBlocks(`
-      <div id="hero-carousel" class="carousel slide">
+      <div id="hero-carousel" class="carousel slide carousel-fade">
         <div class="carousel-indicators">
           <button type="button" data-bs-target="#hero-carousel" data-bs-slide-to="0" class="active"></button>
         </div>
@@ -281,6 +281,28 @@ describe('htmlToBlocks', () => {
       { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
       { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
     ])
+    expect(result.blocks[0].props.transition).toBe('fade')
+    expect(result.blocks[0].props.fade).toBe(true)
+  })
+
+  it('parses bootstrap carousel fixed image height', () => {
+    const result = htmlToBlocks(`
+      <div id="hero-carousel" class="carousel slide">
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img src="slide-1.jpg" class="d-block w-100" alt="Slide 1" style="height: 320px; object-fit: cover;">
+          </div>
+          <div class="carousel-item">
+            <img src="slide-2.jpg" class="d-block w-100" alt="Slide 2" style="height: 320px; object-fit: cover;">
+          </div>
+        </div>
+      </div>
+    `)
+
+    expect(result.blocks).toHaveLength(1)
+    expect(result.blocks[0].type).toBe('carousel')
+    expect(result.blocks[0].props.imageHeightMode).toBe('fixed')
+    expect(result.blocks[0].props.imageHeight).toBe('320px')
   })
 
   it('parses bootstrap modal trigger and dialog as a single modal block', () => {

@@ -1053,11 +1053,11 @@ describe('Phase 4 — layout and component block enhancements', () => {
     expect(html).toContain('flex-column')
   })
 
-  it('renders carousel with fade and thumbnails', () => {
+  it('renders carousel with fade transition and thumbnails', () => {
     const block = createBlock('carousel', {
       props: {
         id: 'carousel-test',
-        fade: true,
+        transition: 'fade',
         thumbnails: true,
         interval: 3000,
         slides: [
@@ -1073,6 +1073,79 @@ describe('Phase 4 — layout and component block enhancements', () => {
     // thumbnails: should include a thumbnail button row
     expect(html).toContain('img1.jpg')
     expect(html).toContain('img2.jpg')
+  })
+
+  it('renders carousel fade class from legacy fade prop when transition is missing', () => {
+    const block = createBlock('carousel', {
+      props: {
+        id: 'carousel-legacy-fade',
+        fade: true,
+        slides: [
+          { src: 'img1.jpg', alt: 'Slide 1', caption: '' },
+          { src: 'img2.jpg', alt: 'Slide 2', caption: '' }
+        ]
+      },
+      classes: ['carousel', 'slide']
+    })
+    const html = blockToHtml([block])
+    expect(html).toContain('carousel-fade')
+  })
+
+  it('renders tailwind carousel with transition mode and animated slide markup', () => {
+    const block = createBlock('carousel', {
+      props: {
+        id: 'tw-carousel',
+        transition: 'fade',
+        slides: [
+          { src: 'img1.jpg', alt: 'Slide 1', caption: 'One' },
+          { src: 'img2.jpg', alt: 'Slide 2', caption: 'Two' }
+        ]
+      },
+      classes: ['carousel', 'slide']
+    })
+
+    const html = blockToHtml([block], { framework: 'tailwind' })
+    expect(html).toContain('data-tw-carousel-transition="fade"')
+    expect(html).toContain('data-tw-active="true"')
+    expect(html).toContain('transition-opacity')
+    expect(html).not.toContain('class="hidden"')
+  })
+
+  it('renders carousel images at a fixed height when configured', () => {
+    const block = createBlock('carousel', {
+      props: {
+        id: 'carousel-fixed-height',
+        imageHeightMode: 'fixed',
+        imageHeight: '320px',
+        slides: [
+          { src: 'img1.jpg', alt: 'Slide 1', caption: '' },
+          { src: 'img2.jpg', alt: 'Slide 2', caption: '' }
+        ]
+      },
+      classes: ['carousel', 'slide']
+    })
+
+    const html = blockToHtml([block])
+    expect(html).toContain('height: 320px')
+    expect(html).toContain('object-fit: cover')
+  })
+
+  it('renders carousel images following the first image height when configured', () => {
+    const block = createBlock('carousel', {
+      props: {
+        id: 'carousel-follow-first',
+        imageHeightMode: 'follow-first',
+        slides: [
+          { src: 'img1.jpg', alt: 'Slide 1', caption: '' },
+          { src: 'img2.jpg', alt: 'Slide 2', caption: '' }
+        ]
+      },
+      classes: ['carousel', 'slide']
+    })
+
+    const html = blockToHtml([block])
+    expect(html).toContain('height: var(--amagon-carousel-image-height, auto)')
+    expect(html).toContain('onload="(function(img)')
   })
 
   it('renders form with horizontal layout', () => {

@@ -306,6 +306,8 @@ describe('round-trip: blocks → HTML → blocks', () => {
         classes: ['carousel', 'slide'],
         props: {
           id: 'hero-carousel',
+          imageHeightMode: 'fixed',
+          imageHeight: '320px',
           slides: [
             { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
             { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
@@ -637,6 +639,7 @@ describe('round-trip: blocks → HTML → blocks', () => {
       createBlock('carousel', {
         props: {
           id: 'carousel-rt',
+          transition: 'fade',
           fade: true,
           thumbnails: true,
           interval: 4000,
@@ -680,6 +683,9 @@ describe('round-trip: blocks → HTML → blocks', () => {
 
     // carousel fade + interval
     expect(blocks[6].type).toBe('carousel')
+    expect(blocks[6].props.transition).toBe('fade')
+    expect(blocks[6].props.fade).toBe(true)
+    expect(blocks[6].props.interval).toBe(4000)
   })
 
   it('preserves modal size/scrollable/centered through export-mode round-trip', () => {

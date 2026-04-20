@@ -1103,6 +1103,7 @@ function parseCarouselBlock(el: Element): Block {
   const carouselId = el.id || String(el.getAttribute('data-bs-target') || '').replace(/^#/, '') || `carousel-${id}`
   const items = Array.from(el.querySelectorAll(':scope > .carousel-inner > .carousel-item, .carousel-inner > .carousel-item'))
   const fade = el.classList.contains('carousel-fade')
+  const transition = fade ? 'fade' : 'slide'
 
   // Recover interval from first item
   const firstItem = items[0] as Element | undefined
@@ -1111,6 +1112,15 @@ function parseCarouselBlock(el: Element): Block {
 
   // Detect thumbnails: look for a thumbnail row after carousel-inner
   const thumbnails = !!el.querySelector('button[data-bs-slide-to] img')
+
+  const firstImg = items[0]?.querySelector('img') || null
+  const firstImgStyle = (firstImg?.getAttribute('style') || '').trim()
+  const imageHeightMode =
+    firstImgStyle.includes('var(--amagon-carousel-image-height')
+      ? 'follow-first'
+      : (/height\s*:\s*[^;]+/i.test(firstImgStyle) ? 'fixed' : 'auto')
+  const heightMatch = firstImgStyle.match(/height\s*:\s*([^;]+)\s*;?/i)
+  const imageHeight = heightMatch ? heightMatch[1].trim() : ''
 
   const slides = items.map((item, index) => {
     const img = item.querySelector('img')
@@ -1129,7 +1139,10 @@ function parseCarouselBlock(el: Element): Block {
     props: {
       id: carouselId,
       slides,
+      transition,
       fade,
+      imageHeightMode,
+      imageHeight,
       interval,
       thumbnails
     },
@@ -1144,6 +1157,17 @@ function parseTailwindCarousel(el: Element): Block {
   const classes = el.className ? el.className.split(/\s+/).filter(Boolean) : []
   const styles = parseInlineStyles(el)
   const carouselId = el.getAttribute('data-tw-carousel') || el.id || `carousel-${id}`
+  const transition = (el.getAttribute('data-tw-carousel-transition') || '').trim().toLowerCase() === 'fade'
+    ? 'fade'
+    : 'slide'
+  const firstImg = el.querySelector('[data-tw-carousel-slide] img')
+  const firstImgStyle = (firstImg?.getAttribute('style') || '').trim()
+  const imageHeightMode =
+    firstImgStyle.includes('var(--amagon-carousel-image-height')
+      ? 'follow-first'
+      : (/height\s*:\s*[^;]+/i.test(firstImgStyle) ? 'fixed' : 'auto')
+  const heightMatch = firstImgStyle.match(/height\s*:\s*([^;]+)\s*;?/i)
+  const imageHeight = heightMatch ? heightMatch[1].trim() : ''
   const slides = Array.from(el.querySelectorAll('[data-tw-carousel-slide]')).map((slide, index) => {
     const img = slide.querySelector('img')
     const caption = slide.querySelector('div')
@@ -1160,7 +1184,11 @@ function parseTailwindCarousel(el: Element): Block {
     tag: el.tagName.toLowerCase() !== defaultTagForType('carousel') ? el.tagName.toLowerCase() : undefined,
     props: {
       id: carouselId,
-      slides
+      slides,
+      transition,
+      fade: transition === 'fade',
+      imageHeightMode,
+      imageHeight
     },
     styles,
     classes,

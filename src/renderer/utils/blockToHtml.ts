@@ -224,8 +224,12 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
     'vertical',
     'justified',
     'fill',
+    'transition',
     'fade',
+    'imageHeightMode',
+    'imageHeight',
     'thumbnails',
+    // Legacy no-op (kept to avoid leaking into exported HTML as an attribute)
     'autoHeight',
     'interval',
     'layout',
@@ -1287,7 +1291,7 @@ function getPropDrivenClasses(block: Block): string[] {
     else if (dec === 'large-quote') classes.push('amagon-bq-large-quote')
   }
 
-  if (block.type === 'carousel' && block.props.fade) {
+  if (block.type === 'carousel' && normalizeCarouselTransition(block.props.transition, block.props.fade) === 'fade') {
     classes.push('carousel-fade')
   }
 
@@ -1642,6 +1646,24 @@ function toBoolean(input: unknown, fallback = false): boolean {
   return fallback
 }
 
+function normalizeCarouselTransition(transition: unknown, legacyFade: unknown): 'slide' | 'fade' {
+  const raw = String(transition ?? '').trim().toLowerCase()
+  if (raw === 'fade') return 'fade'
+  if (raw === 'slide') return 'slide'
+  return toBoolean(legacyFade, false) ? 'fade' : 'slide'
+}
+
+function normalizeCarouselImageHeightMode(mode: unknown): 'auto' | 'fixed' | 'follow-first' {
+  const raw = String(mode ?? '').trim().toLowerCase()
+  if (raw === 'fixed') return 'fixed'
+  if (raw === 'follow-first' || raw === 'followfirst' || raw === 'follow_first') return 'follow-first'
+  return 'auto'
+}
+
+function normalizeCarouselImageHeight(height: unknown): string {
+  return String(height ?? '').trim()
+}
+
 function normalizeCardVariant(input: unknown): 'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'light' | 'dark' {
   const value = String(input ?? 'default').trim()
   if (value === 'primary' || value === 'secondary' || value === 'success' || value === 'danger' || value === 'warning' || value === 'info' || value === 'light' || value === 'dark') {
@@ -1791,7 +1813,9 @@ function getBlockContent(
     case 'carousel': {
       const id = String(props.id || 'carousel-' + Math.random().toString(36).substr(2, 9))
       const slides = (props.slides as Array<{ src: string; alt: string; caption?: string }>) ?? []
-      const fade = toBoolean(props.fade, false)
+      const transition = normalizeCarouselTransition(props.transition, props.fade)
+      const imageHeightMode = normalizeCarouselImageHeightMode(props.imageHeightMode)
+      const imageHeight = normalizeCarouselImageHeight(props.imageHeight) || '400px'
       const thumbnails = toBoolean(props.thumbnails, false)
       const interval = Number(props.interval) || 5000
 
@@ -1808,30 +1832,53 @@ function getBlockContent(
       }
 
       if (framework === 'tailwind') {
+        const followFirstOnLoad = "(function(img){var root=img.closest('[data-tw-carousel], .carousel');if(!root)return;var w=img.naturalWidth||0;var h=img.naturalHeight||0;if(!w||!h)return;var width=img.getBoundingClientRect().width||0;if(!width)return;var px=Math.round(width*h/w);root.style.setProperty('--amagon-carousel-image-height',px+'px');})(this)"
+        const imgStyleAttr = imageHeightMode === 'fixed'
+          ? ` style="height: ${escapeAttrValue(imageHeight)}; object-fit: cover;"`
+          : imageHeightMode === 'follow-first'
+            ? ` style="height: var(--amagon-carousel-image-height, auto); object-fit: cover;"`
+            : ''
+        const hiddenSlideClasses = transition === 'fade'
+          ? 'absolute inset-0 opacity-0 pointer-events-none'
+          : 'absolute inset-0 opacity-0 pointer-events-none translate-x-4 scale-95'
+        const activeSlideClasses = transition === 'fade'
+          ? 'relative opacity-100 pointer-events-auto'
+          : 'relative opacity-100 pointer-events-auto translate-x-0 scale-100'
+        const transitionClasses = transition === 'fade'
+          ? 'transition-opacity duration-700 ease-in-out'
+          : 'transition-all duration-500 ease-out'
         const items = slides.map((slide, i) => `
-        <div class="${i === 0 ? 'block' : 'hidden'}" data-tw-carousel-slide="${i}">
-          <img src="${escapeAttrValue(slide.src)}" class="block w-full rounded-xl" alt="${escapeAttrValue(slide.alt)}">
+        <div class="${i === 0 ? activeSlideClasses : hiddenSlideClasses} ${transitionClasses}" data-tw-carousel-slide="${i}" data-tw-active="${i === 0 ? 'true' : 'false'}" aria-hidden="${i === 0 ? 'false' : 'true'}">
+          <img src="${escapeAttrValue(slide.src)}" class="block w-full rounded-xl" alt="${escapeAttrValue(slide.alt)}"${imgStyleAttr}${imageHeightMode === 'follow-first' && i === 0 ? ` onload="${followFirstOnLoad}"` : ''}>
           ${slide.caption ? `<div class="mt-3 text-center text-sm text-[var(--theme-text-muted)]">${escapeAttrValue(slide.caption)}</div>` : ''}
         </div>`).join('\n')
 
+        const controlsScript = "var root=this.closest('[data-tw-carousel]');if(!root)return;var slides=Array.prototype.slice.call(root.querySelectorAll('[data-tw-carousel-slide]'));if(slides.length<2)return;var mode=root.getAttribute('data-tw-carousel-transition')==='fade'?'fade':'slide';var active=slides.findIndex(function(slide){return slide.getAttribute('data-tw-active')==='true';});if(active<0)active=0;var dir=Number(this.getAttribute('data-tw-dir')||'1');var next=(active+dir+slides.length)%slides.length;slides.forEach(function(slide,index){slide.setAttribute('data-tw-active',index===next?'true':'false');slide.setAttribute('aria-hidden',index===next?'false':'true');if(index===next){slide.classList.remove('absolute','inset-0','opacity-0','pointer-events-none','translate-x-4','scale-95');slide.classList.add('relative','opacity-100','pointer-events-auto','translate-x-0','scale-100');}else{slide.classList.remove('relative','opacity-100','pointer-events-auto','translate-x-0','scale-100');slide.classList.add('absolute','inset-0','opacity-0','pointer-events-none');if(mode==='slide'){slide.classList.add('translate-x-4','scale-95');}}});"
         const controls = slides.length > 1
           ? `
         <div class="mt-4 flex items-center justify-between gap-4">
-          <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="(function(){var root=this.closest('[data-tw-carousel]');if(!root)return;var slides=Array.prototype.slice.call(root.querySelectorAll('[data-tw-carousel-slide]'));var index=slides.findIndex(function(slide){return !slide.classList.contains('hidden');});if(index<0)index=0;slides[index].classList.add('hidden');var next=(index-1+slides.length)%slides.length;slides[next].classList.remove('hidden');}).call(this)">Previous</button>
-          <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="(function(){var root=this.closest('[data-tw-carousel]');if(!root)return;var slides=Array.prototype.slice.call(root.querySelectorAll('[data-tw-carousel-slide]'));var index=slides.findIndex(function(slide){return !slide.classList.contains('hidden');});if(index<0)index=0;slides[index].classList.add('hidden');var next=(index+1)%slides.length;slides[next].classList.remove('hidden');}).call(this)">Next</button>
+          <button type="button" data-tw-dir="-1" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="(function(){${controlsScript}}).call(this)">Previous</button>
+          <button type="button" data-tw-dir="1" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-border)] px-4 py-2 text-sm font-medium text-[var(--theme-text)]" onclick="(function(){${controlsScript}}).call(this)">Next</button>
         </div>`
           : ''
 
-        return `<div data-tw-carousel="${id}">${items}${controls}</div>`
+        return `<div data-tw-carousel="${id}" data-tw-carousel-transition="${transition}"><div class="relative overflow-hidden">${items}</div>${controls}</div>`
       }
 
       const indicators = slides.map((_, i) =>
         `<button type="button" data-bs-target="#${id}" data-bs-slide-to="${i}" class="${i === 0 ? 'active' : ''}" aria-current="${i === 0 ? 'true' : 'false'}" aria-label="Slide ${i + 1}"></button>`
       ).join('\n')
 
+      const followFirstOnLoad = "(function(img){var root=img.closest('[data-tw-carousel], .carousel');if(!root)return;var w=img.naturalWidth||0;var h=img.naturalHeight||0;if(!w||!h)return;var width=img.getBoundingClientRect().width||0;if(!width)return;var px=Math.round(width*h/w);root.style.setProperty('--amagon-carousel-image-height',px+'px');})(this)"
+      const imgStyleAttr = imageHeightMode === 'fixed'
+        ? ` style="height: ${escapeAttrValue(imageHeight)}; object-fit: cover;"`
+        : imageHeightMode === 'follow-first'
+          ? ` style="height: var(--amagon-carousel-image-height, auto); object-fit: cover;"`
+          : ''
+
       const items = slides.map((slide, i) => `
         <div class="carousel-item ${i === 0 ? 'active' : ''}" data-bs-interval="${interval}">
-          <img src="${escapeAttrValue(slide.src)}" class="d-block w-100" alt="${escapeAttrValue(slide.alt)}">
+          <img src="${escapeAttrValue(slide.src)}" class="d-block w-100" alt="${escapeAttrValue(slide.alt)}"${imgStyleAttr}${imageHeightMode === 'follow-first' && i === 0 ? ` onload="${followFirstOnLoad}"` : ''}>
           ${slide.caption ? `<div class="carousel-caption d-none d-md-block"><h5>${escapeAttrValue(slide.caption)}</h5></div>` : ''}
         </div>`).join('\n')
 

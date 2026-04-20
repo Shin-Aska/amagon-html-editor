@@ -341,9 +341,11 @@ export function registerBlocks(): void {
         { src: IMAGE_PLACEHOLDER, alt: 'Slide 2', caption: 'Second Slide' },
         { src: IMAGE_PLACEHOLDER, alt: 'Slide 3', caption: 'Third Slide' }
       ],
+      transition: 'slide',
+      imageHeightMode: 'auto',
+      imageHeight: '400px',
       fade: false,
       thumbnails: false,
-      autoHeight: false,
       interval: 5000
     },
     propsSchema: {
@@ -352,9 +354,27 @@ export function registerBlocks(): void {
         label: 'Slides',
         default: []
       },
-      fade: { type: 'boolean', label: 'Fade Transition', default: false },
+      transition: {
+        type: 'select',
+        label: 'Transition',
+        options: [
+          { label: 'Slide', value: 'slide' },
+          { label: 'Fade', value: 'fade' }
+        ],
+        default: 'slide'
+      },
+      imageHeightMode: {
+        type: 'select',
+        label: 'Image Height',
+        options: [
+          { label: 'Auto', value: 'auto' },
+          { label: 'Fixed', value: 'fixed' },
+          { label: 'Follow First Image', value: 'follow-first' }
+        ],
+        default: 'auto'
+      },
+      imageHeight: { type: 'measurement', label: 'Fixed Height', default: '400px' },
       thumbnails: { type: 'boolean', label: 'Show Thumbnails', default: false },
-      autoHeight: { type: 'boolean', label: 'Auto Height', default: false },
       interval: { type: 'number', label: 'Interval (ms)', default: 5000, min: 1000, max: 30000 }
     }
   })
