@@ -287,7 +287,19 @@ export function themeToCSS(theme: ProjectTheme, variants?: ProjectThemeVariants)
   lines.push('h1, h2, h3, h4, h5, h6 {')
   lines.push('  font-family: var(--theme-heading-font-family);')
   lines.push('  line-height: var(--theme-heading-line-height);')
+  // Tailwind preflight normalizes headings to inherit font-size/font-weight.
+  // Define a baseline typographic scale so changing H1->H2 is visually meaningful
+  // in the editor, regardless of framework. Utility classes can still override.
+  lines.push('  font-weight: 600;')
   lines.push('}')
+
+  // Baseline heading sizes (mirrors browser defaults, scaled from the body font size).
+  lines.push('h1 { font-size: 2em; }')
+  lines.push('h2 { font-size: 1.5em; }')
+  lines.push('h3 { font-size: 1.17em; }')
+  lines.push('h4 { font-size: 1em; }')
+  lines.push('h5 { font-size: 0.83em; }')
+  lines.push('h6 { font-size: 0.67em; }')
 
   // Component Theme Overrides
   lines.push('')

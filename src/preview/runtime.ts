@@ -226,11 +226,69 @@ function removeFrameworkAsset(id: string): void {
   document.getElementById(id)?.remove()
 }
 
+let tailwindHeadObserver: MutationObserver | null = null
+let tailwindReorderTimer: number | null = null
+let isReorderingEditorCss = false
+
+function ensureEditorCssOrder(): void {
+  // Tailwind CDN injects its stylesheet at runtime, which can end up after the
+  // theme/custom CSS if those were applied before the script finished loading.
+  // Re-appending guarantees our editor-driven styles remain last in cascade.
+  if (isReorderingEditorCss) return
+  isReorderingEditorCss = true
+  const themeEl = document.querySelector<HTMLStyleElement>('style#hoarses-theme-css')
+  const customEl = document.querySelector<HTMLStyleElement>('style#html-editor-custom-css')
+  const canvasOverridesEl = document.querySelector<HTMLStyleElement>('style#editor-canvas-overrides')
+  const outlinesEl = document.querySelector<HTMLStyleElement>('style#editor-layout-outlines-css')
+
+  try {
+    if (themeEl) document.head.appendChild(themeEl)
+    if (customEl) document.head.appendChild(customEl)
+    // Canvas overrides should win over any user CSS for safety in the editor canvas.
+    if (canvasOverridesEl) document.head.appendChild(canvasOverridesEl)
+    if (outlinesEl) document.head.appendChild(outlinesEl)
+  } finally {
+    isReorderingEditorCss = false
+  }
+}
+
+function stopTailwindCssOrdering(): void {
+  if (tailwindReorderTimer !== null) {
+    window.clearTimeout(tailwindReorderTimer)
+    tailwindReorderTimer = null
+  }
+  tailwindHeadObserver?.disconnect()
+  tailwindHeadObserver = null
+}
+
+function startTailwindCssOrdering(): void {
+  stopTailwindCssOrdering()
+
+  // Tailwind CDN may inject <style> tags after the script 'load' event; observe
+  // head mutations and keep our theme/custom overrides last.
+  tailwindHeadObserver = new MutationObserver(() => {
+    if (isReorderingEditorCss) return
+    if (tailwindReorderTimer !== null) window.clearTimeout(tailwindReorderTimer)
+    tailwindReorderTimer = window.setTimeout(() => {
+      tailwindReorderTimer = null
+      ensureEditorCssOrder()
+    }, 0)
+  })
+  tailwindHeadObserver.observe(document.head, { childList: true })
+
+  // A couple of extra ticks to catch async injection even without head mutation
+  // (some browsers coalesce mutations in odd ways for script-driven inserts).
+  window.setTimeout(ensureEditorCssOrder, 0)
+  window.setTimeout(ensureEditorCssOrder, 50)
+  window.setTimeout(ensureEditorCssOrder, 250)
+}
+
 async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): Promise<void> {
   removeFrameworkAsset('editor-framework-bootstrap-css')
   removeFrameworkAsset('editor-framework-bootstrap-icons-css')
   removeFrameworkAsset('editor-framework-bootstrap-js')
   removeFrameworkAsset('editor-framework-tailwind-js')
+  stopTailwindCssOrdering()
 
   if (framework === 'bootstrap-5') {
     await Promise.all([
@@ -238,6 +296,7 @@ async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): 
       upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'),
       upsertFrameworkScript('editor-framework-bootstrap-js', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js', true)
     ])
+    ensureEditorCssOrder()
     return
   }
 
@@ -246,7 +305,13 @@ async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): 
       upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'),
       upsertFrameworkScript('editor-framework-tailwind-js', 'https://cdn.tailwindcss.com')
     ])
+    startTailwindCssOrdering()
+    ensureEditorCssOrder()
+    return
   }
+
+  // vanilla
+  ensureEditorCssOrder()
 }
 
 function setLayoutOutlines(show: boolean): void {
@@ -501,6 +566,17 @@ function initRuntime(): void {
       user-select: none;
       cursor: default;
     }
+
+    /* Editor baseline heading sizes.
+       Some frameworks/resets can normalize headings (or user CSS may flatten them).
+       We only apply these when no explicit size utility class is present so the
+       editor stays WYSIWYG with Bootstrap/Tailwind utilities. */
+    h1:not(.h1):not(.h2):not(.h3):not(.h4):not(.h5):not(.h6):not(.display-1):not(.display-2):not(.display-3):not(.display-4):not(.display-5):not(.display-6):not(.fs-1):not(.fs-2):not(.fs-3):not(.fs-4):not(.fs-5):not(.fs-6) { font-size: 2em; }
+    h2:not(.h1):not(.h2):not(.h3):not(.h4):not(.h5):not(.h6):not(.display-1):not(.display-2):not(.display-3):not(.display-4):not(.display-5):not(.display-6):not(.fs-1):not(.fs-2):not(.fs-3):not(.fs-4):not(.fs-5):not(.fs-6) { font-size: 1.5em; }
+    h3:not(.h1):not(.h2):not(.h3):not(.h4):not(.h5):not(.h6):not(.display-1):not(.display-2):not(.display-3):not(.display-4):not(.display-5):not(.display-6):not(.fs-1):not(.fs-2):not(.fs-3):not(.fs-4):not(.fs-5):not(.fs-6) { font-size: 1.17em; }
+    h4:not(.h1):not(.h2):not(.h3):not(.h4):not(.h5):not(.h6):not(.display-1):not(.display-2):not(.display-3):not(.display-4):not(.display-5):not(.display-6):not(.fs-1):not(.fs-2):not(.fs-3):not(.fs-4):not(.fs-5):not(.fs-6) { font-size: 1em; }
+    h5:not(.h1):not(.h2):not(.h3):not(.h4):not(.h5):not(.h6):not(.display-1):not(.display-2):not(.display-3):not(.display-4):not(.display-5):not(.display-6):not(.fs-1):not(.fs-2):not(.fs-3):not(.fs-4):not(.fs-5):not(.fs-6) { font-size: 0.83em; }
+    h6:not(.h1):not(.h2):not(.h3):not(.h4):not(.h5):not(.h6):not(.display-1):not(.display-2):not(.display-3):not(.display-4):not(.display-5):not(.display-6):not(.fs-1):not(.fs-2):not(.fs-3):not(.fs-4):not(.fs-5):not(.fs-6) { font-size: 0.67em; }
   `
   document.head.appendChild(canvasOverrides)
 
