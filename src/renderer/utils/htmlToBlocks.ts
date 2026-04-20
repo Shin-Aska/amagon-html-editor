@@ -558,6 +558,41 @@ function elementToBlock(el: Element): Block | null {
     }
   }
 
+  // Special handling for navbar props that are encoded in markup/classes.
+  if (type === 'navbar') {
+    if (classes.includes('position-sticky') || classes.includes('sticky') || styles.position === 'sticky') {
+      props.sticky = true
+    }
+    if (styles.top) {
+      props.stickyOffset = styles.top
+    }
+    if (styles.zIndex) {
+      const zIndex = Number(styles.zIndex)
+      props.stickyZIndex = Number.isFinite(zIndex) ? zIndex : styles.zIndex
+    }
+    if (classes.includes('navbar-transparent')) {
+      props.transparent = true
+    }
+
+    const classBrandAnchor = el.querySelector('a.navbar-brand')
+    const inferredBrandAnchor = classBrandAnchor || Array.from(el.querySelectorAll('a')).find((anchor) => {
+      const cls = anchor.className || ''
+      return /\btext-lg\b/.test(cls) && /\bfont-semibold\b/.test(cls) && /\bno-underline\b/.test(cls)
+    }) || null
+
+    if (inferredBrandAnchor) {
+      const brandImageEl = inferredBrandAnchor.querySelector('img')
+      const brandImageSrc = brandImageEl?.getAttribute('src') || ''
+      if (brandImageSrc) {
+        props.brandImage = brandImageSrc
+      }
+      const brandText = inferredBrandAnchor.textContent?.trim() || ''
+      if (brandText) {
+        props.brandText = brandText
+      }
+    }
+  }
+
   const block: Block = {
     id,
     type,

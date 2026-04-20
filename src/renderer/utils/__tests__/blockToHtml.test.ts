@@ -885,12 +885,71 @@ describe('Phase 4 — layout and component block enhancements', () => {
     const html = blockToHtml([block])
     expect(html).toContain('position-sticky')
     expect(html).toContain('top-0')
+    expect(html).toContain('position: sticky')
+    expect(html).toContain('top: 0')
+    expect(html).toContain('z-index: 1030')
   })
 
   it('renders navbar with transparent class', () => {
     const block = createBlock('navbar', { props: { transparent: true }, classes: ['navbar', 'navbar-expand-lg'] })
     const html = blockToHtml([block])
     expect(html).toContain('navbar-transparent')
+  })
+
+  it('renders non-pages navbar brand image and sticky classes', () => {
+    const block = createBlock('navbar', {
+      props: {
+        usePages: false,
+        brandText: 'Acme',
+        brandImage: 'https://cdn.example.com/logo.png',
+        sticky: true
+      },
+      classes: ['navbar', 'navbar-expand-lg'],
+      children: [
+        createBlock('container', {
+          classes: ['container'],
+          children: [
+            createBlock('link', { props: { text: 'Acme', href: '#' }, classes: ['navbar-brand'] }),
+            createBlock('link', { props: { text: 'Home', href: 'index.html' }, classes: ['nav-link'] })
+          ]
+        })
+      ]
+    })
+
+    const html = blockToHtml([block])
+    expect(html).toContain('src="https://cdn.example.com/logo.png"')
+    expect(html).toContain('position-sticky')
+    expect(html).toContain('top-0')
+    expect(html).toContain('z-3')
+    expect(html).toContain('position: sticky')
+    expect(html).toContain('z-index: 1030')
+  })
+
+  it('renders pages-based navbar brand image and sticky classes', () => {
+    const block = createBlock('navbar', {
+      props: {
+        usePages: true,
+        brandText: 'Acme',
+        brandImage: 'app-media://project-asset/assets/logo.png',
+        sticky: true
+      },
+      classes: ['navbar', 'navbar-expand-lg']
+    })
+
+    const html = blockToHtml([block], {
+      pages: [
+        { id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {} },
+        { id: 'p2', title: 'About', slug: 'about', blocks: [], meta: {} }
+      ]
+    })
+
+    expect(html).toContain('src="app-media://project-asset/assets/logo.png"')
+    expect(html).toContain('position-sticky')
+    expect(html).toContain('top-0')
+    expect(html).toContain('z-3')
+    expect(html).toContain('position: sticky')
+    expect(html).toContain('z-index: 1030')
+    expect(html).toContain('href="about.html"')
   })
 
   it('renders footer with copyright and back-to-top', () => {

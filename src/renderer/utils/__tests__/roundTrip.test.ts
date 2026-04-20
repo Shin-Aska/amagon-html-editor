@@ -324,6 +324,48 @@ describe('round-trip: blocks → HTML → blocks', () => {
       { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
       { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
     ])
+    expect(blocks[0].props.imageHeightMode).toBe('fixed')
+    expect(blocks[0].props.imageHeight).toBe('320px')
+  })
+
+  it('preserves navbar sticky and brand image through HTML round-trip', () => {
+    const original: Block[] = [
+      createBlock('navbar', {
+        classes: ['navbar', 'navbar-expand-lg'],
+        props: {
+          usePages: false,
+          brandText: 'Acme',
+          brandImage: 'https://cdn.example.com/logo.png',
+          sticky: true
+        },
+        children: [
+          createBlock('container', {
+            classes: ['container'],
+            children: [
+              createBlock('link', {
+                props: { text: 'Acme', href: '#' },
+                classes: ['navbar-brand']
+              }),
+              createBlock('link', {
+                props: { text: 'Home', href: 'index.html' },
+                classes: ['nav-link']
+              })
+            ]
+          })
+        ]
+      })
+    ]
+
+    const html = blockToHtml(original)
+    const { blocks } = htmlToBlocks(html)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].type).toBe('navbar')
+    expect(blocks[0].props.sticky).toBe(true)
+    expect(blocks[0].props.stickyOffset).toBe('0')
+    expect(blocks[0].props.stickyZIndex).toBe(1030)
+    expect(blocks[0].props.brandImage).toBe('https://cdn.example.com/logo.png')
+    expect(blocks[0].props.brandText).toBe('Acme')
   })
 
   it('preserves phase 2 medium blocks through Bootstrap HTML round-trip', () => {

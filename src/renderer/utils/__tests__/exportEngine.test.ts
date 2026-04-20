@@ -290,6 +290,62 @@ describe('exportEngine', () => {
     expect(htmlText).not.toContain('class="btn btn-primary"')
   })
 
+  it('rewrites navbar brandImage app-media assets in pages-based navbars', async () => {
+    const project: ProjectData = {
+      projectSettings: {
+        name: 'Test',
+        framework: 'bootstrap-5',
+        theme: createDefaultTheme(),
+        globalStyles: {}
+      },
+      pages: [
+        {
+          id: 'p1',
+          title: 'Index',
+          slug: 'index',
+          meta: {},
+          blocks: [
+            createBlock('navbar', {
+              props: {
+                usePages: true,
+                brandText: 'Brand',
+                brandImage: 'app-media://project-asset/assets/nav-logo.png',
+                sticky: true
+              },
+              classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-light']
+            })
+          ]
+        },
+        {
+          id: 'p2',
+          title: 'About',
+          slug: 'about',
+          meta: {},
+          blocks: []
+        }
+      ],
+      userBlocks: []
+    }
+
+    const files = await exportProject(project, {
+      resolveAsset: async (url) => {
+        if (url === 'app-media://project-asset/assets/nav-logo.png') {
+          return { bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/png' }
+        }
+        return null
+      }
+    })
+
+    const html = files.find((f) => f.path === 'index.html')
+    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    expect(htmlText).toContain('src="./assets/nav-logo.png"')
+    expect(htmlText).toContain('position-sticky')
+    expect(htmlText).toContain('position: sticky')
+    expect(htmlText).toContain('z-index: 1030')
+    expect(htmlText).not.toContain('app-media://')
+    expect(files.some((f) => f.path === 'assets/nav-logo.png')).toBe(true)
+  })
+
   it('minifies HTML when minify=true', async () => {
     const project: ProjectData = {
       projectSettings: {

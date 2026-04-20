@@ -213,6 +213,33 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
           </select>
         </div>
       </div>
+      <div className="style-row">
+        <div className="style-col">
+          <label className="style-label">Position</label>
+          <select className="inspector-select" name="position" value={styles.position || ''} onChange={handleChange}>
+            <option value="">Default</option>
+            <option value="static">Static</option>
+            <option value="relative">Relative</option>
+            <option value="absolute">Absolute</option>
+            <option value="fixed">Fixed</option>
+            <option value="sticky">Sticky</option>
+          </select>
+        </div>
+        <div className="style-col">
+          <label className="style-label">Z-Index</label>
+          <input className="inspector-input" type="text" name="zIndex" value={styles.zIndex || ''} onChange={handleChange} placeholder="e.g. 10, 1030" />
+        </div>
+      </div>
+      <div className="style-row">
+        <div className="style-col">
+          <label className="style-label">Top</label>
+          <input className="inspector-input" type="text" name="top" value={styles.top || ''} onChange={handleChange} placeholder="e.g. 0, 1rem" />
+        </div>
+        <div className="style-col">
+          <label className="style-label">Bottom</label>
+          <input className="inspector-input" type="text" name="bottom" value={styles.bottom || ''} onChange={handleChange} placeholder="e.g. 0, 1rem" />
+        </div>
+      </div>
 
       {styles.display === 'flex' && (
         <>

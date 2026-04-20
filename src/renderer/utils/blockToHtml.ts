@@ -209,6 +209,9 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
     'ctaButtons',
     'fullHeight',
     'sticky',
+    'stickyOffset',
+    'stickyTop',
+    'stickyZIndex',
     'transparent',
     'socialLinks',
     'showSocialLinks',
@@ -474,6 +477,18 @@ function stylesToString(styles: Record<string, string>): string {
     .filter(([, v]) => v !== '' && v !== undefined)
     .map(([k, v]) => `${camelToKebab(k)}: ${v}`)
     .join('; ')
+}
+
+function getEffectiveStyles(block: Block): Record<string, string> {
+  const styles = { ...block.styles }
+
+  if (block.type === 'navbar' && block.props.sticky) {
+    styles.position = styles.position || 'sticky'
+    styles.top = styles.top || String(block.props.stickyOffset ?? block.props.stickyTop ?? '0').trim() || '0'
+    styles.zIndex = styles.zIndex || String(block.props.stickyZIndex ?? '1030').trim() || '1030'
+  }
+
+  return styles
 }
 
 function eventsToAttributes(events?: Record<string, string>): string {
@@ -2200,7 +2215,7 @@ ${pad}</a>`
     const videoClasses = framework === 'tailwind'
       ? dedupeClasses(['h-full', 'w-full', 'object-cover', ...resolveFrameworkClasses(block, framework, { fullWidthFormControls })]).join(' ')
       : dedupeClasses(['w-100', 'h-100', ...block.classes]).join(' ')
-    const styleStr = stylesToString(block.styles)
+    const styleStr = stylesToString(getEffectiveStyles(block))
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="video"` : ''
     const attrs = [
@@ -2244,7 +2259,7 @@ ${pad}</div>`
     const classes = framework === 'tailwind'
       ? dedupeClasses(bootstrapClasses.flatMap((cls) => mapBootstrapClassToTailwind(cls)).concat(disabled ? ['opacity-60', 'pointer-events-none'] : [])).join(' ')
       : bootstrapClasses.join(' ')
-    const styleStr = stylesToString(block.styles)
+    const styleStr = stylesToString(getEffectiveStyles(block))
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="button"` : ''
     const stateAttrs = ` data-amagon-button-variant="${escapeAttrValue(variantToken)}" data-amagon-button-size="${escapeAttrValue(sizeClass)}" data-amagon-button-outline="${outline}" data-amagon-button-block="${blockWidth}" data-amagon-button-loading="${loading}" data-amagon-button-loading-text="${escapeAttrValue(loadingText)}"`
@@ -3970,7 +3985,7 @@ ${pad}</footer>`
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : ''
     const classesArray = normalizeNavbarThemeClasses([...block.classes, ...getPropDrivenClasses(block)])
     const classes = classesArray.join(' ')
-    const styleStr = stylesToString(block.styles)
+    const styleStr = stylesToString(getEffectiveStyles(block))
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'))
     const brandImage = String(block.props.brandImage || '').trim()
@@ -4674,7 +4689,7 @@ ${pad}</${tag}>`
   const parts: string[] = []
 
   // Inline styles
-  const styleStr = stylesToString(block.styles)
+  const styleStr = stylesToString(getEffectiveStyles(block))
 
   // Props → attributes
   const attrStr = propsToAttributes(tag, block.type, block.props)
@@ -4787,7 +4802,28 @@ ${pad}</${tag}>`
   }
 
   lines.push(`${pad}</${tag}>`)
-  return lines.join('\n')
+  let renderedHtml = lines.join('\n')
+
+  // Non-pages navbar rendering is generic; inject brand image/text into brand anchor when provided.
+  if (block.type === 'navbar' && !(block.props.usePages && pages && pages.length > 0)) {
+    const brandImage = String(block.props.brandImage || '').trim()
+    if (brandImage) {
+      const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'))
+      const replacementInner = framework === 'tailwind'
+        ? `<img src="${escapeAttrValue(brandImage)}" alt="${brandText}" class="h-8 w-auto">${brandText}`
+        : `<img src="${escapeAttrValue(brandImage)}" alt="${brandText}" height="30" class="d-inline-block align-text-top me-2">${brandText}`
+
+      const bootstrapBrandPattern = /(<a\b[^>]*class="[^"]*\bnavbar-brand\b[^"]*"[^>]*>)([\s\S]*?)(<\/a>)/
+      const tailwindBrandPattern = /(<a\b[^>]*class="[^"]*\btext-lg\b[^"]*\bfont-semibold\b[^"]*\bno-underline\b[^"]*"[^>]*>)([\s\S]*?)(<\/a>)/
+      const before = renderedHtml
+      renderedHtml = renderedHtml.replace(bootstrapBrandPattern, `$1${replacementInner}$3`)
+      if (renderedHtml === before) {
+        renderedHtml = renderedHtml.replace(tailwindBrandPattern, `$1${replacementInner}$3`)
+      }
+    }
+  }
+
+  return renderedHtml
 }
 
 // ─── Full page HTML generation ───────────────────────────────────────────────

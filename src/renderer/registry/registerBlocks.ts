@@ -596,7 +596,8 @@ export function registerBlocks(): void {
       brandImage: '',
       usePages: true,
       filterTag: '',
-      hamburgerMenu: true
+      hamburgerMenu: true,
+      stickyOffset: '0'
     },
     defaultChildren: [
       {
@@ -609,11 +610,22 @@ export function registerBlocks(): void {
     ],
     propsSchema: {
       brandText: { type: 'text', label: 'Brand Text', default: 'Brand' },
-      brandImage: { type: 'text', label: 'Brand Image URL (optional)', default: '' },
+      brandImage: { type: 'image', label: 'Brand Image', default: '' },
       usePages: { type: 'boolean', label: 'Use Pages as Links', default: true },
       filterTag: { type: 'combobox', label: 'Filter by Tag (optional)', default: '', dataSource: 'tags' },
       hamburgerMenu: { type: 'boolean', label: 'Hamburger Menu (Mobile)', default: true },
       sticky: { type: 'boolean', label: 'Sticky (top)', default: false },
+      stickyOffset: {
+        type: 'select',
+        label: 'Sticky Offset',
+        options: [
+          { label: 'Flush to top', value: '0' },
+          { label: 'Small gap', value: '0.5rem' },
+          { label: 'Medium gap', value: '1rem' },
+          { label: 'Large gap', value: '2rem' }
+        ],
+        default: '0'
+      },
       transparent: { type: 'boolean', label: 'Transparent Background', default: false },
       theme: {
         type: 'select',
