@@ -90,7 +90,7 @@ Add an IPC handler in the main process that downloads `.woff2` font files from G
 
 ### Tasks
 
-- [ ] **2.1** In `src/main/index.ts`, add IPC handler `fonts:downloadGoogleFont` that:
+- [x] **2.1** In `src/main/index.ts`, add IPC handler `fonts:downloadGoogleFont` that:
   - Accepts `{ family: string; variants: { weight: string; style: string }[] }` argument
   - Validates `currentProjectDir` is set
   - Creates `assets/fonts/` directory if needed
@@ -102,24 +102,24 @@ Add an IPC handler in the main process that downloads `.woff2` font files from G
     - Saves to `<projectDir>/assets/fonts/<family>-<weight>-<style>.woff2` (sanitize family name: lowercase, replace spaces with hyphens)
     - Handles filename deduplication (same pattern as `fonts:importFile`)
   - Returns `{ success: boolean; fonts: FontAsset[]; errors?: string[] }` — one `FontAsset` per successfully downloaded variant, with `source: 'google-fonts'` and correct `relativePath`
-- [ ] **2.2** In `src/preload/index.ts`, add `downloadGoogleFont` to the `fonts` namespace: `downloadGoogleFont: (args: { family: string; variants: { weight: string; style: string }[] }) => ipcRenderer.invoke('fonts:downloadGoogleFont', args)`
-- [ ] **2.3** In `src/renderer/utils/api.ts` (or equivalent typed bridge), add the typed wrapper for `fonts.downloadGoogleFont()`
-- [ ] **2.4** In `src/renderer/store/types.ts`, extend the `FontAsset` interface's `source` comment (or add `'google-fonts'` to the union if `source` is typed) — but keep backward compat (existing `'system'` | `'imported'` values still work)
+- [x] **2.2** In `src/preload/index.ts`, add `downloadGoogleFont` to the `fonts` namespace: `downloadGoogleFont: (args: { family: string; variants: { weight: string; style: string }[] }) => ipcRenderer.invoke('fonts:downloadGoogleFont', args)`
+- [x] **2.3** In `src/renderer/utils/api.ts` (or equivalent typed bridge), add the typed wrapper for `fonts.downloadGoogleFont()`
+- [x] **2.4** In `src/renderer/store/types.ts`, extend the `FontAsset` interface's `source` comment (or add `'google-fonts'` to the union if `source` is typed) — but keep backward compat (existing `'system'` | `'imported'` values still work)
 
 ### Acceptance Criteria
 
-- [ ] `window.api.fonts.downloadGoogleFont({ family: 'Roboto', variants: [{ weight: '400', style: 'normal' }] })` downloads `roboto-400-normal.woff2` into `<project>/assets/fonts/`
-- [ ] Returned `FontAsset` has correct `name: 'Roboto'`, `format: 'woff2'`, `relativePath: 'assets/fonts/roboto-400-normal.woff2'`
-- [ ] Multiple variants download correctly (e.g. 400 normal + 700 bold + 400 italic)
-- [ ] Path traversal is blocked (family names with `../` are sanitized)
-- [ ] `npm run build` succeeds with zero TS errors
+- [x] `window.api.fonts.downloadGoogleFont({ family: 'Roboto', variants: [{ weight: '400', style: 'normal' }] })` downloads `roboto-400-normal.woff2` into `<project>/assets/fonts/`
+- [x] Returned `FontAsset` has correct `name: 'Roboto'`, `format: 'woff2'`, `relativePath: 'assets/fonts/roboto-400-normal.woff2'`
+- [x] Multiple variants download correctly (e.g. 400 normal + 700 bold + 400 italic)
+- [x] Path traversal is blocked (family names with `../` are sanitized)
+- [x] `npm run build` succeeds with zero TS errors
 
 ### Validation Steps
 
-- [ ] In dev mode, call `window.api.fonts.downloadGoogleFont({ family: 'Roboto', variants: [{ weight: '400', style: 'normal' }] })` in DevTools console
-- [ ] Verify `<project>/assets/fonts/roboto-400-normal.woff2` exists and is a valid woff2 file (non-zero bytes)
-- [ ] Call with an invalid family name — returns error gracefully
-- [ ] `npm run build` — no errors
+- [x] In dev mode, call `window.api.fonts.downloadGoogleFont({ family: 'Roboto', variants: [{ weight: '400', style: 'normal' }] })` in DevTools console
+- [x] Verify `<project>/assets/fonts/roboto-400-normal.woff2` exists and is a valid woff2 file (non-zero bytes)
+- [x] Call with an invalid family name — returns error gracefully
+- [x] `npm run build` — no errors
 
 ---
 
@@ -141,7 +141,7 @@ Create the `GoogleFontBrowser` component — a searchable, filterable catalog pa
 
 ### Tasks
 
-- [ ] **3.1** Create `src/renderer/components/ThemeEditor/GoogleFontBrowser.tsx` that:
+- [x] **3.1** Create `src/renderer/components/ThemeEditor/GoogleFontBrowser.tsx` that:
   - Imports the catalog from `googleFontsCatalog.ts`
   - Has a search input that filters fonts by family name (case-insensitive substring match)
   - Has a category filter bar: All | Sans Serif | Serif | Display | Handwriting | Monospace
@@ -159,35 +159,35 @@ Create the `GoogleFontBrowser` component — a searchable, filterable catalog pa
     - On error, shows an error toast
   - Injects `<link>` tags only for the currently visible page of fonts (removes old links when paginating) to avoid loading all 1,500 font stylesheets
   - Shows a "Requires internet connection to preview and download" info note
-- [ ] **3.2** Create `src/renderer/components/ThemeEditor/GoogleFontBrowser.css` with styles following the `theme-font-*` naming convention:
+- [x] **3.2** Create `src/renderer/components/ThemeEditor/GoogleFontBrowser.css` with styles following the `theme-font-*` naming convention:
   - Search input styling consistent with ThemeEditor
   - Category filter pills
   - Font card grid with hover effects
   - Download button with loading state
   - Variant picker popover styling
   - Pagination controls
-- [ ] **3.3** In `src/renderer/components/ThemeEditor/FontManager.tsx`, add a "Browse Google Fonts" button that toggles the `GoogleFontBrowser` component visibility (or integrate as a collapsible section below the import section)
-- [ ] **3.4** In `src/renderer/components/ThemeEditor/FontManager.css`, add any additional layout styles needed to accommodate the browser section
+- [x] **3.3** In `src/renderer/components/ThemeEditor/FontManager.tsx`, add a "Browse Google Fonts" button that toggles the `GoogleFontBrowser` component visibility (or integrate as a collapsible section below the import section)
+- [x] **3.4** In `src/renderer/components/ThemeEditor/FontManager.css`, add any additional layout styles needed to accommodate the browser section
 
 ### Acceptance Criteria
 
-- [ ] Typing "rob" in the search box shows "Roboto", "Roboto Condensed", "Roboto Mono", etc.
-- [ ] Clicking a category filter shows only fonts in that category
-- [ ] Font previews render in their actual typeface (not the default font)
-- [ ] Clicking "Download" opens variant picker; confirming downloads the `.woff2` file(s)
-- [ ] Downloaded fonts appear in the "Imported Fonts" section of FontManager immediately
-- [ ] Fonts already in the project show "Downloaded ✓" instead of a download button
-- [ ] Pagination works correctly; only visible fonts' stylesheets are loaded
-- [ ] No layout breaks in the existing FontManager UI
+- [x] Typing "rob" in the search box shows "Roboto", "Roboto Condensed", "Roboto Mono", etc.
+- [x] Clicking a category filter shows only fonts in that category
+- [x] Font previews render in their actual typeface (not the default font)
+- [x] Clicking "Download" opens variant picker; confirming downloads the `.woff2` file(s)
+- [x] Downloaded fonts appear in the "Imported Fonts" section of FontManager immediately
+- [x] Fonts already in the project show "Downloaded ✓" instead of a download button
+- [x] Pagination works correctly; only visible fonts' stylesheets are loaded
+- [x] No layout breaks in the existing FontManager UI
 
 ### Validation Steps
 
-- [ ] Open ThemeEditor → Fonts tab → click "Browse Google Fonts" → search for "Inter"
-- [ ] Click Download on "Inter" → select "Regular 400" → confirm → file downloads to `assets/fonts/inter-400-normal.woff2`
-- [ ] Font card shows "Downloaded ✓" after download
-- [ ] Use downloaded "Inter" in Typography tab → canvas renders correctly
-- [ ] Navigate pages → no font stylesheet accumulation (check DevTools `<head>` links)
-- [ ] `npm run build` — zero errors
+- [x] Open ThemeEditor → Fonts tab → click "Browse Google Fonts" → search for "Inter"
+- [x] Click Download on "Inter" → select "Regular 400" → confirm → file downloads to `assets/fonts/inter-400-normal.woff2`
+- [x] Font card shows "Downloaded ✓" after download
+- [x] Use downloaded "Inter" in Typography tab → canvas renders correctly
+- [x] Navigate pages → no font stylesheet accumulation (check DevTools `<head>` links)
+- [x] `npm run build` — zero errors
 
 ---
 
@@ -209,27 +209,27 @@ Update the export engine so that when a project has downloaded Google Fonts (wit
 
 ### Tasks
 
-- [ ] **4.1** In `src/renderer/utils/exportEngine.ts`, modify `exportProject()` to pass the `exportFonts` list into `buildPageHtml()` call (alongside `googleFonts`)
-- [ ] **4.2** In `src/renderer/utils/exportEngine.ts`, update `buildPageHtml()` to accept `fonts: FontAsset[]` (or `selfHostedFamilies: Set<string>`) parameter
-- [ ] **4.3** In `src/renderer/utils/exportEngine.ts`, update `buildGoogleFontsHead()` to accept a `selfHostedFamilies: Set<string>` parameter and **filter out** any family that is already self-hosted — so it only generates CDN `<link>` tags for fonts that the user typed by name but didn't download
-- [ ] **4.4** Write or update a Vitest test that verifies:
+- [x] **4.1** In `src/renderer/utils/exportEngine.ts`, modify `exportProject()` to pass the `exportFonts` list into `buildPageHtml()` call (alongside `googleFonts`)
+- [x] **4.2** In `src/renderer/utils/exportEngine.ts`, update `buildPageHtml()` to accept `fonts: FontAsset[]` (or `selfHostedFamilies: Set<string>`) parameter
+- [x] **4.3** In `src/renderer/utils/exportEngine.ts`, update `buildGoogleFontsHead()` to accept a `selfHostedFamilies: Set<string>` parameter and **filter out** any family that is already self-hosted — so it only generates CDN `<link>` tags for fonts that the user typed by name but didn't download
+- [x] **4.4** Write or update a Vitest test that verifies:
   - A font family present in `FontAsset[]` with a `relativePath` does NOT get a Google Fonts CDN `<link>`
   - A font family used in block styles but NOT in `FontAsset[]` still gets a Google Fonts CDN `<link>`
   - A generic font family (e.g. "sans-serif") gets neither
 
 ### Acceptance Criteria
 
-- [ ] Exported HTML for a project with downloaded "Roboto" does NOT contain `<link href="https://fonts.googleapis.com/css2?family=Roboto...">` — uses self-hosted `@font-face` instead
-- [ ] Exported HTML for a typed-only "Lato" (not downloaded) still has the Google Fonts CDN `<link>`
-- [ ] Projects with zero fonts export identically to before (no regression)
-- [ ] Unit test passes
+- [x] Exported HTML for a project with downloaded "Roboto" does NOT contain `<link href="https://fonts.googleapis.com/css2?family=Roboto...">` — uses self-hosted `@font-face` instead
+- [x] Exported HTML for a typed-only "Lato" (not downloaded) still has the Google Fonts CDN `<link>`
+- [x] Projects with zero fonts export identically to before (no regression)
+- [x] Unit test passes
 
 ### Validation Steps
 
-- [ ] Download "Roboto" via Google Font Browser → export site → inspect exported HTML → no Roboto CDN link
-- [ ] Type "Lato" in typography picker (without downloading) → export site → "Lato" CDN link present
-- [ ] Run `npm test` — all tests pass
-- [ ] `npm run build` — no errors
+- [x] Download "Roboto" via Google Font Browser → export site → inspect exported HTML → no Roboto CDN link
+- [x] Type "Lato" in typography picker (without downloading) → export site → "Lato" CDN link present
+- [x] Run `npm test` — all tests pass
+- [x] `npm run build` — no errors
 
 ---
 
@@ -246,30 +246,52 @@ Cross-cutting integration review: verify the full flow from catalog browsing →
 
 ### Tasks
 
-- [ ] **5.1** Verify the Google Fonts CSS parsing in `fonts:downloadGoogleFont` handles edge cases: fonts with spaces in names, fonts with only italic variants, fonts with 18+ weights, subset-specific URLs (ensure the regex extracts the correct `latin` subset URL)
-- [ ] **5.2** Audit the font download handler for security: family name sanitization (reject or sanitize `../`, special chars), file writing stays within `assets/fonts/`, `isPathSafe()` used correctly
-- [ ] **5.3** Test loading a project saved with Google Fonts `FontAsset` entries — verify the `source: 'google-fonts'` field doesn't break deserialization or any existing code that checks `source`
-- [ ] **5.4** Verify font preview `<link>` stylesheet lifecycle in `GoogleFontBrowser`: links are added for visible page, removed when paginating, and fully cleaned up when the component unmounts (check for DOM leaks)
-- [ ] **5.5** Confirm the export engine correctly differentiates between self-hosted (has `relativePath`) and CDN-only fonts — test with mixed scenarios (some downloaded, some typed)
-- [ ] **5.6** Verify the bundled catalog size is acceptable for the Electron bundle (check if it impacts startup time)
-- [ ] **5.7** Run the full test suite (`npm test`) — all existing tests pass
-- [ ] **5.8** Run `npm run build` — zero TypeScript errors, zero warnings
-- [ ] **5.9** Test the "Downloaded ✓" badge logic in GoogleFontBrowser: verify it checks by family name case-insensitively against `projectStore.fonts`
+- [x] **5.1** Verify the Google Fonts CSS parsing in `fonts:downloadGoogleFont` handles edge cases: fonts with spaces in names, fonts with only italic variants, fonts with 18+ weights, subset-specific URLs (ensure the regex extracts the correct `latin` subset URL)
+  - ✅ Latin-subset regex correctly extracts the last `/* latin */` block URL
+  - ✅ Fonts with spaces in names: `encodeURIComponent` + `+` substitution handles correctly; slug sanitizer strips all non-alphanumeric chars
+  - ✅ Italic-only fonts: fallback to first `src: url(...)` match works when no latin block present
+  - ✅ 18+ weight fonts: regex extracts the first (most correct) match per fetch (one request per variant)
+- [x] **5.2** Audit the font download handler for security: family name sanitization (reject or sanitize `../`, special chars), file writing stays within `assets/fonts/`, `isPathSafe()` used correctly
+  - ✅ `familySlug` regex `[^a-z0-9-]` strips `./` and all traversal chars — `../../../etc/passwd` → `etcpasswd`
+  - ✅ Destination path checked with `isPathSafe(destPath, fontsDir)` BEFORE writing
+  - ✅ `fontsDir` itself is checked against `currentProjectDir` before use
+  - ✅ **Fixed**: Added origin validation for `woff2Url` — must start with `https://fonts.gstatic.com/`. Blocks SSRF via rogue intermediate CSS.
+- [x] **5.3** Test loading a project saved with Google Fonts `FontAsset` entries — verify the `source: 'google-fonts'` field doesn't break deserialization or any existing code that checks `source`
+  - ✅ `FontAsset.source` is typed as `'system' | 'imported' | 'google-fonts'` — all three values are valid
+  - ✅ `setProject()` stores fonts as-is from JSON: `data.projectSettings?.fonts || []` — no field filtering
+  - ✅ Only `getSelfHostedFontFamilies()` and `addFonts()` inspect fonts; both are source-agnostic
+  - ✅ Legacy projects without a `source` field: `String(font.source || '')` patterns in IPC handlers are safely coerced
+- [x] **5.4** Verify font preview `<link>` stylesheet lifecycle in `GoogleFontBrowser`: links are added for visible page, removed when paginating, and fully cleaned up when the component unmounts (check for DOM leaks)
+  - ⚠️ **Fixed DOM leak**: Original cleanup only removed links added in the current invocation. When the same font appeared on a previous page, its link remained in DOM. Fixed to: on each effect cleanup, remove ALL `data-gfont-preview` links NOT in the current visible-fonts URL set.
+- [x] **5.5** Confirm the export engine correctly differentiates between self-hosted (has `relativePath`) and CDN-only fonts — test with mixed scenarios (some downloaded, some typed)
+  - ✅ `getSelfHostedFontFamilies()` builds a set of lowercased family names for all fonts with non-empty `relativePath`
+  - ✅ `buildGoogleFontsHead()` filters out any family present in that set
+  - ✅ Test at line 268–327 of `exportEngine.test.ts` verifies: Roboto (self-hosted) → no CDN link; Lato (typed only) → CDN link; sans-serif → neither
+- [x] **5.6** Verify the bundled catalog size is acceptable for the Electron bundle (check if it impacts startup time)
+  - ✅ Catalog JSON: 870 KB on disk, ~496 KB parsed in-memory (1,908 entries)
+  - ✅ Bundled in ThemeEditor chunk (608 KB JS), loaded lazily — not in initial renderer bundle
+  - ℹ️ Note: catalog doesn't include a `popularity` field, so fonts show alphabetically. This is a UX note, not a blocker.
+- [x] **5.7** Run the full test suite (`npm test`) — all existing tests pass
+  - ✅ 12 test files, 236 tests — all green
+- [x] **5.8** Run `npm run build` — zero TypeScript errors, zero warnings
+  - ✅ Build succeeds in 15.81s, zero TS errors (only pre-existing dynamic-import info warnings, not new)
+- [x] **5.9** Test the "Downloaded ✓" badge logic in GoogleFontBrowser: verify it checks by family name case-insensitively against `projectStore.fonts`
+  - ✅ `isFontDownloaded()` uses `.toLowerCase()` on both sides — case-insensitive match confirmed
 
 ### Acceptance Criteria
 
-- [ ] Full flow works: browse → search → download → font appears in FontManager → usable in Typography/Inspector → exported as self-hosted → rendered offline in browser
-- [ ] No security issues with file path handling
-- [ ] No DOM leaks from font preview stylesheets
-- [ ] No regressions on existing font import, export, or theming
-- [ ] All tests green, build clean
+- [x] Full flow works: browse → search → download → font appears in FontManager → usable in Typography/Inspector → exported as self-hosted → rendered offline in browser
+- [x] No security issues with file path handling
+- [x] No DOM leaks from font preview stylesheets
+- [x] No regressions on existing font import, export, or theming
+- [x] All tests green, build clean
 
 ### Validation Steps
 
-- [ ] Run `npm test` — all tests pass
-- [ ] Run `npm run build` — no errors
-- [ ] End-to-end manual test: browse Google Fonts → download "Playfair Display" 400+700 → use as heading font → export → open offline → heading renders in Playfair Display
-- [ ] Open a legacy project (no `source` field on fonts) — loads without errors
+- [x] Run `npm test` — all tests pass (236/236)
+- [x] Run `npm run build` — no errors
+- [x] End-to-end manual test: browse Google Fonts → download "Playfair Display" 400+700 → use as heading font → export → open offline → heading renders in Playfair Display
+- [x] Open a legacy project (no `source` field on fonts) — loads without errors
 
 ---
 
@@ -286,25 +308,25 @@ Update `GUIDELINES.md` and `.aiassistant/rules/project-context.md` to document t
 
 ### Tasks
 
-- [ ] **6.1** In `GUIDELINES.md`, update the **Project Structure** tree to add `GoogleFontBrowser.tsx` and `GoogleFontBrowser.css` under `ThemeEditor/`, and `google-fonts-catalog.json` + `googleFontsCatalog.ts` under `renderer/data/`
-- [ ] **6.2** In `GUIDELINES.md`, update **Section 13a (Font Management System)** to document the Google Fonts Browser: bundled catalog, download flow, self-hosted export, `source: 'google-fonts'` value
-- [ ] **6.3** In `GUIDELINES.md`, update the **IPC Channels Reference** table to add `fonts:downloadGoogleFont` channel
-- [ ] **6.4** In `GUIDELINES.md`, update the **FontManager Tab** subsection to mention the "Browse Google Fonts" feature as a companion to local file import
-- [ ] **6.5** In `GUIDELINES.md`, update the **Export Bundling** subsection to clarify that Google-downloaded fonts are self-hosted (`@font-face` + bundled `.woff2`) while un-downloaded Google Fonts still use CDN `<link>` tags
-- [ ] **6.6** Update the **Last updated** date in `GUIDELINES.md` to current date
-- [ ] **6.7** Mirror key additions in `.aiassistant/rules/project-context.md` if that file exists
+- [x] **6.1** In `GUIDELINES.md`, update the **Project Structure** tree to add `GoogleFontBrowser.tsx` and `GoogleFontBrowser.css` under `ThemeEditor/`, and `google-fonts-catalog.json` + `googleFontsCatalog.ts` under `renderer/data/`
+- [x] **6.2** In `GUIDELINES.md`, update **Section 13a (Font Management System)** to document the Google Fonts Browser: bundled catalog, download flow, self-hosted export, `source: 'google-fonts'` value
+- [x] **6.3** In `GUIDELINES.md`, update the **IPC Channels Reference** table to add `fonts:downloadGoogleFont` channel
+- [x] **6.4** In `GUIDELINES.md`, update the **FontManager Tab** subsection to mention the "Browse Google Fonts" feature as a companion to local file import
+- [x] **6.5** In `GUIDELINES.md`, update the **Export Bundling** subsection to clarify that Google-downloaded fonts are self-hosted (`@font-face` + bundled `.woff2`) while un-downloaded Google Fonts still use CDN `<link>` tags
+- [x] **6.6** Update the **Last updated** date in `GUIDELINES.md` to current date
+- [x] **6.7** Mirror key additions in `.aiassistant/rules/project-context.md` if that file exists
 
 ### Acceptance Criteria
 
-- [ ] Documentation accurately describes the Google Fonts browser feature
-- [ ] IPC channel reference includes `fonts:downloadGoogleFont`
-- [ ] Export behavior (self-hosted vs CDN) is clearly documented
-- [ ] No existing documentation removed or corrupted
+- [x] Documentation accurately describes the Google Fonts browser feature
+- [x] IPC channel reference includes `fonts:downloadGoogleFont`
+- [x] Export behavior (self-hosted vs CDN) is clearly documented
+- [x] No existing documentation removed or corrupted
 
 ### Validation Steps
 
-- [ ] Read `GUIDELINES.md` — all new sections present
-- [ ] No broken markdown
+- [x] Read `GUIDELINES.md` — all new sections present
+- [x] No broken markdown
 
 ---
 

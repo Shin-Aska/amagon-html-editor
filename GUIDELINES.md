@@ -74,6 +74,8 @@ src/
 │   │   │   └── FontPickerField.tsx  # Per-block font dropdown (button trigger + portal)
 │   │   ├── ThemeEditor/    # Visual theme editor (colors, typography, etc.)
 │   │   │   ├── FontManager.tsx           # Import custom font files (.ttf/.otf/.woff/.woff2)
+│   │   │   ├── GoogleFontBrowser.tsx     # Browse, search, and download Google Fonts from bundled catalog
+│   │   │   ├── GoogleFontBrowser.css     # Styles for Google Fonts browser UI
 │   │   │   └── TypographyFontPicker.tsx  # Theme-level font dropdown (button trigger + portal)
 │   │   ├── Sidebar/        # Block library + page tree
 │   │   ├── Toolbar/        # Action buttons
@@ -100,6 +102,10 @@ src/
 │   │   │       ├── publishTutorial.ts
 │   │   │       └── webMediaSearchTutorial.ts
 │   │   └── …others (WelcomeScreen, AboutAmagon, PageModal, etc.)
+│   │
+│   ├── data/               # Static data files and catalog
+│   │   ├── google-fonts-catalog.json   # Bundled catalog of ~1,500 Google Fonts metadata
+│   │   └── googleFontsCatalog.ts       # Typed module exporting catalog and preview URL helper
 │   │
 │   ├── store/              # Zustand stores
 │   │   ├── editorStore.ts  # Blocks, selection, history, clipboard
@@ -290,7 +296,7 @@ API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an
 | `ai` | `chat`, `getConfig`, `setConfig`, `getModels`, `fetchModelsForProvider` |
 | `mediaSearch` | `getConfig`, `setConfig`, `search`, `downloadAndImport` |
 | `publish` | `getProviders`, `getCredentials`, `saveCredentials`, `deleteCredentials`, `validate`, `publish` + `publish:progress` event |
-| `fonts` | `listSystem`, `importFile`, `copySystemFont`, `deleteFont`, `listProject` |
+| `fonts` | `listSystem`, `importFile`, `copySystemFont`, `deleteFont`, `listProject`, `downloadGoogleFont` |
 
 **Canvas ↔ Renderer:** `postMessage` with `source: 'canvas-runtime'` and types: `clicked`, `contextMenu`, `moveBlock`, `updateText`, `keydown`, `hovered`.
 
@@ -357,7 +363,7 @@ Added in v1.9.0. Provides project-level and per-block font control with automati
 
 ### Data Model
 
-Font assets are stored as `FontAsset[]` in `projectStore.fonts` (hydrated from `settings.fonts` on project load). Each font has a `relativePath` pointing to `assets/fonts/<filename>` inside the project directory. System/web fonts have an empty `relativePath` and are applied by CSS name only.
+Font assets are stored as `FontAsset[]` in `projectStore.fonts` (hydrated from `settings.fonts` on project load). Each font has a `relativePath` pointing to `assets/fonts/<filename>` inside the project directory. The `source` field indicates the origin: `'system'` (OS-installed), `'imported'` (uploaded by user), or `'google-fonts'` (downloaded from Google Fonts catalog). System/web fonts have an empty `relativePath` and are applied by CSS name only.
 
 ### @font-face Generation
 
@@ -378,16 +384,38 @@ Both components:
 
 ### FontManager Tab
 
-`ThemeEditor/FontManager.tsx` provides the "Fonts" tab within the Theme Editor. It is an **import-only** interface — users import `.ttf`, `.otf`, `.woff`, or `.woff2` files. System fonts and Google Fonts are typed directly in the Typography picker.
+`ThemeEditor/FontManager.tsx` provides the "Fonts" tab within the Theme Editor. It has two main features:
 
-Each imported font card shows a **"✓ Included in export"** badge to communicate automatic bundling.
+1. **Import local fonts** — Users import `.ttf`, `.otf`, `.woff`, or `.woff2` files. Each imported font card shows a **"✓ Included in export"** badge.
+2. **Browse Google Fonts** — Users can click "Browse Google Fonts" to open the `GoogleFontBrowser` component (see next section).
+
+System fonts and undownloaded Google Fonts are typed directly in the Typography picker by name.
+
+### Google Fonts Browser
+
+`ThemeEditor/GoogleFontBrowser.tsx` and `GoogleFontBrowser.css` provide a searchable, browsable interface to discover and download Google Fonts. The feature uses a **bundled static catalog** (no API key required) with the following capabilities:
+
+- **Search & filter** — Filter ~1,500 Google Fonts by name (substring match) and category (Sans Serif, Serif, Display, Handwriting, Monospace).
+- **Font previews** — Each font card renders a preview of the font in its own typeface, loaded from Google Fonts CDN (`fonts.googleapis.com`). Previews are lazily loaded per page (no stylesheet bloat).
+- **Download variants** — Users select desired weight/style variants (e.g., Regular 400, Bold 700, Bold Italic 700i) and download `.woff2` files directly from `fonts.gstatic.com`.
+- **Automatic registration** — Downloaded fonts are saved to `assets/fonts/` and automatically registered as `FontAsset` entries with `source: 'google-fonts'`.
+- **Offline availability** — Once downloaded, fonts are fully self-hosted (no CDN dependency at runtime).
+
+The bundled catalog lives at `src/renderer/data/google-fonts-catalog.json` (~870 KB, lazily loaded in the ThemeEditor chunk).
 
 ### Export Bundling
 
-The export engine (`src/renderer/utils/exportEngine.ts`) automatically:
-1. Iterates `project.projectSettings.fonts`
-2. Copies each font file to `<output>/assets/fonts/`
-3. Generates `@font-face` CSS with the correct relative path
+The export engine (`src/renderer/utils/exportEngine.ts`) handles fonts in two ways:
+
+**Self-hosted fonts** — Fonts with a `relativePath` (imported files or downloaded Google Fonts):
+1. Copies each font file to `<output>/assets/fonts/`
+2. Generates `@font-face` CSS with the correct relative path
+
+**CDN-only fonts** — Font families typed by name (not downloaded):
+1. System fonts — Omitted from export (rely on OS fonts in the user's browser)
+2. Google Fonts by name — Generates `<link>` tags to Google Fonts CDN (`https://fonts.googleapis.com/css2?family=...`), so only fonts without a corresponding `FontAsset` entry are linked
+
+Downloaded Google Fonts are self-hosted via `@font-face` + bundled `.woff2` files, making exported sites fully offline-capable. Font families used but not downloaded still reference the CDN.
 
 No manual export step is required.
 
@@ -402,6 +430,7 @@ All font IPC handlers are in `src/main/index.ts` under the `fonts:` prefix. The 
 | `fonts:copySystemFont` | Copies a system font file into the project |
 | `fonts:deleteFont` | Removes a font file and its `FontAsset` entry |
 | `fonts:listProject` | Lists all `FontAsset` entries for the current project |
+| `fonts:downloadGoogleFont` | Downloads `.woff2` variants from Google Fonts CDN and registers as `FontAsset` entries with `source: 'google-fonts'` |
 
 ---
 
@@ -487,3 +516,13 @@ If you need deeper context, start with these:
 ---
 
 *Last updated: 2026-04-21*
+
+## Appendix: Google Fonts Browser Implementation (v1.9.0+)
+
+The Google Fonts browser feature adds a no-API-key way to discover and download fonts. Here's a quick reference:
+
+- **Catalog:** Static JSON bundled at build time (`src/renderer/data/google-fonts-catalog.json`, ~1,500 entries)
+- **Type helper:** `googleFontsCatalog.ts` exports the catalog and `getGoogleFontPreviewUrl()` helper
+- **UI component:** `GoogleFontBrowser.tsx` with search, category filter, pagination, and variant picker
+- **Download handler:** IPC `fonts:downloadGoogleFont` fetches `.woff2` from `fonts.gstatic.com` and saves to `assets/fonts/`
+- **Export distinction:** Downloaded fonts are self-hosted (`@font-face`); typed-only fonts use CDN `<link>` tags
