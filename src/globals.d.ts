@@ -47,7 +47,11 @@ declare global {
     },
     fonts: {
       listSystem: () => Promise<IpcResult & { fonts: string[] }>
-      importFiles: () => Promise<IpcResult & { fonts: FontAsset[] }>
+      importFile: () => Promise<IpcResult & { fonts: FontAsset[] }>
+      downloadGoogleFont: (args: { family: string; variants: { weight: string; style: string }[] }) => Promise<IpcResult & { fonts: FontAsset[]; errors?: string[] }>
+      copySystemFont: (args: { familyName: string; filePaths: string[] }) => Promise<IpcResult & { fonts: FontAsset[] }>
+      deleteFont: (args: { relativePath: string }) => Promise<IpcResult>
+      listProject: () => Promise<IpcResult & { fonts: FontAsset[] }>
     }
     menu: {
       setProjectLoaded: (isLoaded: boolean) => Promise<any>

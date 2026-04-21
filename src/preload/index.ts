@@ -184,6 +184,9 @@ const api = {
 
     importFile: () => ipcRenderer.invoke('fonts:importFile'),
 
+    downloadGoogleFont: (args: { family: string; variants: { weight: string; style: string }[] }) =>
+      ipcRenderer.invoke('fonts:downloadGoogleFont', args),
+
     copySystemFont: (args: { familyName: string; filePaths: string[] }) =>
       ipcRenderer.invoke('fonts:copySystemFont', args),
 

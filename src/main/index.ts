@@ -454,6 +454,130 @@ function registerIpcHandlers(): void {
     }
   })
 
+  ipcMain.handle(
+    'fonts:downloadGoogleFont',
+    async (_, args: { family: string; variants: Array<{ weight: string; style: string }> }) => {
+      if (!currentProjectDir) return { success: false, error: 'No project directory set', fonts: [] }
+      if (!args?.family || typeof args.family !== 'string') {
+        return { success: false, error: 'family required', fonts: [] }
+      }
+
+      try {
+        const fontsDir = path.join(currentProjectDir, 'assets', 'fonts')
+        await fs.mkdir(fontsDir, { recursive: true })
+
+        if (!isPathSafe(fontsDir, currentProjectDir)) {
+          return { success: false, error: 'Forbidden: invalid fonts directory', fonts: [] }
+        }
+
+        const family = args.family.trim()
+        const variants = Array.isArray(args.variants) && args.variants.length > 0
+          ? args.variants
+          : [{ weight: '400', style: 'normal' }]
+
+        const downloadedFonts: any[] = []
+        const errors: string[] = []
+
+        const encodedFamily = encodeURIComponent(family).replace(/%20/g, '+')
+        const familySlug = family
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-]/g, '')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || 'font'
+
+        const userAgent =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+
+        for (const variant of variants) {
+          const style = String(variant?.style || 'normal').toLowerCase() === 'italic' ? 'italic' : 'normal'
+          const italic = style === 'italic' ? '1' : '0'
+          const weightRaw = String(variant?.weight || '400')
+          const weightMatch = weightRaw.match(/\d{3}/)
+          const weight = weightMatch ? weightMatch[0] : '400'
+
+          try {
+            const cssUrl = `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${italic},${weight}&display=swap`
+            const cssResponse = await net.fetch(cssUrl, {
+              headers: {
+                'User-Agent': userAgent
+              }
+            })
+            if (!cssResponse.ok) {
+              errors.push(`${family} ${weight} ${style}: CSS request failed (${cssResponse.status})`)
+              continue
+            }
+
+            const css = await cssResponse.text()
+            const latinBlock = css.match(/\/\*\s*latin\s*\*\/[\s\S]*?src:\s*url\(([^)]+)\)/i)
+            const srcMatch = latinBlock || css.match(/src:\s*url\(([^)]+)\)/i)
+            if (!srcMatch?.[1]) {
+              errors.push(`${family} ${weight} ${style}: Could not parse font URL from CSS`)
+              continue
+            }
+
+            const woff2Url = srcMatch[1].trim().replace(/^['"]|['"]$/g, '')
+            // Security: only fetch from the expected Google Fonts CDN domain
+            if (!woff2Url.startsWith('https://fonts.gstatic.com/')) {
+              errors.push(`${family} ${weight} ${style}: Unexpected font URL origin (blocked): ${woff2Url.slice(0, 80)}`)
+              continue
+            }
+            const fontResponse = await net.fetch(woff2Url)
+            if (!fontResponse.ok) {
+              errors.push(`${family} ${weight} ${style}: Font request failed (${fontResponse.status})`)
+              continue
+            }
+
+            const buffer = Buffer.from(await fontResponse.arrayBuffer())
+            if (buffer.length === 0) {
+              errors.push(`${family} ${weight} ${style}: Downloaded file is empty`)
+              continue
+            }
+
+            const baseName = `${familySlug}-${weight}-${style}`
+            let fileName = `${baseName}.woff2`
+            let destPath = path.join(fontsDir, fileName)
+            let counter = 1
+            while (existsSync(destPath)) {
+              fileName = `${baseName}-${counter}.woff2`
+              destPath = path.join(fontsDir, fileName)
+              counter++
+            }
+
+            if (!isPathSafe(destPath, fontsDir)) {
+              errors.push(`${family} ${weight} ${style}: Forbidden destination path`)
+              continue
+            }
+
+            await fs.writeFile(destPath, buffer)
+            const relativePath = path.relative(currentProjectDir, destPath).replace(/\\/g, '/')
+
+            downloadedFonts.push({
+              id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
+              name: family,
+              fileName,
+              relativePath,
+              format: 'woff2',
+              weight,
+              style,
+              source: 'google-fonts'
+            })
+          } catch (error: any) {
+            errors.push(`${family} ${weight} ${style}: ${error.message}`)
+          }
+        }
+
+        return {
+          success: downloadedFonts.length > 0,
+          fonts: downloadedFonts,
+          ...(errors.length ? { errors } : {})
+        }
+      } catch (error: any) {
+        return { success: false, error: error.message, fonts: [] }
+      }
+    }
+  )
+
   ipcMain.handle('fonts:deleteFont', async (_, args: { relativePath: string }) => {
     if (!currentProjectDir) return { success: false, error: 'No project directory set' }
     if (!args?.relativePath) return { success: false, error: 'relativePath required' }

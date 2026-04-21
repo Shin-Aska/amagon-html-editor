@@ -110,6 +110,14 @@ declare global {
       getModels: () => Promise<any>
       fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) => Promise<any>
     }
+    fonts: {
+      listSystem: () => Promise<any>
+      importFile: () => Promise<any>
+      downloadGoogleFont: (args: { family: string; variants: { weight: string; style: string }[] }) => Promise<any>
+      copySystemFont: (args: { familyName: string; filePaths: string[] }) => Promise<any>
+      deleteFont: (args: { relativePath: string }) => Promise<any>
+      listProject: () => Promise<any>
+    }
     mediaSearch: {
       getConfig: () => Promise<any>
       setConfig: (config: any) => Promise<any>

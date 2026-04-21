@@ -8,7 +8,7 @@ export interface FontAsset {
   format: 'ttf' | 'otf' | 'woff' | 'woff2'
   weight?: string        // "400" | "700" etc.
   style?: string         // "normal" | "italic"
-  source: 'system' | 'imported'
+  source: 'system' | 'imported' | 'google-fonts'
 }
 
 export interface Block {
