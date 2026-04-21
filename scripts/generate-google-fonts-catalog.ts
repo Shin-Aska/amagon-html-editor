@@ -16,7 +16,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const outputPath = path.join(__dirname, '../src/renderer/data/google-fonts-catalog.json');
 
-const processFonts = (): GoogleFontMeta[] => {
+/**
+ * Fetch popularity ranks from the public Google Fonts metadata endpoint.
+ * Returns a map of { [familyName.toLowerCase()]: popularityRank }.
+ * No API key required — this endpoint is the same one powering fonts.google.com.
+ */
+async function fetchPopularityMap(): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  try {
+    const res = await fetch('https://fonts.google.com/metadata/fonts');
+    if (!res.ok) {
+      console.warn(`Warning: Could not fetch popularity data (${res.status}). Falling back to alphabetical order.`);
+      return map;
+    }
+    // Google prepends a XSSI guard: )]}'\n — strip it before parsing
+    const raw = await res.text();
+    const json = raw.replace(/^\)\]\}'\n?/, '');
+    const data = JSON.parse(json) as { familyMetadataList?: { family: string; popularity?: number }[] };
+    for (const entry of data.familyMetadataList ?? []) {
+      if (entry.family && typeof entry.popularity === 'number') {
+        map.set(entry.family.toLowerCase(), entry.popularity);
+      }
+    }
+    console.log(`Fetched popularity ranks for ${map.size} font families.`);
+  } catch (err) {
+    console.warn('Warning: Failed to fetch popularity data:', (err as Error).message);
+    console.warn('Falling back to alphabetical order.');
+  }
+  return map;
+}
+
+const processFonts = (popularityMap: Map<string, number>): GoogleFontMeta[] => {
   const fonts: GoogleFontMeta[] = [];
 
   for (const fontId in APIv2) {
@@ -25,44 +55,44 @@ const processFonts = (): GoogleFontMeta[] => {
     const processedVariants: { weight: string; style: string }[] = [];
     for (const weight of font.weights) {
       for (const style of font.styles) {
-        // Map 'normal' to '400' if weight is 'regular' or empty, otherwise use the actual weight.
-        // The style 'normal' is explicitly handled.
-        // If a font has a 'regular' style, it typically means 400.
         const actualWeight = (weight === 'regular' || weight === '') ? '400' : String(weight);
-        const actualStyle = style === 'italic' ? 'italic' : 'normal'; // Ensure style is 'normal' or 'italic'
+        const actualStyle = style === 'italic' ? 'italic' : 'normal';
         processedVariants.push({ weight: actualWeight, style: actualStyle });
       }
     }
+
+    // Popularity: lower number = more popular (rank 1 is most popular).
+    // Use a large fallback so un-ranked fonts sort to the end alphabetically.
+    const popularity = popularityMap.get(font.family.toLowerCase()) ?? 99999;
 
     fonts.push({
       family: font.family,
       category: font.category,
       variants: processedVariants,
-      popularity: font._popularity,
+      popularity,
       subsets: font.subsets,
       lastModified: font.lastModified,
     });
   }
 
-  // Sort by popularity (lower number is more popular)
+  // Sort by popularity rank (1 = most popular), un-ranked fonts at the end
   return fonts.sort((a, b) => a.popularity - b.popularity);
 };
 
 const generateCatalog = async () => {
   try {
-    const catalog = processFonts();
+    const popularityMap = await fetchPopularityMap();
+    const catalog = processFonts(popularityMap);
     const jsonContent = JSON.stringify(catalog, null, 2);
 
-    console.log(`__dirname: ${__dirname}`);
-    console.log(`Calculated outputPath: ${outputPath}`);
-
-    // Ensure the output directory exists
     const outputDir = path.dirname(outputPath);
     await fs.promises.mkdir(outputDir, { recursive: true });
 
     await fs.promises.writeFile(outputPath, jsonContent, 'utf8');
 
-    console.log(`Generated catalog with ${catalog.length} font families.`);
+    const ranked = catalog.filter((f) => f.popularity < 99999).length;
+    console.log(`Generated catalog with ${catalog.length} font families (${ranked} with popularity rank).`);
+    console.log(`Most popular: ${catalog.slice(0, 5).map((f) => `${f.family} (#${f.popularity})`).join(', ')}`);
     console.log(`Catalog written to ${outputPath}`);
   } catch (error) {
     console.error('Error generating Google Fonts catalog:', error);
