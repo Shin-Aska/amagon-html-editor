@@ -265,6 +265,102 @@ describe('exportEngine', () => {
     expect(cssText).toContain('src: url("./assets/fonts/MyFont-Regular.woff2");')
   })
 
+  it('skips Google Fonts CDN links for self-hosted font families but keeps missing families', async () => {
+    const project: ProjectData = {
+      projectSettings: {
+        name: 'Test',
+        framework: 'vanilla',
+        theme: {
+          ...createDefaultTheme(),
+          typography: {
+            ...createDefaultTheme().typography,
+            fontFamily: 'Roboto, Lato, sans-serif',
+            headingFontFamily: 'inherit'
+          }
+        },
+        globalStyles: {},
+        fonts: [
+          {
+            id: 'font_1',
+            name: 'Roboto',
+            fileName: 'Roboto-Regular.woff2',
+            relativePath: 'assets/fonts/Roboto-Regular.woff2',
+            format: 'woff2',
+            weight: '400',
+            style: 'normal',
+            source: 'google-fonts'
+          }
+        ]
+      },
+      pages: [
+        {
+          id: 'p1',
+          title: 'Index',
+          slug: 'index',
+          meta: {},
+          blocks: [
+            createBlock('heading', {
+              props: { text: 'Hello', level: 1 },
+              styles: { fontFamily: 'Roboto, Lato, sans-serif' }
+            })
+          ]
+        }
+      ],
+      userBlocks: []
+    }
+
+    const files = await exportProject(project, {
+      resolveAsset: async (url) => {
+        if (url === 'app-media://project-asset/assets/fonts/Roboto-Regular.woff2') {
+          return { bytes: new Uint8Array([9, 8, 7]), mimeType: 'font/woff2' }
+        }
+        return null
+      }
+    })
+
+    const html = files.find((f) => f.path === 'index.html')
+    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+
+    expect(htmlText).toContain('https://fonts.googleapis.com/css2?family=Lato&display=swap')
+    expect(htmlText).not.toContain('https://fonts.googleapis.com/css2?family=Roboto&display=swap')
+    expect(htmlText).not.toContain('https://fonts.googleapis.com/css2?family=sans-serif&display=swap')
+  })
+
+  it('exports projects with no fonts without adding Google Fonts links', async () => {
+    const project: ProjectData = {
+      projectSettings: {
+        name: 'Test',
+        framework: 'vanilla',
+        theme: createDefaultTheme(),
+        globalStyles: {}
+      },
+      pages: [
+        {
+          id: 'p1',
+          title: 'Index',
+          slug: 'index',
+          meta: {},
+          blocks: [
+            createBlock('heading', {
+              props: { text: 'Hello', level: 1 },
+              styles: { fontFamily: 'sans-serif' }
+            })
+          ]
+        }
+      ],
+      userBlocks: []
+    }
+
+    const files = await exportProject(project, {
+      resolveAsset: async () => null
+    })
+
+    const html = files.find((f) => f.path === 'index.html')
+    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+
+    expect(htmlText).not.toContain('fonts.googleapis.com/css2')
+  })
+
   it('tailwind export includes only tailwind resources', async () => {
     const project: ProjectData = {
       projectSettings: {

@@ -122,6 +122,7 @@ export async function exportProject(
   const resolveAsset = options.resolveAsset ?? createDefaultAssetResolver()
   const assetFiles = await buildAssetFiles(ctx, resolveAsset, Boolean(options.inlineAssets))
   const fontFiles = await buildFontFiles(exportFonts, resolveAsset)
+  const selfHostedFamilies = getSelfHostedFontFamilies(exportFonts)
 
   const cssRaw = replaceAssetTokens(buildStylesCss(ctx, project, exportFonts, options.customCss), ctx)
   const css = options.minify ? minifyCss(cssRaw) : cssRaw
@@ -146,6 +147,7 @@ export async function exportProject(
       includeStylesheet: hasCss && !options.inlineCss,
       inlineCssText: hasCss && options.inlineCss ? css : null,
       googleFonts: ctx.googleFonts,
+      selfHostedFamilies,
       includeJs: options.includeJs ?? true,
       pages: project.pages,
       folders: project.folders
@@ -688,6 +690,7 @@ function buildPageHtml(params: {
   includeStylesheet: boolean
   inlineCssText: string | null
   googleFonts: Set<string>
+  selfHostedFamilies: Set<string>
   includeJs: boolean
   pages?: Page[]
   folders?: PageFolder[]
@@ -725,7 +728,7 @@ function buildPageHtml(params: {
   headParts.push(getFrameworkHead(params.framework, params.includeJs))
 
   // Google Fonts
-  const googleFontLinks = buildGoogleFontsHead(params.googleFonts)
+  const googleFontLinks = buildGoogleFontsHead(params.googleFonts, params.selfHostedFamilies)
   if (googleFontLinks) {
     headParts.push(googleFontLinks)
   }
@@ -789,10 +792,11 @@ function minifyHtml(html: string): string {
     .trim()
 }
 
-function buildGoogleFontsHead(fonts: Set<string>): string {
+function buildGoogleFontsHead(fonts: Set<string>, selfHostedFamilies: Set<string>): string {
   const families = Array.from(fonts)
     .map((f) => f.trim())
     .filter(Boolean)
+    .filter((family) => !selfHostedFamilies.has(family.toLowerCase()))
 
   if (families.length === 0) return ''
 
@@ -804,6 +808,18 @@ function buildGoogleFontsHead(fonts: Set<string>): string {
   })
 
   return links.join('\n')
+}
+
+function getSelfHostedFontFamilies(fonts: FontAsset[]): Set<string> {
+  const families = new Set<string>()
+
+  for (const font of fonts) {
+    const relativePath = String(font.relativePath || '').trim()
+    if (!relativePath) continue
+    families.add(String(font.name || '').trim().toLowerCase())
+  }
+
+  return families
 }
 
 function extractFontFamilies(fontFamily: string): string[] {
