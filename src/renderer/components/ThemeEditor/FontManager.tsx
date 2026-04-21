@@ -1,7 +1,9 @@
-import { Upload, Trash2, Type, PackageCheck } from 'lucide-react'
+import React, { useState } from 'react'
+import { Upload, Trash2, Type, PackageCheck, Globe, X } from 'lucide-react'
 import { useProjectStore } from '../../store/projectStore'
 import { useToastStore } from '../../store/toastStore'
 import type { FontAsset } from '../../store/types'
+import GoogleFontBrowser from './GoogleFontBrowser'
 import './FontManager.css'
 
 export default function FontManager(): JSX.Element {
@@ -9,6 +11,7 @@ export default function FontManager(): JSX.Element {
   const addFonts = useProjectStore((s) => s.addFonts)
   const removeFontStore = useProjectStore((s) => s.removeFont)
   const showToast = useToastStore((s) => s.showToast)
+  const [showGoogleFonts, setShowGoogleFonts] = useState(false)
 
   const handleImportFile = async () => {
     try {
@@ -78,10 +81,27 @@ export default function FontManager(): JSX.Element {
             For web / Google fonts, just type the name in the Typography tab.
           </span>
         </div>
-        <button className="theme-btn theme-btn-primary" onClick={handleImportFile}>
-          <Upload size={14} /> Import Font File(s)
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button className="theme-btn theme-btn-primary" onClick={handleImportFile}>
+            <Upload size={14} /> Import Font File(s)
+          </button>
+          <button className="theme-btn" onClick={() => setShowGoogleFonts(!showGoogleFonts)}>
+            {showGoogleFonts ? (
+              <>
+                <X size={14} /> Hide Font Browser
+              </>
+            ) : (
+              <>
+                <Globe size={14} /> Browse Google Fonts
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {showGoogleFonts && (
+        <GoogleFontBrowser />
+      )}
 
       <div className="theme-section">
         <div className="theme-section-title">Imported Fonts</div>
