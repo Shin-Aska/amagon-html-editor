@@ -212,6 +212,59 @@ describe('exportEngine', () => {
     expect(htmlText).not.toContain('bootstrap.bundle.min.js')
   })
 
+  it('exports project fonts into assets/fonts and emits @font-face with relative src URLs', async () => {
+    const project: ProjectData = {
+      projectSettings: {
+        name: 'Test',
+        framework: 'vanilla',
+        theme: createDefaultTheme(),
+        globalStyles: {},
+        fonts: [
+          {
+            id: 'font_1',
+            name: 'My Font',
+            fileName: 'MyFont-Regular.woff2',
+            relativePath: 'assets/fonts/MyFont-Regular.woff2',
+            format: 'woff2',
+            weight: '400',
+            style: 'normal',
+            source: 'imported'
+          }
+        ]
+      },
+      pages: [
+        {
+          id: 'p1',
+          title: 'Index',
+          slug: 'index',
+          meta: {},
+          blocks: []
+        }
+      ],
+      userBlocks: []
+    }
+
+    const files = await exportProject(project, {
+      resolveAsset: async (url) => {
+        if (url === 'app-media://project-asset/assets/fonts/MyFont-Regular.woff2') {
+          return { bytes: new Uint8Array([9, 8, 7]), mimeType: 'font/woff2' }
+        }
+        return null
+      }
+    })
+
+    const fontFile = files.find((f) => f.path === 'assets/fonts/MyFont-Regular.woff2')
+    expect(fontFile && fontFile.content instanceof Uint8Array ? Array.from(fontFile.content) : []).toEqual([
+      9, 8, 7
+    ])
+
+    const cssFile = files.find((f) => f.path === 'styles.css')
+    const cssText = cssFile && typeof cssFile.content === 'string' ? cssFile.content : ''
+    expect(cssText).toContain('@font-face {')
+    expect(cssText).toContain('font-family: "My Font";')
+    expect(cssText).toContain('src: url("./assets/fonts/MyFont-Regular.woff2");')
+  })
+
   it('tailwind export includes only tailwind resources', async () => {
     const project: ProjectData = {
       projectSettings: {

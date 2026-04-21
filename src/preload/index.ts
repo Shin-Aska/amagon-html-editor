@@ -179,6 +179,20 @@ const api = {
       ipcRenderer.invoke('ai:fetchModelsForProvider', data)
   },
 
+  fonts: {
+    listSystem: () => ipcRenderer.invoke('fonts:listSystem'),
+
+    importFile: () => ipcRenderer.invoke('fonts:importFile'),
+
+    copySystemFont: (args: { familyName: string; filePaths: string[] }) =>
+      ipcRenderer.invoke('fonts:copySystemFont', args),
+
+    deleteFont: (args: { relativePath: string }) =>
+      ipcRenderer.invoke('fonts:deleteFont', args),
+
+    listProject: () => ipcRenderer.invoke('fonts:listProject')
+  },
+
   mediaSearch: {
     getConfig: () => ipcRenderer.invoke('mediaSearch:getConfig'),
 

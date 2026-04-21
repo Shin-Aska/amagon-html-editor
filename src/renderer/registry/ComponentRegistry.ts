@@ -7,6 +7,7 @@ export type PropType =
   | 'boolean'
   | 'select'
   | 'color'
+  | 'font-picker'
   | 'image'
   | 'video'
   | 'carousel'

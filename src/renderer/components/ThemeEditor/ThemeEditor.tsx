@@ -15,9 +15,11 @@ import { themePresets } from './themePresets'
 import CustomCssManager from './CustomCssManager'
 import ColorField from './ColorField'
 import CreatePresetModal from './CreatePresetModal'
+import FontManager from './FontManager'
+import TypographyFontPicker from './TypographyFontPicker'
 import './ThemeEditor.css'
 
-type ThemeTab = 'colors' | 'typography' | 'spacing' | 'borders' | 'customCss' | 'presets'
+type ThemeTab = 'colors' | 'typography' | 'spacing' | 'borders' | 'customCss' | 'presets' | 'fonts'
 
 interface ThemeEditorProps {
   isOpen: boolean
@@ -77,22 +79,16 @@ function TypographyTab({
     <div className="theme-section">
       <div className="theme-section-title">Typography</div>
       <div className="theme-field-group">
-        <div className="theme-field">
-          <label className="theme-field-label">Font Family</label>
-          <input
-            className="theme-field-input"
-            value={typography.fontFamily}
-            onChange={(e) => onChange({ fontFamily: e.target.value })}
-          />
-        </div>
-        <div className="theme-field">
-          <label className="theme-field-label">Heading Font Family</label>
-          <input
-            className="theme-field-input"
-            value={typography.headingFontFamily}
-            onChange={(e) => onChange({ headingFontFamily: e.target.value })}
-          />
-        </div>
+        <TypographyFontPicker
+          label="Body Font"
+          value={typography.fontFamily}
+          onChange={(v) => onChange({ fontFamily: v })}
+        />
+        <TypographyFontPicker
+          label="Heading Font"
+          value={typography.headingFontFamily}
+          onChange={(v) => onChange({ headingFontFamily: v })}
+        />
         <div className="theme-field">
           <label className="theme-field-label">Base Font Size</label>
           <input
@@ -515,6 +511,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
     { id: 'presets', label: 'Presets' },
     { id: 'colors', label: 'Colors' },
     { id: 'typography', label: 'Typography' },
+    { id: 'fonts', label: 'Fonts' },
     { id: 'spacing', label: 'Spacing' },
     { id: 'borders', label: 'Borders' },
     { id: 'customCss', label: 'Custom CSS' }
@@ -609,6 +606,9 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
           )}
           {activeTab === 'customCss' && (
             <CustomCssManager theme={selectedTheme} />
+          )}
+          {activeTab === 'fonts' && (
+            <FontManager />
           )}
         </div>
 

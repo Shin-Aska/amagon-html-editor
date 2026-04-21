@@ -16,6 +16,7 @@ import SortableListField from './SortableListField'
 import VideoField from './VideoField'
 import CarouselField from './CarouselField'
 import IconField from './IconField'
+import FontPickerField from './FontPickerField'
 import { useProjectStore } from '../../store/projectStore'
 import ArrayField, { type ArrayRecordField } from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
@@ -308,6 +309,13 @@ function Inspector(): JSX.Element {
               placeholder="#000000"
             />
           </div>
+        )
+      case 'font-picker':
+        return (
+          <FontPickerField
+            value={typeof block.styles.fontFamily === 'string' ? block.styles.fontFamily : ''}
+            onChange={(v) => updateBlock(block.id, { styles: { fontFamily: v || undefined } })}
+          />
         )
       case 'image':
         return <ImageField value={val || ''} onChange={(v) => handlePropChange(key, v)} />

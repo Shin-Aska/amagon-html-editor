@@ -477,3 +477,205 @@
   border-color: var(--color-accent);
   background: linear-gradient(135deg, var(--color-accent-bg, rgba(124, 58, 237, 0.15)) 0%, rgba(124, 58, 237, 0.1) 100%);
 }
+
+/* ── TypographyFontPicker ─────────────────────────────────────────────────── */
+
+.theme-font-picker-trigger {
+  font-size: 13px;
+  height: auto;
+  min-height: 32px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.theme-font-picker-trigger:hover {
+  border-color: var(--color-accent);
+}
+.theme-font-picker-trigger:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.theme-font-picker-option {
+  display: block;
+  width: 100%;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.theme-font-picker-option:hover,
+.theme-font-picker-option.is-highlighted {
+  background: var(--color-bg-hover, rgba(255,255,255,0.06));
+}
+.theme-font-picker-option.active {
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--color-accent);
+}
+
+/* ── TypographyFontPicker (tfp) ───────────────────────────────────────────── */
+
+.tfp-wrapper {
+  position: relative;
+}
+
+/* Trigger button */
+.tfp-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 34px;
+}
+.tfp-trigger:hover {
+  border-color: var(--color-accent);
+}
+.tfp-trigger.is-open {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.tfp-trigger-preview {
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.85;
+  min-width: 22px;
+  text-align: center;
+}
+
+.tfp-trigger-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.tfp-trigger-caret {
+  flex-shrink: 0;
+  opacity: 0.45;
+  transition: transform 0.15s;
+}
+.tfp-trigger.is-open .tfp-trigger-caret {
+  transform: rotate(180deg);
+}
+
+/* Dropdown — rendered via portal at document.body, positioned via inline fixed style */
+.tfp-dropdown {
+  z-index: 9999;
+  background: var(--color-bg-secondary, #1e1e2e);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Search row */
+.tfp-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.tfp-search {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  padding: 0;
+}
+.tfp-search::placeholder {
+  opacity: 0.45;
+}
+.tfp-search-clear {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.6;
+}
+.tfp-search-clear:hover { opacity: 1; }
+
+/* Options list */
+.tfp-list {
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+}
+
+.tfp-group-label {
+  padding: 7px 12px 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  color: var(--color-text-primary);
+  user-select: none;
+}
+
+.tfp-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.tfp-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.tfp-option.is-selected {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--color-accent, #7c3aed);
+}
+
+.tfp-option-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tfp-option-check {
+  flex-shrink: 0;
+  margin-left: 8px;
+  color: var(--color-accent, #7c3aed);
+}
+
+.tfp-empty {
+  padding: 16px 14px;
+  font-size: 12px;
+  opacity: 0.5;
+  text-align: center;
+}

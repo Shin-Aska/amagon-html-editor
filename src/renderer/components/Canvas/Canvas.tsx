@@ -120,6 +120,7 @@ function Canvas(): JSX.Element {
   const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
   const projectTheme = useProjectStore((s) => s.settings.theme)
   const projectThemeVariants = useProjectStore((s) => s.settings.themes)
+  const projectFonts = useProjectStore((s) => s.fonts)
   const framework = useProjectStore((s) => s.settings.framework)
   const pages = useProjectStore((s) => s.pages)
   const folders = useProjectStore((s) => s.folders)
@@ -343,9 +344,9 @@ function Canvas(): JSX.Element {
 
   useEffect(() => {
     if (!runtimeReady) return
-    const themeCss = themeToCSS(projectTheme, projectThemeVariants)
+    const themeCss = themeToCSS(projectTheme, projectThemeVariants, projectFonts)
     postToIframe({ type: 'setThemeCss', css: themeCss })
-  }, [projectTheme, projectThemeVariants, runtimeReady])
+  }, [projectTheme, projectThemeVariants, projectFonts, runtimeReady])
 
   useEffect(() => {
     if (!runtimeReady) return

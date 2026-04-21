@@ -1,4 +1,4 @@
-import type { Block, Page, PageFolder, FrameworkChoice, ProjectData } from '../store/types'
+import type { Block, Page, PageFolder, FrameworkChoice, ProjectData, FontAsset } from '../store/types'
 import { themeToCSS } from '../store/types'
 import { blockToHtml } from './blockToHtml'
 import { getApi } from './api'
@@ -71,6 +71,8 @@ export async function exportProject(
   project: ProjectData,
   options: ExportEngineOptions = {}
 ): Promise<ExportFile[]> {
+  const exportFonts = normalizeFontsForExport(project.projectSettings.fonts)
+
   const pageIdToFileName = new Map<string, string>()
   const pageSlugToFileName = new Map<string, string>()
   const pageTitleToFileName = new Map<string, string>()
@@ -119,8 +121,9 @@ export async function exportProject(
 
   const resolveAsset = options.resolveAsset ?? createDefaultAssetResolver()
   const assetFiles = await buildAssetFiles(ctx, resolveAsset, Boolean(options.inlineAssets))
+  const fontFiles = await buildFontFiles(exportFonts, resolveAsset)
 
-  const cssRaw = replaceAssetTokens(buildStylesCss(ctx, project, options.customCss), ctx)
+  const cssRaw = replaceAssetTokens(buildStylesCss(ctx, project, exportFonts, options.customCss), ctx)
   const css = options.minify ? minifyCss(cssRaw) : cssRaw
   const hasCss = css.trim().length > 0
 
@@ -157,6 +160,7 @@ export async function exportProject(
   if (!options.inlineAssets) {
     files.push(...assetFiles)
   }
+  files.push(...fontFiles)
   return files
 }
 
@@ -508,14 +512,19 @@ function sanitizeSlug(slug: string): string {
   return s || 'index'
 }
 
-function buildStylesCss(ctx: BuildContext, project: ProjectData, customCss?: string): string {
+function buildStylesCss(
+  ctx: BuildContext,
+  project: ProjectData,
+  exportFonts: FontAsset[],
+  customCss?: string
+): string {
   const lines: string[] = []
 
   // Theme CSS variables and base styles (inserted first so everything else can override)
   const theme = project.projectSettings.theme
   const themes = project.projectSettings.themes
   if (theme && typeof theme === 'object' && theme.colors) {
-    const themeCss = themeToCSS(theme, themes)
+    const themeCss = themeToCSS(theme, themes, exportFonts, { fontUrlPrefix: './' })
     if (themeCss.trim()) lines.push(themeCss.trim())
   }
 
@@ -532,6 +541,58 @@ function buildStylesCss(ctx: BuildContext, project: ProjectData, customCss?: str
   }
 
   return lines.join('\n')
+}
+
+function normalizeFontsForExport(fonts: FontAsset[] | undefined): FontAsset[] {
+  if (!Array.isArray(fonts) || fonts.length === 0) return []
+
+  return fonts.map((font) => {
+    const rawRel = String(font.relativePath || '')
+      .replace(/^[/\\]+/, '')
+      .replace(/\\/g, '/')
+
+    const normalizedRel =
+      rawRel.startsWith('assets/fonts/')
+        ? rawRel
+        : `assets/fonts/${sanitizeFileName(
+            font.fileName ||
+              (font.name ? `${font.name}.${font.format}` : `font.${font.format}`)
+          )}`
+
+    return { ...font, relativePath: normalizedRel }
+  })
+}
+
+async function buildFontFiles(
+  fonts: FontAsset[],
+  resolveAsset: (url: string) => Promise<ResolvedAsset | null>
+): Promise<ExportFile[]> {
+  if (!fonts || fonts.length === 0) return []
+
+  const files: ExportFile[] = []
+  const written = new Set<string>()
+
+  for (const font of fonts) {
+    const rel = String(font.relativePath || '')
+      .replace(/^[/\\]+/, '')
+      .replace(/\\/g, '/')
+
+    if (!rel) continue
+    if (!rel.startsWith('assets/fonts/')) continue
+    if (written.has(rel)) continue
+
+    const url = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(rel)
+      ? rel
+      : `app-media://project-asset/${rel}`
+
+    const resolved = await resolveAsset(url)
+    if (!resolved) continue
+
+    written.add(rel)
+    files.push({ path: rel, content: resolved.bytes })
+  }
+
+  return files
 }
 
 function buildGlobalStylesCss(globalStyles: Record<string, string> | undefined): string {

@@ -157,6 +157,7 @@ function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
 
     const projectTheme = useProjectStore((s) => s.settings.theme)
     const projectThemeVariants = useProjectStore((s) => s.settings.themes)
+    const projectFonts = useProjectStore((s) => s.fonts)
     const previewMode = projectThemeVariants?.previewMode ?? 'device'
     const previewTheme = previewMode === 'device' ? systemUiTheme : previewMode
     const activeTheme = useMemo(
@@ -166,8 +167,8 @@ function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
         [previewTheme, projectTheme, projectThemeVariants]
     )
     const themeCss = useMemo(
-        () => themeToCSS(activeTheme),
-        [activeTheme]
+        () => themeToCSS(activeTheme, undefined, projectFonts),
+        [activeTheme, projectFonts]
     )
 
     const html = useMemo(() => blockToHtml(blocks), [blocks])

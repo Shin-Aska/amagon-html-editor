@@ -12,5 +12,30 @@ describe('themeToCSS', () => {
     expect(css).toContain('h5 { font-size: 0.83em; }')
     expect(css).toContain('h6 { font-size: 0.67em; }')
   })
-})
 
+  it('can emit @font-face rules with export-friendly relative URLs', () => {
+    const css = themeToCSS(
+      createDefaultTheme(),
+      undefined,
+      [
+        {
+          id: 'font_1',
+          name: 'My Font',
+          fileName: 'MyFont-Regular.woff2',
+          relativePath: 'assets/fonts/MyFont-Regular.woff2',
+          format: 'woff2',
+          weight: '400',
+          style: 'normal',
+          source: 'imported'
+        }
+      ],
+      { fontUrlPrefix: './' }
+    )
+
+    expect(css).toContain('@font-face {')
+    expect(css).toContain('font-family: "My Font";')
+    expect(css).toContain('src: url("./assets/fonts/MyFont-Regular.woff2");')
+    expect(css).toContain('font-weight: 400;')
+    expect(css).toContain('font-style: normal;')
+  })
+})

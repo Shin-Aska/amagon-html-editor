@@ -29,7 +29,9 @@ src/
 │   └── validators/       # Per-provider credential + file validators
 ├── renderer/             # React app
 │   ├── components/       # AiAssistant, Canvas, CodeEditor, Inspector, ThemeEditor,
-│   │                     # PublishDialog, Tutorial (interactive onboarding overlay)
+│   │                        # FontManager (import fonts), FontPickerField (per-block),
+│   │                        # TypographyFontPicker (theme-level), PublishDialog,
+│   │                        # Tutorial (interactive onboarding overlay)
 │   ├── hooks/            # Custom React hooks
 │   ├── registry/         # Block definitions (63 types across 7 categories)
 │   ├── store/            # Zustand stores (EditorStore, ProjectStore, AiStore,
@@ -44,6 +46,7 @@ src/
 - **Publish-to-web** (`src/publish/`): Versioned `PublisherExtension` API with built-in GitHub Pages, Cloudflare Pages, and Neocities providers. IPC namespace: `publish`. Credentials stored encrypted via `src/main/publishCredentials.ts`.
 - **Tutorial system** (`src/renderer/components/Tutorial/` + `src/renderer/store/tutorialStore.ts`): Spotlight-driven onboarding with branching paths (AI Assistance, Publish Workflow, Web Media Search). Steps auto-advance via `dispatchTutorialAction()`. UI elements are marked with `data-tutorial="<marker>"` attributes.
 - **Credential catalog** (`src/main/credentialCatalog.ts`): Central registry of credential field definitions for all providers; drives the new credential edit modal in Settings.
+- **Font management system** (v1.9.0): `FontAsset` model stored in `projectStore.fonts`. `FontManager.tsx` handles file import; `TypographyFontPicker.tsx` (theme-wide) and `FontPickerField.tsx` (per-block) provide visual button-trigger dropdowns with portal rendering. `themeToCSS()` generates `@font-face` rules; `exportEngine.ts` bundles font files automatically. IPC namespace: `fonts` (`listSystem`, `importFile`, `copySystemFont`, `deleteFont`, `listProject`). See section 13a of GUIDELINES.md for full details.
 
 ## Hard Constraints
 

@@ -1,5 +1,16 @@
 // ─── Core Data Types ─────────────────────────────────────────────────────────
 
+export interface FontAsset {
+  id: string
+  name: string           // Display/family name
+  fileName: string       // e.g. "MyFont-Regular.ttf"
+  relativePath: string   // "assets/fonts/MyFont-Regular.ttf"
+  format: 'ttf' | 'otf' | 'woff' | 'woff2'
+  weight?: string        // "400" | "700" etc.
+  style?: string         // "normal" | "italic"
+  source: 'system' | 'imported'
+}
+
 export interface Block {
   id: string
   type: string           // e.g., 'heading', 'image', 'hero-section', 'container'
@@ -252,8 +263,47 @@ function pushThemeVariableBlock(lines: string[], selector: string, theme: Projec
   lines.push(`${indent}}`)
 }
 
-export function themeToCSS(theme: ProjectTheme, variants?: ProjectThemeVariants): string {
+export function themeToCSS(
+  theme: ProjectTheme,
+  variants?: ProjectThemeVariants,
+  fonts?: FontAsset[],
+  options?: { fontUrlPrefix?: string }
+): string {
   const lines: string[] = []
+
+  const normalizedFontUrlPrefix = (() => {
+    const prefix = options?.fontUrlPrefix ?? 'app-media://project-asset/'
+    if (!prefix) return ''
+    if (prefix.endsWith('/') || prefix.endsWith('\\')) return prefix
+    return `${prefix}/`
+  })()
+
+  if (fonts && fonts.length > 0) {
+    for (const font of fonts) {
+      const relativePath = String(font.relativePath || '').trim()
+
+      // Skip system-name stubs that have no physical file — they work via CSS name alone
+      if (!relativePath) continue
+
+      const isAlreadyUrl =
+        /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(relativePath) ||
+        relativePath.startsWith('./') ||
+        relativePath.startsWith('../')
+
+      const srcUrl = isAlreadyUrl
+        ? relativePath
+        : `${normalizedFontUrlPrefix}${relativePath.replace(/^\/+/, '')}`
+
+      lines.push('@font-face {')
+      lines.push(`  font-family: "${font.name}";`)
+      lines.push(`  src: url("${srcUrl}");`)
+      if (font.weight) lines.push(`  font-weight: ${font.weight};`)
+      if (font.style) lines.push(`  font-style: ${font.style};`)
+      lines.push('}')
+    }
+    lines.push('')
+  }
+
   const lightTheme = variants?.light ?? theme
   const darkTheme = variants?.dark
 
@@ -516,6 +566,7 @@ export interface ProjectSettings {
   framework: FrameworkChoice
   theme: ProjectTheme
   themes?: ProjectThemeVariants
+  fonts?: FontAsset[]
   globalStyles: Record<string, string>
 }
 

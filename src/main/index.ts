@@ -4,6 +4,7 @@ import * as path from 'path'
 import * as fs from 'fs/promises'
 import { existsSync, createReadStream } from 'fs'
 import { fileURLToPath } from 'url'
+import { getFonts } from 'font-list'
 import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
 import { CLI_BINARY_NAMES, detectCliProvider } from './cliHelpers'
 import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
@@ -308,6 +309,216 @@ function registerIpcHandlers(): void {
     if (mainWindow) {
       const menu = buildAppMenu(mainWindow, isLoaded)
       Menu.setApplicationMenu(menu)
+    }
+  })
+
+  // ── Font Management ───────────────────────────────────────────────────
+
+  ipcMain.handle('fonts:listSystem', async () => {
+    try {
+      const fonts = await getFonts()
+      return { success: true, fonts }
+    } catch (error: any) {
+      return { success: false, error: error.message, fonts: [] }
+    }
+  })
+
+  ipcMain.handle('fonts:importFile', async () => {
+    if (!mainWindow) return { success: false, error: 'Main window not available' }
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Import Font Files',
+        filters: [{ name: 'Font Files', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
+        properties: ['openFile', 'multiSelections']
+      })
+
+      if (canceled || filePaths.length === 0) {
+        return { success: false, canceled: true, fonts: [] }
+      }
+
+      if (!currentProjectDir) {
+        return { success: false, error: 'No project directory set' }
+      }
+
+      const fontsDir = path.join(currentProjectDir, 'assets', 'fonts')
+      await fs.mkdir(fontsDir, { recursive: true })
+
+      const importedFonts: any[] = []
+      for (const srcPath of filePaths) {
+        const fileName = path.basename(srcPath)
+        let destPath = path.join(fontsDir, fileName)
+        let counter = 1
+        while (existsSync(destPath)) {
+          const ext = path.extname(fileName)
+          const base = path.basename(fileName, ext)
+          destPath = path.join(fontsDir, `${base}-${counter}${ext}`)
+          counter++
+        }
+
+        await fs.copyFile(srcPath, destPath)
+
+        const relativePath = path.relative(currentProjectDir, destPath)
+        const ext = path.extname(fileName).slice(1) as 'ttf' | 'otf' | 'woff' | 'woff2'
+
+        importedFonts.push({
+          id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
+          name: path.basename(fileName, path.extname(fileName)),
+          fileName: path.basename(destPath),
+          relativePath,
+          format: ext,
+          weight: '400',
+          style: 'normal',
+          source: 'imported'
+        })
+      }
+
+      return { success: true, fonts: importedFonts }
+    } catch (error: any) {
+      return { success: false, error: error.message, fonts: [] }
+    }
+  })
+
+  ipcMain.handle('fonts:copySystemFont', async (_, args: { familyName: string; filePaths: string[] }) => {
+    if (!currentProjectDir) return { success: false, error: 'No project directory set', fonts: [] }
+    if (!args?.familyName) return { success: false, error: 'familyName required', fonts: [] }
+
+    try {
+      const fontsDir = path.join(currentProjectDir, 'assets', 'fonts')
+      await fs.mkdir(fontsDir, { recursive: true })
+
+      // Use provided file paths if available; otherwise try to get paths from font-list
+      let srcPaths: string[] = (args.filePaths || []).filter(Boolean)
+      if (srcPaths.length === 0) {
+        try {
+          // font-list with { disableQuoting: true } returns detailed entries on some platforms
+          const allFonts: any = await getFonts()
+          // Some builds of font-list return paths; others just names — use paths if available
+          const match = Array.isArray(allFonts)
+            ? allFonts.find((f: any) => typeof f === 'object' && f.family === args.familyName && f.filePath)
+            : null
+          if (match?.filePath) srcPaths = [match.filePath]
+        } catch {
+          // ignore
+        }
+      }
+
+      if (srcPaths.length === 0) {
+        // Cannot locate the font file on disk — return a best-effort FontAsset for system stacks
+        // (font won't be physically copied but the name will be available in the picker)
+        const asset: any = {
+          id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
+          name: args.familyName,
+          fileName: '',
+          relativePath: '',
+          format: 'ttf' as const,
+          weight: '400',
+          style: 'normal',
+          source: 'system' as const
+        }
+        return { success: true, fonts: [asset] }
+      }
+
+      const imported: any[] = []
+      for (const srcPath of srcPaths) {
+        if (!existsSync(srcPath)) continue
+
+        const fileName = path.basename(srcPath)
+        let destPath = path.join(fontsDir, fileName)
+        let counter = 1
+        while (existsSync(destPath)) {
+          const ext = path.extname(fileName)
+          const base = path.basename(fileName, ext)
+          destPath = path.join(fontsDir, `${base}-${counter}${ext}`)
+          counter++
+        }
+
+        await fs.copyFile(srcPath, destPath)
+        const relativePath = path.relative(currentProjectDir, destPath).replace(/\\/g, '/')
+        const ext = path.extname(fileName).slice(1) as 'ttf' | 'otf' | 'woff' | 'woff2'
+
+        imported.push({
+          id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
+          name: args.familyName,
+          fileName: path.basename(destPath),
+          relativePath,
+          format: ext || 'ttf',
+          weight: '400',
+          style: 'normal',
+          source: 'system'
+        })
+      }
+
+      return { success: true, fonts: imported }
+    } catch (error: any) {
+      return { success: false, error: error.message, fonts: [] }
+    }
+  })
+
+  ipcMain.handle('fonts:deleteFont', async (_, args: { relativePath: string }) => {
+    if (!currentProjectDir) return { success: false, error: 'No project directory set' }
+    if (!args?.relativePath) return { success: false, error: 'relativePath required' }
+
+    try {
+      const rel = String(args.relativePath).replace(/^[/\\]+/, '').replace(/\\/g, '/')
+
+      // Security: block path traversal
+      const targetPath = path.join(currentProjectDir, rel)
+      if (!isPathSafe(targetPath, currentProjectDir)) {
+        return { success: false, error: 'Forbidden: path traversal detected' }
+      }
+
+      // Extra guard: must be inside assets/fonts/
+      const fontsDir = path.join(currentProjectDir, 'assets', 'fonts')
+      if (!isPathSafe(targetPath, fontsDir)) {
+        return { success: false, error: 'Forbidden: can only delete files from assets/fonts/' }
+      }
+
+      if (!existsSync(targetPath)) {
+        // Already gone — treat as success so the store can clean up
+        return { success: true }
+      }
+
+      await fs.unlink(targetPath)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('fonts:listProject', async () => {
+    if (!currentProjectDir) return { success: true, fonts: [] }
+
+    try {
+      const fontsDir = path.join(currentProjectDir, 'assets', 'fonts')
+      try {
+        await fs.access(fontsDir)
+      } catch {
+        return { success: true, fonts: [] }
+      }
+
+      const entries = await fs.readdir(fontsDir)
+      const FONT_EXTS = new Set(['.ttf', '.otf', '.woff', '.woff2'])
+
+      const fonts: any[] = entries
+        .filter((f) => FONT_EXTS.has(path.extname(f).toLowerCase()))
+        .map((fileName) => {
+          const ext = path.extname(fileName).slice(1) as 'ttf' | 'otf' | 'woff' | 'woff2'
+          const relativePath = `assets/fonts/${fileName}`
+          return {
+            id: `font_${Buffer.from(relativePath).toString('base64url').slice(0, 12)}`,
+            name: path.basename(fileName, path.extname(fileName)),
+            fileName,
+            relativePath,
+            format: ext,
+            weight: '400',
+            style: 'normal',
+            source: 'imported'
+          }
+        })
+
+      return { success: true, fonts }
+    } catch (error: any) {
+      return { success: false, error: error.message, fonts: [] }
     }
   })
 

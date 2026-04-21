@@ -3,7 +3,7 @@
 // For now, uses browser APIs (localStorage, File API, download links).
 
 import packageJson from '../../../package.json'
-import { createDefaultTheme } from '../store/types'
+import { createDefaultTheme, type FontAsset } from '../store/types'
 import { createWelcomeBlocks } from '../../shared/welcomeBlocks'
 
 export interface IpcResult {
@@ -20,7 +20,8 @@ export interface IpcResult {
   directory?: string | null
   previewPath?: string
   path?: string
-  relativePath?: string
+  relativePath?: string,
+  fonts?: any[]
 }
 
 type MockAsset = { name: string; path: string; relativePath: string; type: 'image' | 'video' }
@@ -441,6 +442,34 @@ const mockApi: ElectronApi = {
     onTick: (_callback: () => void) => {
       // No-op in browser mode
       return () => { }
+    }
+  },
+
+  fonts: {
+    listSystem: async (): Promise<IpcResult & { fonts: string[] }> => {
+      console.log('[Mock API] Listing system fonts (mocked)')
+      const mockFonts = [
+        'Arial', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Times New Roman',
+        'Georgia', 'Garamond', 'Courier New', 'Brush Script MT', 'Impact',
+        'Comic Sans MS'
+      ]
+      return { success: true, fonts: mockFonts }
+    },
+    importFile: async (): Promise<IpcResult & { fonts: FontAsset[] }> => {
+      console.log('[Mock API] Importing font files (mocked)')
+      return { success: false, canceled: true, fonts: [] }
+    },
+    copySystemFont: async (_args: { familyName: string; filePaths: string[] }): Promise<IpcResult & { fonts: FontAsset[] }> => {
+      console.log('[Mock API] copySystemFont (mocked)')
+      return { success: false, error: 'Not supported in browser mode', fonts: [] }
+    },
+    deleteFont: async (_args: { relativePath: string }): Promise<IpcResult> => {
+      console.log('[Mock API] deleteFont (mocked)')
+      return { success: true }
+    },
+    listProject: async (): Promise<IpcResult & { fonts: FontAsset[] }> => {
+      console.log('[Mock API] listProject fonts (mocked)')
+      return { success: true, fonts: [] }
     }
   },
 

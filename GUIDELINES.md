@@ -71,7 +71,10 @@ src/
 │   │   ├── Canvas/         # Iframe wrapper for visual editing
 │   │   ├── CodeEditor/     # Monaco editor wrapper
 │   │   ├── Inspector/      # Property/style panel (~20 sub-components)
+│   │   │   └── FontPickerField.tsx  # Per-block font dropdown (button trigger + portal)
 │   │   ├── ThemeEditor/    # Visual theme editor (colors, typography, etc.)
+│   │   │   ├── FontManager.tsx           # Import custom font files (.ttf/.otf/.woff/.woff2)
+│   │   │   └── TypographyFontPicker.tsx  # Theme-level font dropdown (button trigger + portal)
 │   │   ├── Sidebar/        # Block library + page tree
 │   │   ├── Toolbar/        # Action buttons
 │   │   ├── CommandPalette/ # Cmd+K search
@@ -153,7 +156,7 @@ src/
 ```
 
 **Key patterns:**
-- **IPC bridge** — The preload script (`preload/index.ts`) exposes a typed `window.api` object with namespaces: `project`, `assets`, `autosave`, `menu`, `app`, `ai`, `mediaSearch`.
+- **IPC bridge** — The preload script (`preload/index.ts`) exposes a typed `window.api` object with namespaces: `project`, `assets`, `autosave`, `menu`, `app`, `ai`, `mediaSearch`, `fonts`.
 - **Block-based model** — The UI is a tree of `Block` objects, not direct DOM manipulation. Blocks have `id`, `type`, `props`, `styles`, `classes`, `events`, `children`.
 - **Bidirectional sync** — `blockToHtml` and `htmlToBlocks` keep the visual canvas and code editor in sync.
 - **Canvas isolation** — The live preview runs in an iframe. The renderer and iframe communicate via `postMessage`.
@@ -179,6 +182,21 @@ interface Block {
 }
 ```
 
+### FontAsset
+
+```typescript
+interface FontAsset {
+  id: string           // uuid generated on import
+  name: string         // CSS font-family name (e.g. "MyFont")
+  relativePath: string // path inside project dir (e.g. "assets/fonts/MyFont.woff2")
+  format: string       // 'ttf' | 'otf' | 'woff' | 'woff2'
+  weight?: string      // CSS font-weight (default '400')
+  style?: string       // 'normal' | 'italic' (default 'normal')
+}
+```
+
+FontAssets are stored in `state.fonts` (top-level in projectStore, not nested under `settings`). System fonts have an empty `relativePath` and are resolved by CSS name only.
+
 ### Project File (`.json`)
 
 ```typescript
@@ -190,6 +208,7 @@ interface Block {
     theme: ProjectTheme
     themeVariants?: ProjectThemeVariants
     customCss?: string
+    fonts?: FontAsset[]  // persisted font definitions
   }
   pages: Page[]          // each has id, title, slug, blocks[], meta
   folders: PageFolder[]  // organisational grouping
@@ -271,6 +290,7 @@ API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an
 | `ai` | `chat`, `getConfig`, `setConfig`, `getModels`, `fetchModelsForProvider` |
 | `mediaSearch` | `getConfig`, `setConfig`, `search`, `downloadAndImport` |
 | `publish` | `getProviders`, `getCredentials`, `saveCredentials`, `deleteCredentials`, `validate`, `publish` + `publish:progress` event |
+| `fonts` | `listSystem`, `importFile`, `copySystemFont`, `deleteFont`, `listProject` |
 
 **Canvas ↔ Renderer:** `postMessage` with `source: 'canvas-runtime'` and types: `clicked`, `contextMenu`, `moveBlock`, `updateText`, `keydown`, `hovered`.
 
@@ -327,6 +347,61 @@ Each block's props are typed using one of these PropTypes (defined in `src/rende
 - **measurement** — CSS measurement input (e.g., "10px", "1rem") (new in v1.8.0)
 - **sortable-list** — Array with drag-and-drop reordering capability (new in v1.8.0)
 - **object** — Structured key-value pairs (new in v1.8.0)
+- **font-picker** — Per-block font family override; renders as `FontPickerField` (button trigger + portal dropdown showing all fonts in their own typeface)
+
+---
+
+## 13a. Font Management System
+
+Added in v1.9.0. Provides project-level and per-block font control with automatic bundling on export.
+
+### Data Model
+
+Font assets are stored as `FontAsset[]` in `projectStore.fonts` (hydrated from `settings.fonts` on project load). Each font has a `relativePath` pointing to `assets/fonts/<filename>` inside the project directory. System/web fonts have an empty `relativePath` and are applied by CSS name only.
+
+### @font-face Generation
+
+`themeToCSS()` in `src/renderer/store/types.ts` iterates `projectStore.fonts` and generates `@font-face` declarations for all fonts that have a `relativePath`. Fonts without a path (system stacks, Google Fonts by name) are skipped — they resolve via the browser's normal font resolution mechanism.
+
+### Font Pickers (UI)
+
+Two visual picker components, both using a **button trigger + ReactDOM portal dropdown** pattern to escape `overflow:hidden` parent containers:
+
+- **`ThemeEditor/TypographyFontPicker.tsx`** — Theme-wide body/heading font. Trigger shows `Aa` + font name in selected face.
+- **`Inspector/FontPickerField.tsx`** — Per-block override (registered prop type `font-picker`). Same visual design.
+
+Both components:
+- Show all available fonts (imported + curated presets) immediately on click
+- Have an inline search bar to filter the list
+- Render each option's name in that font's own typeface
+- Require no clearing to switch fonts — the trigger is always a button, never a text input
+
+### FontManager Tab
+
+`ThemeEditor/FontManager.tsx` provides the "Fonts" tab within the Theme Editor. It is an **import-only** interface — users import `.ttf`, `.otf`, `.woff`, or `.woff2` files. System fonts and Google Fonts are typed directly in the Typography picker.
+
+Each imported font card shows a **"✓ Included in export"** badge to communicate automatic bundling.
+
+### Export Bundling
+
+The export engine (`src/renderer/utils/exportEngine.ts`) automatically:
+1. Iterates `project.projectSettings.fonts`
+2. Copies each font file to `<output>/assets/fonts/`
+3. Generates `@font-face` CSS with the correct relative path
+
+No manual export step is required.
+
+### IPC Handlers
+
+All font IPC handlers are in `src/main/index.ts` under the `fonts:` prefix. The preload bridge exposes them under `window.api.fonts`.
+
+| Channel | Description |
+|---------|-------------|
+| `fonts:listSystem` | Returns system-installed font names |
+| `fonts:importFile` | Opens file picker → copies font to project `assets/fonts/` |
+| `fonts:copySystemFont` | Copies a system font file into the project |
+| `fonts:deleteFont` | Removes a font file and its `FontAsset` entry |
+| `fonts:listProject` | Lists all `FontAsset` entries for the current project |
 
 ---
 
@@ -411,4 +486,4 @@ If you need deeper context, start with these:
 
 ---
 
-*Last updated: 2026-04-17*
+*Last updated: 2026-04-21*

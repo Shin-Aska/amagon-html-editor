@@ -10,7 +10,8 @@ import type {
   CssFile,
   PageThemeMode,
   PageThemePreviewMode,
-  ProjectThemeVariants
+  ProjectThemeVariants,
+  FontAsset
 } from './types'
 import {
   generateBlockId,
@@ -30,6 +31,7 @@ interface ProjectState {
   folders: PageFolder[]
   userBlocks: UserBlock[]
   customPresets: ProjectTheme[]  // user-created custom theme presets
+  fonts: FontAsset[]
   metaKeyCounts: Record<string, number>
   uniqueMetaKeys: string[]
   currentPageId: string | null
@@ -65,6 +67,11 @@ interface ProjectActions {
   addCustomPreset: (preset: ProjectTheme) => void
   updateCustomPreset: (name: string, patch: Partial<ProjectTheme>) => void
   deleteCustomPreset: (name: string) => void
+
+  // Font management
+  addFonts: (assets: FontAsset[]) => void
+  removeFont: (id: string) => void
+  setFonts: (assets: FontAsset[]) => void
 
   // CSS file management
   addCssFile: (name: string) => CssFile
@@ -212,6 +219,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     folders: [],
     userBlocks: [],
     customPresets: [],
+    fonts: [],
     metaKeyCounts: initialMetaCounts,
     uniqueMetaKeys: sortedMetaKeysFromCounts(initialMetaCounts),
     currentPageId: defaultPage.id,
@@ -271,6 +279,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         folders: data.folders || [],
         userBlocks: data.userBlocks || [],
         customPresets: data.customPresets || [],
+        fonts: data.projectSettings?.fonts || [],
         metaKeyCounts: counts,
         uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
         currentPageId: data.pages.length > 0 ? data.pages[0].id : null,
@@ -291,6 +300,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         folders: [],
         userBlocks: [],
         customPresets: [],
+        fonts: [],
         metaKeyCounts: counts,
         uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
         currentPageId: newDefault.id,
@@ -338,7 +348,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     getProjectData: () => {
       const state = get()
       return {
-        projectSettings: syncLegacyTheme(state.settings),
+        projectSettings: {
+          ...syncLegacyTheme(state.settings),
+          fonts: state.fonts
+        },
         pages: state.pages,
         folders: state.folders,
         userBlocks: state.userBlocks,
@@ -550,6 +563,33 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set((state) => ({
         customPresets: state.customPresets.filter((p) => p.name !== name)
       }))
+      markProjectDirty()
+    },
+
+    // ─── Font management ─────────────────────────────────────────────
+
+    addFonts: (assets) => {
+      set((state) => {
+        const next = [...state.fonts]
+        for (const asset of assets) {
+          if (!next.some((f) => f.id === asset.id)) {
+            next.push(asset)
+          }
+        }
+        return { fonts: next }
+      })
+      markProjectDirty()
+    },
+
+    removeFont: (id) => {
+      set((state) => ({
+        fonts: state.fonts.filter((f) => f.id !== id)
+      }))
+      markProjectDirty()
+    },
+
+    setFonts: (assets) => {
+      set({ fonts: assets })
       markProjectDirty()
     },
 
