@@ -1,12 +1,14 @@
 ---
-description: multi-agent planning via claude opus 4.6 with gpt-5/codex primary executors, gemini, and optional kimi k2.5
+description: multi-agent planning via claude opus 4.6 (or sonnet/gpt-5.4) with gpt-5/codex primary executors, gemini, kimi k, glm, minimax, and mimo
 auto_execution_mode: 0
 ---
 
 ## Overview
 Use this workflow when you want Claude Opus 4.6 to design the overall plan, then hand off each task to the agent best suited for it.
 
-The primary executor pool is **GPT-5 / Codex** and **Gemini**. Claude Sonnet 4.6 is reserved for complex QA and architectural work only — prefer GPT or Gemini for implementation. **Kimi K2.5** is available on-demand via the `Enable Kimi` setting flag for frontend/visual coding tasks.
+The primary executor pool is **GPT-5 / Codex** and **Gemini**. Claude Sonnet 4.6 is reserved for complex QA and architectural work only — prefer GPT or Gemini for implementation. **Kimi K**, **GLM**, **MiniMax**, and **MiMo** are always available for specialized tasks.
+
+Planning can be done by **Claude Opus 4.6** (primary planner), **Claude Sonnet 4.6**, or **GPT-5.4**. Opus is planner-only and should not be assigned implementation phases.
 
 The key requirement: **Claude must output a Markdown checkbox plan** (not prose) that you can execute phase-by-phase with other agents.
 
@@ -14,28 +16,26 @@ This workflow is **plan-only**: it must end after writing the plan to `plan.md`.
 
 ## Settings / State Flags
 
-Include a `Setting:` line at the top of your task prompt to activate optional behaviours. Multiple flags can be combined:
+Include a `Setting:` line at the top of your task prompt to activate optional behaviours. Multiple flags can be combined. Both `CodexNearLimit` and `GeminiNearLimit` are **enabled by default**.
 
 ```
-Setting: Enable Kimi, Almost Limit[OpenAI, Claude]
+Setting: CodexNearLimit, GeminiNearLimit
 ```
 
-### `Enable Kimi`
-Unlocks Kimi K2.5 (via OpenCode Zen, prepaid credits). Use for frontend/visual coding, design-to-code (screenshot/Figma → React/Vue/HTML), and visual debugging. Without this flag, Kimi K2.5 must not be assigned to any phase.
+### `CodexNearLimit` *(enabled by default)*
+Signals that Codex / OpenAI quota is running low. Minimise Codex usage:
+- Avoid `GPT-5.3-Codex` and `GPT-5.4` unless no alternative can handle the task.
+- Prefer OpenCode-based agents (Kimi K, GLM, MiniMax, MiMo) for implementation phases.
+- If a Codex model is still needed, prefer `GPT-5.4-mini` or `GPT-5.2` (cheaper options).
 
-### `Almost Limit[OpenAI]`
-Signals that OpenAI API usage is approaching ~80% of quota.
-- Prefer `GPT-5.4-mini` over `GPT-5.4`, and `GPT-5.2` over `GPT-5.3-Codex`.
-- If a phase would normally use a large OpenAI model, downgrade or reassign to a Gemini or Claude model.
+### `GeminiNearLimit` *(enabled by default)*
+Signals that Gemini quota is running low. Minimise Gemini usage:
+- Avoid `Gemini 3.1 Pro High` and `Gemini 2.5 Pro` unless no alternative can handle the task.
+- Prefer OpenCode-based agents (Kimi K, GLM, MiniMax, MiMo) for implementation phases.
+- If a Gemini model is still needed, prefer lighter models: `Gemini 3 Flash`, `Gemini 3.1 Flash Lite`, `Gemini 2.5 Flash Lite`.
 
-### `Almost Limit[Claude]`
-Signals that Claude API usage is approaching ~80% of quota.
-- If `Almost Limit[OpenAI]` is **not** active: shift as much work as possible to OpenAI models (implementation AND QA).
-- QA reassignment under this flag:
-  - Simple QA → GPT-5.2
-  - Standard QA → GPT-5.3-Codex
-  - Complex QA → GPT-5.4
-- If **both** limits are active: use mini/lite models and Gemini — Claude Haiku 4.5 for Claude-side, GPT-5.4-mini for OpenAI-side, Gemini 3.1 Flash Lite / Gemini 2.5 Flash Lite for Gemini-side.
+### When both limits are active (default)
+Shift as much implementation work as possible to OpenCode-based agents (Kimi K, GLM, MiniMax, MiMo). Reserve Codex and Gemini models for tasks that genuinely require their specific strengths (e.g. complex multi-file refactors, deep architectural reasoning). Use mini/lite variants when Codex or Gemini is unavoidable.
 
 ---
 
@@ -71,19 +71,19 @@ Hard requirements (must follow exactly):
 4) Every Phase MUST specify exactly one assigned agent from the roster.
 4a) Distribute execution across multiple agents (use at least 2 different executor agents across the phases).
 4b) Apply the active Settings flags before assigning any agent:
-    - Almost Limit[OpenAI]: prefer GPT-5.4-mini and GPT-5.2; downgrade or reassign large OpenAI models.
-    - Almost Limit[Claude]: shift implementation and QA to OpenAI or Gemini models if OpenAI is not also at limit.
-    - If both limits active: mini/lite models and Gemini only on both sides.
+    - CodexNearLimit (default ON): avoid GPT-5.3-Codex and GPT-5.4; prefer OpenCode agents or mini/lite Codex.
+    - GeminiNearLimit (default ON): avoid Gemini 3.1 Pro High and Gemini 2.5 Pro; prefer OpenCode agents or lite Gemini.
+    - When both active: maximise use of OpenCode agents (Kimi K, GLM, MiniMax, MiMo); reserve Codex/Gemini for irreplaceable tasks.
 4c) Executor priority for implementation phases (follow this order unless limit flags override):
-    1st: GPT-5 / Codex models (primary executors)
-    2nd: Gemini models (UI work, component volume, and overflow)
-    3rd: Kimi K2.5 (only if "Enable Kimi" is active — frontend/visual coding only)
-    4th: Claude Sonnet 4.6 (only for tasks requiring deep architectural reasoning that GPT/Gemini cannot handle)
+    1st: OpenCode agents — Kimi K / GLM / MiniMax / MiMo (preferred when CodexNearLimit and/or GeminiNearLimit active)
+    2nd: GPT-5 / Codex models (use mini/lite variants when CodexNearLimit active)
+    3rd: Gemini models (use lite variants when GeminiNearLimit active)
+    4th: Claude Sonnet 4.6 (only for tasks requiring deep architectural reasoning that other agents cannot handle)
 4d) Claude Sonnet 4.6 usage policy:
     - Do NOT assign Sonnet to general implementation, feature development, or routine coding.
     - Sonnet is reserved for: complex architectural refactors, nuanced multi-system integration, and Standard/Complex QA.
     - If a task can be handled by GPT-5.4, GPT-5.3-Codex, or Gemini 3.1 Pro High, assign it there instead of Sonnet.
-4e) QA escalation path (default — overridden by limit flags above):
+4e) QA escalation path (default — adjust when limit flags require cheaper models):
     - Simple QA (running test suites, build verification, manual smoke testing): Claude Haiku 4.5
     - Standard QA (integration testing, regression checks, code review): Claude Sonnet 4.6
     - Complex QA (architectural validation, security review, cross-cutting concerns): Claude Opus 4.6
@@ -98,7 +98,7 @@ Hard requirements (must follow exactly):
 8) Keep it actionable: no vague tasks like "improve" or "polish". Prefer file paths, components, and APIs.
 9) Every phase must only be assigned to one agent. You cannot have multiple agents working on the same phase.
 
-Active settings: [PASTE ACTIVE FLAGS HERE, e.g. "Enable Kimi, Almost Limit[OpenAI]" — or "None"]
+Active settings: [PASTE ACTIVE FLAGS HERE — defaults are "CodexNearLimit, GeminiNearLimit". Remove a flag only if that quota is comfortable.]
 
 Project context:
 [PASTE CONTEXT HERE]
@@ -106,12 +106,12 @@ Project context:
 Agent roster — always available (choose from these unless limit flags apply):
 
 Claude Pro (use sparingly — prefer GPT/Gemini for implementation):
-- Claude Opus 4.6 (Planner & Complex QA — architectural validation, security review, cross-cutting concerns)
-- Claude Sonnet 4.6 (Standard QA, complex architectural refactors ONLY — do not use for general implementation)
+- Claude Opus 4.6 (Planner & Complex QA — architectural validation, security review, cross-cutting concerns. Planner only — do not assign implementation.)
+- Claude Sonnet 4.6 (Planner, Standard QA, complex architectural refactors ONLY — do not use for general implementation)
 - Claude Haiku 4.5 (Simple QA, quick tasks, boilerplate, simple fixes, documentation)
 
 GPT-5 / Codex — OpenAI (primary executor pool):
-- GPT-5.4 (High-complexity reasoning, cross-cutting analysis, large refactors)
+- GPT-5.4 (High-complexity reasoning, cross-cutting analysis, large refactors. Can also serve as Planner.)
 - GPT-5.4-mini (Balanced general-purpose tasks, mid-complexity implementation)
 - GPT-5.3-Codex (Coding specialist — complex multi-file implementation, agentic coding)
 - GPT-5.2 (General implementation, feature development)
@@ -124,8 +124,17 @@ Gemini (always available — append "High" or "Low" effort when assigning):
 - Gemini 2.5 Flash (Fast general-purpose tasks, moderate implementation)
 - Gemini 2.5 Flash Lite (Cheapest/fastest — trivial tasks, boilerplate, formatting)
 
-[IF "Enable Kimi" was specified, also available:]
-- Kimi K2.5 via OpenCode Zen (Frontend/visual coding, design-to-code, screenshot-to-component, visual debugging)
+Kimi K via OpenCode Zen (always available):
+- Kimi K (Frontend/visual coding, design-to-code, screenshot-to-component, visual debugging)
+
+GLM (always available):
+- GLM (General-purpose implementation, reasoning, and coding tasks)
+
+MiniMax (always available):
+- MiniMax (Implementation, coding tasks, general-purpose work)
+
+MiMo (always available):
+- MiMo (Implementation, coding tasks, general-purpose work)
 
 Now produce the plan.
 ```
@@ -133,15 +142,15 @@ Now produce the plan.
 ## Agent roster & expertise
 
 ### Claude Pro (use sparingly — reserve quota for planning & QA)
-- **Claude Opus 4.6 (Planner & Complex QA)**: High-level strategy, risk analysis, coordination, architectural validation, security review, and final review for complex concerns. This is the planner — do not waste quota on implementation.
-- **Claude Sonnet 4.6 (Standard QA & architectural work ONLY)**: Reserved for complex architectural refactors, nuanced multi-system integration, integration testing, regression checks, and code review. Do NOT assign to general implementation — use GPT-5.4 or GPT-5.3-Codex instead.
+- **Claude Opus 4.6 (Planner & Complex QA)**: High-level strategy, risk analysis, coordination, architectural validation, security review, and final review for complex concerns. This is the primary planner — do not assign implementation phases.
+- **Claude Sonnet 4.6 (Planner, Standard QA & architectural work ONLY)**: Can serve as planner. Reserved for complex architectural refactors, nuanced multi-system integration, integration testing, regression checks, and code review. Do NOT assign to general implementation — use GPT-5.4 or GPT-5.3-Codex instead.
 - **Claude Haiku 4.5 (Simple QA)**: Running test suites, build verification, manual smoke testing, quick tasks, boilerplate, simple bug fixes, and documentation.
 
 ### GPT-5 / Codex — OpenAI (primary executor pool)
-- **GPT-5.4**: Highest-capability OpenAI model. Best for high-complexity reasoning, cross-cutting analysis, and large-scale refactors. Also serves as Complex QA substitute when Claude is at limit.
-- **GPT-5.4-mini**: Balanced model for general-purpose tasks and mid-complexity implementation. Preferred when `Almost Limit[OpenAI]` is active instead of GPT-5.4.
-- **GPT-5.3-Codex**: Coding specialist. Best for complex multi-file implementation and agentic coding tasks. Primary choice for implementation phases.
-- **GPT-5.2**: Solid general-purpose model for feature development and standard implementation work. Lightweight alternative when conserving OpenAI quota.
+- **GPT-5.4**: Highest-capability OpenAI model. Best for high-complexity reasoning, cross-cutting analysis, and large-scale refactors. Can also serve as planner. Also serves as Complex QA substitute when Claude is at limit. Avoid when `CodexNearLimit` is active unless irreplaceable.
+- **GPT-5.4-mini**: Balanced model for general-purpose tasks and mid-complexity implementation. Preferred over GPT-5.4 when `CodexNearLimit` is active.
+- **GPT-5.3-Codex**: Coding specialist. Best for complex multi-file implementation and agentic coding tasks. Avoid when `CodexNearLimit` is active — prefer OpenCode agents instead.
+- **GPT-5.2**: Solid general-purpose model for feature development and standard implementation work. Cheapest Codex option when quota is tight.
 
 ### Gemini (always available)
 Models are available via Gemini CLI or Antigravity (separate quotas). Append effort level (High/Low) when assigning Gemini 3.1 Pro to indicate reasoning depth vs. speed.
@@ -153,8 +162,17 @@ Models are available via Gemini CLI or Antigravity (separate quotas). Append eff
 - **Gemini 2.5 Flash**: Fast general-purpose tasks and moderate implementation. Good balance of speed and capability.
 - **Gemini 2.5 Flash Lite**: Cheapest/fastest option for trivial tasks, boilerplate, and formatting.
 
-### Kimi K2.5 via OpenCode Zen (opt-in via `Enable Kimi` setting)
-- **Kimi K2.5**: Frontend/visual coding specialist. Design-to-code (screenshot/Figma → React/Vue/HTML), visual debugging (renders output and self-corrects), and UX polish. Accessed via OpenCode Zen prepaid credits — use when visual coding tasks would benefit from native multimodal understanding. When handing off design work, attach screenshots or design references directly.
+### Kimi K via OpenCode Zen (always available)
+- **Kimi K**: Frontend/visual coding specialist. Design-to-code (screenshot/Figma → React/Vue/HTML), visual debugging (renders output and self-corrects), and UX polish. Accessed via OpenCode Zen prepaid credits — use when visual coding tasks would benefit from native multimodal understanding. When handing off design work, attach screenshots or design references directly.
+
+### GLM (always available)
+- **GLM**: General-purpose model for implementation, reasoning, and coding tasks. Capable of handling a wide range of development work.
+
+### MiniMax (always available)
+- **MiniMax**: General-purpose model for implementation and coding tasks.
+
+### MiMo (always available)
+- **MiMo**: General-purpose model for implementation and coding tasks.
 
 ---
 
@@ -163,7 +181,7 @@ Models are available via Gemini CLI or Antigravity (separate quotas). Append eff
 - Include links to PRs, commits, or files when briefing agents.
 - Always echo active Settings flags at the top of each handoff prompt.
 - Note blocking issues immediately so Claude can replan if necessary.
-- When handing off to Kimi K2.5, attach screenshots or design references directly — it excels at visual-to-code when given visual input.
+- When handing off to Kimi K, attach screenshots or design references directly — it excels at visual-to-code when given visual input.
 
 ## Completion criteria
 - Every plan step has an assigned agent, recorded outcome, and validation notes.
