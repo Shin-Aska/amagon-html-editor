@@ -1,14 +1,14 @@
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {Group as PanelGroup, Panel, Separator as PanelResizeHandle} from 'react-resizable-panels'
 import {
-  DndContext,
-  type DragCancelEvent,
-  type DragEndEvent,
-  DragOverlay,
-  type DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors
+    DndContext,
+    type DragCancelEvent,
+    type DragEndEvent,
+    DragOverlay,
+    type DragStartEvent,
+    PointerSensor,
+    useSensor,
+    useSensors
 } from '@dnd-kit/core'
 import Sidebar from './components/Sidebar/Sidebar'
 import Canvas from './components/Canvas/Canvas'
