@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import './StyleEditor.css'
 import FontPickerField from './FontPickerField'
 
@@ -8,6 +9,11 @@ interface StyleEditorProps {
 
 const SIZE_UNITS = ['px', 'pt', 'rem', 'em', '%', 'vw', 'vh'] as const
 
+function isSimpleMeasurement(val?: string): boolean {
+  if (!val) return true
+  return /^[\d.]+\s*(px|pt|rem|em|%|vw|vh)$/.test(val)
+}
+
 function parseMeasurement(val?: string): { num: string; unit: string } {
   if (!val) return { num: '', unit: 'px' }
   const match = val.match(/^([\d.]+)\s*(px|pt|rem|em|%|vw|vh)$/)
@@ -16,6 +22,10 @@ function parseMeasurement(val?: string): { num: string; unit: string } {
 }
 
 export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.Element {
+  const [fontSizeMode, setFontSizeMode] = useState<'simple' | 'complex'>(() =>
+    isSimpleMeasurement(styles.fontSize) ? 'simple' : 'complex'
+  )
+
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target
     onChange(name, value || undefined)
@@ -45,29 +55,65 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
     <div className="style-editor-section">
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Font Family</label>
+          <div className="style-label-row">
+            <label className="style-label">Font Family</label>
+            <span
+              className="style-info-btn"
+              title="Select a preset font, type a custom font name, or enter a full CSS font stack."
+            >?</span>
+          </div>
           <FontPickerField
             value={styles.fontFamily || ''}
             onChange={(v) => onChange('fontFamily', v || undefined)}
           />
         </div>
         <div className="style-col">
-          <label className="style-label">Size</label>
-          <div className="style-measurement-group">
+          <div className="style-label-row">
+            <label className="style-label">Size</label>
+            <div className="style-mode-toggle">
+              <button
+                type="button"
+                className={`style-mode-btn ${fontSizeMode === 'simple' ? 'active' : ''}`}
+                onClick={() => setFontSizeMode('simple')}
+                title="Simple value"
+              >
+                123
+              </button>
+              <button
+                type="button"
+                className={`style-mode-btn ${fontSizeMode === 'complex' ? 'active' : ''}`}
+                onClick={() => setFontSizeMode('complex')}
+                title="CSS value"
+              >
+                {'{}'}
+              </button>
+            </div>
+          </div>
+          {fontSizeMode === 'simple' ? (
+            <div className="style-measurement-group">
+              <input
+                className="inspector-input"
+                type="number"
+                step="0.1"
+                value={fontSizeParsed.num}
+                onChange={handleFontSizeNumChange}
+                placeholder="16"
+              />
+              <select className="inspector-select" value={fontSizeParsed.unit} onChange={handleFontSizeUnitChange}>
+                {SIZE_UNITS.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
             <input
               className="inspector-input"
-              type="number"
-              step="0.1"
-              value={fontSizeParsed.num}
-              onChange={handleFontSizeNumChange}
-              placeholder="16"
+              type="text"
+              value={styles.fontSize || ''}
+              onChange={(e) => onChange('fontSize', e.target.value || undefined)}
+              placeholder="e.g. clamp(2.5rem, 5vw, 4rem)"
             />
-            <select className="inspector-select" value={fontSizeParsed.unit} onChange={handleFontSizeUnitChange}>
-              {SIZE_UNITS.map((u) => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </select>
-          </div>
+          )}
         </div>
       </div>
       <div className="style-row">

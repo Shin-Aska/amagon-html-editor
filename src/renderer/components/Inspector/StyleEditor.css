@@ -67,3 +67,61 @@
 .style-measurement-group select {
   flex: 1;
 }
+
+.style-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.style-mode-toggle {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.style-mode-btn {
+  background: var(--color-bg-primary);
+  border: none;
+  border-right: 1px solid var(--color-border);
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.style-mode-btn:last-child {
+  border-right: none;
+}
+
+.style-mode-btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.style-mode-btn.active {
+  background: var(--color-accent);
+  color: white;
+}
+
+.style-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: help;
+  transition: all 0.2s;
+}
+
+.style-info-btn:hover {
+  background: var(--color-accent);
+  color: white;
+}
