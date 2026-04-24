@@ -54,3 +54,16 @@
   background: var(--color-accent);
   color: white;
 }
+
+.style-measurement-group {
+  display: flex;
+  gap: 8px;
+}
+
+.style-measurement-group input {
+  flex: 2;
+}
+
+.style-measurement-group select {
+  flex: 1;
+}

@@ -5,10 +5,39 @@ interface StyleEditorProps {
   onChange: (key: string, value: string | undefined) => void
 }
 
+const SIZE_UNITS = ['px', 'rem', 'em', '%', 'vw', 'vh'] as const
+
+function parseMeasurement(val?: string): { num: string; unit: string } {
+  if (!val) return { num: '', unit: 'px' }
+  const match = val.match(/^([\d.]+)\s*(px|rem|em|%|vw|vh)$/)
+  if (match) return { num: match[1], unit: match[2] }
+  return { num: val.replace(/\D/g, '') || '', unit: 'px' }
+}
+
 export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target
     onChange(name, value || undefined)
+  }
+
+  const fontSizeParsed = parseMeasurement(styles.fontSize)
+
+  const handleFontSizeNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const num = e.target.value
+    if (!num) {
+      onChange('fontSize', undefined)
+      return
+    }
+    onChange('fontSize', `${num}${fontSizeParsed.unit}`)
+  }
+
+  const handleFontSizeUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const unit = e.target.value
+    if (!fontSizeParsed.num) {
+      onChange('fontSize', undefined)
+      return
+    }
+    onChange('fontSize', `${fontSizeParsed.num}${unit}`)
   }
 
   return (
@@ -28,6 +57,24 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
             <option value="system-ui, -apple-system, sans-serif">System UI</option>
           </select>
         </div>
+        <div className="style-col">
+          <label className="style-label">Size</label>
+          <div className="style-measurement-group">
+            <input
+              className="inspector-input"
+              type="number"
+              step="0.1"
+              value={fontSizeParsed.num}
+              onChange={handleFontSizeNumChange}
+              placeholder="16"
+            />
+            <select className="inspector-select" value={fontSizeParsed.unit} onChange={handleFontSizeUnitChange}>
+              {SIZE_UNITS.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
       <div className="style-row">
         <div className="style-col">
@@ -46,21 +93,15 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
           </select>
         </div>
         <div className="style-col">
-          <label className="style-label">Size</label>
-          <input className="inspector-input" type="text" name="fontSize" value={styles.fontSize || ''} onChange={handleChange} placeholder="e.g. 16px, 1rem" />
-        </div>
-      </div>
-      <div className="style-row">
-        <div className="style-col">
           <label className="style-label">Line Height</label>
           <input className="inspector-input" type="text" name="lineHeight" value={styles.lineHeight || ''} onChange={handleChange} placeholder="e.g. 1.5, 24px" />
         </div>
+      </div>
+      <div className="style-row">
         <div className="style-col">
           <label className="style-label">Letter Spacing</label>
           <input className="inspector-input" type="text" name="letterSpacing" value={styles.letterSpacing || ''} onChange={handleChange} placeholder="e.g. 1px, 0.1em" />
         </div>
-      </div>
-      <div className="style-row">
         <div className="style-col">
           <label className="style-label">Color</label>
           <div className="color-picker-wrapper">
@@ -74,7 +115,7 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
           <label className="style-label">Align</label>
           <div className="button-group">
             {['left', 'center', 'right', 'justify'].map(align => (
-              <button 
+              <button
                 key={align}
                 className={`btn-toggle ${styles.textAlign === align ? 'active' : ''}`}
                 onClick={() => onChange('textAlign', styles.textAlign === align ? undefined : align)}
