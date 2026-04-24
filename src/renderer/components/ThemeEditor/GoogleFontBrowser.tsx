@@ -8,6 +8,10 @@ import './GoogleFontBrowser.css';
 const CATEGORIES = ['All', 'sans-serif', 'serif', 'display', 'handwriting', 'monospace'];
 const RESULTS_PER_PAGE = 8;
 
+function getScopedPreviewFontId(family: string): string {
+  return `__gfont_preview_${family.replace(/\s+/g, '_')}`;
+}
+
 export default function GoogleFontBrowser(): JSX.Element {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
@@ -43,32 +47,51 @@ export default function GoogleFontBrowser(): JSX.Element {
   const visibleStartIndex = visibleEndIndex - RESULTS_PER_PAGE;
   const visibleFonts = filteredFonts.slice(visibleStartIndex, visibleEndIndex);
 
-  // Inject stylesheets for visible fonts
   useEffect(() => {
-    const injectedUrls = new Set<string>();
+    const injectedIds = new Set<string>();
+    const abortControllers: AbortController[] = [];
 
     visibleFonts.forEach((font) => {
       const regularVariant = font.variants.find((v) => v.weight === '400') || font.variants[0];
       const url = getGoogleFontPreviewUrl(font.family, regularVariant.weight, regularVariant.style);
+      const previewId = getScopedPreviewFontId(font.family);
 
-      // Check if already injected
-      if (!document.querySelector(`link[href="${url}"]`)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = url;
-        link.setAttribute('data-gfont-preview', 'true');
-        document.head.appendChild(link);
+      if (document.getElementById(previewId)) {
+        injectedIds.add(previewId);
+        return;
       }
-      injectedUrls.add(url);
+
+      const controller = new AbortController();
+      abortControllers.push(controller);
+
+      fetch(url, { signal: controller.signal })
+        .then((res) => res.text())
+        .then((css) => {
+          const escapedFamily = font.family.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const scopedCss = css.replace(
+            new RegExp(`font-family:\\s*['"]?${escapedFamily}['"]?`, 'g'),
+            `font-family: "${previewId}"`
+          );
+
+          const style = document.createElement('style');
+          style.id = previewId;
+          style.setAttribute('data-gfont-preview', 'true');
+          style.textContent = scopedCss;
+          document.head.appendChild(style);
+          injectedIds.add(previewId);
+        })
+        .catch((err) => {
+          if (err.name !== 'AbortError') {
+            console.warn(`Failed to load font preview for ${font.family}:`, err);
+          }
+        });
     });
 
     return () => {
-      // Remove ALL gfont preview links that are not in the current visible set
-      // This ensures no accumulation when paginating or on unmount
-      document.querySelectorAll('link[data-gfont-preview="true"]').forEach((el) => {
-        const link = el as HTMLLinkElement;
-        if (!injectedUrls.has(link.href)) {
-          link.parentNode?.removeChild(link);
+      abortControllers.forEach((ctrl) => ctrl.abort());
+      document.querySelectorAll('style[data-gfont-preview="true"]').forEach((el) => {
+        if (!injectedIds.has(el.id)) {
+          el.parentNode?.removeChild(el);
         }
       });
     };
@@ -195,7 +218,7 @@ export default function GoogleFontBrowser(): JSX.Element {
                 <div
                   className="theme-font-preview"
                   style={{
-                    fontFamily: `"${font.family}", sans-serif`,
+                    fontFamily: `"${getScopedPreviewFontId(font.family)}", sans-serif`,
                     fontWeight: regularVariant.weight,
                     fontStyle: regularVariant.style,
                   }}
