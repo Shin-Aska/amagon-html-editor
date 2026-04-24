@@ -2,14 +2,14 @@ import {createHash, createHmac} from 'crypto'
 import type {
     CredentialField,
     ExportedFile,
+    PublisherExtension,
     PublishCredentials,
     PublishProgress,
     PublishResult,
     ValidationIssue,
     ValidationResult
-} from '../../types/index'
-import {PUBLISHER_EXTENSION_API_VERSION} from '../../types/index'
-import type {PublisherExtension} from '../../types/PublisherExtension'
+} from '../../types'
+import {PUBLISHER_EXTENSION_API_VERSION} from '../../types'
 import {validateForAwsS3} from '../../validators/awsS3Validator'
 import {makeError} from '../../validators/validationHelpers'
 

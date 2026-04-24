@@ -254,8 +254,15 @@ export function isRenderableGlyph(value: string): boolean {
     if (trimmed.startsWith('lucide:')) return true;
     if (trimmed.startsWith('bi-')) return false;
     if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(trimmed)) return false;
-    if (trimmed === '☐' || trimmed === '☑' || trimmed === '▢' || trimmed === '▣' || trimmed === '▭' || trimmed === '🔲' || trimmed === '🔳') return false;
-    return true
+    return !(
+        trimmed === '☐' ||
+        trimmed === '☑' ||
+        trimmed === '▢' ||
+        trimmed === '▣' ||
+        trimmed === '▭' ||
+        trimmed === '🔲' ||
+        trimmed === '🔳'
+    )
 }
 
 const dynamicImportsMap = dynamicIconImports as Record<string, () => Promise<{ default: LucideIcon }>>;

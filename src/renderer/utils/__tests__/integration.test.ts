@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it} from 'vitest'
 import {useEditorStore} from '../../store/editorStore'
 import {useProjectStore} from '../../store/projectStore'
 import {type Block, createBlock, createDefaultTheme, type ProjectData} from '../../store/types'
-import {exportProject} from '../../utils/exportEngine'
+import {exportProject} from '../exportEngine'
 
 /**
  * Integration tests for core workflows.

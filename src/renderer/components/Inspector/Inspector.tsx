@@ -201,7 +201,6 @@ function getArrayEditorConfig(blockType: string, key: string): ArrayEditorConfig
 
 function Inspector(): JSX.Element {
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
-    const blocks = useEditorStore((s) => s.blocks);
     const getBlockById = useEditorStore((s) => s.getBlockById);
     const updateBlock = useEditorStore((s) => s.updateBlock);
 

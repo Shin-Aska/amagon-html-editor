@@ -2,15 +2,15 @@ import {zipSync} from 'fflate'
 import type {
     CredentialField,
     ExportedFile,
+    PublisherExtension,
     ProviderMeta,
     PublishCredentials,
     PublishProgress,
     PublishResult,
     ValidationIssue,
     ValidationResult
-} from '../../types/index'
-import {PUBLISHER_EXTENSION_API_VERSION} from '../../types/index'
-import type {PublisherExtension} from '../../types/PublisherExtension'
+} from '../../types'
+import {PUBLISHER_EXTENSION_API_VERSION} from '../../types'
 import {validateForCloudflarePages} from '../../validators/cloudflareValidator'
 
 const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4';

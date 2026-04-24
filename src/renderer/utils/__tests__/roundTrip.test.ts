@@ -10,18 +10,6 @@ import {createBlock} from '../../store/types'
  * IDs are regenerated on parse, so we compare structure only.
  */
 
-function stripIds(blocks: Block[]): unknown[] {
-    return blocks.map((b) => ({
-        type: b.type,
-        tag: b.tag,
-        props: b.props,
-        styles: b.styles,
-        classes: b.classes,
-        content: b.content,
-        children: stripIds(b.children)
-    }))
-}
-
 describe('round-trip: blocks → HTML → blocks', () => {
     it('preserves a simple heading', () => {
         const original: Block[] = [

@@ -522,7 +522,7 @@ The tutorial overlay must sit **above** context menus and drag overlays:
 
 The tutorial overlay and info box use CSS variables so they respond to the `.dark` class on `document.body`:
 
-```css
+```text
 .tutorial-info-box {
   background: var(--tutorial-bg, #ffffff);
   color: var(--tutorial-fg, #111827);

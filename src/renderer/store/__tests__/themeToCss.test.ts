@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {createDefaultTheme, themeToCSS} from '../../store/types'
+import {createDefaultTheme, themeToCSS} from '../types'
 
 describe('themeToCSS', () => {
     it('emits a baseline heading size scale so H1-H6 are visually distinct', () => {

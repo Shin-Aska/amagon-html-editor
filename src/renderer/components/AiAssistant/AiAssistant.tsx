@@ -21,6 +21,8 @@ interface ParsedAiResponse {
     blocks: Block[] | null
 }
 
+const BOOTSTRAP_PREVIEW_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+
 function stripCopilotCliDecorations(content: string): string {
     return content
         .replace(/^\s*●\s?/, '')
@@ -173,11 +175,11 @@ function BlockPreview({blocks}: { blocks: Block[] }): JSX.Element {
     const html = useMemo(() => blockToHtml(blocks), [blocks]);
 
     const previewDoc = useMemo(() => `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="${BOOTSTRAP_PREVIEW_CSS_URL}" rel="stylesheet">
 <style id="hoarses-theme-css">
 ${themeCss}
 </style>
@@ -187,8 +189,8 @@ ${themeCss}
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background: var(--theme-bg);
-        font-family: var(--theme-font-family);
+        background: var(--theme-bg, #ffffff);
+        font-family: var(--theme-font-family, sans-serif);
     }
     body { padding: 12px; }
     img { max-width: 100%; height: auto; }
@@ -402,7 +404,7 @@ const SUGGESTIONS = [
 ];
 
 export default function AiAssistant(): JSX.Element {
-    const {messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig} = useAiStore();
+    const {messages, isLoading, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig} = useAiStore();
     const {hasConfiguredAiProvider} = useAiAvailability();
     const addBlock = useEditorStore((s) => s.addBlock);
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);

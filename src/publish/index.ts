@@ -16,8 +16,6 @@ export type {
 
 export {PUBLISHER_EXTENSION_API_VERSION} from './types/index'
 
-export type {PublisherExtension} from './types/PublisherExtension'
-
 // Registry
 export {
     registerPublisher,

@@ -16,8 +16,6 @@ interface PageModalProps {
     onCancel: () => void
 }
 
-const DEFAULT_META_KEYS = ['description', 'charset', 'viewport', 'author', 'keywords', 'robots', 'datePublished'];
-
 function formatDateYYYYMMDD(d: Date): string {
     return d.toISOString().slice(0, 10)
 }
@@ -39,7 +37,7 @@ export default function PageModal({
     const [tagsInput, setTagsInput] = useState(initialTags.join(', '));
     const [pathInput, setPathInput] = useState(initialPath);
     const [description, setDescription] = useState(initialDescription);
-    const [fullWidthFormControls, setFullWidthFormControls] = useState(initialFullWidthFormControls !== false);
+    const [fullWidthFormControls, setFullWidthFormControls] = useState(initialFullWidthFormControls);
     const [metaEntries, setMetaEntries] = useState<Array<{ key: string; value: string }>>(() => {
         const entries = Object.entries(initialMeta)
             .filter(([k]) => k !== 'description') // description has its own field

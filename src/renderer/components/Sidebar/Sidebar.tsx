@@ -29,8 +29,15 @@ function WidgetItem({widget, onContextMenu}: {
         if (!s) return true;
         if (s.startsWith('lucide:')) return false;
         if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true;
-        if (s === '☐' || s === '☑' || s === '▢' || s === '▣' || s === '▭' || s === '🔲' || s === '🔳') return true;
-        return false
+        return (
+            s === '☐' ||
+            s === '☑' ||
+            s === '▢' ||
+            s === '▣' ||
+            s === '▭' ||
+            s === '🔲' ||
+            s === '🔳'
+        )
     };
 
     const style = transform ? {} : undefined;

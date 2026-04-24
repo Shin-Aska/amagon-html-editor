@@ -67,3 +67,5 @@ export interface ProviderMeta {
     websiteUrl: string
     description: string
 }
+
+export type {PublisherExtension} from './PublisherExtension'

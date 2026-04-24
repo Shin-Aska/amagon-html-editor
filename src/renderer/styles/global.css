@@ -27,6 +27,39 @@
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
+
+    /* Legacy editor token aliases retained for older component stylesheets */
+    --bg-primary: var(--color-bg-primary);
+    --bg-secondary: var(--color-bg-secondary);
+    --bg-tertiary: var(--color-bg-surface);
+    --border-color: var(--color-border);
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --accent-color: var(--color-accent);
+    --bg: var(--color-bg-surface);
+    --border: var(--color-border);
+    --text: var(--color-text-primary);
+    --primary: var(--color-accent);
+
+    /* Shared semantic helpers used by a few focused styles */
+    --color-text: var(--color-text-primary);
+    --color-border-hover: var(--color-accent);
+    --color-danger-bg: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    --color-accent-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
+
+    /* Baseline theme variables for preview/export helpers */
+    --theme-primary: var(--color-accent);
+    --theme-secondary: var(--color-accent-hover);
+    --theme-accent: var(--color-accent);
+    --theme-bg: var(--color-bg-primary);
+    --theme-surface: var(--color-bg-surface);
+    --theme-text: var(--color-text-primary);
+    --theme-text-muted: var(--color-text-muted);
+    --theme-border: var(--color-border);
+    --theme-font-family: var(--font-family);
+    --theme-heading-font-family: var(--font-family);
+    --theme-close-filter: none;
 }
 
 /* Dark Theme Override */
@@ -60,7 +93,7 @@ body,
 }
 
 body {
-    font-family: var(--font-family);
+    font-family: var(--font-family, sans-serif);
     font-size: 13px;
     color: var(--color-text-primary);
     background: var(--color-bg-primary);

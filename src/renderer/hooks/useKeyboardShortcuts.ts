@@ -34,26 +34,6 @@ function cloneBlockTree(block: Block): Block {
     return newBlock
 }
 
-// Find parent of a block
-function findParent(blocks: Block[], targetId: string): Block | null {
-    const findInChildren = (parent: Block, targetId: string): Block | null => {
-        for (const child of parent.children) {
-            if (child.id === targetId) return parent;
-            const found = findInChildren(child, targetId);
-            if (found) return found
-        }
-        return null
-    };
-
-    for (const block of blocks) {
-        if (block.id === targetId) return null; // Top-level block
-        const found = findInChildren(block, targetId);
-        if (found) return found
-    }
-
-    return null
-}
-
 // Get siblings of a block
 function getSiblings(blocks: Block[], blockId: string): Block[] | null {
     for (const block of blocks) {

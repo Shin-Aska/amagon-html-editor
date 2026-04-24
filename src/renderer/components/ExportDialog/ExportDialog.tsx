@@ -54,11 +54,10 @@ export default function ExportDialog({onClose}: ExportDialogProps): JSX.Element 
     }, [getProjectData]);
 
     useEffect(() => {
-        const cleanup = api.project.onExportProgress((data) => {
+        return api.project.onExportProgress((data) => {
             setProgressWritten(data.written);
             setProgressTotal(data.total)
-        });
-        return cleanup
+        })
     }, []);
 
     const handleExport = async (): Promise<void> => {

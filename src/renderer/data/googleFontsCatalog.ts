@@ -20,13 +20,9 @@ export const googleFontsCatalog: GoogleFontMeta[] = catalog;
  */
 export function getGoogleFontPreviewUrl(family: string, weight: string = '400', style: string = 'normal'): string {
     const encodedFamily = family.replace(/ /g, '+');
-    let variantString = '';
-
-    if (style === 'italic') {
-        variantString = `ital,wght@1,${weight}`;
-    } else {
-        variantString = `wght@${weight}`;
-    }
+    const variantString = style === 'italic'
+        ? `ital,wght@1,${weight}`
+        : `wght@${weight}`;
 
     return `https://fonts.googleapis.com/css2?family=${encodedFamily}:${variantString}&display=swap`;
 }

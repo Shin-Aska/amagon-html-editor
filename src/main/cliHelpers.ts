@@ -303,7 +303,7 @@ function resolveWindowsNodeShim(binary: string): { binary: string; argsPrefix: s
             const basename = path.basename(normalized);
             return !/^%.*%$/.test(normalized)
                 && !/^(?:node|node\.exe)$/i.test(basename)
-                && /\.(?:[cm]?js)$/i.test(basename)
+                && /\.[cm]?js$/i.test(basename)
         });
         if (!scriptToken) continue;
 

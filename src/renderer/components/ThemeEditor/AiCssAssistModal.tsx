@@ -201,7 +201,7 @@ function extractJsonLikeStringField(jsonLike: string, fieldName: string): string
         }
         if (ch === '"') {
             const remainder = jsonLike.slice(index + 1);
-            if (/^\s*(?:,|\})/.test(remainder)) {
+            if (/^\s*[,}]/.test(remainder)) {
                 return decodeJsonLikeString(value).trim()
             }
         }

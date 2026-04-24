@@ -67,6 +67,12 @@ const GENERIC_FONTS = new Set([
     'trebuchet ms'
 ]);
 
+const EXPORT_STYLESHEET_HREF = './styles.css'
+const BOOTSTRAP_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+const BOOTSTRAP_ICONS_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
+const BOOTSTRAP_EXPORT_JS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
+const TAILWIND_EXPORT_JS_URL = 'https://cdn.tailwindcss.com'
+
 export async function exportProject(
     project: ProjectData,
     options: ExportEngineOptions = {}
@@ -235,11 +241,10 @@ function sanitizeProps(props: Record<string, unknown>): Record<string, unknown> 
 
 function sanitizeClasses(classes: string[]): string[] {
     return classes.filter((c) => {
-        if (!c) return false;
-        if (c.startsWith('html-editor-')) return false;
-        if (c.startsWith('editor-')) return false;
-        if (c.startsWith('canvas-')) return false;
-        return true
+        return Boolean(c)
+            && !c.startsWith('html-editor-')
+            && !c.startsWith('editor-')
+            && !c.startsWith('canvas-')
     })
 }
 
@@ -436,9 +441,7 @@ function looksLikeAssetUrl(url: string, keyHint?: string): boolean {
 
     if (!keyLooksLikeUrlTarget) return false;
 
-    if (/\.(png|jpe?g|gif|webp|svg|bmp|ico|tiff)$/i.test(u)) return true;
-
-    return false
+    return /\.(png|jpe?g|gif|webp|svg|bmp|ico|tiff)$/i.test(u)
 }
 
 function registerAsset(originalUrl: string, ctx: BuildContext): string {
@@ -737,7 +740,7 @@ function buildPageHtml(params: {
     if (params.inlineCssText) {
         headParts.push(`    <style>\n${params.inlineCssText}\n    </style>`)
     } else if (params.includeStylesheet) {
-        headParts.push(`    <link rel="stylesheet" href="./styles.css">`)
+        headParts.push(`    <link rel="stylesheet" href="${EXPORT_STYLESHEET_HREF}">`)
     }
 
     // Compact head formatting: framework head already contains newlines
@@ -761,16 +764,16 @@ function getFrameworkHead(framework: FrameworkChoice, includeJs: boolean): strin
     switch (framework) {
         case 'bootstrap-5':
             return includeJs
-                ? `    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer><\/script>`
-                : `    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">`;
+                ? `    <link href="${BOOTSTRAP_EXPORT_CSS_URL}" rel="stylesheet">
+    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">
+    <script src="${BOOTSTRAP_EXPORT_JS_URL}" defer><\/script>`
+                : `    <link href="${BOOTSTRAP_EXPORT_CSS_URL}" rel="stylesheet">
+    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">`;
         case 'tailwind':
             return includeJs
-                ? `    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"><\/script>`
-                : `    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">`;
+                ? `    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">
+    <script src="${TAILWIND_EXPORT_JS_URL}"><\/script>`
+                : `    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">`;
         case 'vanilla':
         default:
             return ''

@@ -104,7 +104,7 @@ body[data-tutorial-active] .panel-resize-handle-horizontal::after {
     pointer-events: auto;
     animation: tutorial-infobox-enter 200ms ease;
     overflow: hidden;
-    will-change: left, top, opacity, transform;
+    will-change: opacity, transform;
     transition: left 300ms ease, top 300ms ease, opacity 200ms ease, transform 200ms ease, box-shadow 200ms ease;
 }
 

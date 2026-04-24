@@ -158,7 +158,7 @@ export default function WelcomeScreen(): JSX.Element {
             <div className="welcome-content">
                 <div className="welcome-header">
                     <div className="logo-container">
-                        <img src={appLogo} className="logo-icon" width={40} height={40}/>
+                        <img src={appLogo} alt="Amagon logo" className="logo-icon" width={40} height={40}/>
                         <div className="welcome-logo">Amagon</div>
                     </div>
                     <div className="welcome-subtitle">

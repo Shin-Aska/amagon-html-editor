@@ -1,6 +1,15 @@
 import {describe, expect, it} from 'vitest'
 import {htmlToBlocks} from '../htmlToBlocks'
 
+const PHOTO_SRC = 'photo.jpg'
+const SLIDE_ONE_SRC = 'slide-1.jpg'
+const SLIDE_TWO_SRC = 'slide-2.jpg'
+const HERO_SRC = 'hero.jpg'
+const VIDEO_SRC = 'clip.mp4'
+const POSTER_SRC = 'poster.jpg'
+const EDIT_ANCHOR = '#edit'
+const DELETE_ANCHOR = '#delete'
+
 describe('htmlToBlocks', () => {
     it('parses empty HTML to empty blocks', () => {
         const result = htmlToBlocks('');
@@ -48,10 +57,10 @@ describe('htmlToBlocks', () => {
     });
 
     it('parses an image', () => {
-        const result = htmlToBlocks('<img src="photo.jpg" alt="A photo" />');
+        const result = htmlToBlocks(`<img src="${PHOTO_SRC}" alt="A photo" />`);
         expect(result.blocks).toHaveLength(1);
         expect(result.blocks[0].type).toBe('image');
-        expect(result.blocks[0].props.src).toBe('photo.jpg');
+        expect(result.blocks[0].props.src).toBe(PHOTO_SRC);
         expect(result.blocks[0].props.alt).toBe('A photo')
     });
 
@@ -264,11 +273,11 @@ describe('htmlToBlocks', () => {
         </div>
         <div class="carousel-inner">
           <div class="carousel-item active">
-            <img src="slide-1.jpg" class="d-block w-100" alt="Slide 1">
+            <img src="${SLIDE_ONE_SRC}" class="d-block w-100" alt="Slide 1">
             <div class="carousel-caption d-none d-md-block"><h5>First Slide</h5></div>
           </div>
           <div class="carousel-item">
-            <img src="slide-2.jpg" class="d-block w-100" alt="Slide 2">
+            <img src="${SLIDE_TWO_SRC}" class="d-block w-100" alt="Slide 2">
           </div>
         </div>
       </div>
@@ -278,8 +287,8 @@ describe('htmlToBlocks', () => {
         expect(result.blocks[0].type).toBe('carousel');
         expect(result.blocks[0].props.id).toBe('hero-carousel');
         expect(result.blocks[0].props.slides).toEqual([
-            {src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide'},
-            {src: 'slide-2.jpg', alt: 'Slide 2', caption: ''}
+            {src: SLIDE_ONE_SRC, alt: 'Slide 1', caption: 'First Slide'},
+            {src: SLIDE_TWO_SRC, alt: 'Slide 2', caption: ''}
         ]);
         expect(result.blocks[0].props.transition).toBe('fade');
         expect(result.blocks[0].props.fade).toBe(true)
@@ -290,10 +299,10 @@ describe('htmlToBlocks', () => {
       <div id="hero-carousel" class="carousel slide">
         <div class="carousel-inner">
           <div class="carousel-item active">
-            <img src="slide-1.jpg" class="d-block w-100" alt="Slide 1" style="height: 320px; object-fit: cover;">
+            <img src="${SLIDE_ONE_SRC}" class="d-block w-100" alt="Slide 1" style="height: 320px; object-fit: cover;">
           </div>
           <div class="carousel-item">
-            <img src="slide-2.jpg" class="d-block w-100" alt="Slide 2" style="height: 320px; object-fit: cover;">
+            <img src="${SLIDE_TWO_SRC}" class="d-block w-100" alt="Slide 2" style="height: 320px; object-fit: cover;">
           </div>
         </div>
       </div>
@@ -377,9 +386,9 @@ describe('htmlToBlocks', () => {
         <button type="button" class="btn btn-secondary">Actions</button>
         <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
         <ul class="dropdown-menu">
-          <li><a class="dropdown-item" href="#edit">Edit</a></li>
+          <li><a class="dropdown-item" href="${EDIT_ANCHOR}">Edit</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item disabled" href="#delete" tabindex="-1" aria-disabled="true">Delete</a></li>
+          <li><a class="dropdown-item disabled" href="${DELETE_ANCHOR}" tabindex="-1" aria-disabled="true">Delete</a></li>
         </ul>
       </div>
     `);
@@ -454,13 +463,13 @@ describe('htmlToBlocks', () => {
     it('parses phase 3 enhanced block markup', () => {
         const result = htmlToBlocks(`
       <figure class="position-relative">
-        <a href="hero.jpg" data-amagon-lightbox="true">
-          <img class="img-fluid object-cover" src="hero.jpg" alt="Hero" loading="lazy" style="aspect-ratio: 16 / 9; object-fit: cover" />
+        <a href="${HERO_SRC}" data-amagon-lightbox="true">
+          <img class="img-fluid object-cover" src="${HERO_SRC}" alt="Hero" loading="lazy" style="aspect-ratio: 16 / 9; object-fit: cover" />
         </a>
         <figcaption class="position-absolute bottom-0 start-0 end-0">Hero caption</figcaption>
       </figure>
       <div class="ratio ratio-21x9" data-amagon-media-ratio="21:9">
-        <video class="w-100 h-100" src="clip.mp4" controls autoplay loop muted preload="metadata" poster="poster.jpg"></video>
+        <video class="w-100 h-100" src="${VIDEO_SRC}" controls autoplay loop muted preload="metadata" poster="${POSTER_SRC}"></video>
       </div>
       <button class="btn btn-outline-primary w-100 d-block"
         data-amagon-button-variant="primary"

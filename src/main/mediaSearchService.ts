@@ -296,7 +296,6 @@ export async function searchPexels(options: SearchOptions, apiKey: string): Prom
 
 export async function searchPixabay(options: SearchOptions, apiKey: string): Promise<MediaSearchResult[]> {
     const {query, perPage = 20, page = 1, type = 'image'} = options;
-    const mediaType = type === 'video' ? 'videos' : 'images';
     const url = `https://pixabay.com/api/${type === 'video' ? 'videos/' : ''}?key=${apiKey}&q=${encodeURIComponent(query)}&per_page=${perPage}&page=${page}&safesearch=true`;
 
     const response = await net.fetch(url);

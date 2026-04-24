@@ -1,14 +1,14 @@
 import {net} from 'electron'
 import type {
     ExportedFile,
+    PublisherExtension,
     PublishCredentials,
     PublishProgress,
     PublishResult,
     ValidationIssue,
     ValidationResult
-} from '../../types/index'
-import {PUBLISHER_EXTENSION_API_VERSION} from '../../types/index'
-import type {PublisherExtension} from '../../types/PublisherExtension'
+} from '../../types'
+import {PUBLISHER_EXTENSION_API_VERSION} from '../../types'
 import {validateForNeocities} from '../../validators/neocitiesValidator'
 import {makeError} from '../../validators/validationHelpers'
 

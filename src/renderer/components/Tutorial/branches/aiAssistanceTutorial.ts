@@ -2,7 +2,6 @@ import type {TutorialStep} from '../../../store/tutorialStore'
 import {useTutorialStore} from '../../../store/tutorialStore'
 import {useEditorStore} from '../../../store/editorStore'
 import {useProjectStore} from '../../../store/projectStore'
-import {getApi} from '../../../utils/api'
 import {openGlobalSettings} from '../../../utils/settingsNavigation'
 
 const ensureStandardLayout = () => {
@@ -28,17 +27,6 @@ const ensureToolbarMenuOpen = () => {
 
     if (collapsible.classList.contains('open')) return;
     toggleButton.click()
-};
-
-const hasConfiguredAiProvider = async (): Promise<boolean> => {
-    try {
-        const api = getApi();
-        const result = await api.app.getCredentials();
-        const credentials = Array.isArray(result?.credentials) ? result.credentials : [];
-        return credentials.some((credential: any) => credential?.source === 'ai' && credential?.hasKey)
-    } catch {
-        return false
-    }
 };
 
 let aiKeyLinkCleanup: (() => void) | null = null;

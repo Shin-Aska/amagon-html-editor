@@ -227,8 +227,7 @@ function CodeEditor(): JSX.Element {
         // Seed initial dynamic models
         customCssFiles.forEach(file => {
             const uri = monaco.Uri.parse(`inmemory://model/${file.id}.css`);
-            const model = monaco.editor.createModel(file.css, 'css', uri);
-            customCssModelsRef.current[file.id] = model
+            customCssModelsRef.current[file.id] = monaco.editor.createModel(file.css, 'css', uri)
         })
     };
 
@@ -343,8 +342,7 @@ function CodeEditor(): JSX.Element {
         customCssFiles.forEach(file => {
             if (!customCssModelsRef.current[file.id]) {
                 const uri = monaco.Uri.parse(`inmemory://model/${file.id}.css`);
-                const model = monaco.editor.createModel(file.css, 'css', uri);
-                customCssModelsRef.current[file.id] = model
+                customCssModelsRef.current[file.id] = monaco.editor.createModel(file.css, 'css', uri)
             } else {
                 const model = customCssModelsRef.current[file.id];
                 const msSinceType = Date.now() - (lastUserCustomCssEditAtRef.current[file.id] || 0);

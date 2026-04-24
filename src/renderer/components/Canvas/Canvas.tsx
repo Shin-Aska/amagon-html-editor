@@ -8,8 +8,7 @@ import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {blockToHtml} from '../../utils/blockToHtml'
 import type {Block} from '../../store/types'
 import {createBlock, themeToCSS} from '../../store/types'
-
-type ViewportMode = 'desktop' | 'tablet' | 'mobile'
+import canvasDocumentUrl from '../../canvas.html?url'
 
 type CanvasRuntimeMessage =
     | { source: 'canvas-runtime'; type: 'ready' }
@@ -102,7 +101,6 @@ function Canvas(): JSX.Element {
     const blocks = useEditorStore((s) => s.blocks);
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
     const hoveredBlockId = useEditorStore((s) => s.hoveredBlockId);
-    const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
     const selectBlock = useEditorStore((s) => s.selectBlock);
     const hoverBlock = useEditorStore((s) => s.hoverBlock);
     const moveBlock = useEditorStore((s) => s.moveBlock);
@@ -449,7 +447,7 @@ function Canvas(): JSX.Element {
                         key={framework}
                         ref={iframeRef}
                         className="canvas-iframe"
-                        src="./canvas.html"
+                        src={canvasDocumentUrl}
                         title="Page Preview"
                         sandbox="allow-scripts allow-same-origin"
                     />

@@ -65,7 +65,6 @@ let mainWindow: BrowserWindow | null = null;
 let currentProjectDir: string | null = null;
 let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
 
-const RECENT_PROJECTS_KEY = 'recent-projects';
 const MAX_RECENT = 10;
 
 // ---------------------------------------------------------------------------
@@ -1833,8 +1832,7 @@ function registerIpcHandlers(): void {
     }) => {
         try {
             const config = await mediaSearchLoadConfig();
-            const result = await searchMedia(options, config);
-            return result
+            return await searchMedia(options, config)
         } catch (error: any) {
             return {results: [], error: error.message}
         }
@@ -1846,8 +1844,7 @@ function registerIpcHandlers(): void {
                 return {success: false, error: 'No project directory'}
             }
 
-            const result = await downloadAndImportMedia(url, currentProjectDir);
-            return result
+            return await downloadAndImportMedia(url, currentProjectDir)
         } catch (error: any) {
             return {success: false, error: error.message}
         }

@@ -7,6 +7,11 @@ import {getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon, rende
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 import type {Block, FrameworkChoice, Page, PageFolder} from '../store/types'
 
+const BOOTSTRAP_PAGE_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+const BOOTSTRAP_ICONS_PAGE_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
+const BOOTSTRAP_PAGE_JS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
+const TAILWIND_PAGE_JS_URL = 'https://cdn.tailwindcss.com'
+
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
 
 const DEFAULT_TAGS: Record<string, string> = {
@@ -2083,7 +2088,7 @@ function getBlockContent(
 
             if (framework === 'tailwind') {
                 const navItems = tabs.map((tab, i) => `
-        <button class="${i === defaultTab ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll('[data-tw-tab-button=\\"${id}\\"]').forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n');
+        <button class="${i === defaultTab ? 'bg-[var(--theme-primary)] text-white' : 'border border-[var(--theme-border)] text-[var(--theme-text)]'} rounded-md px-4 py-2 text-sm font-medium" type="button" data-tw-tab-button="${id}" data-tw-tab-target="${id}-content-${i}" onclick="(function(){var root=this.closest('[data-tw-tabs]');if(!root)return;root.querySelectorAll(&quot;[data-tw-tab-button='${id}']&quot;).forEach(function(btn){btn.className='border border-[var(--theme-border)] text-[var(--theme-text)] rounded-md px-4 py-2 text-sm font-medium';});root.querySelectorAll('[data-tw-tab-panel]').forEach(function(panel){panel.classList.add('hidden');});this.className='bg-[var(--theme-primary)] text-white rounded-md px-4 py-2 text-sm font-medium';var panel=root.querySelector('#${id}-content-${i}');if(panel)panel.classList.remove('hidden');}).call(this)">${escapeAttrValue(tab.label)}</button>`).join('\n');
 
                 const contentItems = tabs.map((tab, i) => `
         <div class="${i === defaultTab ? '' : 'hidden '}rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 text-[var(--theme-text)]" id="${id}-content-${i}" data-tw-tab-panel>
@@ -2750,7 +2755,7 @@ ${pad}</div>`
         if (!isExportMode) {
             if (framework === 'tailwind') {
                 return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-offcanvas-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
-${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom: 1px solid ${themeBorder};">
+${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="flex items-center gap-2 font-bold">
 ${pad}      <span>☰</span> ${escapeAttrValue(title)}
 ${pad}    </div>
@@ -2763,7 +2768,7 @@ ${pad}</div>`
             }
 
             return `${pad}<div class="card mb-3 editor-outline-gated editor-offcanvas-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
-${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom: 1px solid ${themeBorder};">
+${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="fw-bold d-flex align-items-center gap-2">
 ${pad}      <span>☰</span> ${escapeAttrValue(title)}
 ${pad}    </div>
@@ -3676,7 +3681,7 @@ ${pad}</div>`
             // Editor preview mode
             if (framework === 'tailwind') {
                 return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${dataAttr}>
-${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom: 1px solid ${themeBorder};">
+${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="flex items-center gap-2 font-bold">
 ${pad}      <span>🔲</span> ${escapeAttrValue(title)}
 ${pad}    </div>
@@ -3688,7 +3693,7 @@ ${pad}  </div>
 ${pad}</div>`
             }
             return `${pad}<div class="card mb-3 editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${dataAttr}>
-${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom: 1px solid ${themeBorder};">
+${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="fw-bold d-flex align-items-center gap-2">
 ${pad}      <span>🔲</span> ${escapeAttrValue(title)}
 ${pad}    </div>
@@ -3791,7 +3796,6 @@ ${pad}</div>`
         if (iconLeftMarkup || iconRightMarkup) {
             const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
             const classAttr = classes ? ` class="${classes}"` : '';
-            const hasDecorators = true;
             const label = escapeAttrValue(text);
             const contentParts = [
                 iconLeftMarkup ? `<span aria-hidden="true">${iconLeftMarkup}</span>` : '',
@@ -4832,7 +4836,6 @@ ${pad}</div>`
         if (bgColor || bgImage || bgOverlay) {
             const tag = resolveTag(block);
             const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
-            const classAttr = classes.length > 0 ? ` class="${dedupeClasses(classes).join(' ')}"` : '';
             const styles: Record<string, string> = {...block.styles};
             if (bgColor) styles.backgroundColor = bgColor;
             if (bgImage) {
@@ -5070,11 +5073,11 @@ ${bodyHtml}
 function getFrameworkHead(framework: string): string {
     switch (framework) {
         case 'bootstrap-5':
-            return `    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer><\/script>\n`;
+            return `    <link href="${BOOTSTRAP_PAGE_CSS_URL}" rel="stylesheet">
+    <link href="${BOOTSTRAP_ICONS_PAGE_CSS_URL}" rel="stylesheet">
+    <script src="${BOOTSTRAP_PAGE_JS_URL}" defer><\/script>\n`;
         case 'tailwind':
-            return `    <script src="https://cdn.tailwindcss.com"><\/script>\n`;
+            return `    <script src="${TAILWIND_PAGE_JS_URL}"><\/script>\n`;
         case 'vanilla':
         default:
             return ''

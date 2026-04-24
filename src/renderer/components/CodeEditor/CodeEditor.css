@@ -54,7 +54,7 @@
 }
 
 .code-placeholder {
-    font-family: var(--font-mono);
+    font-family: var(--font-mono, monospace);
     font-size: 13px;
     line-height: 1.6;
     color: var(--color-text-secondary);

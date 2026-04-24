@@ -1,4 +1,4 @@
-import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/index'
+import type {ExportedFile, ValidationIssue, ValidationResult} from '../types'
 import {extractExternalUrls, getFileExtension, makeWarning} from './validationHelpers'
 
 function isLikelyHtmlFile(filePath: string): boolean {
@@ -55,4 +55,3 @@ export function validateForGithubPages(files: ExportedFile[]): ValidationResult 
         issues
     }
 }
-

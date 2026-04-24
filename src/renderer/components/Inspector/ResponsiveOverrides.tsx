@@ -48,8 +48,7 @@ function parseVisibility(classes: string[]): Record<Viewport, boolean> {
         const match = cls.match(/^d(-sm|-md|-lg|-xl|-xxl)?-(none|inline|inline-block|block|grid|table|table-row|table-cell|flex|inline-flex)$/);
         if (match) {
             const infix = match[1] || '';
-            const display = match[2];
-            displayAtTier[infix] = display
+            displayAtTier[infix] = match[2]
         }
     }
 

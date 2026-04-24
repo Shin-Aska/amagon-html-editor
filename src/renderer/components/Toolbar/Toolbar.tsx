@@ -63,11 +63,9 @@ interface ToolbarProps {
 
 export default function Toolbar({
                                     leftPanelOpen,
-                                    rightPanelOpen,
                                     codeEditorOpen,
                                     editorLayout,
                                     onToggleLeftPanel,
-                                    onToggleRightPanel,
                                     onToggleCodeEditor,
                                     onSetEditorLayout,
                                     onOpenThemeEditor,
@@ -79,10 +77,8 @@ export default function Toolbar({
     const showToast = useToastStore((s) => s.showToast);
 
     // Project Store
-    const getProjectData = useProjectStore((s) => s.getProjectData);
     const setProject = useProjectStore((s) => s.setProject);
     const filePath = useProjectStore((s) => s.filePath);
-    const setFilePath = useProjectStore((s) => s.setFilePath);
     const currentPageId = useProjectStore((s) => s.currentPageId);
     const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded);
     const projectName = useProjectStore((s) => s.settings.name);
@@ -92,9 +88,7 @@ export default function Toolbar({
     const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode);
 
     // Editor Store
-    const editorBlocks = useEditorStore((s) => s.blocks);
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
-    const customCss = useEditorStore((s) => s.customCss);
     const viewportMode = useEditorStore((s) => s.viewportMode);
     const zoom = useEditorStore((s) => s.zoom);
     const theme = useEditorStore((s) => s.theme);
@@ -104,7 +98,6 @@ export default function Toolbar({
 
     const addBlock = useEditorStore((s) => s.addBlock);
     const removeBlock = useEditorStore((s) => s.removeBlock);
-    const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
     const setViewportMode = useEditorStore((s) => s.setViewportMode);
     const setZoom = useEditorStore((s) => s.setZoom);
     const setTheme = useEditorStore((s) => s.setTheme);
@@ -127,9 +120,6 @@ export default function Toolbar({
     const [editingZoom, setEditingZoom] = useState(false);
     const [tempZoom, setTempZoom] = useState(String(zoom));
 
-    // Store access for pages (read-only for display)
-    const currentPage = useProjectStore((s) => s.getCurrentPage());
-
     // Sync temp name when project name changes
     useEffect(() => {
         setTempName(projectName)
@@ -149,10 +139,9 @@ export default function Toolbar({
 
     // Auto-save listener
     useEffect(() => {
-        const cleanup = api.autosave.onTick(() => {
+        return api.autosave.onTick(() => {
             handleSave(true)
-        });
-        return cleanup
+        })
     }, [filePath, currentPageId]);
 
     const ensureBackendReadyAndFlushEdits = async (): Promise<boolean> => {
@@ -254,49 +243,6 @@ export default function Toolbar({
             updatePage(currentPageId, {blocks: useEditorStore.getState().getFullBlocks()})
         }
         setShowExport(true)
-    };
-
-    const handleCopyHtml = async (): Promise<void> => {
-        try {
-            const ok = await ensureBackendReadyAndFlushEdits();
-            if (!ok) return;
-            if (currentPageId) {
-                updatePage(currentPageId, {blocks: useEditorStore.getState().getFullBlocks()})
-            }
-            const projectData = getProjectData();
-            const {exportProject} = await import('../../utils/exportEngine');
-
-            const files = await exportProject(projectData, {
-                customCss,
-                onlyPageId: currentPageId || undefined,
-                inlineCss: true,
-                inlineAssets: true,
-                includeJs: true,
-                minify: false
-            });
-
-            const htmlFile = files.find((f) => f.path.endsWith('.html'));
-            const html = htmlFile && typeof htmlFile.content === 'string' ? htmlFile.content : '';
-            if (!html) return;
-
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(html);
-                console.log('Copied HTML to clipboard');
-                return
-            }
-
-            const el = document.createElement('textarea');
-            el.value = html;
-            el.style.position = 'fixed';
-            el.style.left = '-9999px';
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            console.log('Copied HTML to clipboard')
-        } catch (err) {
-            console.error('Copy HTML failed:', err)
-        }
     };
 
     // Simple clipboard implementation (memory-only for now)

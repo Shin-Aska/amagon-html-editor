@@ -70,7 +70,7 @@ export default function SpacingEditor({styles, onChange}: SpacingEditorProps): J
         }
     };
 
-    const renderSideBox = (type: 'margin' | 'padding', side: typeof SIDES[number], label: string) => {
+    const renderSideBox = (type: 'margin' | 'padding', side: typeof SIDES[number]) => {
         const propKey = type === 'margin'
             ? SPACING_PROPS.margin[SIDES.indexOf(side)]
             : SPACING_PROPS.padding[SIDES.indexOf(side)];
@@ -93,17 +93,17 @@ export default function SpacingEditor({styles, onChange}: SpacingEditorProps): J
             <div className="box-model-container">
                 <div className="box-margin">
                     <div className="box-label">Margin</div>
-                    {renderSideBox('margin', 'Top', 'T')}
-                    {renderSideBox('margin', 'Right', 'R')}
-                    {renderSideBox('margin', 'Bottom', 'B')}
-                    {renderSideBox('margin', 'Left', 'L')}
+                    {renderSideBox('margin', 'Top')}
+                    {renderSideBox('margin', 'Right')}
+                    {renderSideBox('margin', 'Bottom')}
+                    {renderSideBox('margin', 'Left')}
 
                     <div className="box-padding">
                         <div className="box-label">Padding</div>
-                        {renderSideBox('padding', 'Top', 'T')}
-                        {renderSideBox('padding', 'Right', 'R')}
-                        {renderSideBox('padding', 'Bottom', 'B')}
-                        {renderSideBox('padding', 'Left', 'L')}
+                        {renderSideBox('padding', 'Top')}
+                        {renderSideBox('padding', 'Right')}
+                        {renderSideBox('padding', 'Bottom')}
+                        {renderSideBox('padding', 'Left')}
 
                         <div className="box-content">
                             <span>Auto</span>

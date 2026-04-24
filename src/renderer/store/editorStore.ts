@@ -104,9 +104,10 @@ function syncButtonClasses(
     const updatesSize = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'size');
 
     const classes = nextClasses.filter((cls) => {
-        if (updatesVariant && BUTTON_VARIANT_CLASSES.has(cls)) return false;
-        if (updatesSize && BUTTON_SIZE_CLASSES.has(cls)) return false;
-        return true
+        return !(
+            (updatesVariant && BUTTON_VARIANT_CLASSES.has(cls)) ||
+            (updatesSize && BUTTON_SIZE_CLASSES.has(cls))
+        )
     });
 
     const variant = updatesVariant && typeof nextProps.variant === 'string' ? nextProps.variant.trim() : '';
@@ -384,7 +385,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         },
 
         setPageBlocks: (blocks) => {
-            set((state) => {
+            set(() => {
                 const newBlocks = cloneBlocks(blocks);
                 return {
                     blocks: newBlocks,

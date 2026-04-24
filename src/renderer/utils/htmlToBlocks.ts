@@ -514,7 +514,7 @@ function elementToBlock(el: Element): Block | null {
 
     // Special handling for heading level + anchorId
     if (type === 'heading') {
-      props.level = parseInt(tagName.charAt(1), 10);
+        props.level = parseInt(tagName.charAt(1), 10);
         // Recover anchorId: if the id is not a block UUID (contains only alphanumeric/dash), use it as anchorId
         const elId = el.getAttribute('id') || '';
         if (elId && !elId.startsWith('block-') && !/^[a-f0-9-]{36}$/.test(elId)) {
@@ -592,7 +592,7 @@ function elementToBlock(el: Element): Block | null {
         }
     }
 
-    const block: Block = {
+    return {
         id,
         type,
         tag: tagName !== defaultTagForType(type) ? tagName : undefined,
@@ -600,9 +600,7 @@ function elementToBlock(el: Element): Block | null {
         styles,
         classes,
         children: TEXT_CONTENT_TYPES.has(type) ? [] : children
-    };
-
-    return block
+    }
 }
 
 function parseImageBlock(el: Element): Block {
@@ -1038,10 +1036,7 @@ function hasWrappedFormControl(el: Element): boolean {
     const floatingControl = el.querySelector(':scope > .form-floating > input, :scope > .form-floating > textarea, :scope > .form-floating > select');
     const control = directControl || groupedControl || floatingControl;
     if (!control) return false;
-    if (control.tagName.toLowerCase() === 'input' && control.getAttribute('type') === 'checkbox') {
-        return false
-    }
-    return true
+    return !(control.tagName.toLowerCase() === 'input' && control.getAttribute('type') === 'checkbox')
 }
 
 function parseWrappedFormControl(el: Element): Block {
@@ -1287,9 +1282,8 @@ function parseBootstrapTabs(el: Element): Block {
     // Check if vertical (wrapped in d-flex with flex-column nav)
     const isVertical = el.classList.contains('d-flex') ||
         (!!el.querySelector(':scope > div.d-flex') && !!el.querySelector('ul.nav.flex-column'));
-    const navEl = el.querySelector('ul.nav.nav-tabs, ul.nav.nav-pills, ul.nav.nav-underline') ??
+    const ul = el.querySelector('ul.nav.nav-tabs, ul.nav.nav-pills, ul.nav.nav-underline') ??
         el.querySelector('ul.nav');
-    const ul = navEl;
     const tabsId = ul?.id || el.id || `tabs-${id}`;
 
     // Detect variant from nav classes
@@ -1559,10 +1553,6 @@ function parseFormControlElement(control: Element, label?: Element): Block {
         classes,
         children: []
     }
-}
-
-function isFormControlTag(tagName: string): boolean {
-    return tagName === 'input' || tagName === 'textarea' || tagName === 'select'
 }
 
 function isElementNode(node: ChildNode): node is Element {

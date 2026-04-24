@@ -3,7 +3,7 @@ import {getApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {exportProject} from '../../utils/exportEngine'
-import type {ExportedFile, PublishProgress, PublishResult, ValidationResult} from '../../../publish/types'
+import type {ExportedFile, PublishProgress, PublishResult, ValidationResult} from '../../../publish'
 import './PublishDialog.css'
 
 interface PublishDialogProps {
@@ -70,10 +70,7 @@ export default function PublishDialog({open, onClose}: PublishDialogProps): JSX.
 
     useEffect(() => {
         const handler = (nextProgress: PublishProgress) => setProgress(nextProgress);
-        const cleanup = api.publish.onProgress(handler);
-        return () => {
-            cleanup()
-        }
+        return api.publish.onProgress(handler)
     }, []);
 
     const handleSelectProvider = async (provider: PublishProviderInfo): Promise<void> => {

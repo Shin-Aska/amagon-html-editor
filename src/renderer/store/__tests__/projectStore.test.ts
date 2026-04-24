@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from 'vitest'
-import {useProjectStore} from '../../store/projectStore'
-import {createBlock, createDefaultTheme} from '../../store/types'
+import {useProjectStore} from '../projectStore'
+import {createBlock, createDefaultTheme} from '../types'
 
 // Initial state for resetting store between tests
 const initialProjectState = {
@@ -84,7 +84,6 @@ describe('projectStore', () => {
         });
 
         it('prevents removing the last page', () => {
-            const initialPages = store.pages.length;
             store.removePage(store.pages[0].id);
 
             // Should create a new default page when removing the last one

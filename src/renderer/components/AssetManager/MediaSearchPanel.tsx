@@ -48,7 +48,6 @@ function mergeResults(existing: MediaSearchResult[], incoming: MediaSearchResult
 export default function MediaSearchPanel({
                                              mode,
                                              onSelect,
-                                             onCancel,
                                              multiSelect = false,
                                              confirmLabel = 'Confirm Selection'
                                          }: MediaSearchPanelProps): JSX.Element {

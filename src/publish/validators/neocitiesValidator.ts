@@ -1,4 +1,4 @@
-import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/index'
+import type {ExportedFile, ValidationIssue, ValidationResult} from '../types'
 import {extractExternalUrls, getFileExtension, makeError, makeWarning} from './validationHelpers'
 
 export const NEOCITIES_ALLOWED_EXTENSIONS: readonly string[] = [
@@ -65,4 +65,3 @@ export function validateForNeocities(files: ExportedFile[]): ValidationResult {
         issues
     }
 }
-

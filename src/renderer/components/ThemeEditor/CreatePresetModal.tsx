@@ -182,12 +182,14 @@ export default function CreatePresetModal({
             });
 
             if (!result.success || typeof result.content !== 'string') {
-                throw new Error(result.error || 'AI generation failed.')
+                setError(result.error || 'AI generation failed.');
+                return
             }
 
             const parsed = parseThemeColorsFromAi(result.content);
             if (!parsed) {
-                throw new Error('AI response did not include a valid ThemeColors JSON block.')
+                setError('AI response did not include a valid ThemeColors JSON block.');
+                return
             }
 
             setColors(parsed);

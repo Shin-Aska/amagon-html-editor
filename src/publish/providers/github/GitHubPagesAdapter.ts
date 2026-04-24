@@ -1,13 +1,13 @@
 import {
     type ExportedFile,
+    type PublisherExtension,
     type PublishCredentials,
     PUBLISHER_EXTENSION_API_VERSION,
     type PublishProgress,
     type PublishResult,
     type ValidationIssue,
     type ValidationResult
-} from '../../types/index'
-import type {PublisherExtension} from '../../types/PublisherExtension'
+} from '../../types'
 import {validateForGithubPages} from '../../validators/githubPagesValidator'
 import {makeError} from '../../validators/validationHelpers'
 

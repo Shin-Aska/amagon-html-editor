@@ -101,12 +101,12 @@
 }
 
 .inspector-field-note code {
-    font-family: var(--font-mono);
+    font-family: var(--font-mono, monospace);
     color: var(--color-text-primary);
 }
 
 .inspector-id-input {
-    font-family: var(--font-mono);
+    font-family: var(--font-mono, monospace);
 }
 
 .inspector-help-tooltip {
