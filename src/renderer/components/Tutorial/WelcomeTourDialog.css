@@ -1,119 +1,119 @@
 .welcome-tour-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10004;
-  backdrop-filter: blur(3px);
-  padding: 16px;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10004;
+    backdrop-filter: blur(3px);
+    padding: 16px;
 }
 
 .welcome-tour-dialog {
-  width: min(420px, 100%);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
-  padding: 20px;
-  position: relative;
+    width: min(420px, 100%);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    padding: 20px;
+    position: relative;
 }
 
 .welcome-tour-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
 }
 
 .welcome-tour-close:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .welcome-tour-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
 }
 
 .welcome-tour-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: rgba(30, 102, 245, 0.14);
-  border: 1px solid rgba(30, 102, 245, 0.25);
-  color: var(--color-accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(30, 102, 245, 0.14);
+    border: 1px solid rgba(30, 102, 245, 0.25);
+    color: var(--color-accent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .welcome-tour-header h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: var(--color-text-primary);
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--color-text-primary);
 }
 
 .welcome-tour-header p {
-  margin: 0;
-  color: var(--color-text-secondary);
+    margin: 0;
+    color: var(--color-text-secondary);
 }
 
 .welcome-tour-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .welcome-tour-btn {
-  width: 100%;
-  min-height: 38px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
+    width: 100%;
+    min-height: 38px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
 }
 
 .welcome-tour-btn-primary {
-  background: var(--color-accent);
-  color: #fff;
+    background: var(--color-accent);
+    color: #fff;
 }
 
 .welcome-tour-btn-primary:hover {
-  filter: brightness(0.94);
+    filter: brightness(0.94);
 }
 
 .welcome-tour-btn-secondary {
-  background: var(--color-bg-primary);
-  border-color: var(--color-border);
-  color: var(--color-text-primary);
+    background: var(--color-bg-primary);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
 }
 
 .welcome-tour-btn-secondary:hover {
-  background: var(--color-bg-hover);
+    background: var(--color-bg-hover);
 }
 
 .welcome-tour-btn-ghost {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
+    background: transparent;
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
 }
 
 .welcome-tour-btn-ghost:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }

@@ -1,6 +1,6 @@
-import { DiffEditor } from '@monaco-editor/react'
-import { useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import {DiffEditor} from '@monaco-editor/react'
+import {useEffect, useId, useRef, useState} from 'react'
+import {createPortal} from 'react-dom'
 import './AiProposalReviewPanel.css'
 
 interface AiProposalReviewPanelProps {
@@ -16,45 +16,45 @@ interface AiProposalReviewPanelProps {
 }
 
 export default function AiProposalReviewPanel({
-    explanation,
-    original,
-    modified,
-    language,
-    height = '100%',
-    onDiscard,
-    onApply,
-    discardLabel = 'Discard Proposal',
-    applyLabel = 'Apply Proposal'
-}: AiProposalReviewPanelProps): JSX.Element {
-    const infoRef = useRef<HTMLButtonElement | null>(null)
-    const [tooltipOpen, setTooltipOpen] = useState(false)
-    const [tooltipStyle, setTooltipStyle] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
-    const tooltipId = useId()
+                                                  explanation,
+                                                  original,
+                                                  modified,
+                                                  language,
+                                                  height = '100%',
+                                                  onDiscard,
+                                                  onApply,
+                                                  discardLabel = 'Discard Proposal',
+                                                  applyLabel = 'Apply Proposal'
+                                              }: AiProposalReviewPanelProps): JSX.Element {
+    const infoRef = useRef<HTMLButtonElement | null>(null);
+    const [tooltipOpen, setTooltipOpen] = useState(false);
+    const [tooltipStyle, setTooltipStyle] = useState<{ top: number; left: number }>({top: 0, left: 0});
+    const tooltipId = useId();
 
     useEffect(() => {
-        if (!tooltipOpen) return
+        if (!tooltipOpen) return;
 
         const updatePosition = () => {
-            const anchor = infoRef.current
-            if (!anchor) return
-            const rect = anchor.getBoundingClientRect()
-            const width = Math.min(320, Math.max(220, window.innerWidth * 0.6))
+            const anchor = infoRef.current;
+            if (!anchor) return;
+            const rect = anchor.getBoundingClientRect();
+            const width = Math.min(320, Math.max(220, window.innerWidth * 0.6));
             const left = Math.min(
                 Math.max(12, rect.left),
                 Math.max(12, window.innerWidth - width - 12)
-            )
-            const top = rect.bottom + 8
-            setTooltipStyle({ top, left })
-        }
+            );
+            const top = rect.bottom + 8;
+            setTooltipStyle({top, left})
+        };
 
-        updatePosition()
-        window.addEventListener('scroll', updatePosition, true)
-        window.addEventListener('resize', updatePosition)
+        updatePosition();
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
         return () => {
-            window.removeEventListener('scroll', updatePosition, true)
+            window.removeEventListener('scroll', updatePosition, true);
             window.removeEventListener('resize', updatePosition)
         }
-    }, [tooltipOpen])
+    }, [tooltipOpen]);
 
     return (
         <div className="ai-proposal-review-panel">
@@ -95,7 +95,7 @@ export default function AiProposalReviewPanel({
                     options={{
                         renderSideBySide: false,
                         readOnly: true,
-                        minimap: { enabled: false },
+                        minimap: {enabled: false},
                         fontSize: 13,
                         lineNumbers: 'on',
                         scrollBeyondLastLine: false,
@@ -108,16 +108,16 @@ export default function AiProposalReviewPanel({
             </div>
             {tooltipOpen && typeof document !== 'undefined'
                 ? createPortal(
-                      <div
-                          id={tooltipId}
-                          className="ai-proposal-review-tooltip is-portal"
-                          role="tooltip"
-                          style={{ top: tooltipStyle.top, left: tooltipStyle.left }}
-                      >
-                          {explanation}
-                      </div>,
-                      document.body
-                  )
+                    <div
+                        id={tooltipId}
+                        className="ai-proposal-review-tooltip is-portal"
+                        role="tooltip"
+                        style={{top: tooltipStyle.top, left: tooltipStyle.left}}
+                    >
+                        {explanation}
+                    </div>,
+                    document.body
+                )
                 : null}
         </div>
     )

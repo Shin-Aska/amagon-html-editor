@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
-import { useAiStore, type AiProvider } from '../../store/aiStore'
-import { useAppSettingsStore } from '../../store/appSettingsStore'
+import {useEffect} from 'react'
+import {type AiProvider, useAiStore} from '../../store/aiStore'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
 import './AiProviderSelector.css'
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
@@ -15,59 +15,63 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
     'github-cli': 'GitHub Copilot CLI',
     'junie-cli': 'Junie CLI',
     'opencode-cli': 'Opencode CLI'
-}
+};
 
 export default function AiProviderSelector(): JSX.Element {
-    const config = useAiStore((s) => s.config)
-    const configLoaded = useAiStore((s) => s.configLoaded)
-    const modelsLoaded = useAiStore((s) => s.modelsLoaded)
-    const providerModels = useAiStore((s) => s.providerModels)
-    const loadConfig = useAiStore((s) => s.loadConfig)
-    const loadModels = useAiStore((s) => s.loadModels)
-    const saveConfig = useAiStore((s) => s.saveConfig)
-    const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures)
+    const config = useAiStore((s) => s.config);
+    const configLoaded = useAiStore((s) => s.configLoaded);
+    const modelsLoaded = useAiStore((s) => s.modelsLoaded);
+    const providerModels = useAiStore((s) => s.providerModels);
+    const loadConfig = useAiStore((s) => s.loadConfig);
+    const loadModels = useAiStore((s) => s.loadModels);
+    const saveConfig = useAiStore((s) => s.saveConfig);
+    const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures);
 
     useEffect(() => {
         if (!configLoaded) {
             loadConfig().then(() => loadModels())
         }
-    }, [configLoaded, loadConfig, loadModels])
+    }, [configLoaded, loadConfig, loadModels]);
 
-    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli', 'junie-cli']
+    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli', 'junie-cli'];
 
-    const isReady = configLoaded && modelsLoaded
+    const isReady = configLoaded && modelsLoaded;
 
-    const models = providerModels[config.provider] || []
+    const models = providerModels[config.provider] || [];
 
     // Only show providers that have been configured (have models loaded), plus
     // always include the currently active provider so the selector is never blank.
     // Dangerous providers are hidden unless the flag is on.
     const visibleProviders = (Object.keys(PROVIDER_LABELS) as AiProvider[]).filter((p) => {
-        if (DANGEROUS_PROVIDERS.includes(p) && !enableDangerousFeatures) return false
+        if (DANGEROUS_PROVIDERS.includes(p) && !enableDangerousFeatures) return false;
         return p === config.provider || (providerModels[p] && providerModels[p].length > 0)
-    })
+    });
 
     const handleProviderChange = (provider: AiProvider) => {
-        const firstModel = (providerModels[provider] || [])[0] || ''
-        saveConfig({ provider, model: firstModel })
-    }
+        const firstModel = (providerModels[provider] || [])[0] || '';
+        saveConfig({provider, model: firstModel})
+    };
 
     const handleModelChange = (model: string) => {
-        saveConfig({ model })
-    }
+        saveConfig({model})
+    };
 
     // Config hasn't loaded yet — show skeleton selects so layout doesn't shift
     if (!configLoaded) {
         return (
             <div className="ai-provider-selector ai-provider-selector--loading">
-                <select className="ai-provider-select" disabled><option>Loading…</option></select>
-                <select className="ai-provider-select ai-model-select" disabled><option>Loading…</option></select>
+                <select className="ai-provider-select" disabled>
+                    <option>Loading…</option>
+                </select>
+                <select className="ai-provider-select ai-model-select" disabled>
+                    <option>Loading…</option>
+                </select>
             </div>
         )
     }
 
     // Config loaded but no providers configured
-    if (visibleProviders.length === 0) return <></>
+    if (visibleProviders.length === 0) return <></>;
 
     return (
         <div className="ai-provider-selector">

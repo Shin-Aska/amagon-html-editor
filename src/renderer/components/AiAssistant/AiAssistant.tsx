@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Send, Trash2, Sparkles, ArrowDownToLine, Copy, Eye, ZoomIn, ZoomOut } from 'lucide-react'
-import { useAiStore } from '../../store/aiStore'
-import { useEditorStore } from '../../store/editorStore'
-import { useProjectStore } from '../../store/projectStore'
-import { createBlock, type Block } from '../../store/types'
-import { themeToCSS } from '../../store/types'
-import { blockToHtml } from '../../utils/blockToHtml'
-import { openGlobalSettings } from '../../utils/settingsNavigation'
-import { AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability } from '../../hooks/useAiAvailability'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {ArrowDownToLine, Copy, Eye, Send, Sparkles, Trash2, ZoomIn, ZoomOut} from 'lucide-react'
+import {useAiStore} from '../../store/aiStore'
+import {useEditorStore} from '../../store/editorStore'
+import {useProjectStore} from '../../store/projectStore'
+import {type Block, createBlock, themeToCSS} from '../../store/types'
+import {blockToHtml} from '../../utils/blockToHtml'
+import {openGlobalSettings} from '../../utils/settingsNavigation'
+import {AI_API_KEY_REQUIRED_MESSAGE, useAiAvailability} from '../../hooks/useAiAvailability'
 import AiProviderSelector from './AiProviderSelector'
 import './AiAssistant.css'
 
@@ -22,6 +21,8 @@ interface ParsedAiResponse {
     blocks: Block[] | null
 }
 
+const BOOTSTRAP_PREVIEW_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
+
 function stripCopilotCliDecorations(content: string): string {
     return content
         .replace(/^\s*●\s?/, '')
@@ -30,18 +31,18 @@ function stripCopilotCliDecorations(content: string): string {
 }
 
 function findJsonObjectCandidate(content: string): { json: string; start: number; end: number } | null {
-    const blocksIndex = content.indexOf('"blocks"')
-    if (blocksIndex === -1) return null
+    const blocksIndex = content.indexOf('"blocks"');
+    if (blocksIndex === -1) return null;
 
-    const start = content.lastIndexOf('{', blocksIndex)
-    if (start === -1) return null
+    const start = content.lastIndexOf('{', blocksIndex);
+    if (start === -1) return null;
 
-    let depth = 0
-    let inString = false
-    let escaped = false
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
 
     for (let i = start; i < content.length; i += 1) {
-        const char = content[i]
+        const char = content[i];
 
         if (inString) {
             if (escaped) {
@@ -59,9 +60,9 @@ function findJsonObjectCandidate(content: string): { json: string; start: number
         } else if (char === '{') {
             depth += 1
         } else if (char === '}') {
-            depth -= 1
+            depth -= 1;
             if (depth === 0) {
-                return { json: content.slice(start, i + 1), start, end: i + 1 }
+                return {json: content.slice(start, i + 1), start, end: i + 1}
             }
         }
     }
@@ -70,20 +71,20 @@ function findJsonObjectCandidate(content: string): { json: string; start: number
 }
 
 function repairTerminalWrappedJson(json: string): string {
-    let result = ''
-    let inString = false
-    let escaped = false
+    let result = '';
+    let inString = false;
+    let escaped = false;
 
     for (let i = 0; i < json.length; i += 1) {
-        const char = json[i]
+        const char = json[i];
 
         if (inString && (char === '\n' || char === '\r')) {
-            while (json[i + 1] === ' ' || json[i + 1] === '\t') i += 1
-            escaped = false
+            while (json[i + 1] === ' ' || json[i + 1] === '\t') i += 1;
+            escaped = false;
             continue
         }
 
-        result += char
+        result += char;
 
         if (inString) {
             if (escaped) {
@@ -103,32 +104,32 @@ function repairTerminalWrappedJson(json: string): string {
 
 /** Parse an AI response into explanatory text + optional blocks */
 function parseAiResponse(content: string): ParsedAiResponse {
-    const normalizedContent = stripCopilotCliDecorations(content)
+    const normalizedContent = stripCopilotCliDecorations(content);
 
     try {
-        const candidate = findJsonObjectCandidate(normalizedContent)
+        const candidate = findJsonObjectCandidate(normalizedContent);
 
         if (candidate) {
-            const parsed = JSON.parse(repairTerminalWrappedJson(candidate.json))
+            const parsed = JSON.parse(repairTerminalWrappedJson(candidate.json));
             if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
                 // Extract the text portion (everything that isn't the JSON)
                 let text = `${normalizedContent.slice(0, candidate.start)}${normalizedContent.slice(candidate.end)}`
                     .replace(/```(?:json)?/g, '')
                     .replace(/```/g, '')
-                    .trim()
+                    .trim();
 
                 // Clean up markdown artifacts
-                text = text.replace(/^\s*```\s*/gm, '').replace(/\s*```\s*$/gm, '').trim()
+                text = text.replace(/^\s*```\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
 
-                const blocks = parsed.blocks.map(buildBlockFromAiData)
-                return { text, blocks }
+                const blocks = parsed.blocks.map(buildBlockFromAiData);
+                return {text, blocks}
             }
         }
     } catch {
         // Not valid JSON — treat as text-only response
     }
 
-    return { text: normalizedContent, blocks: null }
+    return {text: normalizedContent, blocks: null}
 }
 
 function buildBlockFromAiData(data: any): Block {
@@ -147,37 +148,38 @@ function buildBlockFromAiData(data: any): Block {
 // Block Preview Component
 // ---------------------------------------------------------------------------
 
-function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
-    const iframeRef = useRef<HTMLIFrameElement>(null)
-    const [height, setHeight] = useState(120)
-    const [zoom, setZoom] = useState(1)
+function BlockPreview({blocks}: { blocks: Block[] }): JSX.Element {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [height, setHeight] = useState(120);
+    const [zoom, setZoom] = useState(1);
     const [systemUiTheme, setSystemUiTheme] = useState<'light' | 'dark'>(() =>
         document.body.classList.contains('dark') ? 'dark' : 'light'
-    )
+    );
 
-    const projectTheme = useProjectStore((s) => s.settings.theme)
-    const projectThemeVariants = useProjectStore((s) => s.settings.themes)
-    const previewMode = projectThemeVariants?.previewMode ?? 'device'
-    const previewTheme = previewMode === 'device' ? systemUiTheme : previewMode
+    const projectTheme = useProjectStore((s) => s.settings.theme);
+    const projectThemeVariants = useProjectStore((s) => s.settings.themes);
+    const projectFonts = useProjectStore((s) => s.fonts);
+    const previewMode = projectThemeVariants?.previewMode ?? 'device';
+    const previewTheme = previewMode === 'device' ? systemUiTheme : previewMode;
     const activeTheme = useMemo(
         () => previewTheme === 'dark'
             ? (projectThemeVariants?.dark ?? projectTheme)
             : (projectThemeVariants?.light ?? projectTheme),
         [previewTheme, projectTheme, projectThemeVariants]
-    )
+    );
     const themeCss = useMemo(
-        () => themeToCSS(activeTheme),
-        [activeTheme]
-    )
+        () => themeToCSS(activeTheme, undefined, projectFonts),
+        [activeTheme, projectFonts]
+    );
 
-    const html = useMemo(() => blockToHtml(blocks), [blocks])
+    const html = useMemo(() => blockToHtml(blocks), [blocks]);
 
     const previewDoc = useMemo(() => `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="${BOOTSTRAP_PREVIEW_CSS_URL}" rel="stylesheet">
 <style id="hoarses-theme-css">
 ${themeCss}
 </style>
@@ -187,8 +189,8 @@ ${themeCss}
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background: var(--theme-bg);
-        font-family: var(--theme-font-family);
+        background: var(--theme-bg, #ffffff);
+        font-family: var(--theme-font-family, sans-serif);
     }
     body { padding: 12px; }
     img { max-width: 100%; height: auto; }
@@ -209,7 +211,7 @@ ${themeCss}
     window.addEventListener('load', sendHeight);
     new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
 <\/script>
-</html>`, [html, themeCss])
+</html>`, [html, themeCss]);
 
     useEffect(() => {
         const onMessage = (e: MessageEvent) => {
@@ -219,46 +221,46 @@ ${themeCss}
                     setHeight(Math.min(Math.max(e.data.height, 60), 400))
                 }
             }
-        }
-        window.addEventListener('message', onMessage)
+        };
+        window.addEventListener('message', onMessage);
         return () => window.removeEventListener('message', onMessage)
-    }, [])
+    }, []);
 
     useEffect(() => {
         const syncTheme = () => {
             setSystemUiTheme(document.body.classList.contains('dark') ? 'dark' : 'light')
-        }
+        };
 
-        syncTheme()
+        syncTheme();
 
-        const observer = new MutationObserver(syncTheme)
+        const observer = new MutationObserver(syncTheme);
         observer.observe(document.body, {
             attributes: true,
             attributeFilter: ['class']
-        })
+        });
 
         return () => observer.disconnect()
-    }, [])
+    }, []);
 
     useEffect(() => {
-        const iframe = iframeRef.current
-        const doc = iframe?.contentDocument
-        if (!iframe || !doc) return
+        const iframe = iframeRef.current;
+        const doc = iframe?.contentDocument;
+        if (!iframe || !doc) return;
 
-        doc.documentElement.setAttribute('data-page-theme', previewTheme)
-        doc.documentElement.setAttribute('data-bs-theme', previewTheme)
-        doc.documentElement.style.colorScheme = previewTheme
+        doc.documentElement.setAttribute('data-page-theme', previewTheme);
+        doc.documentElement.setAttribute('data-bs-theme', previewTheme);
+        doc.documentElement.style.colorScheme = previewTheme;
 
-        const themeStyle = doc.getElementById('hoarses-theme-css')
+        const themeStyle = doc.getElementById('hoarses-theme-css');
         if (themeStyle) {
             themeStyle.textContent = themeCss
         }
-    }, [previewTheme, themeCss])
+    }, [previewTheme, themeCss]);
 
     return (
         <div className="ai-preview-container">
             <div className="ai-preview-label">
-                <Eye size={11} />
+                <Eye size={11}/>
                 <span>Preview</span>
                 <div className="ai-preview-zoom">
                     <button
@@ -267,7 +269,7 @@ ${themeCss}
                         title="Zoom out"
                         disabled={zoom <= 0.25}
                     >
-                        <ZoomOut size={10} />
+                        <ZoomOut size={10}/>
                     </button>
                     <span className="ai-preview-zoom-level">{Math.round(zoom * 100)}%</span>
                     <button
@@ -276,11 +278,11 @@ ${themeCss}
                         title="Zoom in"
                         disabled={zoom >= 2}
                     >
-                        <ZoomIn size={10} />
+                        <ZoomIn size={10}/>
                     </button>
                 </div>
             </div>
-            <div className="ai-preview-viewport" style={{ height: `${height * zoom}px` }}>
+            <div className="ai-preview-viewport" style={{height: `${height * zoom}px`}}>
                 <iframe
                     ref={iframeRef}
                     className="ai-preview-iframe"
@@ -305,46 +307,46 @@ ${themeCss}
 // ---------------------------------------------------------------------------
 
 function AiMessageBubble({
-    msg,
-    onInsertBlocks,
-    onCopy
-}: {
+                             msg,
+                             onInsertBlocks,
+                             onCopy
+                         }: {
     msg: { id: string; role: string; content: string; timestamp: number; isError?: boolean }
     onInsertBlocks: (blocks: Block[]) => void
     onCopy: (content: string) => void
 }): JSX.Element {
     const parsed = useMemo(() => {
-        if (msg.role !== 'assistant' || msg.isError) return null
+        if (msg.role !== 'assistant' || msg.isError) return null;
         return parseAiResponse(msg.content)
-    }, [msg.role, msg.content, msg.isError])
+    }, [msg.role, msg.content, msg.isError]);
 
-    const hasBlocks = parsed?.blocks && parsed.blocks.length > 0
+    const hasBlocks = parsed?.blocks && parsed.blocks.length > 0;
 
     // Build display text: use AI's text if available, otherwise auto-generate a summary
     const displayText = useMemo(() => {
-        if (msg.role === 'user' || msg.isError) return msg.content
-        if (!parsed) return msg.content
-        if (parsed.text) return parsed.text
+        if (msg.role === 'user' || msg.isError) return msg.content;
+        if (!parsed) return msg.content;
+        if (parsed.text) return parsed.text;
         // Fallback: auto-generate summary when the AI sent only JSON
         if (hasBlocks && parsed.blocks) {
-            const types = [...new Set(parsed.blocks.map((b) => b.type))]
-            const typeList = types.slice(0, 4).join(', ') + (types.length > 4 ? '…' : '')
+            const types = [...new Set(parsed.blocks.map((b) => b.type))];
+            const typeList = types.slice(0, 4).join(', ') + (types.length > 4 ? '…' : '');
             return `Generated ${parsed.blocks.length} block${parsed.blocks.length > 1 ? 's' : ''}: ${typeList}. Click "Insert" to add ${parsed.blocks.length > 1 ? 'them' : 'it'} to your page.`
         }
         return msg.content
-    }, [msg.role, msg.content, msg.isError, parsed, hasBlocks])
+    }, [msg.role, msg.content, msg.isError, parsed, hasBlocks]);
 
-    const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-    const getBlockById = useEditorStore((s) => s.getBlockById)
+    const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+    const getBlockById = useEditorStore((s) => s.getBlockById);
 
     // Determine insert target label
     const insertTargetLabel = useMemo(() => {
-        if (!selectedBlockId) return 'page root'
-        const block = getBlockById(selectedBlockId)
-        if (!block) return 'page root'
-        const label = (block.props?.text as string) || block.type
+        if (!selectedBlockId) return 'page root';
+        const block = getBlockById(selectedBlockId);
+        if (!block) return 'page root';
+        const label = (block.props?.text as string) || block.type;
         return label.length > 20 ? label.slice(0, 20) + '…' : label
-    }, [selectedBlockId, getBlockById])
+    }, [selectedBlockId, getBlockById]);
 
     return (
         <div className={`ai-message ${msg.role} ${msg.isError ? 'error' : ''}`}>
@@ -355,7 +357,7 @@ function AiMessageBubble({
 
             {/* Live preview for block responses */}
             {hasBlocks && parsed?.blocks && (
-                <BlockPreview blocks={parsed.blocks} />
+                <BlockPreview blocks={parsed.blocks}/>
             )}
 
             {/* Timestamp */}
@@ -375,7 +377,7 @@ function AiMessageBubble({
                         onClick={() => onInsertBlocks(parsed.blocks!)}
                         title={`Insert into ${insertTargetLabel}`}
                     >
-                        <ArrowDownToLine size={12} /> Insert into {insertTargetLabel}
+                        <ArrowDownToLine size={12}/> Insert into {insertTargetLabel}
                     </button>
                 )}
                 <button
@@ -383,7 +385,7 @@ function AiMessageBubble({
                     onClick={() => onCopy(msg.content)}
                     title={msg.role === 'user' ? 'Copy message' : 'Copy response'}
                 >
-                    <Copy size={12} /> Copy
+                    <Copy size={12}/> Copy
                 </button>
             </div>
         </div>
@@ -399,94 +401,94 @@ const SUGGESTIONS = [
     'Build a pricing table with 3 tiers',
     'Make a footer with copyright and social links',
     'Add a contact form with name, email, and message'
-]
+];
 
 export default function AiAssistant(): JSX.Element {
-    const { messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig } = useAiStore()
-    const { hasConfiguredAiProvider } = useAiAvailability()
-    const addBlock = useEditorStore((s) => s.addBlock)
-    const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-    const [input, setInput] = useState('')
-    const messagesEndRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLTextAreaElement>(null)
+    const {messages, isLoading, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig} = useAiStore();
+    const {hasConfiguredAiProvider} = useAiAvailability();
+    const addBlock = useEditorStore((s) => s.addBlock);
+    const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+    const [input, setInput] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Auto-resize textarea based on content
     const adjustTextareaHeight = useCallback(() => {
-        const textarea = inputRef.current
-        if (!textarea) return
-        
+        const textarea = inputRef.current;
+        if (!textarea) return;
+
         // Reset to auto to get correct scrollHeight
-        textarea.style.height = 'auto'
-        
+        textarea.style.height = 'auto';
+
         // Set new height (clamped to max-height in CSS: 100px)
-        const newHeight = Math.min(textarea.scrollHeight, 100)
+        const newHeight = Math.min(textarea.scrollHeight, 100);
         textarea.style.height = `${newHeight}px`
-    }, [])
+    }, []);
 
     // Load config on mount
     useEffect(() => {
         if (!configLoaded) {
             loadConfig()
         }
-    }, [configLoaded, loadConfig])
+    }, [configLoaded, loadConfig]);
 
     // Auto-scroll to bottom
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages, isLoading])
+        messagesEndRef.current?.scrollIntoView({behavior: 'smooth'})
+    }, [messages, isLoading]);
 
     const handleSend = () => {
-        const text = input.trim()
-        if (!text || isLoading || !modelsLoaded || !configLoaded) return
-        setInput('')
+        const text = input.trim();
+        if (!text || isLoading || !modelsLoaded || !configLoaded) return;
+        setInput('');
         // Reset textarea height after sending
         if (inputRef.current) {
             inputRef.current.style.height = 'auto'
         }
-        sendMessage(text)
+        sendMessage(text);
         inputRef.current?.focus()
-    }
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
+            e.preventDefault();
             handleSend()
         }
-    }
+    };
 
     const handleInsertBlocks = (blocks: Block[]) => {
         // Insert into selected container, or at page root
-        const parentId = selectedBlockId || null
+        const parentId = selectedBlockId || null;
         for (const block of blocks) {
             addBlock(block, parentId)
         }
-    }
+    };
 
     const handleCopy = (content: string) => {
         navigator.clipboard.writeText(content).catch(() => {
             // fallback — ignore
         })
-    }
+    };
 
-    const aiEnabled = hasConfiguredAiProvider
+    const aiEnabled = hasConfiguredAiProvider;
 
     return (
         <div className={`ai-assistant ${!aiEnabled ? 'is-disabled' : ''}`}>
             {/* Header */}
             <div className="ai-header">
                 <div className="ai-header-left">
-                    <Sparkles size={14} />
+                    <Sparkles size={14}/>
                     <span>AI Assistant</span>
                 </div>
                 <div className="ai-header-actions">
-                    <AiProviderSelector />
+                    <AiProviderSelector/>
                     {messages.length > 0 && (
                         <button
                             className="ai-header-btn"
                             title="Clear chat"
                             onClick={clearChat}
                         >
-                            <Trash2 size={14} />
+                            <Trash2 size={14}/>
                         </button>
                     )}
                 </div>
@@ -497,7 +499,7 @@ export default function AiAssistant(): JSX.Element {
                 {messages.length === 0 && !isLoading ? (
                     <div className="ai-empty">
                         <div className="ai-empty-icon">
-                            <Sparkles size={28} strokeWidth={2.2} />
+                            <Sparkles size={28} strokeWidth={2.2}/>
                         </div>
                         <div className="ai-empty-title">AI Assistant</div>
                         <div className="ai-empty-subtitle">
@@ -508,7 +510,7 @@ export default function AiAssistant(): JSX.Element {
                         {!aiEnabled && (
                             <button
                                 className="ai-suggestion-btn"
-                                onClick={() => openGlobalSettings({ tab: 'keys' })}
+                                onClick={() => openGlobalSettings({tab: 'keys'})}
                             >
                                 Manage API Keys
                             </button>
@@ -520,7 +522,7 @@ export default function AiAssistant(): JSX.Element {
                                         key={s}
                                         className="ai-suggestion-btn"
                                         onClick={() => {
-                                            setInput(s)
+                                            setInput(s);
                                             inputRef.current?.focus()
                                         }}
                                     >
@@ -544,16 +546,16 @@ export default function AiAssistant(): JSX.Element {
                         {isLoading && (
                             <div className="ai-loading">
                                 <div className="ai-loading-dots">
-                                    <span />
-                                    <span />
-                                    <span />
+                                    <span/>
+                                    <span/>
+                                    <span/>
                                 </div>
                                 Thinking...
                             </div>
                         )}
                     </>
                 )}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef}/>
             </div>
 
             {/* Input bar */}
@@ -564,7 +566,7 @@ export default function AiAssistant(): JSX.Element {
                     data-tutorial="ai-input"
                     value={input}
                     onChange={(e) => {
-                        setInput(e.target.value)
+                        setInput(e.target.value);
                         // Adjust height on next tick to get correct scrollHeight
                         requestAnimationFrame(adjustTextareaHeight)
                     }}
@@ -580,13 +582,14 @@ export default function AiAssistant(): JSX.Element {
                     disabled={!input.trim() || isLoading || !aiEnabled || !modelsLoaded || !configLoaded}
                     title="Send message"
                 >
-                    <Send size={16} />
+                    <Send size={16}/>
                 </button>
             </div>
             {!aiEnabled && (
                 <div className="ai-disabled-note">
                     <span>{AI_API_KEY_REQUIRED_MESSAGE}</span>
-                    <button type="button" className="ai-disabled-link" onClick={() => openGlobalSettings({ tab: 'keys' })}>
+                    <button type="button" className="ai-disabled-link"
+                            onClick={() => openGlobalSettings({tab: 'keys'})}>
                         Open Global Settings
                     </button>
                 </div>

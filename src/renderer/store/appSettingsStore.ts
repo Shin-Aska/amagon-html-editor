@@ -1,120 +1,120 @@
-import { create } from 'zustand'
-import { getApi } from '../utils/api'
-import type { EditorLayout } from './types'
+import {create} from 'zustand'
+import {getApi} from '../utils/api'
+import type {EditorLayout} from './types'
 
 export interface AppSettings {
-  theme: 'light' | 'dark'
-  defaultLayout: EditorLayout
-  showTabChildSelectionWarning: boolean
-  tutorialEnabled: boolean
-  tutorialCompleted: boolean
-  enableDangerousFeatures: boolean
+    theme: 'light' | 'dark'
+    defaultLayout: EditorLayout
+    showTabChildSelectionWarning: boolean
+    tutorialEnabled: boolean
+    tutorialCompleted: boolean
+    enableDangerousFeatures: boolean
 }
 
 interface AppSettingsState extends AppSettings {
-  loaded: boolean
+    loaded: boolean
 }
 
 interface AppSettingsActions {
-  loadSettings: () => Promise<void>
-  saveSettings: (patch: Partial<AppSettings>) => Promise<void>
-  setTheme: (theme: 'light' | 'dark') => void
-  setDefaultLayout: (layout: EditorLayout) => void
-  setShowTabChildSelectionWarning: (show: boolean) => void
-  setTutorialEnabled: (enabled: boolean) => void
-  setTutorialCompleted: (completed: boolean) => void
-  setEnableDangerousFeatures: (enabled: boolean) => void
+    loadSettings: () => Promise<void>
+    saveSettings: (patch: Partial<AppSettings>) => Promise<void>
+    setTheme: (theme: 'light' | 'dark') => void
+    setDefaultLayout: (layout: EditorLayout) => void
+    setShowTabChildSelectionWarning: (show: boolean) => void
+    setTutorialEnabled: (enabled: boolean) => void
+    setTutorialCompleted: (completed: boolean) => void
+    setEnableDangerousFeatures: (enabled: boolean) => void
 }
 
 type AppSettingsStore = AppSettingsState & AppSettingsActions
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'dark',
-  defaultLayout: 'standard',
-  showTabChildSelectionWarning: true,
-  tutorialEnabled: true,
-  tutorialCompleted: false,
-  enableDangerousFeatures: false
-}
+    theme: 'dark',
+    defaultLayout: 'standard',
+    showTabChildSelectionWarning: true,
+    tutorialEnabled: true,
+    tutorialCompleted: false,
+    enableDangerousFeatures: false
+};
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
-  ...DEFAULT_SETTINGS,
-  loaded: false,
+    ...DEFAULT_SETTINGS,
+    loaded: false,
 
-  loadSettings: async () => {
-    try {
-      const api = getApi()
-      const result = await api.app.getSettings()
-      if (result.success && result.settings) {
-        set({ ...DEFAULT_SETTINGS, ...result.settings, loaded: true })
-      } else {
-        set({ ...DEFAULT_SETTINGS, loaded: true })
-      }
-    } catch {
-      set({ ...DEFAULT_SETTINGS, loaded: true })
-    } finally {
-      // Regardless of load success, apply the resolved theme
-      const theme = get().theme
-      if (theme === 'dark') {
-        document.body.classList.add('dark')
-      } else {
-        document.body.classList.remove('dark')
-      }
+    loadSettings: async () => {
+        try {
+            const api = getApi();
+            const result = await api.app.getSettings();
+            if (result.success && result.settings) {
+                set({...DEFAULT_SETTINGS, ...result.settings, loaded: true})
+            } else {
+                set({...DEFAULT_SETTINGS, loaded: true})
+            }
+        } catch {
+            set({...DEFAULT_SETTINGS, loaded: true})
+        } finally {
+            // Regardless of load success, apply the resolved theme
+            const theme = get().theme;
+            if (theme === 'dark') {
+                document.body.classList.add('dark')
+            } else {
+                document.body.classList.remove('dark')
+            }
+        }
+    },
+
+    saveSettings: async (patch: Partial<AppSettings>) => {
+        const current = get();
+        const nextSettings: AppSettings = {
+            theme: patch.theme ?? current.theme,
+            defaultLayout: patch.defaultLayout ?? current.defaultLayout,
+            showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
+            tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
+            tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
+            enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures
+        };
+        set({...nextSettings});
+
+        try {
+            const api = getApi();
+            await api.app.saveSettings(nextSettings)
+        } catch (err) {
+            console.error('Failed to save app settings', err)
+        }
+    },
+
+    setTheme: (theme: 'light' | 'dark') => {
+        set({theme});
+        if (theme === 'dark') {
+            document.body.classList.add('dark')
+        } else {
+            document.body.classList.remove('dark')
+        }
+        get().saveSettings({theme})
+    },
+
+    setDefaultLayout: (layout: EditorLayout) => {
+        set({defaultLayout: layout});
+        get().saveSettings({defaultLayout: layout})
+    },
+
+    setShowTabChildSelectionWarning: (show: boolean) => {
+        set({showTabChildSelectionWarning: show});
+        get().saveSettings({showTabChildSelectionWarning: show})
+    },
+
+    setTutorialEnabled: (enabled: boolean) => {
+        set({tutorialEnabled: enabled});
+        get().saveSettings({tutorialEnabled: enabled})
+    },
+
+    setTutorialCompleted: (completed: boolean) => {
+        set({tutorialCompleted: completed});
+        get().saveSettings({tutorialCompleted: completed})
+    },
+
+    setEnableDangerousFeatures: (enabled: boolean) => {
+        set({enableDangerousFeatures: enabled});
+        get().saveSettings({enableDangerousFeatures: enabled})
     }
-  },
-
-  saveSettings: async (patch: Partial<AppSettings>) => {
-    const current = get()
-    const nextSettings: AppSettings = {
-      theme: patch.theme ?? current.theme,
-      defaultLayout: patch.defaultLayout ?? current.defaultLayout,
-      showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
-      tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
-      tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
-      enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures
-    }
-    set({ ...nextSettings })
-
-    try {
-      const api = getApi()
-      await api.app.saveSettings(nextSettings)
-    } catch (err) {
-      console.error('Failed to save app settings', err)
-    }
-  },
-
-  setTheme: (theme: 'light' | 'dark') => {
-    set({ theme })
-    if (theme === 'dark') {
-      document.body.classList.add('dark')
-    } else {
-      document.body.classList.remove('dark')
-    }
-    get().saveSettings({ theme })
-  },
-
-  setDefaultLayout: (layout: EditorLayout) => {
-    set({ defaultLayout: layout })
-    get().saveSettings({ defaultLayout: layout })
-  },
-
-  setShowTabChildSelectionWarning: (show: boolean) => {
-    set({ showTabChildSelectionWarning: show })
-    get().saveSettings({ showTabChildSelectionWarning: show })
-  },
-
-  setTutorialEnabled: (enabled: boolean) => {
-    set({ tutorialEnabled: enabled })
-    get().saveSettings({ tutorialEnabled: enabled })
-  },
-
-  setTutorialCompleted: (completed: boolean) => {
-    set({ tutorialCompleted: completed })
-    get().saveSettings({ tutorialCompleted: completed })
-  },
-
-  setEnableDangerousFeatures: (enabled: boolean) => {
-    set({ enableDangerousFeatures: enabled })
-    get().saveSettings({ enableDangerousFeatures: enabled })
-  }
-}))
+}));

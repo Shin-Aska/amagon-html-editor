@@ -1,6 +1,6 @@
 {
   "name": "hoarses-html-editor",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "Amagon — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
   "author": "Shin-Aska <Orillarichard@pm.me>",
   "license": "GPL-3.0-or-later",
@@ -14,6 +14,7 @@
     "preview": "electron-vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "generate:fonts": "npx tsx scripts/generate-google-fonts-catalog.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "dist": "electron-builder",
@@ -27,6 +28,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@monaco-editor/react": "^4.7.0",
     "fflate": "^0.8.2",
+    "font-list": "^2.0.2",
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.7.0",
     "monaco-editor": "^0.53.0",
@@ -45,7 +47,9 @@
     "electron": "^41.1.1",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
+    "google-font-metadata": "^6.0.8",
     "jsdom": "^29.0.1",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^7.3.2",
     "vitest": "^4.1.2"

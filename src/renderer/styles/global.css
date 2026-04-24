@@ -1,139 +1,172 @@
 :root {
-  /* Light Theme (Default) */
-  --color-bg-primary: #eff1f5;
-  --color-bg-secondary: #e6e9ef;
-  --color-bg-surface: #dce0e8;
-  --color-bg-hover: #bcc0cc;
-  --color-text-primary: #4c4f69;
-  --color-text-secondary: #6c6f85;
-  --color-text-muted: #9ca0b0;
-  --color-border: #ccd0da;
-  --color-accent: #1e66f5;
-  --color-accent-hover: #7287fd;
-  --color-danger: #d20f39;
-  --color-success: #40a02b;
-  --color-warning: #df8e1d;
+    /* Light Theme (Default) */
+    --color-bg-primary: #eff1f5;
+    --color-bg-secondary: #e6e9ef;
+    --color-bg-surface: #dce0e8;
+    --color-bg-hover: #bcc0cc;
+    --color-text-primary: #4c4f69;
+    --color-text-secondary: #6c6f85;
+    --color-text-muted: #9ca0b0;
+    --color-border: #ccd0da;
+    --color-accent: #1e66f5;
+    --color-accent-hover: #7287fd;
+    --color-danger: #d20f39;
+    --color-success: #40a02b;
+    --color-warning: #df8e1d;
 
-  --sidebar-width: 260px;
-  --inspector-width: 300px;
-  --toolbar-height: 44px;
-  --code-editor-height: 250px;
+    --sidebar-width: 260px;
+    --inspector-width: 300px;
+    --toolbar-height: 44px;
+    --code-editor-height: 250px;
 
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas,
+    --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas,
     'Courier New', monospace;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+
+    /* Legacy editor token aliases retained for older component stylesheets */
+    --bg-primary: var(--color-bg-primary);
+    --bg-secondary: var(--color-bg-secondary);
+    --bg-tertiary: var(--color-bg-surface);
+    --border-color: var(--color-border);
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --accent-color: var(--color-accent);
+    --bg: var(--color-bg-surface);
+    --border: var(--color-border);
+    --text: var(--color-text-primary);
+    --primary: var(--color-accent);
+
+    /* Shared semantic helpers used by a few focused styles */
+    --color-text: var(--color-text-primary);
+    --color-border-hover: var(--color-accent);
+    --color-danger-bg: color-mix(in srgb, var(--color-danger) 14%, transparent);
+    --color-accent-bg: color-mix(in srgb, var(--color-accent) 16%, transparent);
+
+    /* Baseline theme variables for preview/export helpers */
+    --theme-primary: var(--color-accent);
+    --theme-secondary: var(--color-accent-hover);
+    --theme-accent: var(--color-accent);
+    --theme-bg: var(--color-bg-primary);
+    --theme-surface: var(--color-bg-surface);
+    --theme-text: var(--color-text-primary);
+    --theme-text-muted: var(--color-text-muted);
+    --theme-border: var(--color-border);
+    --theme-font-family: var(--font-family);
+    --theme-heading-font-family: var(--font-family);
+    --theme-close-filter: none;
 }
 
 /* Dark Theme Override */
 body.dark {
-  --color-bg-primary: #1e1e2e;
-  --color-bg-secondary: #181825;
-  --color-bg-surface: #313244;
-  --color-bg-hover: #45475a;
-  --color-text-primary: #cdd6f4;
-  --color-text-secondary: #a6adc8;
-  --color-text-muted: #6c7086;
-  --color-border: #45475a;
-  --color-accent: #89b4fa;
-  --color-accent-hover: #74c7ec;
-  --color-danger: #f38ba8;
-  --color-success: #a6e3a1;
-  --color-warning: #fab387;
+    --color-bg-primary: #1e1e2e;
+    --color-bg-secondary: #181825;
+    --color-bg-surface: #313244;
+    --color-bg-hover: #45475a;
+    --color-text-primary: #cdd6f4;
+    --color-text-secondary: #a6adc8;
+    --color-text-muted: #6c7086;
+    --color-border: #45475a;
+    --color-accent: #89b4fa;
+    --color-accent-hover: #74c7ec;
+    --color-danger: #f38ba8;
+    --color-success: #a6e3a1;
+    --color-warning: #fab387;
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-  height: 100%;
-  overflow: hidden;
+    height: 100%;
+    overflow: hidden;
 }
 
 body {
-  font-family: var(--font-family);
-  font-size: 13px;
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-family, sans-serif);
+    font-size: 13px;
+    color: var(--color-text-primary);
+    background: var(--color-bg-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* ─── App Layout ──────────────────────────────────────────────────────────── */
 
 .app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .editor-layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
+    display: flex;
+    flex: 1;
+    overflow: hidden;
 }
 
 /* ─── React Resizable Panels ──────────────────────────────────────────────── */
 
 /* The resize handle */
 .panel-resize-handle {
-  flex: 0 0 1px;
-  background-color: var(--color-border);
-  transition: background-color 0.2s;
-  outline: none;
-  position: relative;
-  z-index: 10;
+    flex: 0 0 1px;
+    background-color: var(--color-border);
+    transition: background-color 0.2s;
+    outline: none;
+    position: relative;
+    z-index: 10;
 }
 
 .panel-resize-handle:hover,
 .panel-resize-handle[data-resize-handle-active] {
-  background-color: var(--color-accent);
+    background-color: var(--color-accent);
 }
 
 /* Hit area for easier grabbing */
 .panel-resize-handle::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -4px;
-  right: -4px;
-  z-index: 10;
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -4px;
+    right: -4px;
+    z-index: 10;
 }
 
 /* Horizontal handle (vertical split) */
 .panel-resize-handle-horizontal {
-  flex: 0 0 1px;
-  background-color: var(--color-border);
-  transition: background-color 0.2s;
-  outline: none;
-  position: relative;
-  z-index: 10;
+    flex: 0 0 1px;
+    background-color: var(--color-border);
+    transition: background-color 0.2s;
+    outline: none;
+    position: relative;
+    z-index: 10;
 }
 
 .panel-resize-handle-horizontal:hover,
 .panel-resize-handle-horizontal[data-resize-handle-active] {
-  background-color: var(--color-accent);
+    background-color: var(--color-accent);
 }
 
 .panel-resize-handle-horizontal::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -4px;
-  bottom: -4px;
-  z-index: 10;
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -4px;
+    bottom: -4px;
+    z-index: 10;
 }
 
 /* ─── Panel Smooth Transitions ────────────────────────────────────────────── */
@@ -143,42 +176,42 @@ body {
 .panel-left,
 .panel-right,
 .code-editor-area {
-  transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, opacity 0.2s ease;
+    transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease, opacity 0.2s ease;
 }
 
 /* Ensure canvas doesn't scroll when layout changes */
 .canvas-area {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-  background: var(--color-bg-surface);
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--color-bg-surface);
 }
 
 /* Code editor smooth appearance */
 .code-editor-area {
-  height: var(--code-editor-height);
-  min-height: 100px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-  transition: height 0.2s ease, min-height 0.2s ease;
+    height: var(--code-editor-height);
+    min-height: 100px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    transition: height 0.2s ease, min-height 0.2s ease;
 }
 
 /* ─── Scrollbar Styling ───────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-bg-hover);
-  border-radius: 4px;
+    background: var(--color-bg-hover);
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+    background: var(--color-text-muted);
 }

@@ -1,63 +1,63 @@
 .code-editor {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
 .code-editor-header {
-  display: flex;
-  align-items: center;
-  height: 32px;
-  padding: 0 8px;
-  background: var(--color-bg-primary);
-  border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 8px;
+    background: var(--color-bg-primary);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .code-editor-header-spacer {
-  flex: 1;
+    flex: 1;
 }
 
 .code-editor-action {
-  height: 24px;
-  padding: 0 10px;
-  font-size: 12px;
-  color: var(--color-text-primary);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+    height: 24px;
+    padding: 0 10px;
+    font-size: 12px;
+    color: var(--color-text-primary);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
 }
 
 .code-editor-action:hover {
-  background: var(--color-bg-surface);
+    background: var(--color-bg-surface);
 }
 
 .code-editor-tab {
-  padding: 4px 12px;
-  font-size: 12px;
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  cursor: pointer;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    cursor: pointer;
 }
 
 .code-editor-tab.active {
-  color: var(--color-text-primary);
-  background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    background: var(--color-bg-secondary);
 }
 
 .code-editor-body {
-  flex: 1;
-  overflow: auto;
-  padding: 0;
-  background: var(--color-bg-primary);
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+    background: var(--color-bg-primary);
 }
 
 .code-placeholder {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
-  white-space: pre;
-  margin: 0;
+    font-family: var(--font-mono, monospace);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    white-space: pre;
+    margin: 0;
 }
