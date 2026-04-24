@@ -690,12 +690,12 @@ const mockApi: ElectronApi = {
       blockRegistry?: string
       config?: any
       themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
-    }): Promise<IpcResult> => {
+    }): Promise<IpcResult & { content?: string }> => {
       // Simulated AI response in browser mode
       return {
         success: true,
         content: 'This is a simulated AI response. To use real AI, run the app in Electron mode and configure your API key in the AI settings.'
-      } as any
+      }
     },
 
     checkCliAvailability: async (): Promise<any> => {
