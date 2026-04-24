@@ -9,51 +9,51 @@ import {webMediaSearchSteps} from './branches/webMediaSearchTutorial'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')
-}
+};
 
 const clickTarget = (selector: string) => {
-  const element = document.querySelector(selector) as HTMLElement | null
+  const element = document.querySelector(selector) as HTMLElement | null;
   if (element) element.click()
-}
+};
 
 const openSidebarTab = (selector: string) => {
-  ensureStandardLayout()
+  ensureStandardLayout();
   window.setTimeout(() => clickTarget(selector), 0)
-}
+};
 
 const ensureToolbarMenuOpen = () => {
-  if (!window.matchMedia('(max-width: 840px)').matches) return
+  if (!window.matchMedia('(max-width: 840px)').matches) return;
 
-  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null
-  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null
-  if (!toggleButton || !collapsible) return
+  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null;
+  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null;
+  if (!toggleButton || !collapsible) return;
 
-  if (collapsible.classList.contains('open')) return
+  if (collapsible.classList.contains('open')) return;
   toggleButton.click()
-}
+};
 
-let keyboardShortcutsLinkCleanup: (() => void) | null = null
+let keyboardShortcutsLinkCleanup: (() => void) | null = null;
 
 const clearKeyboardShortcutsLinkHandler = () => {
-  if (!keyboardShortcutsLinkCleanup) return
-  keyboardShortcutsLinkCleanup()
+  if (!keyboardShortcutsLinkCleanup) return;
+  keyboardShortcutsLinkCleanup();
   keyboardShortcutsLinkCleanup = null
-}
+};
 
 const installKeyboardShortcutsLinkHandler = () => {
-  clearKeyboardShortcutsLinkHandler()
+  clearKeyboardShortcutsLinkHandler();
 
   const handler = (event: Event) => {
-    const target = event.target as HTMLElement | null
-    const link = target?.closest('[data-action="open-shortcuts"]') as HTMLAnchorElement | null
-    if (!link) return
-    event.preventDefault()
+    const target = event.target as HTMLElement | null;
+    const link = target?.closest('[data-action="open-shortcuts"]') as HTMLAnchorElement | null;
+    if (!link) return;
+    event.preventDefault();
     window.dispatchEvent(new CustomEvent(OPEN_KEYBOARD_SHORTCUTS_EVENT))
-  }
+  };
 
-  document.addEventListener('click', handler)
+  document.addEventListener('click', handler);
   keyboardShortcutsLinkCleanup = () => document.removeEventListener('click', handler)
-}
+};
 
 export const tutorialSteps: TutorialStep[] = [
   {
@@ -125,7 +125,7 @@ export const tutorialSteps: TutorialStep[] = [
     action: { type: 'drag-to-canvas' },
     autoAdvance: true,
     onEnter: () => {
-      ensureStandardLayout()
+      ensureStandardLayout();
       openSidebarTab('[data-tutorial="sidebar-tab-widgets"]')
     }
   },
@@ -139,7 +139,7 @@ export const tutorialSteps: TutorialStep[] = [
     action: { type: 'select-block' },
     autoAdvance: true,
     onEnter: () => {
-      ensureStandardLayout()
+      ensureStandardLayout();
       useEditorStore.getState().selectBlock(null)
     }
   },
@@ -219,7 +219,7 @@ export const tutorialSteps: TutorialStep[] = [
     action: { type: 'none' },
     autoAdvance: false,
     onEnter: () => {
-      ensureToolbarMenuOpen()
+      ensureToolbarMenuOpen();
       installKeyboardShortcutsLinkHandler()
     },
     onExit: () => {
@@ -261,7 +261,7 @@ export const tutorialSteps: TutorialStep[] = [
       }
     ]
   }
-]
+];
 
 export const completionStep: TutorialStep = {
   id: 'completion',
@@ -272,4 +272,4 @@ export const completionStep: TutorialStep = {
   arrowDirection: 'none',
   action: { type: 'none' },
   autoAdvance: false
-}
+};

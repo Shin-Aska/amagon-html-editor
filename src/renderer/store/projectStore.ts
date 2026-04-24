@@ -106,7 +106,7 @@ type ProjectStore = ProjectState & ProjectActions
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
 function createDefaultSettings(): ProjectSettings {
-  const theme = createDefaultTheme()
+  const theme = createDefaultTheme();
   return {
     name: 'Untitled Project',
     framework: 'bootstrap-5',
@@ -147,33 +147,33 @@ function normalizeSlug(input: string): string {
 }
 
 function ensureUniqueSlug(baseSlug: string, pages: Page[]): string {
-  const existing = new Set(pages.map((p) => p.slug))
-  if (!existing.has(baseSlug)) return baseSlug
+  const existing = new Set(pages.map((p) => p.slug));
+  if (!existing.has(baseSlug)) return baseSlug;
 
-  let i = 1
-  while (existing.has(`${baseSlug}-${i}`)) i++
+  let i = 1;
+  while (existing.has(`${baseSlug}-${i}`)) i++;
   return `${baseSlug}-${i}`
 }
 
 function addMetaKeysToCounts(counts: Record<string, number>, meta: Record<string, string> | undefined): void {
-  if (!meta) return
+  if (!meta) return;
   for (const k of Object.keys(meta)) {
     counts[k] = (counts[k] || 0) + 1
   }
 }
 
 function removeMetaKeysFromCounts(counts: Record<string, number>, meta: Record<string, string> | undefined): void {
-  if (!meta) return
+  if (!meta) return;
   for (const k of Object.keys(meta)) {
-    const next = (counts[k] || 0) - 1
-    if (next <= 0) delete counts[k]
+    const next = (counts[k] || 0) - 1;
+    if (next <= 0) delete counts[k];
     else counts[k] = next
   }
 }
 
 function buildMetaKeyCounts(pages: Page[]): Record<string, number> {
-  const counts: Record<string, number> = {}
-  for (const p of pages) addMetaKeysToCounts(counts, p.meta)
+  const counts: Record<string, number> = {};
+  for (const p of pages) addMetaKeysToCounts(counts, p.meta);
   return counts
 }
 
@@ -185,7 +185,7 @@ function normalizeThemeVariants(
   variants: ProjectThemeVariants | undefined,
   fallbackTheme: ProjectTheme
 ): ProjectThemeVariants {
-  if (!variants) return createDefaultThemeVariants(fallbackTheme)
+  if (!variants) return createDefaultThemeVariants(fallbackTheme);
 
   return {
     light: cloneTheme(variants.light ?? fallbackTheme),
@@ -195,7 +195,7 @@ function normalizeThemeVariants(
 }
 
 function syncLegacyTheme(settings: ProjectSettings): ProjectSettings {
-  const variants = normalizeThemeVariants(settings.themes, settings.theme)
+  const variants = normalizeThemeVariants(settings.themes, settings.theme);
   return {
     ...settings,
     theme: cloneTheme(variants.light),
@@ -210,8 +210,8 @@ function markProjectDirty(): void {
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
-  const defaultPage = createDefaultPage()
-  const initialMetaCounts = buildMetaKeyCounts([defaultPage])
+  const defaultPage = createDefaultPage();
+  const initialMetaCounts = buildMetaKeyCounts([defaultPage]);
 
   return {
     settings: createDefaultSettings(),
@@ -233,22 +233,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     setProject: (data, filePath) => {
       // Backward compatibility: migrate old string theme to ProjectTheme object
-      const incoming = data.projectSettings
+      const incoming = data.projectSettings;
       const fallbackTheme =
         incoming?.theme && typeof incoming.theme === 'object' && (incoming.theme as ProjectTheme).colors
           ? (incoming.theme as ProjectTheme)
-          : createDefaultTheme()
+          : createDefaultTheme();
       const migratedSettings = {
         ...createDefaultSettings(),
         ...incoming,
         theme: cloneTheme(fallbackTheme),
         themes: normalizeThemeVariants(incoming?.themes, fallbackTheme)
-      }
-      const normalizedSettings = syncLegacyTheme(migratedSettings)
+      };
+      const normalizedSettings = syncLegacyTheme(migratedSettings);
 
       // Migrate legacy customCss string to customCssFiles
       const sharedCssFiles = (() => {
-        const lightTheme = normalizedSettings.themes?.light
+        const lightTheme = normalizedSettings.themes?.light;
         if (lightTheme?.customCssFiles && lightTheme.customCssFiles.length > 0) {
           return lightTheme.customCssFiles.map((file) => ({ ...file }))
         }
@@ -261,17 +261,17 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }]
         }
         return []
-      })()
+      })();
 
-      const themes = normalizedSettings.themes
+      const themes = normalizedSettings.themes;
       if (themes) {
-        themes.light.customCssFiles = sharedCssFiles.map((file) => ({ ...file }))
-        themes.dark.customCssFiles = sharedCssFiles.map((file) => ({ ...file }))
+        themes.light.customCssFiles = sharedCssFiles.map((file) => ({ ...file }));
+        themes.dark.customCssFiles = sharedCssFiles.map((file) => ({ ...file }));
         normalizedSettings.theme = cloneTheme(themes.light)
       }
 
-      const nextPages = data.pages.length > 0 ? data.pages : [createDefaultPage()]
-      const counts = buildMetaKeyCounts(nextPages)
+      const nextPages = data.pages.length > 0 ? data.pages : [createDefaultPage()];
+      const counts = buildMetaKeyCounts(nextPages);
 
       set({
         settings: normalizedSettings,
@@ -292,8 +292,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     closeProject: () => {
-      const newDefault = createDefaultPage()
-      const counts = buildMetaKeyCounts([newDefault])
+      const newDefault = createDefaultPage();
+      const counts = buildMetaKeyCounts([newDefault]);
       set({
         settings: createDefaultSettings(),
         pages: [newDefault],
@@ -315,14 +315,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     updateSettings: (patch) => {
       set((state) => ({
         settings: syncLegacyTheme({ ...state.settings, ...patch })
-      }))
+      }));
       markProjectDirty()
     },
 
     setFramework: (framework) => {
       set((state) => ({
         settings: { ...state.settings, framework }
-      }))
+      }));
       markProjectDirty()
     },
 
@@ -333,7 +333,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     setPublisherBinding: (providerId) => {
       set({
         boundPublisherId: providerId ?? undefined
-      })
+      });
       markProjectDirty()
     },
 
@@ -341,12 +341,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       set({
         lastPublishedUrl: url,
         lastPublishedAt: date
-      })
+      });
       markProjectDirty()
     },
 
     getProjectData: () => {
-      const state = get()
+      const state = get();
       return {
         projectSettings: {
           ...syncLegacyTheme(state.settings),
@@ -371,12 +371,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     setProjectTheme: (theme, mode = 'light') => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
-        const nextTheme = cloneTheme(theme)
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
+        const nextTheme = cloneTheme(theme);
         const nextVariants = {
           ...variants,
           [mode]: nextTheme
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -384,22 +384,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     updateProjectTheme: (patch, mode = 'light') => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
-        const current = mode === 'dark' ? variants.dark : variants.light
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
+        const current = mode === 'dark' ? variants.dark : variants.light;
         const nextTheme: ProjectTheme = {
           ...current,
           ...patch
-        }
+        };
         const nextVariants = {
           ...variants,
           [mode]: nextTheme
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -407,22 +407,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     updateThemeColors: (patch, mode = 'light') => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
-        const current = mode === 'dark' ? variants.dark : variants.light
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
+        const current = mode === 'dark' ? variants.dark : variants.light;
         const nextTheme: ProjectTheme = {
           ...current,
           colors: { ...current.colors, ...patch }
-        }
+        };
         const nextVariants = {
           ...variants,
           [mode]: nextTheme
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -430,22 +430,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     updateThemeTypography: (patch, mode = 'light') => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
-        const current = mode === 'dark' ? variants.dark : variants.light
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
+        const current = mode === 'dark' ? variants.dark : variants.light;
         const nextTheme: ProjectTheme = {
           ...current,
           typography: { ...current.typography, ...patch }
-        }
+        };
         const nextVariants = {
           ...variants,
           [mode]: nextTheme
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -453,22 +453,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     updateThemeSpacing: (patch, mode = 'light') => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
-        const current = mode === 'dark' ? variants.dark : variants.light
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
+        const current = mode === 'dark' ? variants.dark : variants.light;
         const nextTheme: ProjectTheme = {
           ...current,
           spacing: { ...current.spacing, ...patch }
-        }
+        };
         const nextVariants = {
           ...variants,
           [mode]: nextTheme
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -476,22 +476,22 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     updateThemeBorders: (patch, mode = 'light') => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
-        const current = mode === 'dark' ? variants.dark : variants.light
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
+        const current = mode === 'dark' ? variants.dark : variants.light;
         const nextTheme: ProjectTheme = {
           ...current,
           borders: { ...current.borders, ...patch }
-        }
+        };
         const nextVariants = {
           ...variants,
           [mode]: nextTheme
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -499,18 +499,18 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     setThemeCustomCss: (css) => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
         const nextVariants = {
           ...variants,
           light: { ...variants.light, customCss: css },
           dark: { ...variants.dark, customCss: css }
-        }
+        };
         return {
           settings: syncLegacyTheme({
             ...state.settings,
@@ -518,20 +518,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             themes: nextVariants
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
     setThemePreviewMode: (mode) => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
         return {
           settings: syncLegacyTheme({
             ...state.settings,
             themes: { ...variants, previewMode: mode }
           })
         }
-      })
+      });
       markProjectDirty()
     },
 
@@ -539,14 +539,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     addCustomPreset: (preset) => {
       set((state) => {
-        const index = state.customPresets.findIndex((p) => p.name === preset.name)
+        const index = state.customPresets.findIndex((p) => p.name === preset.name);
         if (index >= 0) {
-          const next = [...state.customPresets]
-          next[index] = { ...next[index], ...preset, isCustom: true }
+          const next = [...state.customPresets];
+          next[index] = { ...next[index], ...preset, isCustom: true };
           return { customPresets: next }
         }
         return { customPresets: [...state.customPresets, { ...preset, isCustom: true }] }
-      })
+      });
       markProjectDirty()
     },
 
@@ -555,14 +555,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         customPresets: state.customPresets.map((p) =>
           p.name === name ? { ...p, ...patch, isCustom: true } : p
         )
-      }))
+      }));
       markProjectDirty()
     },
 
     deleteCustomPreset: (name) => {
       set((state) => ({
         customPresets: state.customPresets.filter((p) => p.name !== name)
-      }))
+      }));
       markProjectDirty()
     },
 
@@ -570,26 +570,26 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
 
     addFonts: (assets) => {
       set((state) => {
-        const next = [...state.fonts]
+        const next = [...state.fonts];
         for (const asset of assets) {
           if (!next.some((f) => f.id === asset.id)) {
             next.push(asset)
           }
         }
         return { fonts: next }
-      })
+      });
       markProjectDirty()
     },
 
     removeFont: (id) => {
       set((state) => ({
         fonts: state.fonts.filter((f) => f.id !== id)
-      }))
+      }));
       markProjectDirty()
     },
 
     setFonts: (assets) => {
-      set({ fonts: assets })
+      set({ fonts: assets });
       markProjectDirty()
     },
 
@@ -601,7 +601,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         name,
         css: '',
         enabled: true
-      }
+      };
       set((state) => ({
         settings: {
           ...state.settings,
@@ -618,8 +618,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             }
           }
         }
-      }))
-      markProjectDirty()
+      }));
+      markProjectDirty();
       return file
     },
 
@@ -643,7 +643,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             }
           }
         }
-      }))
+      }));
       markProjectDirty()
     },
 
@@ -673,20 +673,20 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             }
           }
         }
-      }))
+      }));
       markProjectDirty()
     },
 
     reorderCssFiles: (fromIndex, toIndex) => {
       set((state) => {
-        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme)
+        const variants = normalizeThemeVariants(state.settings.themes, state.settings.theme);
         const reorder = (files: CssFile[]) => {
-          const next = [...files]
-          const [moved] = next.splice(fromIndex, 1)
-          next.splice(toIndex, 0, moved)
+          const next = [...files];
+          const [moved] = next.splice(fromIndex, 1);
+          next.splice(toIndex, 0, moved);
           return next
-        }
-        const files = reorder(state.settings.theme.customCssFiles || [])
+        };
+        const files = reorder(state.settings.theme.customCssFiles || []);
         return {
           settings: {
             ...state.settings,
@@ -698,7 +698,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             }
           }
         }
-      })
+      });
       markProjectDirty()
     },
 
@@ -728,40 +728,40 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             }
           }
         }
-      }))
+      }));
       markProjectDirty()
     },
 
     // ─── Page management ─────────────────────────────────────────────
 
     addPage: (title, slug) => {
-      const state = get()
-      const base = normalizeSlug(slug ?? title) || 'page'
-      const unique = ensureUniqueSlug(base, state.pages)
-      const created = createDefaultPage(title, unique)
-      created.blocks = createPageHeaderBlock(title) as any
+      const state = get();
+      const base = normalizeSlug(slug ?? title) || 'page';
+      const unique = ensureUniqueSlug(base, state.pages);
+      const created = createDefaultPage(title, unique);
+      created.blocks = createPageHeaderBlock(title) as any;
 
       set((s) => {
-        const counts = { ...s.metaKeyCounts }
-        addMetaKeysToCounts(counts, created.meta)
+        const counts = { ...s.metaKeyCounts };
+        addMetaKeysToCounts(counts, created.meta);
         return {
           pages: [...s.pages, created],
           currentPageId: created.id,
           metaKeyCounts: counts,
           uniqueMetaKeys: sortedMetaKeysFromCounts(counts)
         }
-      })
+      });
 
       return created
     },
 
     removePage: (id) => {
       set((state) => {
-        const removed = state.pages.find((p) => p.id === id)
-        const filtered = state.pages.filter((p) => p.id !== id)
+        const removed = state.pages.find((p) => p.id === id);
+        const filtered = state.pages.filter((p) => p.id !== id);
         if (filtered.length === 0) {
-          const newPage = createDefaultPage()
-          const counts = buildMetaKeyCounts([newPage])
+          const newPage = createDefaultPage();
+          const counts = buildMetaKeyCounts([newPage]);
           return {
             pages: [newPage],
             currentPageId: newPage.id,
@@ -769,9 +769,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
             uniqueMetaKeys: sortedMetaKeysFromCounts(counts)
           }
         }
-        const newCurrentId = state.currentPageId === id ? filtered[0].id : state.currentPageId
-        const counts = { ...state.metaKeyCounts }
-        if (removed) removeMetaKeysFromCounts(counts, removed.meta)
+        const newCurrentId = state.currentPageId === id ? filtered[0].id : state.currentPageId;
+        const counts = { ...state.metaKeyCounts };
+        if (removed) removeMetaKeysFromCounts(counts, removed.meta);
         return {
           pages: filtered,
           currentPageId: newCurrentId,
@@ -789,14 +789,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
           }
         }
 
-        const counts = { ...state.metaKeyCounts }
+        const counts = { ...state.metaKeyCounts };
 
         const pages = state.pages.map((p) => {
-          if (p.id !== id) return p
-          removeMetaKeysFromCounts(counts, p.meta)
-          addMetaKeysToCounts(counts, patch.meta)
+          if (p.id !== id) return p;
+          removeMetaKeysFromCounts(counts, p.meta);
+          addMetaKeysToCounts(counts, patch.meta);
           return { ...p, ...patch }
-        })
+        });
 
         return {
           pages,
@@ -811,15 +811,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     getCurrentPage: () => {
-      const state = get()
+      const state = get();
       return state.pages.find((p) => p.id === state.currentPageId) ?? null
     },
 
     reorderPages: (fromIndex, toIndex) => {
       set((state) => {
-        const pages = [...state.pages]
-        const [moved] = pages.splice(fromIndex, 1)
-        pages.splice(toIndex, 0, moved)
+        const pages = [...state.pages];
+        const [moved] = pages.splice(fromIndex, 1);
+        pages.splice(toIndex, 0, moved);
         return { pages }
       })
     },
@@ -831,10 +831,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         id: generateBlockId(),
         name,
         tags: tags && tags.length > 0 ? tags : undefined
-      }
+      };
       set((state) => ({
         folders: [...state.folders, folder]
-      }))
+      }));
       return folder
     },
 
@@ -855,12 +855,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     getEffectiveTags: (page) => {
-      const state = get()
-      const ownTags = page.tags ?? []
-      if (!page.folderId) return ownTags
+      const state = get();
+      const ownTags = page.tags ?? [];
+      if (!page.folderId) return ownTags;
 
-      const folder = state.folders.find((f) => f.id === page.folderId)
-      if (!folder || !folder.tags || folder.tags.length === 0) return ownTags
+      const folder = state.folders.find((f) => f.id === page.folderId);
+      if (!folder || !folder.tags || folder.tags.length === 0) return ownTags;
 
       // Merge and deduplicate
       return Array.from(new Set([...ownTags, ...folder.tags]))
@@ -880,13 +880,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       }))
     }
   }
-})
+});
 
 // When the user exits tab edit mode in the editor, immediately flush the merged
 // block tree back into projectStore so App.tsx cannot reload a stale snapshot.
 setOnExitTabEditModeCallback((mergedBlocks) => {
-  const ps = useProjectStore.getState()
+  const ps = useProjectStore.getState();
   if (ps.currentPageId) {
     ps.updatePage(ps.currentPageId, { blocks: mergedBlocks })
   }
-})
+});

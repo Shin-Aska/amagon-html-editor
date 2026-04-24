@@ -11,8 +11,8 @@ import type {PublisherExtension} from '../../types/PublisherExtension'
 import {validateForGithubPages} from '../../validators/githubPagesValidator'
 import {makeError} from '../../validators/validationHelpers'
 
-const GITHUB_API_BASE_URL = 'https://api.github.com'
-const COMMIT_MESSAGE = 'Publish via Amagon'
+const GITHUB_API_BASE_URL = 'https://api.github.com';
+const COMMIT_MESSAGE = 'Publish via Amagon';
 
 interface GitHubUserResponse {
   login: string
@@ -71,7 +71,7 @@ function toBase64Content(file: ExportedFile): string {
 }
 
 function getValidationErrors(credentials: PublishCredentials): ValidationIssue[] {
-  const issues: ValidationIssue[] = []
+  const issues: ValidationIssue[] = [];
 
   if (!isNonEmptyString(credentials.pat)) {
     issues.push(makeError('GitHub Personal Access Token is required.', undefined, 'Provide a token with repository write access.'))
@@ -90,14 +90,14 @@ function getValidationErrors(credentials: PublishCredentials): ValidationIssue[]
 }
 
 async function parseGitHubResponse<T>(response: Response): Promise<GitHubApiResult<T>> {
-  const contentType = response.headers.get('content-type') ?? ''
-  const isJson = contentType.includes('application/json')
-  const payload = isJson ? await response.json() : await response.text()
+  const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+  const payload = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
     const message = typeof payload === 'string'
       ? payload
-      : (payload as GitHubApiErrorPayload)?.message ?? `GitHub API request failed with status ${response.status}.`
+      : (payload as GitHubApiErrorPayload)?.message ?? `GitHub API request failed with status ${response.status}.`;
 
     return {
       ok: false,
@@ -117,11 +117,11 @@ async function githubRequest<T>(
   pat: string,
   init: RequestInit = {}
 ): Promise<GitHubApiResult<T>> {
-  const headers = new Headers(init.headers)
-  headers.set('Accept', 'application/vnd.github+json')
-  headers.set('Authorization', `token ${pat}`)
-  headers.set('User-Agent', 'Amagon-HTML-Editor')
-  headers.set('X-GitHub-Api-Version', '2022-11-28')
+  const headers = new Headers(init.headers);
+  headers.set('Accept', 'application/vnd.github+json');
+  headers.set('Authorization', `token ${pat}`);
+  headers.set('User-Agent', 'Amagon-HTML-Editor');
+  headers.set('X-GitHub-Api-Version', '2022-11-28');
 
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
@@ -130,32 +130,32 @@ async function githubRequest<T>(
   const response = await fetch(`${GITHUB_API_BASE_URL}${path}`, {
     ...init,
     headers
-  })
+  });
 
   return parseGitHubResponse<T>(response)
 }
 
 export class GitHubPagesAdapter implements PublisherExtension {
-  readonly apiVersion = PUBLISHER_EXTENSION_API_VERSION
+  readonly apiVersion = PUBLISHER_EXTENSION_API_VERSION;
 
   readonly meta = {
     id: 'github-pages',
     displayName: 'GitHub Pages',
     websiteUrl: 'https://pages.github.com',
     description: 'Free static hosting from a GitHub repository branch'
-  }
+  };
 
   readonly credentialFields = [
     { key: 'pat', label: 'Personal Access Token', sensitive: true },
     { key: 'owner', label: 'GitHub Username / Org', sensitive: false },
     { key: 'repo', label: 'Repository Name', sensitive: false },
     { key: 'branch', label: 'Branch (e.g. gh-pages)', sensitive: false }
-  ]
+  ];
 
   async validate(files: ExportedFile[], credentials: PublishCredentials): Promise<ValidationResult> {
-    const baseResult = validateForGithubPages(files)
-    const credentialIssues = getValidationErrors(credentials)
-    const issues = [...baseResult.issues, ...credentialIssues]
+    const baseResult = validateForGithubPages(files);
+    const credentialIssues = getValidationErrors(credentials);
+    const issues = [...baseResult.issues, ...credentialIssues];
 
     return {
       ok: credentialIssues.length === 0,
@@ -172,9 +172,9 @@ export class GitHubPagesAdapter implements PublisherExtension {
       phase: 'validating',
       percent: 0,
       message: 'Validating files and credentials...'
-    })
+    });
 
-    const validation = await this.validate(files, credentials)
+    const validation = await this.validate(files, credentials);
     if (!validation.ok) {
       return {
         success: false,
@@ -183,19 +183,19 @@ export class GitHubPagesAdapter implements PublisherExtension {
       }
     }
 
-    const pat = credentials.pat.trim()
-    const owner = credentials.owner.trim()
-    const repo = credentials.repo.trim()
-    const branch = credentials.branch.trim()
+    const pat = credentials.pat.trim();
+    const owner = credentials.owner.trim();
+    const repo = credentials.repo.trim();
+    const branch = credentials.branch.trim();
 
     onProgress({
       phase: 'uploading',
       percent: 5,
       message: 'Connecting to GitHub...'
-    })
+    });
 
     try {
-      const userResult = await githubRequest<GitHubUserResponse>('/user', pat)
+      const userResult = await githubRequest<GitHubUserResponse>('/user', pat);
       if (!userResult.ok) {
         return {
           success: false,
@@ -204,8 +204,8 @@ export class GitHubPagesAdapter implements PublisherExtension {
         }
       }
 
-      const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`
-      const repoResult = await githubRequest<GitHubRepoResponse>(repoPath, pat)
+      const repoPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+      const repoResult = await githubRequest<GitHubRepoResponse>(repoPath, pat);
       if (!repoResult.ok) {
         return {
           success: false,
@@ -214,8 +214,8 @@ export class GitHubPagesAdapter implements PublisherExtension {
         }
       }
 
-      const branchRefPath = `${repoPath}/git/ref/heads/${encodeURIComponent(branch)}`
-      const branchRefResult = await githubRequest<GitHubRefResponse>(branchRefPath, pat)
+      const branchRefPath = `${repoPath}/git/ref/heads/${encodeURIComponent(branch)}`;
+      const branchRefResult = await githubRequest<GitHubRefResponse>(branchRefPath, pat);
 
       if (!branchRefResult.ok) {
         if (branchRefResult.status !== 404) {
@@ -226,11 +226,11 @@ export class GitHubPagesAdapter implements PublisherExtension {
           }
         }
 
-        const defaultBranch = repoResult.data.default_branch
+        const defaultBranch = repoResult.data.default_branch;
         const defaultBranchRefResult = await githubRequest<GitHubRefResponse>(
           `${repoPath}/git/ref/heads/${encodeURIComponent(defaultBranch)}`,
           pat
-        )
+        );
 
         if (!defaultBranchRefResult.ok) {
           return {
@@ -240,7 +240,7 @@ export class GitHubPagesAdapter implements PublisherExtension {
           }
         }
 
-        const baseSha = defaultBranchRefResult.data.object?.sha
+        const baseSha = defaultBranchRefResult.data.object?.sha;
         if (!baseSha) {
           return {
             success: false,
@@ -259,7 +259,7 @@ export class GitHubPagesAdapter implements PublisherExtension {
               sha: baseSha
             })
           }
-        )
+        );
 
         if (!createBranchResult.ok) {
           return {
@@ -270,17 +270,17 @@ export class GitHubPagesAdapter implements PublisherExtension {
         }
       }
 
-      const totalFiles = files.length
+      const totalFiles = files.length;
 
       for (let index = 0; index < files.length; index += 1) {
-        const file = files[index]
-        const encodedPath = encodeGitHubContentPath(file.path)
-        const contentPath = `${repoPath}/contents/${encodedPath}`
+        const file = files[index];
+        const encodedPath = encodeGitHubContentPath(file.path);
+        const contentPath = `${repoPath}/contents/${encodedPath}`;
 
         const existingFileResult = await githubRequest<GitHubContentResponse>(
           `${contentPath}?ref=${encodeURIComponent(branch)}`,
           pat
-        )
+        );
 
         if (!existingFileResult.ok && existingFileResult.status !== 404) {
           return {
@@ -290,7 +290,7 @@ export class GitHubPagesAdapter implements PublisherExtension {
           }
         }
 
-        const existingSha = existingFileResult.ok ? existingFileResult.data.sha : undefined
+        const existingSha = existingFileResult.ok ? existingFileResult.data.sha : undefined;
         const uploadResult = await githubRequest<{ content: { path: string } }>(
           contentPath,
           pat,
@@ -303,7 +303,7 @@ export class GitHubPagesAdapter implements PublisherExtension {
               branch
             })
           }
-        )
+        );
 
         if (!uploadResult.ok) {
           return {
@@ -315,7 +315,7 @@ export class GitHubPagesAdapter implements PublisherExtension {
 
         const progressPercent = totalFiles === 0
           ? 95
-          : Math.round(((index + 1) / totalFiles) * 90) + 5
+          : Math.round(((index + 1) / totalFiles) * 90) + 5;
 
         onProgress({
           phase: 'uploading',
@@ -328,7 +328,7 @@ export class GitHubPagesAdapter implements PublisherExtension {
         phase: 'done',
         percent: 100,
         message: `Published as ${userResult.data.login}.`
-      })
+      });
 
       return {
         success: true,

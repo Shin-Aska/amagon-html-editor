@@ -17,8 +17,8 @@ interface IconFieldProps {
 }
 
 function LazyGridIcon({ name }: { name: string }): JSX.Element | null {
-  const LazyIcon = getLazyLucideIcon(name)
-  if (!LazyIcon) return <div style={{ width: 16, height: 16 }} />
+  const LazyIcon = getLazyLucideIcon(name);
+  if (!LazyIcon) return <div style={{ width: 16, height: 16 }} />;
   return (
     <Suspense fallback={<div style={{ width: 16, height: 16 }} />}>
       <LazyIcon size={16} />
@@ -27,20 +27,20 @@ function LazyGridIcon({ name }: { name: string }): JSX.Element | null {
 }
 
 function IconField({ value, onChange }: IconFieldProps): JSX.Element {
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const trimmed = String(value || '').trim()
-  const lucideName = trimmed.startsWith('lucide:') ? trimmed.replace(/^lucide:/, '') : ''
-  const legacyLucideName = mapLegacyBootstrapIcon(trimmed)
-  const hasLucideIcon = isKnownLucideIcon(lucideName)
-  const hasLegacyLucideIcon = !!legacyLucideName && isKnownLucideIcon(legacyLucideName)
-  const hasGlyph = !trimmed ? false : isRenderableGlyph(trimmed)
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const trimmed = String(value || '').trim();
+  const lucideName = trimmed.startsWith('lucide:') ? trimmed.replace(/^lucide:/, '') : '';
+  const legacyLucideName = mapLegacyBootstrapIcon(trimmed);
+  const hasLucideIcon = isKnownLucideIcon(lucideName);
+  const hasLegacyLucideIcon = !!legacyLucideName && isKnownLucideIcon(legacyLucideName);
+  const hasGlyph = !trimmed ? false : isRenderableGlyph(trimmed);
 
-  const query = searchQuery.trim().toLowerCase()
+  const query = searchQuery.trim().toLowerCase();
   const visibleIconNames = useMemo(() => {
-    if (query.length < 2) return lucidePickerIcons
+    if (query.length < 2) return lucidePickerIcons;
     return allLucideIconNames.filter((n) => n.includes(query))
-  }, [query])
+  }, [query]);
 
   return (
     <div className="icon-field">
@@ -120,17 +120,17 @@ function IconField({ value, onChange }: IconFieldProps): JSX.Element {
                 </div>
               ) : (
                 visibleIconNames.map((iconName) => {
-                  const iconValue = `lucide:${iconName}`
-                  const active = trimmed === iconValue
-                  const isPopular = lucidePickerIcons.includes(iconName)
+                  const iconValue = `lucide:${iconName}`;
+                  const active = trimmed === iconValue;
+                  const isPopular = lucidePickerIcons.includes(iconName);
                   return (
                     <button
                       key={iconValue}
                       type="button"
                       className={`icon-field-grid-btn ${active ? 'active' : ''}`}
                       onClick={() => {
-                        onChange(iconValue)
-                        setPickerOpen(false)
+                        onChange(iconValue);
+                        setPickerOpen(false);
                         setSearchQuery('')
                       }}
                       title={`${iconValue}${isPopular ? ' (popular)' : ''}`}

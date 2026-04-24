@@ -5,49 +5,49 @@ import {getApi} from '../../../utils/api'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')
-}
+};
 
 const clickTarget = (selector: string) => {
-  const element = document.querySelector(selector) as HTMLElement | null
+  const element = document.querySelector(selector) as HTMLElement | null;
   if (element) element.click()
-}
+};
 
 const openSidebarTab = (selector: string) => {
-  ensureStandardLayout()
+  ensureStandardLayout();
   window.setTimeout(() => clickTarget(selector), 0)
-}
+};
 
 const ensureToolbarMenuOpen = () => {
-  if (!window.matchMedia('(max-width: 840px)').matches) return
+  if (!window.matchMedia('(max-width: 840px)').matches) return;
 
-  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null
-  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null
-  if (!toggleButton || !collapsible) return
+  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null;
+  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null;
+  if (!toggleButton || !collapsible) return;
 
-  if (collapsible.classList.contains('open')) return
+  if (collapsible.classList.contains('open')) return;
   toggleButton.click()
-}
+};
 
 const maybeSkipMediaKeyStep = async (stepId: string) => {
-  const api = getApi()
+  const api = getApi();
   try {
-    const result = await api.mediaSearch.getConfig()
-    const config = result?.config as any
-    if (!config) return
+    const result = await api.mediaSearch.getConfig();
+    const config = result?.config as any;
+    if (!config) return;
 
-    const hasApiKey = Boolean(config.apiKey)
-    const encryptedKeys = config.encryptedApiKeys
-    const provider = config.provider
+    const hasApiKey = Boolean(config.apiKey);
+    const encryptedKeys = config.encryptedApiKeys;
+    const provider = config.provider;
     const hasEncryptedKey = Boolean(
       encryptedKeys && (
         (provider && encryptedKeys[provider]) ||
         Object.values(encryptedKeys).some(Boolean)
       )
-    )
+    );
 
     if (config.enabled && (hasApiKey || hasEncryptedKey)) {
-      const state = useTutorialStore.getState()
-      const currentStep = state.steps[state.currentStepIndex]
+      const state = useTutorialStore.getState();
+      const currentStep = state.steps[state.currentStepIndex];
       if (state.isActive && currentStep?.id === stepId) {
         state.nextStep()
       }
@@ -55,7 +55,7 @@ const maybeSkipMediaKeyStep = async (stepId: string) => {
   } catch (err) {
     console.warn('Failed to check media search config', err)
   }
-}
+};
 
 export const webMediaSearchSteps: TutorialStep[] = [
   {
@@ -166,4 +166,4 @@ export const webMediaSearchSteps: TutorialStep[] = [
     action: { type: 'none' },
     autoAdvance: false
   }
-]
+];

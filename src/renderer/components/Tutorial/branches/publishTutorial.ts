@@ -1,15 +1,15 @@
 import type {TutorialStep} from '../../../store/tutorialStore'
 
 const ensureToolbarMenuOpen = () => {
-  if (!window.matchMedia('(max-width: 840px)').matches) return
+  if (!window.matchMedia('(max-width: 840px)').matches) return;
 
-  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null
-  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null
-  if (!toggleButton || !collapsible) return
+  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null;
+  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null;
+  if (!toggleButton || !collapsible) return;
 
-  if (collapsible.classList.contains('open')) return
+  if (collapsible.classList.contains('open')) return;
   toggleButton.click()
-}
+};
 
 export const publishSteps: TutorialStep[] = [
   {
@@ -74,4 +74,4 @@ export const publishSteps: TutorialStep[] = [
     action: { type: 'none' },
     autoAdvance: false
   }
-]
+];

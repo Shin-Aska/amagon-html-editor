@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   tutorialEnabled: true,
   tutorialCompleted: false,
   enableDangerousFeatures: false
-}
+};
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   ...DEFAULT_SETTINGS,
@@ -43,8 +43,8 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
 
   loadSettings: async () => {
     try {
-      const api = getApi()
-      const result = await api.app.getSettings()
+      const api = getApi();
+      const result = await api.app.getSettings();
       if (result.success && result.settings) {
         set({ ...DEFAULT_SETTINGS, ...result.settings, loaded: true })
       } else {
@@ -54,7 +54,7 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       set({ ...DEFAULT_SETTINGS, loaded: true })
     } finally {
       // Regardless of load success, apply the resolved theme
-      const theme = get().theme
+      const theme = get().theme;
       if (theme === 'dark') {
         document.body.classList.add('dark')
       } else {
@@ -64,7 +64,7 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   },
 
   saveSettings: async (patch: Partial<AppSettings>) => {
-    const current = get()
+    const current = get();
     const nextSettings: AppSettings = {
       theme: patch.theme ?? current.theme,
       defaultLayout: patch.defaultLayout ?? current.defaultLayout,
@@ -72,11 +72,11 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
       tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
       tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
       enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures
-    }
-    set({ ...nextSettings })
+    };
+    set({ ...nextSettings });
 
     try {
-      const api = getApi()
+      const api = getApi();
       await api.app.saveSettings(nextSettings)
     } catch (err) {
       console.error('Failed to save app settings', err)
@@ -84,7 +84,7 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   },
 
   setTheme: (theme: 'light' | 'dark') => {
-    set({ theme })
+    set({ theme });
     if (theme === 'dark') {
       document.body.classList.add('dark')
     } else {
@@ -94,27 +94,27 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
   },
 
   setDefaultLayout: (layout: EditorLayout) => {
-    set({ defaultLayout: layout })
+    set({ defaultLayout: layout });
     get().saveSettings({ defaultLayout: layout })
   },
 
   setShowTabChildSelectionWarning: (show: boolean) => {
-    set({ showTabChildSelectionWarning: show })
+    set({ showTabChildSelectionWarning: show });
     get().saveSettings({ showTabChildSelectionWarning: show })
   },
 
   setTutorialEnabled: (enabled: boolean) => {
-    set({ tutorialEnabled: enabled })
+    set({ tutorialEnabled: enabled });
     get().saveSettings({ tutorialEnabled: enabled })
   },
 
   setTutorialCompleted: (completed: boolean) => {
-    set({ tutorialCompleted: completed })
+    set({ tutorialCompleted: completed });
     get().saveSettings({ tutorialCompleted: completed })
   },
 
   setEnableDangerousFeatures: (enabled: boolean) => {
-    set({ enableDangerousFeatures: enabled })
+    set({ enableDangerousFeatures: enabled });
     get().saveSettings({ enableDangerousFeatures: enabled })
   }
-}))
+}));

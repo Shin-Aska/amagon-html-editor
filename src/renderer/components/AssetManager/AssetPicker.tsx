@@ -16,17 +16,17 @@ interface AssetPickerProps {
 }
 
 export default function AssetPicker({ mode, onSelect, onCancel, initialSelection = [] }: AssetPickerProps): JSX.Element {
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [loading, setLoading] = useState(false)
-  const [selectedUrls, setSelectedUrls] = useState<string[]>(initialSelection)
-  const [activeTab, setActiveTab] = useState<'project' | 'web'>('project')
-  const [downloading, setDownloading] = useState(false)
-  const api = getApi()
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedUrls, setSelectedUrls] = useState<string[]>(initialSelection);
+  const [activeTab, setActiveTab] = useState<'project' | 'web'>('project');
+  const [downloading, setDownloading] = useState(false);
+  const api = getApi();
 
   const refreshAssets = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const result = await api.assets.list()
+      const result = await api.assets.list();
       if (result.success && result.assets) {
         setAssets(result.assets)
       }
@@ -35,22 +35,22 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
     } finally {
       setLoading(false)
     }
-  }, [api])
+  }, [api]);
 
   useEffect(() => {
     refreshAssets()
-  }, [refreshAssets])
+  }, [refreshAssets]);
 
   const handleWebResultsSelect = async (results: MediaSearchResult[]) => {
-    if (!results.length) return
+    if (!results.length) return;
 
     // Download and import selected web media
-    setDownloading(true)
-    const importedUrls: string[] = []
+    setDownloading(true);
+    const importedUrls: string[] = [];
 
     for (const result of results) {
       try {
-        const downloadResult = await api.mediaSearch.downloadAndImport(result.url)
+        const downloadResult = await api.mediaSearch.downloadAndImport(result.url);
         if (downloadResult.success && downloadResult.path) {
           importedUrls.push(downloadResult.path)
         }
@@ -59,14 +59,14 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
       }
     }
 
-    setDownloading(false)
+    setDownloading(false);
 
     if (importedUrls.length > 0) {
       onSelect(importedUrls)
     }
-  }
+  };
 
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
@@ -78,18 +78,18 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
       }
       return true
     })
-  }, [assets, mode])
+  }, [assets, mode]);
 
-  const PROJECT_ASSETS_PER_PAGE = 8
-  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PROJECT_ASSETS_PER_PAGE))
-  const pageStartIndex = (currentPage - 1) * PROJECT_ASSETS_PER_PAGE
-  const paginatedAssets = filteredAssets.slice(pageStartIndex, pageStartIndex + PROJECT_ASSETS_PER_PAGE)
-  const visibleStart = filteredAssets.length === 0 ? 0 : pageStartIndex + 1
-  const visibleEnd = Math.min(pageStartIndex + PROJECT_ASSETS_PER_PAGE, filteredAssets.length)
+  const PROJECT_ASSETS_PER_PAGE = 8;
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PROJECT_ASSETS_PER_PAGE));
+  const pageStartIndex = (currentPage - 1) * PROJECT_ASSETS_PER_PAGE;
+  const paginatedAssets = filteredAssets.slice(pageStartIndex, pageStartIndex + PROJECT_ASSETS_PER_PAGE);
+  const visibleStart = filteredAssets.length === 0 ? 0 : pageStartIndex + 1;
+  const visibleEnd = Math.min(pageStartIndex + PROJECT_ASSETS_PER_PAGE, filteredAssets.length);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages))
-  }, [totalPages])
+  }, [totalPages]);
 
   const handleAssetClick = (asset: Asset) => {
     if (mode === 'single-image' || mode === 'single-video') {
@@ -102,36 +102,36 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
         return [...prev, asset.path]
       })
     }
-  }
+  };
 
   const handleAssetDoubleClick = (asset: Asset) => {
     if (mode === 'single-image' || mode === 'single-video') {
       onSelect([asset.path])
     }
-  }
+  };
 
   const handleConfirm = () => {
     onSelect(selectedUrls)
-  }
+  };
 
-  const isMulti = mode === 'multi-image'
-  const searchMode: 'image' | 'video' = mode === 'single-video' ? 'video' : 'image'
+  const isMulti = mode === 'multi-image';
+  const searchMode: 'image' | 'video' = mode === 'single-video' ? 'video' : 'image';
 
   const moveSelectedItem = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= selectedUrls.length) return
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= selectedUrls.length) return;
 
     setSelectedUrls(prev => {
-      const next = [...prev]
-      const [item] = next.splice(index, 1)
-      next.splice(newIndex, 0, item)
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(newIndex, 0, item);
       return next
     })
-  }
+  };
 
   const removeSelectedItem = (url: string) => {
     setSelectedUrls(prev => prev.filter(u => u !== url))
-  }
+  };
 
   return (
     <div className="asset-picker-overlay" onClick={onCancel}>
@@ -168,7 +168,7 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
                     </div>
                   ) : (
                     paginatedAssets.map(asset => {
-                      const isSelected = selectedUrls.includes(asset.path)
+                      const isSelected = selectedUrls.includes(asset.path);
                       return (
                         <div
                           key={asset.path}
@@ -237,8 +237,8 @@ export default function AssetPicker({ mode, onSelect, onCancel, initialSelection
                   </div>
                   <div className="asset-picker-sidebar-content">
                     {selectedUrls.map((url, index) => {
-                      const asset = assets.find(a => a.path === url)
-                      const name = asset ? asset.name : url.split('/').pop() || 'Unknown'
+                      const asset = assets.find(a => a.path === url);
+                      const name = asset ? asset.name : url.split('/').pop() || 'Unknown';
                       return (
                         <div key={url} className="ap-selected-item">
                           <div className="ap-selected-thumb">

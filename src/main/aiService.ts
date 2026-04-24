@@ -53,7 +53,7 @@ const DEFAULT_CONFIG: AiConfig = {
     model: 'gpt-4o',
     apiKey: '',
     ollamaUrl: 'http://localhost:11434'
-}
+};
 
 // Re-export crypto helpers so existing imports from aiService still work
 export { encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX } from './cryptoHelpers'
@@ -79,13 +79,13 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
         'opencode/gemini-3-flash',
         'opencode/kimi-k2.5'
     ]
-}
+};
 
 // Re-export for the IPC handler to use as a baseline
 export { FALLBACK_MODELS as PROVIDER_MODELS }
 
 function getDefaultModelForProvider(provider: AiProvider, preferredModel?: string): string {
-    const providerModels = FALLBACK_MODELS[provider]
+    const providerModels = FALLBACK_MODELS[provider];
     if (preferredModel && (provider === 'ollama' || providerModels.includes(preferredModel))) {
         return preferredModel
     }
@@ -93,7 +93,7 @@ function getDefaultModelForProvider(provider: AiProvider, preferredModel?: strin
 }
 
 function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>): AiProvider | null {
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli']
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
 }
 
@@ -108,11 +108,11 @@ function getConfigPath(): string {
 /** Read the persisted file and normalize to the current format (encryptedApiKeys map). */
 async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encryptedApiKeys: Record<string, string> }> {
     try {
-        const raw = await fs.readFile(getConfigPath(), 'utf-8')
-        const parsed = JSON.parse(raw) as PersistedAiConfig
-        const provider = parsed.provider ?? DEFAULT_CONFIG.provider
+        const raw = await fs.readFile(getConfigPath(), 'utf-8');
+        const parsed = JSON.parse(raw) as PersistedAiConfig;
+        const provider = parsed.provider ?? DEFAULT_CONFIG.provider;
 
-        let encryptedApiKeys: Record<string, string> = { ...(parsed.encryptedApiKeys ?? {}) }
+        let encryptedApiKeys: Record<string, string> = { ...(parsed.encryptedApiKeys ?? {}) };
 
         // Migrate legacy single-key format → per-provider map
         if (Object.keys(encryptedApiKeys).length === 0) {
@@ -128,9 +128,9 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
                     model: parsed.model ?? DEFAULT_CONFIG.model,
                     encryptedApiKeys,
                     ollamaUrl: parsed.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
-                }
-                await fs.writeFile(getConfigPath(), JSON.stringify(migrated, null, 2), 'utf-8')
-                console.log('[AI Service] Migrated legacy API key to per-provider encrypted storage.')
+                };
+                await fs.writeFile(getConfigPath(), JSON.stringify(migrated, null, 2), 'utf-8');
+                console.log('[AI Service] Migrated legacy API key to per-provider encrypted storage.');
                 return { persisted: migrated, encryptedApiKeys }
             }
         }
@@ -142,16 +142,16 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
             model: DEFAULT_CONFIG.model,
             encryptedApiKeys: {},
             ollamaUrl: DEFAULT_CONFIG.ollamaUrl
-        }
+        };
         return { persisted: empty, encryptedApiKeys: {} }
     }
 }
 
 export async function loadConfig(): Promise<AiConfig> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
-    const provider = persisted.provider ?? DEFAULT_CONFIG.provider
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
+    const provider = persisted.provider ?? DEFAULT_CONFIG.provider;
 
-    let apiKey = ''
+    let apiKey = '';
     if (encryptedApiKeys[provider]) {
         try { apiKey = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted key */ }
     }
@@ -166,7 +166,7 @@ export async function loadConfig(): Promise<AiConfig> {
 
 /** Returns the stored (decrypted) API key for a specific provider, regardless of the active provider. */
 export async function loadApiKeyForProvider(provider: AiProvider): Promise<string> {
-    const { encryptedApiKeys } = await loadPersistedRaw()
+    const { encryptedApiKeys } = await loadPersistedRaw();
     if (encryptedApiKeys[provider]) {
         try { return decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted */ }
     }
@@ -175,19 +175,19 @@ export async function loadApiKeyForProvider(provider: AiProvider): Promise<strin
 
 /** Returns masked credentials for key-based providers and credentialless CLI providers. */
 export async function loadAllProviderCredentials(): Promise<{ provider: AiProvider; hasKey: boolean; maskedKey: string }[]> {
-    const { encryptedApiKeys } = await loadPersistedRaw()
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli']
-    const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = []
+    const { encryptedApiKeys } = await loadPersistedRaw();
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = [];
 
     for (const provider of providers) {
         if (isCliProvider(provider)) {
-            result.push({ provider, hasKey: true, maskedKey: '' })
+            result.push({ provider, hasKey: true, maskedKey: '' });
             continue
         }
-        if (!encryptedApiKeys[provider]) continue
-        let key = ''
+        if (!encryptedApiKeys[provider]) continue;
+        let key = '';
         try { key = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted — skip */ }
-        if (!key) continue
+        if (!key) continue;
         result.push({ provider, hasKey: true, maskedKey: maskApiKey(key) })
     }
 
@@ -196,16 +196,16 @@ export async function loadAllProviderCredentials(): Promise<{ provider: AiProvid
 
 /** Removes the stored API key for a specific provider. */
 export async function clearApiKeyForProvider(provider: AiProvider): Promise<void> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
-    const updatedKeys = { ...encryptedApiKeys }
-    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider
-    delete updatedKeys[provider]
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
+    const updatedKeys = { ...encryptedApiKeys };
+    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider;
+    delete updatedKeys[provider];
     const nextProvider = currentProvider === provider
         ? (getFirstConfiguredAiProvider(updatedKeys) ?? DEFAULT_CONFIG.provider)
-        : currentProvider
+        : currentProvider;
     const nextModel = nextProvider === currentProvider
         ? (persisted.model ?? DEFAULT_CONFIG.model)
-        : getDefaultModelForProvider(nextProvider)
+        : getDefaultModelForProvider(nextProvider);
 
     await fs.writeFile(getConfigPath(), JSON.stringify({
         provider: nextProvider,
@@ -220,15 +220,15 @@ export async function clearApiKeyForProvider(provider: AiProvider): Promise<void
  * active provider has no key yet (or when editing the active provider itself).
  */
 export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string): Promise<void> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
-    const updatedKeys = { ...encryptedApiKeys }
-    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider
-    const currentModel = persisted.model ?? DEFAULT_CONFIG.model
-    const shouldPromoteProvider = Boolean(apiKey) && (!updatedKeys[currentProvider] || currentProvider === provider)
-    const nextProvider = shouldPromoteProvider ? provider : currentProvider
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
+    const updatedKeys = { ...encryptedApiKeys };
+    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider;
+    const currentModel = persisted.model ?? DEFAULT_CONFIG.model;
+    const shouldPromoteProvider = Boolean(apiKey) && (!updatedKeys[currentProvider] || currentProvider === provider);
+    const nextProvider = shouldPromoteProvider ? provider : currentProvider;
     const nextModel = shouldPromoteProvider
         ? getDefaultModelForProvider(nextProvider, currentProvider === provider ? currentModel : undefined)
-        : currentModel
+        : currentModel;
 
     if (apiKey) {
         updatedKeys[provider] = encryptApiKey(apiKey)
@@ -245,19 +245,19 @@ export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string
 }
 
 export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
 
     const current: AiConfig = {
         provider: persisted.provider ?? DEFAULT_CONFIG.provider,
         model: persisted.model ?? DEFAULT_CONFIG.model,
         apiKey: '',
         ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
-    }
-    const merged: AiConfig = { ...current, ...config }
-    const activeProvider = merged.provider
+    };
+    const merged: AiConfig = { ...current, ...config };
+    const activeProvider = merged.provider;
 
     // Preserve existing per-provider keys; only update the active provider's key if explicitly set
-    const newEncryptedApiKeys = { ...encryptedApiKeys }
+    const newEncryptedApiKeys = { ...encryptedApiKeys };
     if (config.apiKey !== undefined && config.apiKey !== '') {
         newEncryptedApiKeys[activeProvider] = encryptApiKey(config.apiKey)
     }
@@ -267,12 +267,12 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
         model: merged.model,
         encryptedApiKeys: newEncryptedApiKeys,
         ollamaUrl: merged.ollamaUrl
-    }
+    };
 
-    await fs.writeFile(getConfigPath(), JSON.stringify(newPersisted, null, 2), 'utf-8')
+    await fs.writeFile(getConfigPath(), JSON.stringify(newPersisted, null, 2), 'utf-8');
 
     // Return config with the decrypted key for the active provider
-    let activeApiKey = ''
+    let activeApiKey = '';
     if (config.apiKey !== undefined && config.apiKey !== '') {
         activeApiKey = config.apiKey
     } else if (newEncryptedApiKeys[activeProvider]) {
@@ -290,26 +290,26 @@ export function buildSystemPrompt(
     blockRegistryJson: string,
     themeContext?: { projectTheme?: unknown; uiTheme?: 'light' | 'dark' }
 ): string {
-    const projectTheme = themeContext?.projectTheme
-    const uiTheme = themeContext?.uiTheme
+    const projectTheme = themeContext?.projectTheme;
+    const uiTheme = themeContext?.uiTheme;
 
     const safeThemeJson = (() => {
-        if (!projectTheme || typeof projectTheme !== 'object') return ''
+        if (!projectTheme || typeof projectTheme !== 'object') return '';
         try {
-            const raw = JSON.stringify(projectTheme, null, 2)
+            const raw = JSON.stringify(projectTheme, null, 2);
             return raw.length > 6000 ? raw.slice(0, 6000) + '\n…(truncated)…' : raw
         } catch {
             return ''
         }
-    })()
+    })();
 
     const themeSection = safeThemeJson
         ? `\n## Project Theme\nThe current project has a theme system applied to the canvas.\n\nTheme CSS variables available in the page:\n- --theme-primary, --theme-secondary, --theme-accent\n- --theme-bg, --theme-surface\n- --theme-text, --theme-text-muted\n- --theme-border\n- --theme-success, --theme-warning, --theme-danger\n- --theme-font-family, --theme-heading-font-family, --theme-font-size\n- --theme-line-height, --theme-heading-line-height\n- --theme-spacing-unit, --theme-space-0..--theme-space-8\n- --theme-border-radius, --theme-border-width, --theme-border-color\n\nTheme JSON (reference values):\n\n\`\`\`json\n${safeThemeJson}\n\`\`\`\n`
-        : ''
+        : '';
 
     const uiThemeSection = uiTheme
         ? `\n## Editor UI Theme\nThe editor UI is currently in ${uiTheme} mode. This does not change the exported page, but it may influence what users expect to see in previews.\n`
-        : ''
+        : '';
 
     return `You are an AI assistant embedded in "Amagon", a visual HTML editor that uses Bootstrap 5.
 The editor represents the page as a tree of Block objects.
@@ -362,13 +362,13 @@ ${blockRegistryJson}
 // ---------------------------------------------------------------------------
 
 async function chatOpenAI(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const url = 'https://api.openai.com/v1/chat/completions'
+    const url = 'https://api.openai.com/v1/chat/completions';
     const body = JSON.stringify({
         model: config.model,
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
         temperature: 0.7,
         max_tokens: 4096
-    })
+    });
 
     const response = await net.fetch(url, {
         method: 'POST',
@@ -377,32 +377,32 @@ async function chatOpenAI(messages: ChatMessage[], config: AiConfig): Promise<Pr
             Authorization: `Bearer ${config.apiKey}`
         },
         body
-    })
+    });
 
     if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await response.text();
         return { content: '', error: `OpenAI API error (${response.status}): ${errorText}` }
     }
 
-    const data = await response.json() as any
+    const data = await response.json() as any;
     return { content: data.choices?.[0]?.message?.content ?? '' }
 }
 
 async function chatAnthropic(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const url = 'https://api.anthropic.com/v1/messages'
+    const url = 'https://api.anthropic.com/v1/messages';
 
     // Anthropic separates system from messages
-    const systemMsg = messages.find((m) => m.role === 'system')?.content ?? ''
+    const systemMsg = messages.find((m) => m.role === 'system')?.content ?? '';
     const chatMessages = messages
         .filter((m) => m.role !== 'system')
-        .map((m) => ({ role: m.role, content: m.content }))
+        .map((m) => ({ role: m.role, content: m.content }));
 
     const body = JSON.stringify({
         model: config.model,
         system: systemMsg,
         messages: chatMessages,
         max_tokens: 4096
-    })
+    });
 
     const response = await net.fetch(url, {
         method: 'POST',
@@ -412,30 +412,30 @@ async function chatAnthropic(messages: ChatMessage[], config: AiConfig): Promise
             'anthropic-version': '2023-06-01'
         },
         body
-    })
+    });
 
     if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await response.text();
         return { content: '', error: `Anthropic API error (${response.status}): ${errorText}` }
     }
 
-    const data = await response.json() as any
-    const textBlock = data.content?.find((b: any) => b.type === 'text')
+    const data = await response.json() as any;
+    const textBlock = data.content?.find((b: any) => b.type === 'text');
     return { content: textBlock?.text ?? '' }
 }
 
 async function chatGoogle(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const model = config.model || 'gemini-2.5-flash-preview-05-20'
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`
+    const model = config.model || 'gemini-2.5-flash-preview-05-20';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.apiKey}`;
 
     // Convert to Google's format
-    const systemMsg = messages.find((m) => m.role === 'system')?.content ?? ''
+    const systemMsg = messages.find((m) => m.role === 'system')?.content ?? '';
     const contents = messages
         .filter((m) => m.role !== 'system')
         .map((m) => ({
             role: m.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: m.content }]
-        }))
+        }));
 
     const body = JSON.stringify({
         systemInstruction: systemMsg ? { parts: [{ text: systemMsg }] } : undefined,
@@ -444,50 +444,50 @@ async function chatGoogle(messages: ChatMessage[], config: AiConfig): Promise<Pr
             temperature: 0.7,
             maxOutputTokens: 4096
         }
-    })
+    });
 
     const response = await net.fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body
-    })
+    });
 
     if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await response.text();
         return { content: '', error: `Google AI API error (${response.status}): ${errorText}` }
     }
 
-    const data = await response.json() as any
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    const data = await response.json() as any;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     return { content: text }
 }
 
 async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const baseUrl = config.ollamaUrl || 'http://localhost:11434'
-    const url = `${baseUrl}/api/chat`
+    const baseUrl = config.ollamaUrl || 'http://localhost:11434';
+    const url = `${baseUrl}/api/chat`;
 
     const body = JSON.stringify({
         model: config.model || 'llama3',
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
         stream: false
-    })
+    });
 
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`;
 
     try {
         const response = await net.fetch(url, {
             method: 'POST',
             headers,
             body
-        })
+        });
 
         if (!response.ok) {
-            const errorText = await response.text()
+            const errorText = await response.text();
             return { content: '', error: `Ollama error (${response.status}): ${errorText}` }
         }
 
-        const data = await response.json() as any
+        const data = await response.json() as any;
         return { content: data.message?.content ?? '' }
     } catch (err: any) {
         return {
@@ -498,13 +498,13 @@ async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<Pr
 }
 
 async function chatMistral(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const url = 'https://api.mistral.ai/v1/chat/completions'
+    const url = 'https://api.mistral.ai/v1/chat/completions';
     const body = JSON.stringify({
         model: config.model,
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
         temperature: 0.7,
         max_tokens: 4096
-    })
+    });
 
     const response = await net.fetch(url, {
         method: 'POST',
@@ -513,21 +513,21 @@ async function chatMistral(messages: ChatMessage[], config: AiConfig): Promise<P
             Authorization: `Bearer ${config.apiKey}`
         },
         body
-    })
+    });
 
     if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await response.text();
         return { content: '', error: `Mistral API error (${response.status}): ${errorText}` }
     }
 
-    const data = await response.json() as any
+    const data = await response.json() as any;
     return { content: data.choices?.[0]?.message?.content ?? '' }
 }
 
 function formatPromptForCli(messages: ChatMessage[]): string {
     return messages
         .map((message) => {
-            const roleLabel = message.role.charAt(0).toUpperCase() + message.role.slice(1)
+            const roleLabel = message.role.charAt(0).toUpperCase() + message.role.slice(1);
             return `[${roleLabel}]\n${message.content}`
         })
         .join('\n\n')
@@ -545,23 +545,23 @@ function stripAnsi(value: string): string {
 }
 
 function normalizeJunieCliOutput(output: string): string {
-    const cleaned = stripAnsi(output).trim()
-    let result = cleaned
+    const cleaned = stripAnsi(output).trim();
+    let result = cleaned;
     try {
-        const jsonStart = cleaned.indexOf('{')
-        const jsonEnd = cleaned.lastIndexOf('}')
+        const jsonStart = cleaned.indexOf('{');
+        const jsonEnd = cleaned.lastIndexOf('}');
         const jsonPayload = jsonStart >= 0 && jsonEnd > jsonStart
             ? cleaned.slice(jsonStart, jsonEnd + 1)
-            : cleaned
-        const parsed = JSON.parse(jsonPayload)
+            : cleaned;
+        const parsed = JSON.parse(jsonPayload);
         if (typeof parsed?.result === 'string') result = parsed.result
     } catch {
         result = cleaned
     }
 
-    const summaryMatch = result.match(/^### Summary\s*\n([\s\S]*?)(?:\n### \w|$)/)
+    const summaryMatch = result.match(/^### Summary\s*\n([\s\S]*?)(?:\n### \w|$)/);
     const content = (summaryMatch ? summaryMatch[1] : result)
-        .trim()
+        .trim();
 
     return content
         .replace(/^\s*●\s?/, '')
@@ -598,15 +598,15 @@ function getCliInstallInstruction(provider: CliProvider): string {
 }
 
 function normalizeCliModel(provider: CliProvider, model: string): string {
-    const normalized = model.trim()
+    const normalized = model.trim();
     if (provider === 'github-cli') {
-        const lower = normalized.toLowerCase()
+        const lower = normalized.toLowerCase();
         return !lower || lower === 'default' ? 'default' : normalized
     }
 
     if (provider === 'junie-cli') {
-        const lower = normalized.toLowerCase()
-        if (!lower || lower === 'default') return 'default'
+        const lower = normalized.toLowerCase();
+        if (!lower || lower === 'default') return 'default';
         const aliases: Record<string, string> = {
             'gemini 3 flash': 'gemini-3-flash-preview',
             'gemini-3-0-flash': 'gemini-3-flash-preview',
@@ -636,23 +636,23 @@ function normalizeCliModel(provider: CliProvider, model: string): string {
             'grok 4.1 fast reasoning': 'grok-4-1-fast-reasoning',
             'grok-4.1-fast-reasoning': 'grok-4-1-fast-reasoning',
             'grok_4_1_fast_reasoning': 'grok-4-1-fast-reasoning'
-        }
+        };
         return aliases[lower] ?? normalized
     }
 
     if (provider === 'opencode-cli') {
-        const lower = normalized.toLowerCase()
-        if (!lower || lower === 'default') return 'default'
+        const lower = normalized.toLowerCase();
+        if (!lower || lower === 'default') return 'default';
         return normalized
     }
 
-    if (provider !== 'claude-cli') return normalized
+    if (provider !== 'claude-cli') return normalized;
 
-    const lower = normalized.toLowerCase()
-    if (!lower || lower === 'default') return 'sonnet'
-    if (lower.includes('opus')) return 'opus'
-    if (lower.includes('haiku')) return 'haiku'
-    if (lower.includes('sonnet')) return 'sonnet'
+    const lower = normalized.toLowerCase();
+    if (!lower || lower === 'default') return 'sonnet';
+    if (lower.includes('opus')) return 'opus';
+    if (lower.includes('haiku')) return 'haiku';
+    if (lower.includes('sonnet')) return 'sonnet';
     return normalized
 }
 
@@ -682,12 +682,12 @@ async function runCliChat(
     stdinOverride?: string,
     timeoutMs?: number
 ): Promise<ProviderResponse> {
-    const prompt = formatPromptForCli(messages)
+    const prompt = formatPromptForCli(messages);
 
     try {
-        const result = await spawnCliChat(CLI_BINARY_NAMES[provider], args, stdinOverride ?? prompt, timeoutMs)
+        const result = await spawnCliChat(CLI_BINARY_NAMES[provider], args, stdinOverride ?? prompt, timeoutMs);
         if (result.exitCode !== 0) {
-            const error = result.stderr.trim() || result.stdout.trim() || getCliEmptyError(provider, result.exitCode)
+            const error = result.stderr.trim() || result.stdout.trim() || getCliEmptyError(provider, result.exitCode);
             return { content: '', error }
         }
 
@@ -697,9 +697,9 @@ async function runCliChat(
                 ? normalizeJunieCliOutput(result.stdout)
                 : provider === 'opencode-cli'
                     ? normalizeOpencodeOutput(result.stdout)
-                    : result.stdout.trim()
+                    : result.stdout.trim();
         if (!content) {
-            const error = result.stderr.trim() || 'CLI returned no output.'
+            const error = result.stderr.trim() || 'CLI returned no output.';
             return { content: '', error }
         }
         return { content }
@@ -736,8 +736,8 @@ async function chatGeminiCli(messages: ChatMessage[], config: AiConfig): Promise
 }
 
 async function chatGithubCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const prompt = formatPromptForCli(messages)
-    const model = normalizeCliModel('github-cli', config.model)
+    const prompt = formatPromptForCli(messages);
+    const model = normalizeCliModel('github-cli', config.model);
     const args = [
         '--silent',
         '--output-format', 'text',
@@ -747,8 +747,8 @@ async function chatGithubCli(messages: ChatMessage[], config: AiConfig): Promise
         '--disable-builtin-mcps',
         '--no-custom-instructions',
         '--no-ask-user'
-    ]
-    if (model !== 'default') args.push('--model', model)
+    ];
+    if (model !== 'default') args.push('--model', model);
 
     return runCliChat(
         'github-cli',
@@ -766,11 +766,11 @@ async function chatJunieCli(messages: ChatMessage[], config: AiConfig): Promise<
         'Answer only from the request text below.',
         '',
         formatPromptForCli(messages)
-    ].join('\n')
-    const model = normalizeCliModel('junie-cli', config.model)
-    const tempProjectDir = await fs.mkdtemp(path.join(app.getPath('temp'), 'amagon-junie-'))
-    const args = ['--project', tempProjectDir, '--input-format', 'text', '--output-format', 'json', '--skip-update-check']
-    if (model !== 'default') args.push('--model', model)
+    ].join('\n');
+    const model = normalizeCliModel('junie-cli', config.model);
+    const tempProjectDir = await fs.mkdtemp(path.join(app.getPath('temp'), 'amagon-junie-'));
+    const args = ['--project', tempProjectDir, '--input-format', 'text', '--output-format', 'json', '--skip-update-check'];
+    if (model !== 'default') args.push('--model', model);
 
     try {
         return await runCliChat('junie-cli', args, messages, prompt, 300_000)
@@ -786,11 +786,11 @@ async function chatOpencodeCli(messages: ChatMessage[], config: AiConfig): Promi
         'Answer only from the request text below.',
         '',
         formatPromptForCli(messages)
-    ].join('\n')
+    ].join('\n');
 
-    const model = normalizeCliModel('opencode-cli', config.model)
-    const args = ['run']
-    if (model !== 'default') args.push('--model', model)
+    const model = normalizeCliModel('opencode-cli', config.model);
+    const args = ['run'];
+    if (model !== 'default') args.push('--model', model);
 
     return runCliChat('opencode-cli', args, messages, prompt, 300_000)
 }
@@ -811,24 +811,24 @@ const ADAPTERS: Record<AiProvider, (msgs: ChatMessage[], cfg: AiConfig) => Promi
     'github-cli': chatGithubCli,
     'junie-cli': chatJunieCli,
     'opencode-cli': chatOpencodeCli
-}
+};
 
 // ---------------------------------------------------------------------------
 // Dynamic model discovery
 // ---------------------------------------------------------------------------
 
-const MODEL_FETCH_TIMEOUT_MS = 10_000
+const MODEL_FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchGoogleModels(apiKey: string): Promise<string[]> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
 
     try {
-        const response = await net.fetch(url, { signal: controller.signal })
-        if (!response.ok) return []
-        const data = (await response.json()) as any
-        if (!Array.isArray(data.models)) return []
+        const response = await net.fetch(url, { signal: controller.signal });
+        if (!response.ok) return [];
+        const data = (await response.json()) as any;
+        if (!Array.isArray(data.models)) return [];
 
         return data.models
             .filter((m: any) =>
@@ -843,21 +843,21 @@ async function fetchGoogleModels(apiKey: string): Promise<string[]> {
 }
 
 async function fetchOpenAIModels(apiKey: string): Promise<string[]> {
-    const url = 'https://api.openai.com/v1/models'
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS)
+    const url = 'https://api.openai.com/v1/models';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
 
     try {
         const response = await net.fetch(url, {
             headers: { Authorization: `Bearer ${apiKey}` },
             signal: controller.signal
-        })
-        if (!response.ok) return []
-        const data = (await response.json()) as any
-        if (!Array.isArray(data.data)) return []
+        });
+        if (!response.ok) return [];
+        const data = (await response.json()) as any;
+        if (!Array.isArray(data.data)) return [];
 
         // Keep only chat-capable models
-        const chatPrefixes = ['gpt-4', 'gpt-3.5', 'o1', 'o3', 'o4', 'chatgpt']
+        const chatPrefixes = ['gpt-4', 'gpt-3.5', 'o1', 'o3', 'o4', 'chatgpt'];
         return data.data
             .map((m: any) => m.id as string)
             .filter((id: string) =>
@@ -873,19 +873,19 @@ async function fetchOpenAIModels(apiKey: string): Promise<string[]> {
 }
 
 async function fetchOllamaModels(ollamaUrl: string, apiKey?: string): Promise<string[]> {
-    const baseUrl = ollamaUrl || 'http://localhost:11434'
-    const url = `${baseUrl}/api/tags`
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS)
+    const baseUrl = ollamaUrl || 'http://localhost:11434';
+    const url = `${baseUrl}/api/tags`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
 
-    const headers: Record<string, string> = {}
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
+    const headers: Record<string, string> = {};
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
-        const response = await net.fetch(url, { signal: controller.signal, headers })
-        if (!response.ok) return []
-        const data = (await response.json()) as any
-        if (!Array.isArray(data.models)) return []
+        const response = await net.fetch(url, { signal: controller.signal, headers });
+        if (!response.ok) return [];
+        const data = (await response.json()) as any;
+        if (!Array.isArray(data.models)) return [];
 
         return data.models.map((m: any) => String(m.name ?? ''))
     } finally {
@@ -894,18 +894,18 @@ async function fetchOllamaModels(ollamaUrl: string, apiKey?: string): Promise<st
 }
 
 async function fetchMistralModels(apiKey: string): Promise<string[]> {
-    const url = 'https://api.mistral.ai/v1/models'
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS)
+    const url = 'https://api.mistral.ai/v1/models';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
 
     try {
         const response = await net.fetch(url, {
             headers: { Authorization: `Bearer ${apiKey}` },
             signal: controller.signal
-        })
-        if (!response.ok) return []
-        const data = (await response.json()) as any
-        if (!Array.isArray(data.data)) return []
+        });
+        if (!response.ok) return [];
+        const data = (await response.json()) as any;
+        if (!Array.isArray(data.data)) return [];
 
         return data.data.map((m: any) => m.id as string).filter((id: string) => id.length > 0)
     } finally {
@@ -919,11 +919,11 @@ export async function fetchModelsForProvider(
     ollamaUrl?: string
 ): Promise<string[]> {
     try {
-        if (isCliProvider(provider)) return await fetchCliModels(provider, FALLBACK_MODELS[provider])
-        if (provider !== 'ollama' && provider !== 'anthropic' && !apiKey) return []
-        if (provider === 'openai') return await fetchOpenAIModels(apiKey)
-        if (provider === 'google') return await fetchGoogleModels(apiKey)
-        if (provider === 'mistral') return await fetchMistralModels(apiKey)
+        if (isCliProvider(provider)) return await fetchCliModels(provider, FALLBACK_MODELS[provider]);
+        if (provider !== 'ollama' && provider !== 'anthropic' && !apiKey) return [];
+        if (provider === 'openai') return await fetchOpenAIModels(apiKey);
+        if (provider === 'google') return await fetchGoogleModels(apiKey);
+        if (provider === 'mistral') return await fetchMistralModels(apiKey);
         if (provider === 'ollama') {
             return await fetchOllamaModels(ollamaUrl || 'http://localhost:11434', apiKey || undefined)
         }
@@ -938,10 +938,10 @@ export async function fetchModelsForProvider(
 }
 
 export async function fetchAvailableModels(): Promise<Record<AiProvider, string[]>> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw()
+    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
 
     // Decrypt all stored per-provider keys
-    const apiKeys: Record<string, string> = {}
+    const apiKeys: Record<string, string> = {};
     for (const [provider, encrypted] of Object.entries(encryptedApiKeys)) {
         try { apiKeys[provider] = decryptApiKey(encrypted) } catch { /* skip corrupted */ }
     }
@@ -958,9 +958,9 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         'github-cli': [],
         'junie-cli': [],
         'opencode-cli': []
-    }
+    };
 
-    const fetchers: Promise<void>[] = []
+    const fetchers: Promise<void>[] = [];
 
     // Anthropic has no public list-models endpoint — use fallback if key is present
     if (apiKeys['anthropic']) {
@@ -996,9 +996,9 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         fetchOllamaModels(persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl, apiKeys['ollama'])
             .then((models) => { if (models.length > 0) result.ollama = models })
             .catch(() => { /* server unreachable — leave empty */ })
-    )
+    );
 
-    const cliProviders: CliProvider[] = ['claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli']
+    const cliProviders: CliProvider[] = ['claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     for (const provider of cliProviders) {
         fetchers.push(
             fetchCliModels(provider, FALLBACK_MODELS[provider])
@@ -1007,7 +1007,7 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         )
     }
 
-    await Promise.allSettled(fetchers)
+    await Promise.allSettled(fetchers);
     return result
 }
 
@@ -1017,14 +1017,14 @@ export async function chat(
 ): Promise<{ content: string; error?: string }> {
     const cfg = config
         ? { ...(await loadConfig()), ...config }
-        : await loadConfig()
+        : await loadConfig();
 
     // Validate config
     if (!isCliProvider(cfg.provider) && cfg.provider !== 'ollama' && !cfg.apiKey) {
         return { content: '', error: `No API key configured for ${cfg.provider}. Please add your API key in the AI settings.` }
     }
 
-    const adapter = ADAPTERS[cfg.provider]
+    const adapter = ADAPTERS[cfg.provider];
     if (!adapter) {
         return { content: '', error: `Unknown provider: ${cfg.provider}` }
     }

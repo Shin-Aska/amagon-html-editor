@@ -27,4 +27,4 @@ export const useToastStore = create<ToastState>((set) => {
     showToast: (message, type, options) => set({ toast: { message, type, ...options } }),
     clearToast: () => set({ toast: null })
   }
-})
+});

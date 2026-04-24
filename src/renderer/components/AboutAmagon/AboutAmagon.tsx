@@ -10,19 +10,19 @@ interface AboutAmagonProps {
 
 export default function AboutAmagon({ isOpen, onClose }: AboutAmagonProps): JSX.Element | null {
     useEffect(() => {
-        if (!isOpen) return
+        if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose()
             }
-        }
+        };
 
-        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [isOpen, onClose])
+    }, [isOpen, onClose]);
 
-    if (!isOpen) return null
+    if (!isOpen) return null;
 
     return (
         <div className="about-overlay" onClick={onClose}>

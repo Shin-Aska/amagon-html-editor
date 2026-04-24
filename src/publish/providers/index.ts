@@ -6,10 +6,10 @@ import {cloudflarePagesAdapter} from './cloudflare'
 import {githubPagesAdapter} from './github'
 import {awsS3Adapter} from './aws-s3'
 
-registerPublisher(neocitiesAdapter)
-registerPublisher(cloudflarePagesAdapter)
-registerPublisher(githubPagesAdapter)
-registerPublisher(awsS3Adapter)
+registerPublisher(neocitiesAdapter);
+registerPublisher(cloudflarePagesAdapter);
+registerPublisher(githubPagesAdapter);
+registerPublisher(awsS3Adapter);
 
 export { NeocitiesAdapter, neocitiesAdapter } from './neocities'
 export { CloudflarePagesAdapter, cloudflarePagesAdapter } from './cloudflare'

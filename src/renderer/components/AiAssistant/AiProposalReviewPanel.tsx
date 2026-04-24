@@ -26,35 +26,35 @@ export default function AiProposalReviewPanel({
     discardLabel = 'Discard Proposal',
     applyLabel = 'Apply Proposal'
 }: AiProposalReviewPanelProps): JSX.Element {
-    const infoRef = useRef<HTMLButtonElement | null>(null)
-    const [tooltipOpen, setTooltipOpen] = useState(false)
-    const [tooltipStyle, setTooltipStyle] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
-    const tooltipId = useId()
+    const infoRef = useRef<HTMLButtonElement | null>(null);
+    const [tooltipOpen, setTooltipOpen] = useState(false);
+    const [tooltipStyle, setTooltipStyle] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const tooltipId = useId();
 
     useEffect(() => {
-        if (!tooltipOpen) return
+        if (!tooltipOpen) return;
 
         const updatePosition = () => {
-            const anchor = infoRef.current
-            if (!anchor) return
-            const rect = anchor.getBoundingClientRect()
-            const width = Math.min(320, Math.max(220, window.innerWidth * 0.6))
+            const anchor = infoRef.current;
+            if (!anchor) return;
+            const rect = anchor.getBoundingClientRect();
+            const width = Math.min(320, Math.max(220, window.innerWidth * 0.6));
             const left = Math.min(
                 Math.max(12, rect.left),
                 Math.max(12, window.innerWidth - width - 12)
-            )
-            const top = rect.bottom + 8
+            );
+            const top = rect.bottom + 8;
             setTooltipStyle({ top, left })
-        }
+        };
 
-        updatePosition()
-        window.addEventListener('scroll', updatePosition, true)
-        window.addEventListener('resize', updatePosition)
+        updatePosition();
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
         return () => {
-            window.removeEventListener('scroll', updatePosition, true)
+            window.removeEventListener('scroll', updatePosition, true);
             window.removeEventListener('resize', updatePosition)
         }
-    }, [tooltipOpen])
+    }, [tooltipOpen]);
 
     return (
         <div className="ai-proposal-review-panel">

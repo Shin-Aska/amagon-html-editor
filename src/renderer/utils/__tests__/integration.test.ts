@@ -30,39 +30,39 @@ describe('Integration: Code Editor ↔ Canvas Sync', () => {
       theme: 'dark',
       clipboard: null
     })
-  })
+  });
 
   it('setPageBlocks updates canvas state', () => {
-    const store = useEditorStore.getState()
+    const store = useEditorStore.getState();
     const blocks: Block[] = [
       createBlock('heading', { props: { text: 'Hello', level: 1 } }),
       createBlock('paragraph', { props: { text: 'World' } })
-    ]
+    ];
     
-    store.setPageBlocks(blocks)
+    store.setPageBlocks(blocks);
     
-    const updated = useEditorStore.getState()
-    expect(updated.blocks).toHaveLength(2)
-    expect(updated.blocks[0].type).toBe('heading')
-    expect(updated.blocks[1].type).toBe('paragraph')
+    const updated = useEditorStore.getState();
+    expect(updated.blocks).toHaveLength(2);
+    expect(updated.blocks[0].type).toBe('heading');
+    expect(updated.blocks[1].type).toBe('paragraph');
     expect(updated.isDirty).toBe(true)
-  })
+  });
 
   it('block operations create history entries', () => {
-    const store = useEditorStore.getState()
+    const store = useEditorStore.getState();
     
     // Initial history has one entry
-    expect(store.history).toHaveLength(1)
+    expect(store.history).toHaveLength(1);
     
     // Add a block
-    const block = createBlock('container')
-    store.addBlock(block)
+    const block = createBlock('container');
+    store.addBlock(block);
     
-    const afterAdd = useEditorStore.getState()
-    expect(afterAdd.history.length).toBeGreaterThan(0)
+    const afterAdd = useEditorStore.getState();
+    expect(afterAdd.history.length).toBeGreaterThan(0);
     expect(afterAdd.isDirty).toBe(true)
   })
-})
+});
 
 describe('Integration: Save/Load Round-trip', () => {
   beforeEach(() => {
@@ -84,7 +84,7 @@ describe('Integration: Save/Load Round-trip', () => {
       currentPageId: 'page-1',
       filePath: null,
       isProjectLoaded: true
-    })
+    });
     
     useEditorStore.setState({
       blocks: [createBlock('heading', { props: { text: 'Saved', level: 1 } })],
@@ -101,22 +101,22 @@ describe('Integration: Save/Load Round-trip', () => {
       theme: 'dark',
       clipboard: null
     })
-  })
+  });
 
   it('exports complete project data including custom CSS', () => {
-    const projectStore = useProjectStore.getState()
-    const editorStore = useEditorStore.getState()
+    const projectStore = useProjectStore.getState();
+    const editorStore = useEditorStore.getState();
     
     // Update page with current blocks
-    projectStore.updatePage('page-1', { blocks: editorStore.blocks })
+    projectStore.updatePage('page-1', { blocks: editorStore.blocks });
     
-    const data = projectStore.getProjectData()
+    const data = projectStore.getProjectData();
     
-    expect(data.projectSettings.name).toBe('Test Project')
-    expect(data.pages).toHaveLength(1)
-    expect(data.pages[0].blocks).toHaveLength(1)
+    expect(data.projectSettings.name).toBe('Test Project');
+    expect(data.pages).toHaveLength(1);
+    expect(data.pages[0].blocks).toHaveLength(1);
     expect(data.pages[0].blocks[0].type).toBe('heading')
-  })
+  });
 
   it('imports project and restores state', () => {
     const projectData: ProjectData = {
@@ -136,19 +136,19 @@ describe('Integration: Save/Load Round-trip', () => {
         }
       ],
       userBlocks: []
-    }
+    };
     
-    const projectStore = useProjectStore.getState()
-    projectStore.setProject(projectData, '/path/to/file.hoarses')
+    const projectStore = useProjectStore.getState();
+    projectStore.setProject(projectData, '/path/to/file.hoarses');
     
-    const afterImport = useProjectStore.getState()
-    expect(afterImport.settings.name).toBe('Imported')
-    expect(afterImport.pages).toHaveLength(1)
-    expect(afterImport.currentPageId).toBe('imported-page')
-    expect(afterImport.filePath).toBe('/path/to/file.hoarses')
+    const afterImport = useProjectStore.getState();
+    expect(afterImport.settings.name).toBe('Imported');
+    expect(afterImport.pages).toHaveLength(1);
+    expect(afterImport.currentPageId).toBe('imported-page');
+    expect(afterImport.filePath).toBe('/path/to/file.hoarses');
     expect(afterImport.isProjectLoaded).toBe(true)
   })
-})
+});
 
 describe('Integration: Export Engine', () => {
   it('exports clean HTML without editor artifacts', async () => {
@@ -172,25 +172,25 @@ describe('Integration: Export Engine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
     
-    const files = await exportProject(project)
+    const files = await exportProject(project);
     
-    const htmlFile = files.find(f => f.path === 'index.html')
-    expect(htmlFile).toBeDefined()
-    expect(typeof htmlFile?.content).toBe('string')
+    const htmlFile = files.find(f => f.path === 'index.html');
+    expect(htmlFile).toBeDefined();
+    expect(typeof htmlFile?.content).toBe('string');
     
-    const html = htmlFile?.content as string
+    const html = htmlFile?.content as string;
     
     // Should contain the content
-    expect(html).toContain('Title')
-    expect(html).toContain('Content')
-    expect(html).toContain('main-title')
+    expect(html).toContain('Title');
+    expect(html).toContain('Content');
+    expect(html).toContain('main-title');
     
     // Should NOT contain editor artifacts
-    expect(html).not.toContain('data-block-id')
+    expect(html).not.toContain('data-block-id');
     expect(html).not.toContain('editor-overlay')
-  })
+  });
 
   it('handles custom CSS in export', async () => {
     const project: ProjectData = {
@@ -208,26 +208,26 @@ describe('Integration: Export Engine', () => {
         meta: {}
       }],
       userBlocks: []
-    }
+    };
     
     const files = await exportProject(project, {
       customCss: 'body { background: red; }'
-    })
+    });
     
     // Custom CSS is included in the external styles.css alongside theme CSS
-    const cssFile = files.find(f => f.path === 'styles.css')
-    expect(cssFile).toBeDefined()
-    const css = cssFile?.content as string
-    expect(css).toContain('body { background: red; }')
+    const cssFile = files.find(f => f.path === 'styles.css');
+    expect(cssFile).toBeDefined();
+    const css = cssFile?.content as string;
+    expect(css).toContain('body { background: red; }');
     // Theme variables should also be present
-    expect(css).toContain('--theme-primary')
+    expect(css).toContain('--theme-primary');
     
     // HTML should reference the stylesheet
-    const htmlFile = files.find(f => f.path === 'index.html')
-    const html = htmlFile?.content as string
+    const htmlFile = files.find(f => f.path === 'index.html');
+    const html = htmlFile?.content as string;
     expect(html).toContain('styles.css')
   })
-})
+});
 
 describe('Integration: Multi-page Workflow', () => {
   beforeEach(() => {
@@ -247,30 +247,30 @@ describe('Integration: Multi-page Workflow', () => {
       filePath: null,
       isProjectLoaded: true
     })
-  })
+  });
 
   it('switches between pages', () => {
-    const store = useProjectStore.getState()
+    const store = useProjectStore.getState();
     
-    expect(store.currentPageId).toBe('home')
+    expect(store.currentPageId).toBe('home');
     
-    store.setCurrentPage('about')
+    store.setCurrentPage('about');
     
-    const afterSwitch = useProjectStore.getState()
-    expect(afterSwitch.currentPageId).toBe('about')
+    const afterSwitch = useProjectStore.getState();
+    expect(afterSwitch.currentPageId).toBe('about');
     expect(afterSwitch.getCurrentPage()?.title).toBe('About')
-  })
+  });
 
   it('maintains separate blocks per page', () => {
-    const projectStore = useProjectStore.getState()
-    const homeBlocks = [createBlock('heading', { props: { text: 'Home Page' } })]
-    const aboutBlocks = [createBlock('heading', { props: { text: 'About Page' } })]
+    const projectStore = useProjectStore.getState();
+    const homeBlocks = [createBlock('heading', { props: { text: 'Home Page' } })];
+    const aboutBlocks = [createBlock('heading', { props: { text: 'About Page' } })];
     
-    projectStore.updatePage('home', { blocks: homeBlocks })
-    projectStore.updatePage('about', { blocks: aboutBlocks })
+    projectStore.updatePage('home', { blocks: homeBlocks });
+    projectStore.updatePage('about', { blocks: aboutBlocks });
     
-    const updated = useProjectStore.getState()
-    expect(updated.pages[0].blocks[0].props.text).toBe('Home Page')
+    const updated = useProjectStore.getState();
+    expect(updated.pages[0].blocks[0].props.text).toBe('Home Page');
     expect(updated.pages[1].blocks[0].props.text).toBe('About Page')
   })
-})
+});

@@ -2,7 +2,7 @@ import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/ind
 import {extractExternalUrls, getFileExtension, makeWarning} from './validationHelpers'
 
 function isLikelyHtmlFile(filePath: string): boolean {
-  const ext = getFileExtension(filePath)
+  const ext = getFileExtension(filePath);
   return ext === '.html' || ext === '.htm'
 }
 
@@ -11,9 +11,9 @@ function hasRepositoryRiskyPath(filePath: string): boolean {
 }
 
 export function validateForGithubPages(files: ExportedFile[]): ValidationResult {
-  const issues: ValidationIssue[] = []
-  const htmlFileCount = files.filter((file) => isLikelyHtmlFile(file.path)).length
-  const hasCnameFile = files.some((file) => file.path.toUpperCase() === 'CNAME')
+  const issues: ValidationIssue[] = [];
+  const htmlFileCount = files.filter((file) => isLikelyHtmlFile(file.path)).length;
+  const hasCnameFile = files.some((file) => file.path.toUpperCase() === 'CNAME');
 
   if (htmlFileCount > 1 && !hasCnameFile) {
     issues.push(
@@ -37,7 +37,7 @@ export function validateForGithubPages(files: ExportedFile[]): ValidationResult 
     }
 
     if (isLikelyHtmlFile(file.path) && typeof file.content === 'string') {
-      const externalUrls = extractExternalUrls(file.content)
+      const externalUrls = extractExternalUrls(file.content);
       for (const url of externalUrls) {
         issues.push(
           makeWarning(

@@ -16,20 +16,20 @@ interface PendingCssReview {
 }
 
 function findBalancedCssBlock(css: string, startIndex: number): { start: number; end: number } | null {
-    const openBraceIndex = css.indexOf('{', startIndex)
-    if (openBraceIndex === -1) return null
+    const openBraceIndex = css.indexOf('{', startIndex);
+    if (openBraceIndex === -1) return null;
 
-    let depth = 0
+    let depth = 0;
     for (let index = openBraceIndex; index < css.length; index += 1) {
-        const ch = css[index]
-        if (ch === '{') depth += 1
+        const ch = css[index];
+        if (ch === '{') depth += 1;
         else if (ch === '}') {
-            depth -= 1
+            depth -= 1;
             if (depth === 0) {
-                let blockStart = startIndex
-                while (blockStart > 0 && css[blockStart - 1] !== '\n') blockStart -= 1
-                let blockEnd = index + 1
-                while (blockEnd < css.length && /\s/.test(css[blockEnd])) blockEnd += 1
+                let blockStart = startIndex;
+                while (blockStart > 0 && css[blockStart - 1] !== '\n') blockStart -= 1;
+                let blockEnd = index + 1;
+                while (blockEnd < css.length && /\s/.test(css[blockEnd])) blockEnd += 1;
                 return { start: blockStart, end: blockEnd }
             }
         }
@@ -39,171 +39,171 @@ function findBalancedCssBlock(css: string, startIndex: number): { start: number;
 }
 
 function findMatchRange(css: string, matchText: string): { start: number; end: number } | null {
-    const trimmedMatch = matchText.trim()
-    if (!trimmedMatch) return null
+    const trimmedMatch = matchText.trim();
+    if (!trimmedMatch) return null;
 
-    const directIndex = css.indexOf(trimmedMatch)
-    if (directIndex === -1) return null
+    const directIndex = css.indexOf(trimmedMatch);
+    if (directIndex === -1) return null;
 
-    const balancedBlock = findBalancedCssBlock(css, directIndex)
-    if (balancedBlock) return balancedBlock
+    const balancedBlock = findBalancedCssBlock(css, directIndex);
+    if (balancedBlock) return balancedBlock;
 
     return { start: directIndex, end: directIndex + trimmedMatch.length }
 }
 
 export function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
-    const snippet = proposal.css.trim()
-    if (!snippet && proposal.mode !== 'delete_match') return currentCss
+    const snippet = proposal.css.trim();
+    if (!snippet && proposal.mode !== 'delete_match') return currentCss;
 
     if (proposal.mode === 'replace') {
         return snippet
     }
 
     if ((proposal.mode === 'replace_match' || proposal.mode === 'delete_match') && proposal.matchText) {
-        const range = findMatchRange(currentCss, proposal.matchText)
+        const range = findMatchRange(currentCss, proposal.matchText);
         if (range) {
-            const replacement = proposal.mode === 'delete_match' ? '' : snippet
-            const before = currentCss.slice(0, range.start).replace(/\s*$/, '')
-            const after = currentCss.slice(range.end).replace(/^\s*/, '')
+            const replacement = proposal.mode === 'delete_match' ? '' : snippet;
+            const before = currentCss.slice(0, range.start).replace(/\s*$/, '');
+            const after = currentCss.slice(range.end).replace(/^\s*/, '');
             if (!replacement) {
-                if (!before) return after
-                if (!after) return before
+                if (!before) return after;
+                if (!after) return before;
                 return `${before}\n\n${after}`
             }
-            if (!before) return after ? `${replacement}\n\n${after}` : replacement
-            if (!after) return `${before}\n\n${replacement}`
+            if (!before) return after ? `${replacement}\n\n${after}` : replacement;
+            if (!after) return `${before}\n\n${replacement}`;
             return `${before}\n\n${replacement}\n\n${after}`
         }
     }
 
     if (proposal.matchText) {
-        const lines = currentCss.split('\n')
-        const lineIndex = lines.findIndex((line) => line.includes(proposal.matchText!))
+        const lines = currentCss.split('\n');
+        const lineIndex = lines.findIndex((line) => line.includes(proposal.matchText!));
         if (lineIndex >= 0) {
-            const insertIndex = proposal.anchor === 'before_selector' ? lineIndex : lineIndex + 1
-            lines.splice(insertIndex, 0, ...snippet.split('\n'))
+            const insertIndex = proposal.anchor === 'before_selector' ? lineIndex : lineIndex + 1;
+            lines.splice(insertIndex, 0, ...snippet.split('\n'));
             return lines.join('\n')
         }
     }
 
-    if (!currentCss.trim()) return snippet
+    if (!currentCss.trim()) return snippet;
     return `${currentCss.replace(/\s*$/, '')}\n\n${snippet}`
 }
 
 export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JSX.Element {
-    const { hasConfiguredAiProvider } = useAiAvailability()
-    const addCssFile = useProjectStore((s) => s.addCssFile)
-    const removeCssFile = useProjectStore((s) => s.removeCssFile)
-    const updateCssFile = useProjectStore((s) => s.updateCssFile)
-    const reorderCssFiles = useProjectStore((s) => s.reorderCssFiles)
-    const toggleCssFile = useProjectStore((s) => s.toggleCssFile)
+    const { hasConfiguredAiProvider } = useAiAvailability();
+    const addCssFile = useProjectStore((s) => s.addCssFile);
+    const removeCssFile = useProjectStore((s) => s.removeCssFile);
+    const updateCssFile = useProjectStore((s) => s.updateCssFile);
+    const reorderCssFiles = useProjectStore((s) => s.reorderCssFiles);
+    const toggleCssFile = useProjectStore((s) => s.toggleCssFile);
 
-    const files = theme.customCssFiles || []
+    const files = theme.customCssFiles || [];
     const [selectedFileId, setSelectedFileId] = useState<string | null>(
         files.length > 0 ? files[0].id : null
-    )
-    const [renamingId, setRenamingId] = useState<string | null>(null)
-    const [renameValue, setRenameValue] = useState('')
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: CssFile } | null>(null)
-    const [aiModalFile, setAiModalFile] = useState<CssFile | null>(null)
-    const [aiPrompt, setAiPrompt] = useState('')
-    const [pendingCssReview, setPendingCssReview] = useState<PendingCssReview | null>(null)
+    );
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; file: CssFile } | null>(null);
+    const [aiModalFile, setAiModalFile] = useState<CssFile | null>(null);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [pendingCssReview, setPendingCssReview] = useState<PendingCssReview | null>(null);
 
-    const selectedFile = files.find((f) => f.id === selectedFileId) || null
-    const allFileNames = useMemo(() => files.map((f) => f.name), [files])
+    const selectedFile = files.find((f) => f.id === selectedFileId) || null;
+    const allFileNames = useMemo(() => files.map((f) => f.name), [files]);
 
     useEffect(() => {
-        if (!contextMenu) return
-        const handlePointerDown = () => setContextMenu(null)
+        if (!contextMenu) return;
+        const handlePointerDown = () => setContextMenu(null);
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') setContextMenu(null)
-        }
-        window.addEventListener('pointerdown', handlePointerDown)
-        window.addEventListener('keydown', handleKeyDown)
+        };
+        window.addEventListener('pointerdown', handlePointerDown);
+        window.addEventListener('keydown', handleKeyDown);
         return () => {
-            window.removeEventListener('pointerdown', handlePointerDown)
+            window.removeEventListener('pointerdown', handlePointerDown);
             window.removeEventListener('keydown', handleKeyDown)
         }
-    }, [contextMenu])
+    }, [contextMenu]);
 
     const handleAddFile = useCallback(() => {
-        const name = `stylesheet-${files.length + 1}.css`
-        const file = addCssFile(name)
-        setSelectedFileId(file.id)
+        const name = `stylesheet-${files.length + 1}.css`;
+        const file = addCssFile(name);
+        setSelectedFileId(file.id);
         setPendingCssReview(null)
-    }, [files.length, addCssFile])
+    }, [files.length, addCssFile]);
 
     const handleRemoveFile = useCallback((id: string) => {
-        removeCssFile(id)
+        removeCssFile(id);
         if (selectedFileId === id) {
-            const remaining = files.filter((f) => f.id !== id)
+            const remaining = files.filter((f) => f.id !== id);
             setSelectedFileId(remaining.length > 0 ? remaining[0].id : null)
         }
-    }, [files, selectedFileId, removeCssFile])
+    }, [files, selectedFileId, removeCssFile]);
 
     const handleCssChange = useCallback((value: string | undefined) => {
         if (selectedFileId) {
-            updateCssFile(selectedFileId, { css: value || '' })
+            updateCssFile(selectedFileId, { css: value || '' });
             setPendingCssReview(null)
         }
-    }, [selectedFileId, updateCssFile])
+    }, [selectedFileId, updateCssFile]);
 
     const handleStartRename = useCallback((file: CssFile) => {
-        setRenamingId(file.id)
+        setRenamingId(file.id);
         setRenameValue(file.name)
-    }, [])
+    }, []);
 
     const handleFinishRename = useCallback(() => {
         if (renamingId && renameValue.trim()) {
             updateCssFile(renamingId, { name: renameValue.trim() })
         }
-        setRenamingId(null)
+        setRenamingId(null);
         setRenameValue('')
-    }, [renamingId, renameValue, updateCssFile])
+    }, [renamingId, renameValue, updateCssFile]);
 
     const handleMoveUp = useCallback((index: number) => {
         if (index > 0) reorderCssFiles(index, index - 1)
-    }, [reorderCssFiles])
+    }, [reorderCssFiles]);
 
     const handleMoveDown = useCallback((index: number) => {
         if (index < files.length - 1) reorderCssFiles(index, index + 1)
-    }, [files.length, reorderCssFiles])
+    }, [files.length, reorderCssFiles]);
 
     const handleOpenContextMenu = useCallback((event: MouseEvent<HTMLDivElement>, file: CssFile) => {
-        event.preventDefault()
-        const menuWidth = 180
-        const menuHeight = 44
-        const padding = 8
-        const x = Math.min(event.clientX, window.innerWidth - menuWidth - padding)
-        const y = Math.min(event.clientY, window.innerHeight - menuHeight - padding)
-        setSelectedFileId(file.id)
+        event.preventDefault();
+        const menuWidth = 180;
+        const menuHeight = 44;
+        const padding = 8;
+        const x = Math.min(event.clientX, window.innerWidth - menuWidth - padding);
+        const y = Math.min(event.clientY, window.innerHeight - menuHeight - padding);
+        setSelectedFileId(file.id);
         setContextMenu({ x, y, file })
-    }, [])
+    }, []);
 
     const handleProposalGenerated = useCallback((proposal: AiCssProposal) => {
-        if (!aiModalFile) return
-        const sourceCss = aiModalFile.css || ''
-        const previewCss = applyCssProposal(sourceCss, proposal)
+        if (!aiModalFile) return;
+        const sourceCss = aiModalFile.css || '';
+        const previewCss = applyCssProposal(sourceCss, proposal);
         setPendingCssReview({
             proposal,
             sourceCss,
             previewCss
         })
-    }, [aiModalFile])
+    }, [aiModalFile]);
 
     const handleAcceptProposal = useCallback(() => {
-        if (!pendingCssReview || !selectedFileId) return
-        updateCssFile(selectedFileId, { css: pendingCssReview.previewCss })
-        setPendingCssReview(null)
+        if (!pendingCssReview || !selectedFileId) return;
+        updateCssFile(selectedFileId, { css: pendingCssReview.previewCss });
+        setPendingCssReview(null);
         setAiPrompt('')
-    }, [pendingCssReview, selectedFileId, updateCssFile])
+    }, [pendingCssReview, selectedFileId, updateCssFile]);
 
     const handleDenyProposal = useCallback(() => {
-        setPendingCssReview(null)
+        setPendingCssReview(null);
         if (selectedFile) {
             setAiModalFile(selectedFile)
         }
-    }, [selectedFile])
+    }, [selectedFile]);
 
     return (
         <div className="css-manager" data-tutorial="custom-css-area">
@@ -241,7 +241,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                     onChange={(e) => setRenameValue(e.target.value)}
                                     onBlur={handleFinishRename}
                                     onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleFinishRename()
+                                        if (e.key === 'Enter') handleFinishRename();
                                         if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
                                     }}
                                     autoFocus
@@ -262,8 +262,8 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                     className="css-manager-icon-btn ai"
                                     data-tutorial={file.id === selectedFileId ? 'css-ai-assist-btn' : undefined}
                                     onClick={() => {
-                                        if (!hasConfiguredAiProvider || pendingCssReview) return
-                                        setSelectedFileId(file.id)
+                                        if (!hasConfiguredAiProvider || pendingCssReview) return;
+                                        setSelectedFileId(file.id);
                                         setAiModalFile(file)
                                     }}
                                     disabled={!hasConfiguredAiProvider || !!pendingCssReview}
@@ -375,8 +375,8 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                         className="css-manager-context-item css-manager-context-item-ai"
                         disabled={!hasConfiguredAiProvider}
                         onClick={() => {
-                            if (!hasConfiguredAiProvider) return
-                            setAiModalFile(contextMenu.file)
+                            if (!hasConfiguredAiProvider) return;
+                            setAiModalFile(contextMenu.file);
                             setContextMenu(null)
                         }}
                     >
@@ -386,7 +386,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                         <button
                             className="css-manager-context-note"
                             onClick={() => {
-                                setContextMenu(null)
+                                setContextMenu(null);
                                 openGlobalSettings({ tab: 'keys' })
                             }}
                         >

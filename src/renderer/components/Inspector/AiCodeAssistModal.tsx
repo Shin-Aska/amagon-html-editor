@@ -39,8 +39,8 @@ interface AiCodeAssistModalProps {
 
 function truncateJson(value: unknown, maxLen: number): string {
     try {
-        const raw = JSON.stringify(value, null, 2)
-        if (raw.length <= maxLen) return raw
+        const raw = JSON.stringify(value, null, 2);
+        if (raw.length <= maxLen) return raw;
         return raw.slice(0, maxLen) + '\n…(truncated)…'
     } catch {
         return ''
@@ -48,7 +48,7 @@ function truncateJson(value: unknown, maxLen: number): string {
 }
 
 function stripFence(text: string, language: string): string | null {
-    const match = text.match(new RegExp(String.raw`(?:\`\`\`${language}|\`\`\`)\s*([\s\S]*?)\`\`\``, 'i'))
+    const match = text.match(new RegExp(String.raw`(?:\`\`\`${language}|\`\`\`)\s*([\s\S]*?)\`\`\``, 'i'));
     return match ? match[1].trim() : null
 }
 
@@ -61,7 +61,7 @@ function extractCodeBlock(text: string): string {
 }
 
 function indentLines(text: string, spaces: number): string {
-    const pad = ' '.repeat(spaces)
+    const pad = ' '.repeat(spaces);
     return text
         .split('\n')
         .map((line) => (line.trim().length ? pad + line : line))
@@ -73,31 +73,31 @@ function normalizeSnippet(code: string): string {
 }
 
 function normalizeToIife(code: string): string {
-    const trimmed = code.trim()
-    if (trimmed.includes('(function') && trimmed.includes('.call(this, event)')) return trimmed
+    const trimmed = code.trim();
+    if (trimmed.includes('(function') && trimmed.includes('.call(this, event)')) return trimmed;
     return `(function(event) {\n${indentLines(trimmed || '// Your code here', 2)}\n}).call(this, event)`
 }
 
 function looksLikeHandlerSkeleton(code: string): boolean {
-    const trimmed = code.trim()
-    if (!trimmed) return true
+    const trimmed = code.trim();
+    if (!trimmed) return true;
     return /\/\/\s*Your code here/.test(trimmed) || /\/\/\s*Runs when/.test(trimmed)
 }
 
 function parseAiProposal(text: string, currentCode: string, selection: AiCodeSelection | null): AiCodeProposal | null {
-    const jsonCandidate = extractJsonBlock(text) ?? text.trim()
+    const jsonCandidate = extractJsonBlock(text) ?? text.trim();
 
     try {
-        const parsed = JSON.parse(jsonCandidate) as Partial<AiCodeProposal>
-        const rawCode = typeof parsed.code === 'string' ? normalizeSnippet(parsed.code) : ''
-        if (!rawCode) return null
+        const parsed = JSON.parse(jsonCandidate) as Partial<AiCodeProposal>;
+        const rawCode = typeof parsed.code === 'string' ? normalizeSnippet(parsed.code) : '';
+        if (!rawCode) return null;
 
-        const requestedMode = parsed.mode
+        const requestedMode = parsed.mode;
         const fallbackMode: AiEditMode = selection?.text.trim()
             ? 'replace_selection'
             : looksLikeHandlerSkeleton(currentCode)
               ? 'replace_all'
-              : 'insert'
+              : 'insert';
 
         return {
             mode:
@@ -120,8 +120,8 @@ function parseAiProposal(text: string, currentCode: string, selection: AiCodeSel
                     : undefined
         }
     } catch {
-        const extracted = extractCodeBlock(text)
-        const normalized = normalizeToIife(extracted)
+        const extracted = extractCodeBlock(text);
+        const normalized = normalizeToIife(extracted);
         return {
             mode: 'replace_all',
             code: normalized,
@@ -150,17 +150,17 @@ function buildEventCodeSystemPrompt(args: {
                   classes: c.classes
               }))
           }
-        : null
+        : null;
 
-    const blockJson = blockSummary ? truncateJson(blockSummary, 4500) : '(unknown block)'
-    const currentCode = args.currentCode ? args.currentCode.trim() : ''
+    const blockJson = blockSummary ? truncateJson(blockSummary, 4500) : '(unknown block)';
+    const currentCode = args.currentCode ? args.currentCode.trim() : '';
     const selectionSummary = args.selection
         ? {
               startLineNumber: args.selection.startLineNumber,
               endLineNumber: args.selection.endLineNumber,
               text: args.selection.text
           }
-        : null
+        : null;
 
     return `You are an AI assistant helping edit JavaScript event handler code in an HTML editor.
 
@@ -225,48 +225,48 @@ export default function AiCodeAssistModal({
     onProposalGenerated,
     onClose
 }: AiCodeAssistModalProps): JSX.Element | null {
-    const { hasConfiguredAiProvider } = useAiAvailability()
-    const modelsLoaded = useAiStore((s) => s.modelsLoaded)
-    const configLoaded = useAiStore((s) => s.configLoaded)
-    const isReady = configLoaded && modelsLoaded
-    const [isGenerating, setIsGenerating] = useState(false)
-    const [proposal, setProposal] = useState<AiCodeProposal | null>(null)
-    const [error, setError] = useState<string | null>(null)
+    const { hasConfiguredAiProvider } = useAiAvailability();
+    const modelsLoaded = useAiStore((s) => s.modelsLoaded);
+    const configLoaded = useAiStore((s) => s.configLoaded);
+    const isReady = configLoaded && modelsLoaded;
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [proposal, setProposal] = useState<AiCodeProposal | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const systemPrompt = useMemo(
         () => buildEventCodeSystemPrompt({ eventName, block, currentCode, selection }),
         [eventName, block, currentCode, selection]
-    )
+    );
 
     useEffect(() => {
-        if (!isOpen) return
-        setError(null)
-        setIsGenerating(false)
+        if (!isOpen) return;
+        setError(null);
+        setIsGenerating(false);
         setProposal(null)
-    }, [isOpen, eventName])
+    }, [isOpen, eventName]);
 
     useEffect(() => {
-        if (!isOpen) return
+        if (!isOpen) return;
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose()
-        }
-        document.addEventListener('keydown', onKeyDown)
+        };
+        document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown)
-    }, [isOpen, onClose])
+    }, [isOpen, onClose]);
 
     const handleGenerate = useCallback(async () => {
-        const prompt = requestText.trim()
+        const prompt = requestText.trim();
         if (!prompt) {
-            setError('Describe what you want the event to do.')
+            setError('Describe what you want the event to do.');
             return
         }
 
-        setIsGenerating(true)
-        setError(null)
-        setProposal(null)
+        setIsGenerating(true);
+        setError(null);
+        setProposal(null);
 
         try {
-            const api = getApi()
+            const api = getApi();
             const result = await (api as any).ai.chat({
                 messages: [
                     { role: 'system', content: systemPrompt },
@@ -275,31 +275,31 @@ export default function AiCodeAssistModal({
                         content: `Event: ${eventName}\nRequest: ${prompt}`
                     }
                 ]
-            })
+            });
 
             if (!result?.success) {
-                setError(result?.error || 'AI request failed.')
-                setIsGenerating(false)
+                setError(result?.error || 'AI request failed.');
+                setIsGenerating(false);
                 return
             }
 
-            const raw = String(result.content || '')
-            const nextProposal = parseAiProposal(raw, currentCode, selection)
+            const raw = String(result.content || '');
+            const nextProposal = parseAiProposal(raw, currentCode, selection);
             if (!nextProposal) {
-                setError('AI response did not include a usable code proposal.')
+                setError('AI response did not include a usable code proposal.');
                 return
             }
-            setProposal(nextProposal)
-            onProposalGenerated(nextProposal)
+            setProposal(nextProposal);
+            onProposalGenerated(nextProposal);
             onClose()
         } catch (err: any) {
             setError(err?.message || 'AI request failed.')
         } finally {
             setIsGenerating(false)
         }
-    }, [currentCode, eventName, onClose, onProposalGenerated, requestText, selection, systemPrompt])
+    }, [currentCode, eventName, onClose, onProposalGenerated, requestText, selection, systemPrompt]);
 
-    if (!isOpen) return null
+    if (!isOpen) return null;
 
     return (
         <div className="ai-code-assist-panel">

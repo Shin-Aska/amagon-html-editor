@@ -5,11 +5,11 @@ import './styles/global.css'
 import {registerBlocks} from './registry/registerBlocks'
 import {useAppSettingsStore} from './store/appSettingsStore'
 
-registerBlocks()
-useAppSettingsStore.getState().loadSettings()
+registerBlocks();
+useAppSettingsStore.getState().loadSettings();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
-)
+);

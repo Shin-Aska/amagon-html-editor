@@ -10,35 +10,35 @@ import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './WelcomeScreen.css'
 
 function getFrameworkLabel(framework?: string): string {
-  if (framework === 'bootstrap-5') return 'B'
-  if (framework === 'tailwind') return 'T'
+  if (framework === 'bootstrap-5') return 'B';
+  if (framework === 'tailwind') return 'T';
   return '<>'
 }
 
 function getFrameworkTitle(framework?: string): string {
-  if (framework === 'bootstrap-5') return 'Bootstrap 5'
-  if (framework === 'tailwind') return 'Tailwind CSS'
+  if (framework === 'bootstrap-5') return 'Bootstrap 5';
+  if (framework === 'tailwind') return 'Tailwind CSS';
   return 'Vanilla HTML/CSS'
 }
 
 export default function WelcomeScreen(): JSX.Element {
-  const api = getApi()
-  const setProject = useProjectStore((s) => s.setProject)
-  const setCustomCss = useEditorStore((s) => s.setCustomCss)
-  const markSaved = useEditorStore((s) => s.markSaved)
-  const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks)
-  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
+  const api = getApi();
+  const setProject = useProjectStore((s) => s.setProject);
+  const setCustomCss = useEditorStore((s) => s.setCustomCss);
+  const markSaved = useEditorStore((s) => s.markSaved);
+  const loadPageBlocks = useEditorStore((s) => s.loadPageBlocks);
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
 
-  const [recentProjects, setRecentProjects] = useState<{ path: string; name: string; framework?: string }[]>([])
-  const [appVersion, setAppVersion] = useState('')
+  const [recentProjects, setRecentProjects] = useState<{ path: string; name: string; framework?: string }[]>([]);
+  const [appVersion, setAppVersion] = useState('');
 
   const normalizeRecentProjects = (projects: unknown): Array<{ path: string; name: string; framework?: string }> => {
-    if (!Array.isArray(projects)) return []
+    if (!Array.isArray(projects)) return [];
 
     return projects.flatMap((project) => {
       if (typeof project === 'string') {
-        const trimmedPath = project.trim()
-        if (!trimmedPath) return []
+        const trimmedPath = project.trim();
+        if (!trimmedPath) return [];
 
         return [{
           path: trimmedPath,
@@ -47,20 +47,20 @@ export default function WelcomeScreen(): JSX.Element {
         }]
       }
 
-      if (!project || typeof project !== 'object') return []
+      if (!project || typeof project !== 'object') return [];
 
       const pathValue = typeof (project as { path?: unknown }).path === 'string'
         ? (project as { path: string }).path.trim()
-        : ''
-      if (!pathValue) return []
+        : '';
+      if (!pathValue) return [];
 
       const nameValue = typeof (project as { name?: unknown }).name === 'string'
         ? (project as { name: string }).name.trim()
-        : ''
+        : '';
 
       const frameworkValue = typeof (project as { framework?: unknown }).framework === 'string'
         ? (project as { framework: string }).framework
-        : undefined
+        : undefined;
 
       return [{
         path: pathValue,
@@ -68,78 +68,78 @@ export default function WelcomeScreen(): JSX.Element {
         framework: frameworkValue
       }]
     })
-  }
+  };
 
-  const [showNewProject, setShowNewProject] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     async function loadRecent() {
-      const result = await api.project.getRecent()
+      const result = await api.project.getRecent();
       if (result.success && result.projects) {
         setRecentProjects(normalizeRecentProjects(result.projects))
       }
     }
     loadRecent()
-  }, [])
+  }, []);
 
   useEffect(() => {
     async function loadAppVersion() {
-      const result = await api.app.getVersion()
+      const result = await api.app.getVersion();
       if (result.success && typeof result.version === 'string') {
         setAppVersion(result.version)
       }
     }
 
     loadAppVersion()
-  }, [])
+  }, []);
 
   const handleLoad = async () => {
-    const result = await api.project.load()
+    const result = await api.project.load();
     if (result.success && result.content) {
-      setProject(result.content as any, result.filePath)
-      const data = result.content as any
-      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      setProject(result.content as any, result.filePath);
+      const data = result.content as any;
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null;
       if (firstPage && Array.isArray(firstPage.blocks)) {
         loadPageBlocks(firstPage.blocks)
       }
-      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
-      markSaved()
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '');
+      markSaved();
 
-      const defaultLayout = useAppSettingsStore.getState().defaultLayout
+      const defaultLayout = useAppSettingsStore.getState().defaultLayout;
       setEditorLayout(defaultLayout)
     }
-  }
+  };
 
   const handleOpenRecent = async (path: string) => {
-    const result = await api.project.loadFile(path)
+    const result = await api.project.loadFile(path);
     if (result.success && result.content) {
-      setProject(result.content as any, result.filePath)
-      const data = result.content as any
-      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      setProject(result.content as any, result.filePath);
+      const data = result.content as any;
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null;
       if (firstPage && Array.isArray(firstPage.blocks)) {
         loadPageBlocks(firstPage.blocks)
       }
-      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
-      markSaved()
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '');
+      markSaved();
 
-      const defaultLayout = useAppSettingsStore.getState().defaultLayout
+      const defaultLayout = useAppSettingsStore.getState().defaultLayout;
       setEditorLayout(defaultLayout)
     } else {
-      console.error('Failed to load recent project:', result.error)
+      console.error('Failed to load recent project:', result.error);
       alert(`Failed to load project: ${result.error}`)
     }
-  }
+  };
 
   const handleRemoveRecent = async (e: React.MouseEvent, projectPath: string) => {
-    e.stopPropagation()
-    const result = await api.project.removeRecent(projectPath)
+    e.stopPropagation();
+    const result = await api.project.removeRecent(projectPath);
     if (result.success && result.projects) {
       setRecentProjects(normalizeRecentProjects(result.projects))
     } else {
       setRecentProjects((prev) => prev.filter((p) => p.path !== projectPath))
     }
-  }
+  };
 
   return (
     <div className="welcome-screen">

@@ -7,15 +7,15 @@ interface CssClassesEditorProps {
 }
 
 export default function CssClassesEditor({ classes, onChange }: CssClassesEditorProps): JSX.Element {
-  const [inputValue, setInputValue] = useState('')
+  const [inputValue, setInputValue] = useState('');
 
   const handleAddClass = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim()) {
-      e.preventDefault()
+      e.preventDefault();
       
       // Split by space to allow adding multiple classes at once
-      const newClasses = inputValue.trim().split(/\s+/)
-      const uniqueNewClasses = newClasses.filter(c => !classes.includes(c))
+      const newClasses = inputValue.trim().split(/\s+/);
+      const uniqueNewClasses = newClasses.filter(c => !classes.includes(c));
       
       if (uniqueNewClasses.length > 0) {
         onChange([...classes, ...uniqueNewClasses])
@@ -23,11 +23,11 @@ export default function CssClassesEditor({ classes, onChange }: CssClassesEditor
       
       setInputValue('')
     }
-  }
+  };
 
   const handleRemoveClass = (classToRemove: string) => {
     onChange(classes.filter(c => c !== classToRemove))
-  }
+  };
 
   return (
     <div className="css-classes-editor" data-tutorial="css-classes-editor">

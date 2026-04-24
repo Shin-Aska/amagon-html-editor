@@ -9,25 +9,25 @@ export default function ColorField({
   value: string
   onChange: (value: string) => void
 }): JSX.Element {
-  const [hex, setHex] = useState(value)
+  const [hex, setHex] = useState(value);
 
   useEffect(() => {
     setHex(value)
-  }, [value])
+  }, [value]);
 
   const handleHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value
-    setHex(v)
+    const v = e.target.value;
+    setHex(v);
     if (/^#[0-9a-fA-F]{6}$/.test(v) || /^#[0-9a-fA-F]{3}$/.test(v)) {
       onChange(v)
     }
-  }
+  };
 
   const handleHexBlur = () => {
     if (!/^#[0-9a-fA-F]{3,6}$/.test(hex)) {
       setHex(value)
     }
-  }
+  };
 
   return (
     <div className="theme-color-item">

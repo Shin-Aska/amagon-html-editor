@@ -14,24 +14,24 @@ import {getApi} from '../../utils/api'
 import PageModal from '../PageModal/PageModal'
 
 function WidgetItem({ widget, onContextMenu }: { widget: BlockDefinition; onContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void }): JSX.Element {
-  const isTypingCode = useEditorStore((s) => s.isTypingCode)
+  const isTypingCode = useEditorStore((s) => s.isTypingCode);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `widget:${widget.type}`,
     disabled: isTypingCode,
     data: { widgetType: widget.type, label: widget.label, icon: widget.icon }
-  })
+  });
 
-  const iconString = typeof widget.icon === 'string' ? widget.icon.trim() : ''
+  const iconString = typeof widget.icon === 'string' ? widget.icon.trim() : '';
   const isBadIconGlyph = (s: string): boolean => {
-    if (!s) return true
-    if (s.startsWith('lucide:')) return false
-    if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true
-    if (s === '☐' || s === '☑' || s === '▢' || s === '▣' || s === '▭' || s === '🔲' || s === '🔳') return true
+    if (!s) return true;
+    if (s.startsWith('lucide:')) return false;
+    if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true;
+    if (s === '☐' || s === '☑' || s === '▢' || s === '▣' || s === '▭' || s === '🔲' || s === '🔳') return true;
     return false
-  }
+  };
 
   const style = transform ? {
-  } : undefined
+  } : undefined;
 
   return (
     <div
@@ -69,7 +69,7 @@ function WidgetCategory({
   widgets: BlockDefinition[]
   onWidgetContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void
 }): JSX.Element {
-  if (widgets.length === 0) return <></>
+  if (widgets.length === 0) return <></>;
 
   return (
     <div className="widget-category">
@@ -84,30 +84,30 @@ function WidgetCategory({
 }
 
 function Sidebar(): JSX.Element {
-  const api = getApi()
-  const categories = componentRegistry.getCategories()
-  const userBlocks = useProjectStore((s) => s.userBlocks)
-  const removeUserBlock = useProjectStore((s) => s.removeUserBlock)
-  const showToast = useToastStore((s) => s.showToast)
-  const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets')
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null)
-  const [widgetSearch, setWidgetSearch] = useState('')
+  const api = getApi();
+  const categories = componentRegistry.getCategories();
+  const userBlocks = useProjectStore((s) => s.userBlocks);
+  const removeUserBlock = useProjectStore((s) => s.removeUserBlock);
+  const showToast = useToastStore((s) => s.showToast);
+  const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets');
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null);
+  const [widgetSearch, setWidgetSearch] = useState('');
 
   // Page management
-  const pages = useProjectStore((s) => s.pages)
-  const currentPageId = useProjectStore((s) => s.currentPageId)
-  const setCurrentPage = useProjectStore((s) => s.setCurrentPage)
-  const addPage = useProjectStore((s) => s.addPage)
-  const removePage = useProjectStore((s) => s.removePage)
-  const updatePage = useProjectStore((s) => s.updatePage)
-  const getEffectiveTags = useProjectStore((s) => s.getEffectiveTags)
-  const reorderPages = useProjectStore((s) => s.reorderPages)
+  const pages = useProjectStore((s) => s.pages);
+  const currentPageId = useProjectStore((s) => s.currentPageId);
+  const setCurrentPage = useProjectStore((s) => s.setCurrentPage);
+  const addPage = useProjectStore((s) => s.addPage);
+  const removePage = useProjectStore((s) => s.removePage);
+  const updatePage = useProjectStore((s) => s.updatePage);
+  const getEffectiveTags = useProjectStore((s) => s.getEffectiveTags);
+  const reorderPages = useProjectStore((s) => s.reorderPages);
 
   // Folder management
-  const folders = useProjectStore((s) => s.folders)
-  const addFolder = useProjectStore((s) => s.addFolder)
-  const removeFolder = useProjectStore((s) => s.removeFolder)
-  const updateFolder = useProjectStore((s) => s.updateFolder)
+  const folders = useProjectStore((s) => s.folders);
+  const addFolder = useProjectStore((s) => s.addFolder);
+  const removeFolder = useProjectStore((s) => s.removeFolder);
+  const updateFolder = useProjectStore((s) => s.updateFolder);
 
   // UI state
   const [pageModal, setPageModal] = useState<{
@@ -122,26 +122,26 @@ function Sidebar(): JSX.Element {
     initialMeta?: Record<string, string>
     initialFullWidthFormControls?: boolean
     targetFolderId?: string // folder to place new page into
-  } | null>(null)
+  } | null>(null);
 
   const [pageContextMenu, setPageContextMenu] = useState<{
     x: number
     y: number
     pageId?: string
     folderId?: string
-  } | null>(null)
+  } | null>(null);
 
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   // Page drag-reorder state
-  const [dragPageId, setDragPageId] = useState<string | null>(null)
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
-  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null)
-  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null)
-  const dragPageIdRef = useRef<string | null>(null)
+  const [dragPageId, setDragPageId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+  const dragPageIdRef = useRef<string | null>(null);
 
   // Define a specific order for categories if desired, or just use the insertion order
-  const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed']
+  const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed'];
 
   // Convert user blocks to BlockDefinition format for display
   const userBlockDefinitions: BlockDefinition[] = userBlocks.map((ub) => ({
@@ -155,22 +155,22 @@ function Sidebar(): JSX.Element {
           ? ub.icon.trim()
           : 'lucide:user-block',
     propsSchema: {}
-  }))
+  }));
 
-  const allRegistryCategories = Array.from(new Set([...orderedCategories, ...categories]))
-  const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)))
-  const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c))
-  const allCategories = [...allRegistryCategories, ...customOnlyCategories]
+  const allRegistryCategories = Array.from(new Set([...orderedCategories, ...categories]));
+  const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)));
+  const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c));
+  const allCategories = [...allRegistryCategories, ...customOnlyCategories];
 
   // Filter widgets by search query
   const filteredWidgetsByCategory = useMemo(() => {
-    const q = widgetSearch.trim().toLowerCase()
-    const result: Record<string, BlockDefinition[]> = {}
+    const q = widgetSearch.trim().toLowerCase();
+    const result: Record<string, BlockDefinition[]> = {};
     for (const category of allCategories) {
       const widgets = [
         ...componentRegistry.getByCategory(category),
         ...userBlockDefinitions.filter((w) => w.category === category)
-      ]
+      ];
       if (!q) {
         result[category] = widgets
       } else {
@@ -183,16 +183,16 @@ function Sidebar(): JSX.Element {
       }
     }
     return result
-  }, [widgetSearch, allCategories, userBlockDefinitions])
+  }, [widgetSearch, allCategories, userBlockDefinitions]);
 
   const handleWidgetContextMenu = (e: MouseEvent, widget: BlockDefinition) => {
-    if (!widget.type.startsWith('user:')) return
-    e.preventDefault()
-    e.stopPropagation()
+    if (!widget.type.startsWith('user:')) return;
+    e.preventDefault();
+    e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, widget })
-  }
+  };
 
-  const closeContextMenu = () => setContextMenu(null)
+  const closeContextMenu = () => setContextMenu(null);
 
   // ── Page/Folder handlers ──────────────────────────────────────────────
 
@@ -201,61 +201,61 @@ function Sidebar(): JSX.Element {
       updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
     }
     setCurrentPage(pageId)
-  }
+  };
 
   const handlePageContextMenu = (e: MouseEvent, pageId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     setPageContextMenu({ x: e.clientX, y: e.clientY, pageId })
-  }
+  };
 
   const handleFolderContextMenu = (e: MouseEvent, folderId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     setPageContextMenu({ x: e.clientX, y: e.clientY, folderId })
-  }
+  };
 
-  const closePageContextMenu = () => setPageContextMenu(null)
+  const closePageContextMenu = () => setPageContextMenu(null);
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders((prev) => {
-      const next = new Set(prev)
-      if (next.has(folderId)) next.delete(folderId)
-      else next.add(folderId)
+      const next = new Set(prev);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
       return next
     })
-  }
+  };
 
   const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
-    const created = addPage(name, path || undefined)
-    const patch: Record<string, unknown> = {}
-    if (pageTitle) patch.pageTitle = pageTitle
-    if (fullWidth !== undefined) patch.fullWidthFormControls = fullWidth
-    if (tags.length > 0) patch.tags = tags
-    if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId
+    const created = addPage(name, path || undefined);
+    const patch: Record<string, unknown> = {};
+    if (pageTitle) patch.pageTitle = pageTitle;
+    if (fullWidth !== undefined) patch.fullWidthFormControls = fullWidth;
+    if (tags.length > 0) patch.tags = tags;
+    if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId;
     // Merge provided meta with the defaults already on the page
     if (description || meta) {
-      const existing = created.meta || {}
-      const merged = { ...existing }
-      if (description) merged.description = description
-      if (meta) Object.assign(merged, meta)
+      const existing = created.meta || {};
+      const merged = { ...existing };
+      if (description) merged.description = description;
+      if (meta) Object.assign(merged, meta);
       patch.meta = merged
     }
-    if (Object.keys(patch).length > 0) updatePage(created.id, patch)
+    if (Object.keys(patch).length > 0) updatePage(created.id, patch);
     setPageModal(null)
-  }
+  };
 
   const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
-    if (!pageModal?.pageId) return
-    const page = pages.find((p) => p.id === pageModal.pageId)
-    const patch: Record<string, unknown> = { title: name, tags, pageTitle, fullWidthFormControls: fullWidth }
-    if (path) patch.slug = path
+    if (!pageModal?.pageId) return;
+    const page = pages.find((p) => p.id === pageModal.pageId);
+    const patch: Record<string, unknown> = { title: name, tags, pageTitle, fullWidthFormControls: fullWidth };
+    if (path) patch.slug = path;
     // Build final meta: start from existing, update description, merge custom meta
-    const existingMeta = { ...(page?.meta || {}) }
-    if (description !== undefined) existingMeta.description = description || ''
+    const existingMeta = { ...(page?.meta || {}) };
+    if (description !== undefined) existingMeta.description = description || '';
     if (meta) {
       // Remove old custom entries not in the new meta (but keep default ones)
-      const newKeys = new Set(Object.keys(meta))
+      const newKeys = new Set(Object.keys(meta));
       for (const k of Object.keys(existingMeta)) {
         if (k !== 'description' && k !== 'charset' && k !== 'viewport' && k !== 'datePublished' && !newKeys.has(k)) {
           delete existingMeta[k]
@@ -263,46 +263,46 @@ function Sidebar(): JSX.Element {
       }
       Object.assign(existingMeta, meta)
     }
-    patch.meta = existingMeta
-    updatePage(pageModal.pageId, patch)
+    patch.meta = existingMeta;
+    updatePage(pageModal.pageId, patch);
     setPageModal(null)
-  }
+  };
 
   const handleCreateFolder = (name: string, tags: string[]) => {
-    const folder = addFolder(name, tags)
-    setExpandedFolders((prev) => new Set(prev).add(folder.id))
+    const folder = addFolder(name, tags);
+    setExpandedFolders((prev) => new Set(prev).add(folder.id));
     setPageModal(null)
-  }
+  };
 
   const handleEditFolder = (name: string, tags: string[]) => {
-    if (!pageModal?.folderId) return
-    updateFolder(pageModal.folderId, { name, tags: tags.length > 0 ? tags : undefined })
+    if (!pageModal?.folderId) return;
+    updateFolder(pageModal.folderId, { name, tags: tags.length > 0 ? tags : undefined });
     setPageModal(null)
-  }
+  };
 
   const handleDeletePage = (pageId: string) => {
     if (pages.length <= 1) {
-      alert('Cannot delete the last page.')
+      alert('Cannot delete the last page.');
       return
     }
     if (confirm('Are you sure you want to delete this page?')) {
       removePage(pageId)
     }
-  }
+  };
 
   const handleDeleteFolder = (folderId: string) => {
     if (confirm('Delete this folder? Pages inside will be moved to the root level.')) {
       removeFolder(folderId)
     }
-  }
+  };
 
   // ── Folder move submenu ──────────────────────────────────────────────
 
   const buildMoveToItems = (pageId: string) => {
-    const page = pages.find((p) => p.id === pageId)
-    if (!page) return []
+    const page = pages.find((p) => p.id === pageId);
+    if (!page) return [];
 
-    const items: Array<{ label: string; action: () => void; disabled?: boolean }> = []
+    const items: Array<{ label: string; action: () => void; disabled?: boolean }> = [];
 
     // Move to root
     if (page.folderId) {
@@ -322,175 +322,175 @@ function Sidebar(): JSX.Element {
     }
 
     return items
-  }
+  };
 
   // ── Derived data ─────────────────────────────────────────────────────
 
-  const ungroupedPages = pages.filter((p) => !p.folderId)
-  const pagesByFolder = (folderId: string) => pages.filter((p) => p.folderId === folderId)
+  const ungroupedPages = pages.filter((p) => !p.folderId);
+  const pagesByFolder = (folderId: string) => pages.filter((p) => p.folderId === folderId);
 
   // ── Render a page item ────────────────────────────────────────────────
 
   const getDraggedPageId = (e: React.DragEvent | null): string | null => {
-    if (dragPageIdRef.current) return dragPageIdRef.current
-    const dt = e?.dataTransfer?.getData('text/plain')
+    if (dragPageIdRef.current) return dragPageIdRef.current;
+    const dt = e?.dataTransfer?.getData('text/plain');
     return dt ? String(dt) : null
-  }
+  };
 
   const handlePageDragStart = (e: React.DragEvent, pageId: string) => {
-    dragPageIdRef.current = pageId
-    setDragPageId(pageId)
-    e.dataTransfer.effectAllowed = 'move'
+    dragPageIdRef.current = pageId;
+    setDragPageId(pageId);
+    e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', pageId)
-  }
+  };
 
   const handlePageDragOver = (e: React.DragEvent, pageId: string) => {
-    const draggedId = getDraggedPageId(e)
-    if (!draggedId || draggedId === pageId) return
+    const draggedId = getDraggedPageId(e);
+    if (!draggedId || draggedId === pageId) return;
     // Required for onDrop to fire in HTML5 DnD.
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const midY = rect.top + rect.height / 2
-    setDropTargetId(pageId)
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    setDropTargetId(pageId);
     setDropPosition(e.clientY < midY ? 'above' : 'below')
-  }
+  };
 
   const handlePageDrop = (e: React.DragEvent, targetPageId: string) => {
-    e.preventDefault()
-    const draggedId = getDraggedPageId(e)
-    if (!draggedId || draggedId === targetPageId) return
+    e.preventDefault();
+    const draggedId = getDraggedPageId(e);
+    if (!draggedId || draggedId === targetPageId) return;
 
-    const draggedPage = pages.find((p) => p.id === draggedId)
-    const targetPage = pages.find((p) => p.id === targetPageId)
-    if (!draggedPage || !targetPage) return
+    const draggedPage = pages.find((p) => p.id === draggedId);
+    const targetPage = pages.find((p) => p.id === targetPageId);
+    if (!draggedPage || !targetPage) return;
 
-    const fromIndex = pages.findIndex((p) => p.id === draggedId)
-    let toIndex = pages.findIndex((p) => p.id === targetPageId)
-    if (fromIndex === -1 || toIndex === -1) return
+    const fromIndex = pages.findIndex((p) => p.id === draggedId);
+    let toIndex = pages.findIndex((p) => p.id === targetPageId);
+    if (fromIndex === -1 || toIndex === -1) return;
 
     // Determine above/below using the drop position at the moment of drop.
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const midY = rect.top + rect.height / 2
-    const isBelow = e.clientY >= midY
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const isBelow = e.clientY >= midY;
 
-    if (isBelow) toIndex += 1
-    if (fromIndex < toIndex) toIndex -= 1
-    if (fromIndex !== toIndex) reorderPages(fromIndex, toIndex)
+    if (isBelow) toIndex += 1;
+    if (fromIndex < toIndex) toIndex -= 1;
+    if (fromIndex !== toIndex) reorderPages(fromIndex, toIndex);
 
-    const targetFolderId = targetPage.folderId ?? undefined
+    const targetFolderId = targetPage.folderId ?? undefined;
     if ((draggedPage.folderId ?? undefined) !== targetFolderId) {
-      updatePage(draggedId, { folderId: targetFolderId })
+      updatePage(draggedId, { folderId: targetFolderId });
       if (targetFolderId) {
         setExpandedFolders((prev) => new Set([...prev, targetFolderId]))
       }
     }
 
-    dragPageIdRef.current = null
-    setDragPageId(null)
-    setDropTargetId(null)
-    setDropPosition(null)
+    dragPageIdRef.current = null;
+    setDragPageId(null);
+    setDropTargetId(null);
+    setDropPosition(null);
     setDropTargetFolderId(null)
-  }
+  };
 
   const handlePageDragEnd = () => {
-    dragPageIdRef.current = null
-    setDragPageId(null)
-    setDropTargetId(null)
-    setDropPosition(null)
+    dragPageIdRef.current = null;
+    setDragPageId(null);
+    setDropTargetId(null);
+    setDropPosition(null);
     setDropTargetFolderId(null)
-  }
+  };
 
   const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
-    const draggedId = dragPageIdRef.current
-    if (!draggedId) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDropTargetFolderId(folderId)
-    setDropTargetId(null)
+    const draggedId = dragPageIdRef.current;
+    if (!draggedId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetFolderId(folderId);
+    setDropTargetId(null);
     setDropPosition(null)
-  }
+  };
 
   const handleFolderDrop = (e: React.DragEvent, folderId: string) => {
-    e.preventDefault()
-    const draggedId = dragPageIdRef.current
-    if (!draggedId) return
-    const draggedPage = pages.find(p => p.id === draggedId)
+    e.preventDefault();
+    const draggedId = dragPageIdRef.current;
+    if (!draggedId) return;
+    const draggedPage = pages.find(p => p.id === draggedId);
     if (!draggedPage || draggedPage.folderId === folderId) {
       // No-op if page already in this folder
-      dragPageIdRef.current = null
-      setDragPageId(null)
-      setDropTargetId(null)
-      setDropPosition(null)
-      setDropTargetFolderId(null)
+      dragPageIdRef.current = null;
+      setDragPageId(null);
+      setDropTargetId(null);
+      setDropPosition(null);
+      setDropTargetFolderId(null);
       return
     }
-    updatePage(draggedId, { folderId })
+    updatePage(draggedId, { folderId });
     // Auto-expand folder
-    setExpandedFolders(prev => new Set([...prev, folderId]))
+    setExpandedFolders(prev => new Set([...prev, folderId]));
     // Reset drag state
-    dragPageIdRef.current = null
-    setDragPageId(null)
-    setDropTargetId(null)
-    setDropPosition(null)
+    dragPageIdRef.current = null;
+    setDragPageId(null);
+    setDropTargetId(null);
+    setDropPosition(null);
     setDropTargetFolderId(null)
-  }
+  };
 
   const handleFolderDragLeave = (e: React.DragEvent, folderId: string) => {
     if (dropTargetFolderId === folderId) {
       setDropTargetFolderId(null)
     }
-  }
+  };
 
   const isBackgroundDropTarget = (target: EventTarget | null): target is HTMLElement => {
-    if (!(target instanceof HTMLElement)) return false
+    if (!(target instanceof HTMLElement)) return false;
     return !(
       target.closest('.folder-header') ||
       target.closest('.page-item') ||
       target.closest('.ungrouped-drop-zone') ||
       target.closest('.page-actions')
     )
-  }
+  };
 
   const handleBackgroundDragOver = (e: React.DragEvent) => {
-    if (!dragPageIdRef.current) return
-    if (!isBackgroundDropTarget(e.target)) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDropTargetFolderId('__root__')
-    setDropTargetId(null)
+    if (!dragPageIdRef.current) return;
+    if (!isBackgroundDropTarget(e.target)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetFolderId('__root__');
+    setDropTargetId(null);
     setDropPosition(null)
-  }
+  };
 
   const handleBackgroundDrop = (e: React.DragEvent) => {
-    if (!dragPageIdRef.current) return
-    if (!isBackgroundDropTarget(e.target)) return
-    e.preventDefault()
-    const draggedId = dragPageIdRef.current
-    if (!draggedId) return
-    updatePage(draggedId, { folderId: undefined })
-    dragPageIdRef.current = null
-    setDragPageId(null)
-    setDropTargetId(null)
-    setDropPosition(null)
+    if (!dragPageIdRef.current) return;
+    if (!isBackgroundDropTarget(e.target)) return;
+    e.preventDefault();
+    const draggedId = dragPageIdRef.current;
+    if (!draggedId) return;
+    updatePage(draggedId, { folderId: undefined });
+    dragPageIdRef.current = null;
+    setDragPageId(null);
+    setDropTargetId(null);
+    setDropPosition(null);
     setDropTargetFolderId(null)
-  }
+  };
 
   const handleBackgroundDragLeave = (e: React.DragEvent) => {
     if (e.target === e.currentTarget) {
       setDropTargetFolderId(null)
     }
-  }
+  };
 
   const renderPageItem = (page: typeof pages[0], indented = false) => {
-    const effectiveTags = getEffectiveTags(page)
-    const ownTags = page.tags ?? []
-    const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null
-    const inheritedTags = folder?.tags?.filter((t) => !ownTags.includes(t)) ?? []
+    const effectiveTags = getEffectiveTags(page);
+    const ownTags = page.tags ?? [];
+    const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null;
+    const inheritedTags = folder?.tags?.filter((t) => !ownTags.includes(t)) ?? [];
 
-    const isDragOver = dropTargetId === page.id
-    const dropClass = isDragOver ? (dropPosition === 'above' ? 'drop-above' : 'drop-below') : ''
-    const isDragging = dragPageId === page.id
+    const isDragOver = dropTargetId === page.id;
+    const dropClass = isDragOver ? (dropPosition === 'above' ? 'drop-above' : 'drop-below') : '';
+    const isDragging = dragPageId === page.id;
 
     return (
       <div
@@ -523,19 +523,19 @@ function Sidebar(): JSX.Element {
         )}
       </div>
     )
-  }
+  };
 
   // ── Main render ──────────────────────────────────────────────────────
 
   const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string) => {
-    if (!pageModal) return
+    if (!pageModal) return;
     switch (pageModal.mode) {
-      case 'create': handleCreatePage(name, tags, path, description, meta, pageTitle); break
-      case 'edit': handleEditPage(name, tags, path, description, meta, pageTitle); break
-      case 'create-folder': handleCreateFolder(name, tags); break
+      case 'create': handleCreatePage(name, tags, path, description, meta, pageTitle); break;
+      case 'edit': handleEditPage(name, tags, path, description, meta, pageTitle); break;
+      case 'create-folder': handleCreateFolder(name, tags); break;
       case 'edit-folder': handleEditFolder(name, tags); break
     }
-  }
+  };
 
   return (
     <div className="sidebar">
@@ -583,8 +583,8 @@ function Sidebar(): JSX.Element {
             <div className="pages-list">
               {/* Folders */}
               {folders.map((folder) => {
-                const isExpanded = expandedFolders.has(folder.id)
-                const folderPages = pagesByFolder(folder.id)
+                const isExpanded = expandedFolders.has(folder.id);
+                const folderPages = pagesByFolder(folder.id);
                 return (
                   <div key={folder.id} className="folder-group">
                     <div
@@ -625,35 +625,35 @@ function Sidebar(): JSX.Element {
               <div
                 className={`ungrouped-drop-zone${dropTargetFolderId === '__ungrouped__' ? ' drop-active' : ''}`}
                 onDragOver={(e) => {
-                  const draggedId = dragPageIdRef.current
+                  const draggedId = dragPageIdRef.current;
                   if (draggedId) {
-                    e.preventDefault()
-                    e.dataTransfer.dropEffect = 'move'
-                    setDropTargetFolderId('__ungrouped__')
-                    setDropTargetId(null)
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    setDropTargetFolderId('__ungrouped__');
+                    setDropTargetId(null);
                     setDropPosition(null)
                   }
                 }}
                 onDrop={(e) => {
-                  e.preventDefault()
-                  const draggedId = dragPageIdRef.current
-                  if (!draggedId) return
-                  const draggedPage = pages.find(p => p.id === draggedId)
+                  e.preventDefault();
+                  const draggedId = dragPageIdRef.current;
+                  if (!draggedId) return;
+                  const draggedPage = pages.find(p => p.id === draggedId);
                   if (!draggedPage || draggedPage.folderId === undefined) {
                     // No-op if page already ungrouped
-                    dragPageIdRef.current = null
-                    setDragPageId(null)
-                    setDropTargetId(null)
-                    setDropPosition(null)
-                    setDropTargetFolderId(null)
+                    dragPageIdRef.current = null;
+                    setDragPageId(null);
+                    setDropTargetId(null);
+                    setDropPosition(null);
+                    setDropTargetFolderId(null);
                     return
                   }
-                  updatePage(draggedId, { folderId: undefined })
+                  updatePage(draggedId, { folderId: undefined });
                   // Reset drag state
-                  dragPageIdRef.current = null
-                  setDragPageId(null)
-                  setDropTargetId(null)
-                  setDropPosition(null)
+                  dragPageIdRef.current = null;
+                  setDragPageId(null);
+                  setDropTargetId(null);
+                  setDropPosition(null);
                   setDropTargetFolderId(null)
                 }}
                 onDragLeave={() => {
@@ -725,22 +725,22 @@ function Sidebar(): JSX.Element {
               label: 'Remove custom block',
               danger: true,
               action: () => {
-                const id = contextMenu.widget.type.replace(/^user:/, '')
-                if (!id) return
-                if (!confirm(`Remove "${contextMenu.widget.label}"?`)) return
-                removeUserBlock(id)
+                const id = contextMenu.widget.type.replace(/^user:/, '');
+                if (!id) return;
+                if (!confirm(`Remove "${contextMenu.widget.label}"?`)) return;
+                removeUserBlock(id);
                 showToast(`Removed custom block: ${contextMenu.widget.label}`, 'success')
 
                   ; (async () => {
                     try {
-                      const editorState = useEditorStore.getState()
-                      const projectState = useProjectStore.getState()
-                      const pageId = projectState.currentPageId
-                      if (!projectState.filePath) return
+                      const editorState = useEditorStore.getState();
+                      const projectState = useProjectStore.getState();
+                      const pageId = projectState.currentPageId;
+                      if (!projectState.filePath) return;
 
                       const updatedPages = projectState.pages.map((p) =>
                         pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
-                      )
+                      );
 
                       if (pageId) {
                         projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
@@ -756,12 +756,12 @@ function Sidebar(): JSX.Element {
                         },
                         null,
                         2
-                      )
+                      );
 
                       const result = await api.project.save({
                         filePath: projectState.filePath || undefined,
                         content
-                      })
+                      });
 
                       if (result.success && result.filePath && result.filePath !== projectState.filePath) {
                         projectState.setFilePath(result.filePath)
@@ -788,7 +788,7 @@ function Sidebar(): JSX.Element {
                 {
                   label: 'Edit Folder',
                   action: () => {
-                    const folder = folders.find((f) => f.id === pageContextMenu.folderId)
+                    const folder = folders.find((f) => f.id === pageContextMenu.folderId);
                     if (folder) {
                       setPageModal({
                         mode: 'edit-folder',
@@ -824,7 +824,7 @@ function Sidebar(): JSX.Element {
                 {
                   label: 'Page Properties',
                   action: () => {
-                    const page = pages.find((p) => p.id === pageContextMenu.pageId)
+                    const page = pages.find((p) => p.id === pageContextMenu.pageId);
                     if (page) {
                       setPageModal({
                         mode: 'edit',

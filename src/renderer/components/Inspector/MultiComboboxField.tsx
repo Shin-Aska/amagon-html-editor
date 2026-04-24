@@ -13,27 +13,27 @@ export default function MultiComboboxField({
   onChange,
   placeholder
 }: MultiComboboxFieldProps): JSX.Element {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const selected = Array.isArray(value) ? value : []
+  const selected = Array.isArray(value) ? value : [];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
+    };
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, []);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return options
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
     return options.filter((opt) => opt.toLowerCase().includes(q))
-  }, [options, query])
+  }, [options, query]);
 
   const toggle = (opt: string) => {
     if (selected.includes(opt)) {
@@ -41,11 +41,11 @@ export default function MultiComboboxField({
     } else {
       onChange([...selected, opt])
     }
-  }
+  };
 
   const remove = (opt: string) => {
     onChange(selected.filter((v) => v !== opt))
-  }
+  };
 
   return (
     <div className="multi-combobox-wrapper" ref={wrapperRef}>
@@ -55,7 +55,7 @@ export default function MultiComboboxField({
         tabIndex={0}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v)
+          if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v);
           if (e.key === 'Escape') setOpen(false)
         }}
       >
@@ -68,7 +68,7 @@ export default function MultiComboboxField({
                 key={opt}
                 className="multi-combobox-tag"
                 onClick={(e) => {
-                  e.stopPropagation()
+                  e.stopPropagation();
                   remove(opt)
                 }}
                 title="Remove"
@@ -92,13 +92,13 @@ export default function MultiComboboxField({
           />
           <div className="multi-combobox-options">
             {filtered.map((opt) => {
-              const isSelected = selected.includes(opt)
+              const isSelected = selected.includes(opt);
               return (
                 <div
                   key={opt}
                   className={`multi-combobox-option ${isSelected ? 'selected' : ''}`}
                   onMouseDown={(e) => {
-                    e.preventDefault()
+                    e.preventDefault();
                     toggle(opt)
                   }}
                 >

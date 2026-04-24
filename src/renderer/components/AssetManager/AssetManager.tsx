@@ -17,22 +17,22 @@ interface AssetManagerProps {
   onSelect?: (url: string) => void
 }
 
-const PROJECT_ASSETS_PER_PAGE = 8
+const PROJECT_ASSETS_PER_PAGE = 8;
 
 export default function AssetManager({ onClose, onSelect }: AssetManagerProps): JSX.Element {
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [loading, setLoading] = useState(false)
-  const [selectedAsset, setSelectedAsset] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'project' | 'web'>('project')
-  const [filterType, setFilterType] = useState<'all' | 'images' | 'videos'>('all')
-  const [downloading, setDownloading] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const api = getApi()
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'project' | 'web'>('project');
+  const [filterType, setFilterType] = useState<'all' | 'images' | 'videos'>('all');
+  const [downloading, setDownloading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const api = getApi();
 
   const refreshAssets = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const result = await api.assets.list()
+      const result = await api.assets.list();
       if (result.success && result.assets) {
         setAssets(result.assets)
       }
@@ -41,16 +41,16 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
     } finally {
       setLoading(false)
     }
-  }, [api])
+  }, [api]);
 
   useEffect(() => {
     refreshAssets()
-  }, [refreshAssets])
+  }, [refreshAssets]);
 
   const handleAddMedia = async (type: 'image' | 'video') => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const result = type === 'image' ? await api.assets.selectImage() : await api.assets.selectVideo()
+      const result = type === 'image' ? await api.assets.selectImage() : await api.assets.selectVideo();
       if (result.success && (result.filePaths || result.filePath)) {
         await refreshAssets()
       }
@@ -59,16 +59,16 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
     } finally {
       setLoading(false)
     }
-  }
+  };
 
   const handleDeleteAsset = async (asset: Asset, e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!confirm(`Delete "${asset.name}"? This cannot be undone.`)) return
+    e.stopPropagation();
+    if (!confirm(`Delete "${asset.name}"? This cannot be undone.`)) return;
 
     try {
-      const result = await api.assets.delete(asset.relativePath)
+      const result = await api.assets.delete(asset.relativePath);
       if (result.success) {
-        setAssets(prev => prev.filter(a => a.path !== asset.path))
+        setAssets(prev => prev.filter(a => a.path !== asset.path));
         if (selectedAsset === asset.path) setSelectedAsset(null)
       } else {
         console.error('Failed to delete asset:', result.error)
@@ -76,24 +76,24 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
     } catch (err) {
       console.error('Failed to delete asset', err)
     }
-  }
+  };
 
   const handleInsert = () => {
     if (selectedAsset && onSelect) {
-      onSelect(selectedAsset)
+      onSelect(selectedAsset);
       onClose()
     }
-  }
+  };
 
   const handleWebResultsSelect = async (results: MediaSearchResult[]) => {
-    if (!results.length) return
+    if (!results.length) return;
 
-    setDownloading(true)
-    const importedUrls: string[] = []
+    setDownloading(true);
+    const importedUrls: string[] = [];
 
     for (const result of results) {
       try {
-        const downloadResult = await api.mediaSearch.downloadAndImport(result.url)
+        const downloadResult = await api.mediaSearch.downloadAndImport(result.url);
         if (downloadResult.success && downloadResult.path) {
           importedUrls.push(downloadResult.path)
         }
@@ -102,67 +102,67 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
       }
     }
 
-    await refreshAssets()
-    setDownloading(false)
+    await refreshAssets();
+    setDownloading(false);
 
     if (importedUrls.length > 0) {
-      setSelectedAsset(importedUrls[0])
+      setSelectedAsset(importedUrls[0]);
       setActiveTab('project')
     }
-  }
+  };
 
   const handleAssetClick = (asset: Asset) => {
     setSelectedAsset(asset.path)
-  }
+  };
 
   const handleAssetDoubleClick = (asset: Asset) => {
     if (onSelect) {
-      onSelect(asset.path)
+      onSelect(asset.path);
       onClose()
     }
-  }
+  };
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
-      if (filterType === 'all') return true
-      if (filterType === 'images') return asset.type === 'image' || !asset.type
-      if (filterType === 'videos') return asset.type === 'video'
+      if (filterType === 'all') return true;
+      if (filterType === 'images') return asset.type === 'image' || !asset.type;
+      if (filterType === 'videos') return asset.type === 'video';
       return true
     })
-  }, [assets, filterType])
+  }, [assets, filterType]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PROJECT_ASSETS_PER_PAGE))
-  const pageStartIndex = (currentPage - 1) * PROJECT_ASSETS_PER_PAGE
-  const paginatedAssets = filteredAssets.slice(pageStartIndex, pageStartIndex + PROJECT_ASSETS_PER_PAGE)
-  const visibleStart = filteredAssets.length === 0 ? 0 : pageStartIndex + 1
-  const visibleEnd = Math.min(pageStartIndex + PROJECT_ASSETS_PER_PAGE, filteredAssets.length)
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PROJECT_ASSETS_PER_PAGE));
+  const pageStartIndex = (currentPage - 1) * PROJECT_ASSETS_PER_PAGE;
+  const paginatedAssets = filteredAssets.slice(pageStartIndex, pageStartIndex + PROJECT_ASSETS_PER_PAGE);
+  const visibleStart = filteredAssets.length === 0 ? 0 : pageStartIndex + 1;
+  const visibleEnd = Math.min(pageStartIndex + PROJECT_ASSETS_PER_PAGE, filteredAssets.length);
 
-  const webSearchMode: 'image' | 'video' = filterType === 'videos' ? 'video' : 'image'
+  const webSearchMode: 'image' | 'video' = filterType === 'videos' ? 'video' : 'image';
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterType])
+  }, [filterType]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages))
-  }, [totalPages])
+  }, [totalPages]);
 
   useEffect(() => {
-    if (!selectedAsset) return
-    const selectedIndex = filteredAssets.findIndex((asset) => asset.path === selectedAsset)
-    if (selectedIndex < 0) return
-    const nextPage = Math.floor(selectedIndex / PROJECT_ASSETS_PER_PAGE) + 1
+    if (!selectedAsset) return;
+    const selectedIndex = filteredAssets.findIndex((asset) => asset.path === selectedAsset);
+    if (selectedIndex < 0) return;
+    const nextPage = Math.floor(selectedIndex / PROJECT_ASSETS_PER_PAGE) + 1;
     if (nextPage !== currentPage) {
       setCurrentPage(nextPage)
     }
-  }, [selectedAsset, filteredAssets, currentPage])
+  }, [selectedAsset, filteredAssets, currentPage]);
 
   const openWebTab = () => {
     if (filterType === 'all') {
       setFilterType('images')
     }
     setActiveTab('web')
-  }
+  };
 
   const overlay = (
     <div className="asset-manager-overlay" onClick={onClose}>
@@ -325,7 +325,7 @@ export default function AssetManager({ onClose, onSelect }: AssetManagerProps): 
         </div>
       </div>
     </div>
-  )
+  );
 
   if (typeof document === 'undefined') {
     return overlay

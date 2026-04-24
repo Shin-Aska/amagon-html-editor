@@ -16,57 +16,57 @@ export default function Tooltip({
   position = 'bottom',
   delay = 300
 }: TooltipProps): JSX.Element {
-  const [isVisible, setIsVisible] = useState(false)
-  const [coords, setCoords] = useState({ x: 0, y: 0 })
-  const tooltipRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLDivElement>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isVisible, setIsVisible] = useState(false);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const show = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true)
     }, delay)
-  }
+  };
 
   const hide = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setIsVisible(false)
-  }
+  };
 
   useEffect(() => {
     if (isVisible && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const tooltipEl = tooltipRef.current
+      const rect = triggerRef.current.getBoundingClientRect();
+      const tooltipEl = tooltipRef.current;
       
-      let x = 0
-      let y = 0
+      let x = 0;
+      let y = 0;
 
       switch (position) {
         case 'top':
-          x = rect.left + rect.width / 2
-          y = rect.top
-          break
+          x = rect.left + rect.width / 2;
+          y = rect.top;
+          break;
         case 'bottom':
-          x = rect.left + rect.width / 2
-          y = rect.bottom
-          break
+          x = rect.left + rect.width / 2;
+          y = rect.bottom;
+          break;
         case 'left':
-          x = rect.left
-          y = rect.top + rect.height / 2
-          break
+          x = rect.left;
+          y = rect.top + rect.height / 2;
+          break;
         case 'right':
-          x = rect.right
-          y = rect.top + rect.height / 2
+          x = rect.right;
+          y = rect.top + rect.height / 2;
           break
       }
 
-      setCoords({ x, y })
+      setCoords({ x, y });
 
       // Adjust if tooltip would go off screen
       if (tooltipEl) {
-        const tooltipRect = tooltipEl.getBoundingClientRect()
-        const padding = 8
+        const tooltipRect = tooltipEl.getBoundingClientRect();
+        const padding = 8;
 
         if (x - tooltipRect.width / 2 < padding) {
           x = tooltipRect.width / 2 + padding
@@ -81,13 +81,13 @@ export default function Tooltip({
         setCoords({ x, y })
       }
     }
-  }, [isVisible, position])
+  }, [isVisible, position]);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [])
+  }, []);
 
   return (
     <>

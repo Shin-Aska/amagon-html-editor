@@ -69,8 +69,8 @@ type CanvasRuntimeMessage =
 
 function findBlockById(blocks: Block[], id: string): Block | null {
   for (const block of blocks) {
-    if (block.id === id) return block
-    const found = findBlockById(block.children, id)
+    if (block.id === id) return block;
+    const found = findBlockById(block.children, id);
     if (found) return found
   }
   return null
@@ -82,83 +82,83 @@ function findParentAndIndex(
 ): { parentId: string | null; index: number } | null {
   const walk = (nodes: Block[], parentId: string | null): { parentId: string | null; index: number } | null => {
     for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]
-      if (node.id === targetId) return { parentId, index: i }
-      const found = walk(node.children, node.id)
+      const node = nodes[i];
+      if (node.id === targetId) return { parentId, index: i };
+      const found = walk(node.children, node.id);
       if (found) return found
     }
     return null
-  }
+  };
 
   return walk(blocks, null)
 }
 
 function Canvas(): JSX.Element {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [runtimeReady, setRuntimeReady] = useState(false)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null)
-  const [tabWarningVisible, setTabWarningVisible] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
+  const [tabWarningVisible, setTabWarningVisible] = useState(false);
 
-  const blocks = useEditorStore((s) => s.blocks)
-  const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-  const hoveredBlockId = useEditorStore((s) => s.hoveredBlockId)
-  const setPageBlocks = useEditorStore((s) => s.setPageBlocks)
-  const selectBlock = useEditorStore((s) => s.selectBlock)
-  const hoverBlock = useEditorStore((s) => s.hoverBlock)
-  const moveBlock = useEditorStore((s) => s.moveBlock)
-  const addBlock = useEditorStore((s) => s.addBlock)
-  const removeBlock = useEditorStore((s) => s.removeBlock)
-  const getBlockById = useEditorStore((s) => s.getBlockById)
-  const updateBlock = useEditorStore((s) => s.updateBlock)
-  const setClipboard = useEditorStore((s) => s.setClipboard)
-  const clipboard = useEditorStore((s) => s.clipboard)
-  const isTypingCode = useEditorStore((s) => s.isTypingCode)
-  const customCss = useEditorStore((s) => s.customCss)
-  const viewportMode = useEditorStore((s) => s.viewportMode)
-  const zoom = useEditorStore((s) => s.zoom)
-  const theme = useEditorStore((s) => s.theme)
-  const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
-  const projectTheme = useProjectStore((s) => s.settings.theme)
-  const projectThemeVariants = useProjectStore((s) => s.settings.themes)
-  const projectFonts = useProjectStore((s) => s.fonts)
-  const framework = useProjectStore((s) => s.settings.framework)
-  const pages = useProjectStore((s) => s.pages)
-  const folders = useProjectStore((s) => s.folders)
-  const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning)
-  const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning)
-  const activeTabEditBlockId = useEditorStore((s) => s.activeTabEditBlockId)
-  const activeTabIndex = useEditorStore((s) => s.activeTabIndex)
-  const exitTabEditMode = useEditorStore((s) => s.exitTabEditMode)
+  const blocks = useEditorStore((s) => s.blocks);
+  const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+  const hoveredBlockId = useEditorStore((s) => s.hoveredBlockId);
+  const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
+  const selectBlock = useEditorStore((s) => s.selectBlock);
+  const hoverBlock = useEditorStore((s) => s.hoverBlock);
+  const moveBlock = useEditorStore((s) => s.moveBlock);
+  const addBlock = useEditorStore((s) => s.addBlock);
+  const removeBlock = useEditorStore((s) => s.removeBlock);
+  const getBlockById = useEditorStore((s) => s.getBlockById);
+  const updateBlock = useEditorStore((s) => s.updateBlock);
+  const setClipboard = useEditorStore((s) => s.setClipboard);
+  const clipboard = useEditorStore((s) => s.clipboard);
+  const isTypingCode = useEditorStore((s) => s.isTypingCode);
+  const customCss = useEditorStore((s) => s.customCss);
+  const viewportMode = useEditorStore((s) => s.viewportMode);
+  const zoom = useEditorStore((s) => s.zoom);
+  const theme = useEditorStore((s) => s.theme);
+  const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines);
+  const projectTheme = useProjectStore((s) => s.settings.theme);
+  const projectThemeVariants = useProjectStore((s) => s.settings.themes);
+  const projectFonts = useProjectStore((s) => s.fonts);
+  const framework = useProjectStore((s) => s.settings.framework);
+  const pages = useProjectStore((s) => s.pages);
+  const folders = useProjectStore((s) => s.folders);
+  const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning);
+  const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning);
+  const activeTabEditBlockId = useEditorStore((s) => s.activeTabEditBlockId);
+  const activeTabIndex = useEditorStore((s) => s.activeTabIndex);
+  const exitTabEditMode = useEditorStore((s) => s.exitTabEditMode);
 
-  const blocksRef = useRef(blocks)
+  const blocksRef = useRef(blocks);
   useEffect(() => {
     blocksRef.current = blocks
-  }, [blocks])
+  }, [blocks]);
 
 
 
   useEffect(() => {
-    if (showTabChildSelectionWarning) return
-    console.warn('[amagon][tabs-warning][canvas] setting disabled, hiding warning')
+    if (showTabChildSelectionWarning) return;
+    console.warn('[amagon][tabs-warning][canvas] setting disabled, hiding warning');
     setTabWarningVisible(false)
-  }, [showTabChildSelectionWarning])
+  }, [showTabChildSelectionWarning]);
 
   useEffect(() => {
     const maybeShowNestedTabSelectionToast = (redirected?: boolean) => {
       console.warn('[amagon][tabs-warning][canvas] maybeShowNestedTabSelectionToast', {
         redirected,
         showTabChildSelectionWarning
-      })
-      if (!redirected || !showTabChildSelectionWarning) return
-      console.warn('[amagon][tabs-warning][canvas] showing warning')
+      });
+      if (!redirected || !showTabChildSelectionWarning) return;
+      console.warn('[amagon][tabs-warning][canvas] showing warning');
       setTabWarningVisible(true)
-    }
+    };
 
     const onMessage = (event: MessageEvent) => {
-      const data = event.data as CanvasRuntimeMessage
-      if (!data || data.source !== 'canvas-runtime') return
+      const data = event.data as CanvasRuntimeMessage;
+      if (!data || data.source !== 'canvas-runtime') return;
       if (data.type === 'debug') {
-        console.warn('[amagon][tabs-warning][bridge]', data.payload)
+        console.warn('[amagon][tabs-warning][bridge]', data.payload);
         return
       }
       if (data.type === 'clicked' || data.type === 'contextMenu') {
@@ -167,21 +167,21 @@ function Canvas(): JSX.Element {
 
       switch (data.type) {
         case 'ready':
-          setRuntimeReady(true)
-          break
+          setRuntimeReady(true);
+          break;
         case 'clicked':
-          selectBlock(data.blockId ?? null)
-          maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent)
-          setContextMenu(null)
-          break
+          selectBlock(data.blockId ?? null);
+          maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent);
+          setContextMenu(null);
+          break;
         case 'hovered':
-          hoverBlock(data.blockId ?? null)
-          break
+          hoverBlock(data.blockId ?? null);
+          break;
         case 'contextMenu':
           if (data.blockId) {
-            selectBlock(data.blockId)
-            maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent)
-            const iframeRect = iframeRef.current?.getBoundingClientRect()
+            selectBlock(data.blockId);
+            maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent);
+            const iframeRect = iframeRef.current?.getBoundingClientRect();
             if (iframeRect && data.clientX !== undefined && data.clientY !== undefined) {
               setContextMenu({
                 x: iframeRect.left + data.clientX * (zoom / 100),
@@ -190,29 +190,29 @@ function Canvas(): JSX.Element {
               })
             }
           }
-          break
+          break;
         case 'moveBlock': {
-          if (isTypingCode) return
-          const tree = blocksRef.current
-          const movedId = data.blockId
-          const drop = data.dropTarget
-          if (!movedId || !drop?.targetBlockId) return
-          if (drop.targetBlockId === movedId) return
+          if (isTypingCode) return;
+          const tree = blocksRef.current;
+          const movedId = data.blockId;
+          const drop = data.dropTarget;
+          if (!movedId || !drop?.targetBlockId) return;
+          if (drop.targetBlockId === movedId) return;
 
-          const movedLoc = findParentAndIndex(tree, movedId)
-          if (!movedLoc) return
+          const movedLoc = findParentAndIndex(tree, movedId);
+          if (!movedLoc) return;
 
-          let newParentId: string | null = null
-          let newIndex = 0
+          let newParentId: string | null = null;
+          let newIndex = 0;
 
           if (drop.mode === 'inside') {
-            newParentId = drop.targetBlockId
-            const parent = findBlockById(tree, newParentId)
+            newParentId = drop.targetBlockId;
+            const parent = findBlockById(tree, newParentId);
             newIndex = parent?.children.length ?? 0
           } else {
-            const targetLoc = findParentAndIndex(tree, drop.targetBlockId)
-            if (!targetLoc) return
-            newParentId = targetLoc.parentId
+            const targetLoc = findParentAndIndex(tree, drop.targetBlockId);
+            if (!targetLoc) return;
+            newParentId = targetLoc.parentId;
             newIndex = drop.mode === 'before' ? targetLoc.index : targetLoc.index + 1
           }
 
@@ -224,7 +224,7 @@ function Canvas(): JSX.Element {
             return
           }
 
-          moveBlock(movedId, newParentId, newIndex)
+          moveBlock(movedId, newParentId, newIndex);
           break
         }
         case 'updateText': {
@@ -243,8 +243,8 @@ function Canvas(): JSX.Element {
             altKey: data.altKey,
             bubbles: true,
             cancelable: true
-          })
-          window.dispatchEvent(ke)
+          });
+          window.dispatchEvent(ke);
           break
         }
         case 'deleteBlock': {
@@ -254,30 +254,30 @@ function Canvas(): JSX.Element {
           break
         }
       }
-    }
+    };
 
-    window.addEventListener('message', onMessage)
+    window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage)
-  }, [hoverBlock, isTypingCode, moveBlock, selectBlock, zoom, updateBlock, removeBlock, showTabChildSelectionWarning])
+  }, [hoverBlock, isTypingCode, moveBlock, selectBlock, zoom, updateBlock, removeBlock, showTabChildSelectionWarning]);
 
   useEffect(() => {
     console.warn('[amagon][tabs-warning][canvas] render state', {
       tabWarningVisible,
       showTabChildSelectionWarning
     })
-  }, [tabWarningVisible, showTabChildSelectionWarning])
+  }, [tabWarningVisible, showTabChildSelectionWarning]);
 
   const menuItems = useMemo<ContextMenuItem[]>(() => {
-    if (!contextMenu) return []
-    const blockId = contextMenu.blockId
+    if (!contextMenu) return [];
+    const blockId = contextMenu.blockId;
 
     return [
       {
         label: 'Cut',
         action: () => {
-          const block = getBlockById(blockId)
+          const block = getBlockById(blockId);
           if (block) {
-            setClipboard(block)
+            setClipboard(block);
             removeBlock(blockId)
           }
         }
@@ -285,7 +285,7 @@ function Canvas(): JSX.Element {
       {
         label: 'Copy',
         action: () => {
-          const block = getBlockById(blockId)
+          const block = getBlockById(blockId);
           if (block) {
             setClipboard(block)
           }
@@ -304,8 +304,8 @@ function Canvas(): JSX.Element {
                 content: b.content,
                 children: b.children.map(cloneBlock)
               })
-            }
-            const newBlock = cloneBlock(clipboard)
+            };
+            const newBlock = cloneBlock(clipboard);
             addBlock(newBlock, blockId)
           }
         }
@@ -319,70 +319,70 @@ function Canvas(): JSX.Element {
         }
       }
     ]
-  }, [contextMenu, clipboard, addBlock, removeBlock, setClipboard, getBlockById])
+  }, [contextMenu, clipboard, addBlock, removeBlock, setClipboard, getBlockById]);
 
   const postToIframe = (msg: unknown): void => {
-    const win = iframeRef.current?.contentWindow
-    if (!win) return
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
     win.postMessage(msg, '*')
-  }
+  };
 
   useEffect(() => {
     setRuntimeReady(false)
-  }, [framework])
+  }, [framework]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'setFramework', framework })
-  }, [runtimeReady, framework])
+  }, [runtimeReady, framework]);
 
   useEffect(() => {
-    if (!runtimeReady) return
-    const html = blockToHtml(blocks, { includeDataAttributes: true, pages, folders, framework })
+    if (!runtimeReady) return;
+    const html = blockToHtml(blocks, { includeDataAttributes: true, pages, folders, framework });
     postToIframe({ type: 'render', html })
-  }, [blocks, runtimeReady, pages, folders, framework])
+  }, [blocks, runtimeReady, pages, folders, framework]);
 
   useEffect(() => {
-    if (!runtimeReady) return
-    const themeCss = themeToCSS(projectTheme, projectThemeVariants, projectFonts)
+    if (!runtimeReady) return;
+    const themeCss = themeToCSS(projectTheme, projectThemeVariants, projectFonts);
     postToIframe({ type: 'setThemeCss', css: themeCss })
-  }, [projectTheme, projectThemeVariants, projectFonts, runtimeReady])
+  }, [projectTheme, projectThemeVariants, projectFonts, runtimeReady]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'setPageThemeMode', mode: projectThemeVariants?.previewMode ?? 'device' })
-  }, [projectThemeVariants?.previewMode, runtimeReady])
+  }, [projectThemeVariants?.previewMode, runtimeReady]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'setCustomCss', css: customCss })
-  }, [customCss, runtimeReady])
+  }, [customCss, runtimeReady]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'select', blockId: selectedBlockId })
-  }, [runtimeReady, selectedBlockId])
+  }, [runtimeReady, selectedBlockId]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'highlight', blockId: hoveredBlockId })
-  }, [runtimeReady, hoveredBlockId])
+  }, [runtimeReady, hoveredBlockId]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'toggleLayoutOutlines', show: showLayoutOutlines })
-  }, [runtimeReady, showLayoutOutlines])
+  }, [runtimeReady, showLayoutOutlines]);
 
   useEffect(() => {
-    if (!runtimeReady) return
+    if (!runtimeReady) return;
     postToIframe({ type: 'setUiTheme', isDark: theme === 'dark' })
-  }, [runtimeReady, theme])
+  }, [runtimeReady, theme]);
 
-  const scale = zoom / 100
-  const viewportWidth = viewportMode === 'desktop' ? '100%' : viewportMode === 'tablet' ? '820px' : '390px'
-  const viewportHeight = '100%'
-  const scaledContentWidth = `${100 / scale}%`
-  const scaledContentHeight = `${100 / scale}%`
+  const scale = zoom / 100;
+  const viewportWidth = viewportMode === 'desktop' ? '100%' : viewportMode === 'tablet' ? '820px' : '390px';
+  const viewportHeight = '100%';
+  const scaledContentWidth = `${100 / scale}%`;
+  const scaledContentHeight = `${100 / scale}%`;
 
   return (
     <div className="canvas-wrapper" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -465,7 +465,7 @@ function Canvas(): JSX.Element {
                 type="button"
                 className="canvas-warning-btn"
                 onClick={() => {
-                  setShowTabChildSelectionWarning(false)
+                  setShowTabChildSelectionWarning(false);
                   setTabWarningVisible(false)
                 }}
               >

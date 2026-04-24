@@ -30,7 +30,7 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async (url) => {
@@ -39,20 +39,20 @@ describe('exportEngine', () => {
         }
         return { bytes: new Uint8Array([4, 5, 6]), mimeType: 'image/png' }
       }
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
+    const html = files.find((f) => f.path === 'index.html');
     expect(html && typeof html.content === 'string' ? html.content : '').toContain(
       'src="./assets/my-photo.png"'
-    )
+    );
     expect(html && typeof html.content === 'string' ? html.content : '').toContain(
       'src="./assets/my-photo-1.png"'
-    )
-    expect(html && typeof html.content === 'string' ? html.content : '').not.toContain('app-media://')
+    );
+    expect(html && typeof html.content === 'string' ? html.content : '').not.toContain('app-media://');
 
-    expect(files.some((f) => f.path === 'assets/my-photo.png')).toBe(true)
+    expect(files.some((f) => f.path === 'assets/my-photo.png')).toBe(true);
     expect(files.some((f) => f.path === 'assets/my-photo-1.png')).toBe(true)
-  })
+  });
 
   it('rewrites asset references inside raw-html block content', async () => {
     const project: ProjectData = {
@@ -79,19 +79,19 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async () => ({ bytes: new Uint8Array([1]), mimeType: 'image/png' })
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
 
-    expect(htmlText).toContain('./assets/bg.png')
-    expect(htmlText).toContain('./assets/inner.png')
+    expect(htmlText).toContain('./assets/bg.png');
+    expect(htmlText).toContain('./assets/inner.png');
     expect(htmlText).not.toContain('app-media://')
-  })
+  });
 
   it('strips editor-only classes from exported HTML', async () => {
     const project: ProjectData = {
@@ -115,20 +115,20 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
 
-    expect(htmlText).toContain('class="container"')
-    expect(htmlText).not.toContain('html-editor-')
-    expect(htmlText).not.toContain('canvas-')
+    expect(htmlText).toContain('class="container"');
+    expect(htmlText).not.toContain('html-editor-');
+    expect(htmlText).not.toContain('canvas-');
     expect(htmlText).not.toContain('editor-')
-  })
+  });
 
   it('rewrites internal multi-page links to correct .html files', async () => {
     const project: ProjectData = {
@@ -169,17 +169,17 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
-    expect(htmlText).toContain('href="./about.html#team"')
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
+    expect(htmlText).toContain('href="./about.html#team"');
     expect(htmlText).toContain('href="./contact.html?x=1"')
-  })
+  });
 
   it('supports includeJs=false (omits framework scripts but keeps CSS)', async () => {
     const project: ProjectData = {
@@ -199,18 +199,18 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       includeJs: false,
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
-    expect(htmlText).toContain('bootstrap.min.css')
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
+    expect(htmlText).toContain('bootstrap.min.css');
     expect(htmlText).not.toContain('bootstrap.bundle.min.js')
-  })
+  });
 
   it('exports project fonts into assets/fonts and emits @font-face with relative src URLs', async () => {
     const project: ProjectData = {
@@ -242,7 +242,7 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async (url) => {
@@ -251,19 +251,19 @@ describe('exportEngine', () => {
         }
         return null
       }
-    })
+    });
 
-    const fontFile = files.find((f) => f.path === 'assets/fonts/MyFont-Regular.woff2')
+    const fontFile = files.find((f) => f.path === 'assets/fonts/MyFont-Regular.woff2');
     expect(fontFile && fontFile.content instanceof Uint8Array ? Array.from(fontFile.content) : []).toEqual([
       9, 8, 7
-    ])
+    ]);
 
-    const cssFile = files.find((f) => f.path === 'styles.css')
-    const cssText = cssFile && typeof cssFile.content === 'string' ? cssFile.content : ''
-    expect(cssText).toContain('@font-face {')
-    expect(cssText).toContain('font-family: "My Font";')
+    const cssFile = files.find((f) => f.path === 'styles.css');
+    const cssText = cssFile && typeof cssFile.content === 'string' ? cssFile.content : '';
+    expect(cssText).toContain('@font-face {');
+    expect(cssText).toContain('font-family: "My Font";');
     expect(cssText).toContain('src: url("./assets/fonts/MyFont-Regular.woff2");')
-  })
+  });
 
   it('skips Google Fonts CDN links for self-hosted font families but keeps missing families', async () => {
     const project: ProjectData = {
@@ -307,7 +307,7 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async (url) => {
@@ -316,15 +316,15 @@ describe('exportEngine', () => {
         }
         return null
       }
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
 
-    expect(htmlText).toContain('https://fonts.googleapis.com/css2?family=Lato&display=swap')
-    expect(htmlText).not.toContain('https://fonts.googleapis.com/css2?family=Roboto&display=swap')
+    expect(htmlText).toContain('https://fonts.googleapis.com/css2?family=Lato&display=swap');
+    expect(htmlText).not.toContain('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
     expect(htmlText).not.toContain('https://fonts.googleapis.com/css2?family=sans-serif&display=swap')
-  })
+  });
 
   it('exports projects with no fonts without adding Google Fonts links', async () => {
     const project: ProjectData = {
@@ -349,17 +349,17 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
 
     expect(htmlText).not.toContain('fonts.googleapis.com/css2')
-  })
+  });
 
   it('tailwind export includes only tailwind resources', async () => {
     const project: ProjectData = {
@@ -379,18 +379,18 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
-    expect(htmlText).toContain('tailwindcss.com')
-    expect(htmlText).not.toContain('bootstrap.min.css')
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
+    expect(htmlText).toContain('tailwindcss.com');
+    expect(htmlText).not.toContain('bootstrap.min.css');
     expect(htmlText).not.toContain('bootstrap.bundle.min.js')
-  })
+  });
 
   it('tailwind export renders tailwind-native markup for framework-sensitive blocks', async () => {
     const project: ProjectData = {
@@ -423,21 +423,21 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
-    expect(htmlText).toContain('max-w-6xl')
-    expect(htmlText).toContain('inline-flex items-center justify-center rounded-md')
-    expect(htmlText).toContain('md:text-5xl')
-    expect(htmlText).not.toContain('navbar-expand-lg')
-    expect(htmlText).not.toContain('data-bs-toggle=')
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
+    expect(htmlText).toContain('max-w-6xl');
+    expect(htmlText).toContain('inline-flex items-center justify-center rounded-md');
+    expect(htmlText).toContain('md:text-5xl');
+    expect(htmlText).not.toContain('navbar-expand-lg');
+    expect(htmlText).not.toContain('data-bs-toggle=');
     expect(htmlText).not.toContain('class="btn btn-primary"')
-  })
+  });
 
   it('rewrites navbar brandImage app-media assets in pages-based navbars', async () => {
     const project: ProjectData = {
@@ -474,7 +474,7 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       resolveAsset: async (url) => {
@@ -483,17 +483,17 @@ describe('exportEngine', () => {
         }
         return null
       }
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
-    expect(htmlText).toContain('src="./assets/nav-logo.png"')
-    expect(htmlText).toContain('position-sticky')
-    expect(htmlText).toContain('position: sticky')
-    expect(htmlText).toContain('z-index: 1030')
-    expect(htmlText).not.toContain('app-media://')
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
+    expect(htmlText).toContain('src="./assets/nav-logo.png"');
+    expect(htmlText).toContain('position-sticky');
+    expect(htmlText).toContain('position: sticky');
+    expect(htmlText).toContain('z-index: 1030');
+    expect(htmlText).not.toContain('app-media://');
     expect(files.some((f) => f.path === 'assets/nav-logo.png')).toBe(true)
-  })
+  });
 
   it('minifies HTML when minify=true', async () => {
     const project: ProjectData = {
@@ -513,17 +513,17 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       minify: true,
       resolveAsset: async () => null
-    })
+    });
 
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
     expect(htmlText).toContain('</head><body>')
-  })
+  });
 
   it('single-page inline export can inline assets as data URLs', async () => {
     const project: ProjectData = {
@@ -545,20 +545,20 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
     const files = await exportProject(project, {
       onlyPageId: 'p1',
       inlineCss: true,
       inlineAssets: true,
       resolveAsset: async () => ({ bytes: new Uint8Array([1, 2, 3]), mimeType: 'image/png' })
-    })
+    });
 
-    expect(files.some((f) => f.path.startsWith('assets/'))).toBe(false)
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    expect(files.some((f) => f.path.startsWith('assets/'))).toBe(false);
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
     expect(htmlText).toContain('data:image/png;base64,')
-  })
+  });
 
   it('outputs parseable HTML and contains no editor artifacts', async () => {
     const project: ProjectData = {
@@ -583,19 +583,19 @@ describe('exportEngine', () => {
         }
       ],
       userBlocks: []
-    }
+    };
 
-    const files = await exportProject(project, { resolveAsset: async () => null })
-    const html = files.find((f) => f.path === 'index.html')
-    const htmlText = html && typeof html.content === 'string' ? html.content : ''
+    const files = await exportProject(project, { resolveAsset: async () => null });
+    const html = files.find((f) => f.path === 'index.html');
+    const htmlText = html && typeof html.content === 'string' ? html.content : '';
 
-    const doc = parse(htmlText)
-    expect(doc).toBeTruthy()
+    const doc = parse(htmlText);
+    expect(doc).toBeTruthy();
 
-    expect(htmlText).not.toContain('data-block-id')
-    expect(htmlText).not.toContain('data-editor')
-    expect(htmlText).not.toContain('html-editor-')
-    expect(htmlText).not.toContain('editor-')
+    expect(htmlText).not.toContain('data-block-id');
+    expect(htmlText).not.toContain('data-editor');
+    expect(htmlText).not.toContain('html-editor-');
+    expect(htmlText).not.toContain('editor-');
     expect(htmlText).not.toContain('canvas-')
   })
-})
+});

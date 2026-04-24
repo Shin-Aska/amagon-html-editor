@@ -1,6 +1,6 @@
 import * as electron from 'electron'
 
-const { contextBridge, ipcRenderer } = electron
+const { contextBridge, ipcRenderer } = electron;
 
 // ---------------------------------------------------------------------------
 // Expose a typed API to the renderer process via contextBridge.
@@ -35,8 +35,8 @@ const api = {
     onExportProgress: (callback: (data: { written: number; total: number; path?: string }) => void) => {
       const handler = (_event: any, data: { written: number; total: number; path?: string }) => {
         callback(data)
-      }
-      ipcRenderer.on('project:exportProgress', handler)
+      };
+      ipcRenderer.on('project:exportProgress', handler);
       return () => ipcRenderer.removeListener('project:exportProgress', handler)
     },
 
@@ -80,7 +80,7 @@ const api = {
     stop: () => ipcRenderer.invoke('autosave:stop'),
 
     onTick: (callback: () => void) => {
-      ipcRenderer.on('auto-save-tick', callback)
+      ipcRenderer.on('auto-save-tick', callback);
       return () => ipcRenderer.removeListener('auto-save-tick', callback)
     }
   },
@@ -92,14 +92,14 @@ const api = {
     onAction: (callback: (action: string) => void) => {
       const handler = (_event: any, action: string) => {
         callback(action)
-      }
-      ipcRenderer.on('menu:action', handler)
+      };
+      ipcRenderer.on('menu:action', handler);
       return () => ipcRenderer.removeListener('menu:action', handler)
     }
   },
 
   publish: (() => {
-    const progressListeners = new WeakMap<Function, (...args: any[]) => void>()
+    const progressListeners = new WeakMap<Function, (...args: any[]) => void>();
 
     return {
       getProviders: () => ipcRenderer.invoke('publish:getProviders'),
@@ -128,19 +128,19 @@ const api = {
       onProgress: (callback: (progress: { phase: string; percent: number; message: string }) => void) => {
         const handler = (_event: any, progress: { phase: string; percent: number; message: string }) => {
           callback(progress)
-        }
-        progressListeners.set(callback, handler)
-        ipcRenderer.on('publish:progress', handler)
+        };
+        progressListeners.set(callback, handler);
+        ipcRenderer.on('publish:progress', handler);
         return () => {
-          ipcRenderer.removeListener('publish:progress', handler)
+          ipcRenderer.removeListener('publish:progress', handler);
           progressListeners.delete(callback)
         }
       },
 
       offProgress: (callback: (progress: { phase: string; percent: number; message: string }) => void) => {
-        const handler = progressListeners.get(callback)
+        const handler = progressListeners.get(callback);
         if (handler) {
-          ipcRenderer.removeListener('publish:progress', handler)
+          ipcRenderer.removeListener('publish:progress', handler);
           progressListeners.delete(callback)
         }
       }
@@ -206,9 +206,9 @@ const api = {
 
     downloadAndImport: (url: string) => ipcRenderer.invoke('mediaSearch:downloadAndImport', url)
   }
-}
+};
 
-contextBridge.exposeInMainWorld('api', api)
+contextBridge.exposeInMainWorld('api', api);
 
 // Export the type so the renderer can reference it
 export type ElectronApi = typeof api

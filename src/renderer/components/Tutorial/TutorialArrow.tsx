@@ -7,7 +7,7 @@ export interface TutorialArrowProps {
 }
 
 export default function TutorialArrow({ direction, style }: TutorialArrowProps): JSX.Element | null {
-  if (direction === 'none') return null
+  if (direction === 'none') return null;
 
   return <div className={`tutorial-arrow tutorial-arrow-${direction}`} style={style} aria-hidden="true" />
 }

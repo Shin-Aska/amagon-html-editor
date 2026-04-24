@@ -61,11 +61,11 @@ function generateId(): string {
 }
 
 function getBlockRegistrySchema(): string {
-    const categories = componentRegistry.getCategories()
-    const result: Record<string, any[]> = {}
+    const categories = componentRegistry.getCategories();
+    const result: Record<string, any[]> = {};
 
     for (const category of categories) {
-        const blocks = componentRegistry.getByCategory(category)
+        const blocks = componentRegistry.getByCategory(category);
         result[category] = blocks.map((b) => ({
             type: b.type,
             label: b.label,
@@ -86,7 +86,7 @@ const DEFAULT_CONFIG: AiConfig = {
     model: 'gpt-4o',
     apiKey: '',
     ollamaUrl: 'http://localhost:11434'
-}
+};
 
 export const useAiStore = create<AiStore>((set, get) => ({
     // ─── Initial State ─────────────────────────────────────────────────
@@ -106,25 +106,25 @@ export const useAiStore = create<AiStore>((set, get) => ({
             role: 'user',
             content,
             timestamp: Date.now()
-        }
+        };
 
         set((state) => ({
             messages: [...state.messages, userMessage],
             isLoading: true
-        }))
+        }));
 
         try {
-            const api = getApi()
-            const { messages } = get()
+            const api = getApi();
+            const { messages } = get();
 
-            const projectTheme = useProjectStore.getState().settings.theme
-            const uiTheme = useEditorStore.getState().theme
+            const projectTheme = useProjectStore.getState().settings.theme;
+            const uiTheme = useEditorStore.getState().theme;
 
             // Build messages array for the API (only role + content)
             const apiMessages = messages.map((m) => ({
                 role: m.role,
                 content: m.content
-            }))
+            }));
 
             const result = await (api as any).ai.chat({
                 messages: apiMessages,
@@ -133,7 +133,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
                     projectTheme,
                     uiTheme
                 }
-            })
+            });
 
             const assistantMessage: ChatMessage = {
                 id: generateId(),
@@ -141,7 +141,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
                 content: result.success ? result.content : result.error || 'An unknown error occurred.',
                 timestamp: Date.now(),
                 isError: !result.success
-            }
+            };
 
             set((state) => ({
                 messages: [...state.messages, assistantMessage],
@@ -154,7 +154,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
                 content: `Error: ${error.message}`,
                 timestamp: Date.now(),
                 isError: true
-            }
+            };
 
             set((state) => ({
                 messages: [...state.messages, errorMessage],
@@ -169,8 +169,8 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
     loadConfig: async () => {
         try {
-            const api = getApi()
-            const result = await (api as any).ai.getConfig()
+            const api = getApi();
+            const result = await (api as any).ai.getConfig();
             if (result.success && result.config) {
                 set({ config: result.config, configLoaded: true })
             }
@@ -180,17 +180,17 @@ export const useAiStore = create<AiStore>((set, get) => ({
     },
 
     saveConfig: async (partial: Partial<AiConfig>) => {
-        const current = get().config
-        const merged = { ...current, ...partial }
-        set({ config: merged })
+        const current = get().config;
+        const merged = { ...current, ...partial };
+        set({ config: merged });
 
         try {
-            const api = getApi()
-            const result = await (api as any).ai.setConfig(merged)
+            const api = getApi();
+            const result = await (api as any).ai.setConfig(merged);
             if (result.success && result.config) {
                 // Update state with masked config from main process so the
                 // raw API key isn't retained in renderer memory.
-                set({ config: result.config })
+                set({ config: result.config });
                 dispatchAiAvailabilityChanged()
             }
         } catch {
@@ -200,10 +200,10 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
     loadModels: async () => {
         try {
-            const api = getApi()
-            const result = await (api as any).ai.getModels()
+            const api = getApi();
+            const result = await (api as any).ai.getModels();
             if (result.success && result.models) {
-                set({ providerModels: result.models, modelsLoaded: true })
+                set({ providerModels: result.models, modelsLoaded: true });
                 return
             }
         } catch {
@@ -214,13 +214,13 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
     fetchModelsForProvider: async (provider: string, apiKey: string, ollamaUrl?: string): Promise<string[]> => {
         try {
-            const api = getApi()
-            const result = await (api as any).ai.fetchModelsForProvider({ provider, apiKey, ollamaUrl })
+            const api = getApi();
+            const result = await (api as any).ai.fetchModelsForProvider({ provider, apiKey, ollamaUrl });
             if (result.success && result.models) {
                 // Merge into providerModels so the dropdown can use them
                 set((state) => ({
                     providerModels: { ...state.providerModels, [provider]: result.models }
-                }))
+                }));
                 return result.models as string[]
             }
         } catch {
@@ -232,4 +232,4 @@ export const useAiStore = create<AiStore>((set, get) => ({
     setShowSettings: (show: boolean) => {
         set({ showSettings: show })
     }
-}))
+}));

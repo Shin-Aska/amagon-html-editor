@@ -16,19 +16,19 @@ export default function WelcomeTourDialog({
   onDontShowAgain
 }: WelcomeTourDialogProps): JSX.Element | null {
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onSkipForNow()
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onSkipForNow])
+  }, [open, onSkipForNow]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="welcome-tour-overlay" onClick={onSkipForNow}>

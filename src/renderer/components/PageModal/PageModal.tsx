@@ -16,7 +16,7 @@ interface PageModalProps {
     onCancel: () => void
 }
 
-const DEFAULT_META_KEYS = ['description', 'charset', 'viewport', 'author', 'keywords', 'robots', 'datePublished']
+const DEFAULT_META_KEYS = ['description', 'charset', 'viewport', 'author', 'keywords', 'robots', 'datePublished'];
 
 function formatDateYYYYMMDD(d: Date): string {
     return d.toISOString().slice(0, 10)
@@ -34,86 +34,86 @@ export default function PageModal({
     onSave,
     onCancel
 }: PageModalProps): JSX.Element {
-    const [name, setName] = useState(initialName)
-    const [pageTitleInput, setPageTitleInput] = useState(initialPageTitle)
-    const [tagsInput, setTagsInput] = useState(initialTags.join(', '))
-    const [pathInput, setPathInput] = useState(initialPath)
-    const [description, setDescription] = useState(initialDescription)
-    const [fullWidthFormControls, setFullWidthFormControls] = useState(initialFullWidthFormControls !== false)
+    const [name, setName] = useState(initialName);
+    const [pageTitleInput, setPageTitleInput] = useState(initialPageTitle);
+    const [tagsInput, setTagsInput] = useState(initialTags.join(', '));
+    const [pathInput, setPathInput] = useState(initialPath);
+    const [description, setDescription] = useState(initialDescription);
+    const [fullWidthFormControls, setFullWidthFormControls] = useState(initialFullWidthFormControls !== false);
     const [metaEntries, setMetaEntries] = useState<Array<{ key: string; value: string }>>(() => {
         const entries = Object.entries(initialMeta)
             .filter(([k]) => k !== 'description') // description has its own field
-            .map(([key, value]) => ({ key, value }))
+            .map(([key, value]) => ({ key, value }));
 
-        if (entries.length > 0) return entries
+        if (entries.length > 0) return entries;
 
         if (mode === 'create') {
             return [{ key: 'datePublished', value: formatDateYYYYMMDD(new Date()) }]
         }
 
         return []
-    })
-    const nameRef = useRef<HTMLInputElement>(null)
+    });
+    const nameRef = useRef<HTMLInputElement>(null);
 
-    const isFolder = mode === 'create-folder' || mode === 'edit-folder'
-    const isCreate = mode === 'create' || mode === 'create-folder'
+    const isFolder = mode === 'create-folder' || mode === 'edit-folder';
+    const isCreate = mode === 'create' || mode === 'create-folder';
 
     useEffect(() => {
-        nameRef.current?.focus()
+        nameRef.current?.focus();
         nameRef.current?.select()
-    }, [])
+    }, []);
 
     const parseTags = (input: string): string[] => {
         return input
             .split(',')
             .map((t) => t.trim())
             .filter(Boolean)
-    }
+    };
 
     const handleSave = () => {
-        const trimmed = name.trim()
-        if (!trimmed) return
-        const trimmedPath = pathInput.trim()
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const trimmedPath = pathInput.trim();
 
         // Build meta from entries
-        const meta: Record<string, string> = {}
+        const meta: Record<string, string> = {};
         if (description.trim()) {
             meta.description = description.trim()
         }
         for (const entry of metaEntries) {
-            const k = entry.key.trim()
-            const v = entry.value.trim()
+            const k = entry.key.trim();
+            const v = entry.value.trim();
             if (k && v) meta[k] = v
         }
 
         onSave(trimmed, parseTags(tagsInput), trimmedPath || undefined, description.trim() || undefined, Object.keys(meta).length > 0 ? meta : undefined, pageTitleInput.trim() || undefined, fullWidthFormControls)
-    }
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) handleSave()
+        if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) handleSave();
         if (e.key === 'Escape') onCancel()
-    }
+    };
 
     const addMetaEntry = () => {
         setMetaEntries((prev) => [...prev, { key: '', value: '' }])
-    }
+    };
 
     const removeMetaEntry = (index: number) => {
         setMetaEntries((prev) => prev.filter((_, i) => i !== index))
-    }
+    };
 
     const updateMetaEntry = (index: number, field: 'key' | 'value', value: string) => {
         setMetaEntries((prev) =>
             prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry))
         )
-    }
+    };
 
     const title = isCreate
         ? isFolder ? 'New Folder' : 'New Page'
-        : isFolder ? 'Edit Folder' : 'Page Properties'
+        : isFolder ? 'Edit Folder' : 'Page Properties';
 
-    const namePlaceholder = isFolder ? 'e.g. Navigation Pages' : 'e.g. About Us'
-    const tagsPlaceholder = isFolder ? 'e.g. nav' : 'e.g. nav, footer'
+    const namePlaceholder = isFolder ? 'e.g. Navigation Pages' : 'e.g. About Us';
+    const tagsPlaceholder = isFolder ? 'e.g. nav' : 'e.g. nav, footer';
 
     return (
         <div className="page-modal-overlay" onClick={onCancel}>

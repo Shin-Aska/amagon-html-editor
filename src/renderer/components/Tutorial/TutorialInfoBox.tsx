@@ -29,79 +29,79 @@ export default function TutorialInfoBox({
   nextDisabled = false,
   onChoiceSelect
 }: TutorialInfoBoxProps): JSX.Element {
-  const isFirstStep = currentIndex === 0
-  const isLastStep = currentIndex === totalSteps - 1
-  const isCompletion = step.id === 'completion'
-  const isBranchChoice = step.id === 'branch-choice'
-  const dialogRef = useRef<HTMLDivElement | null>(null)
-  const primaryActionRef = useRef<HTMLButtonElement | null>(null)
-  const loadBranchSteps = useTutorialStore((state) => state.loadBranchSteps)
-  const completeTutorial = useTutorialStore((state) => state.completeTutorial)
-  const branchLabel = useTutorialStore((state) => state.branchLabel)
-  const branchStartIndex = useTutorialStore((state) => state.branchStartIndex)
-  const branchStepCount = useTutorialStore((state) => state.branchStepCount)
+  const isFirstStep = currentIndex === 0;
+  const isLastStep = currentIndex === totalSteps - 1;
+  const isCompletion = step.id === 'completion';
+  const isBranchChoice = step.id === 'branch-choice';
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const primaryActionRef = useRef<HTMLButtonElement | null>(null);
+  const loadBranchSteps = useTutorialStore((state) => state.loadBranchSteps);
+  const completeTutorial = useTutorialStore((state) => state.completeTutorial);
+  const branchLabel = useTutorialStore((state) => state.branchLabel);
+  const branchStartIndex = useTutorialStore((state) => state.branchStartIndex);
+  const branchStepCount = useTutorialStore((state) => state.branchStepCount);
 
-  const isInBranch = branchStartIndex !== null && currentIndex > branchStartIndex
-  const branchPosition = isInBranch ? currentIndex - branchStartIndex : 0
+  const isInBranch = branchStartIndex !== null && currentIndex > branchStartIndex;
+  const branchPosition = isInBranch ? currentIndex - branchStartIndex : 0;
 
   const handleChoiceSelect = (choice: TutorialChoice) => {
-    onChoiceSelect?.(choice)
+    onChoiceSelect?.(choice);
     if (choice.steps.length > 0) {
       loadBranchSteps(choice.steps, choice.label)
     }
-  }
+  };
 
   const handleDecline = () => {
     completeTutorial()
-  }
+  };
 
   useEffect(() => {
-    const focusTarget = primaryActionRef.current ?? dialogRef.current?.querySelector<HTMLElement>('[data-tutorial-focus="true"]') ?? dialogRef.current
+    const focusTarget = primaryActionRef.current ?? dialogRef.current?.querySelector<HTMLElement>('[data-tutorial-focus="true"]') ?? dialogRef.current;
     focusTarget?.focus?.()
-  }, [step.id])
+  }, [step.id]);
 
   const getFocusableElements = () => {
-    const root = dialogRef.current
-    if (!root) return [] as HTMLElement[]
+    const root = dialogRef.current;
+    if (!root) return [] as HTMLElement[];
     return Array.from(
       root.querySelectorAll<HTMLElement>(
         'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
       )
     ).filter((element) => !element.hasAttribute('disabled') && element.tabIndex >= 0)
-  }
+  };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
-      event.preventDefault()
-      onSkip()
+      event.preventDefault();
+      onSkip();
       return
     }
 
-    if (event.key !== 'Tab') return
+    if (event.key !== 'Tab') return;
 
-    const focusableElements = getFocusableElements()
+    const focusableElements = getFocusableElements();
 
     if (focusableElements.length === 0) {
-      event.preventDefault()
+      event.preventDefault();
       return
     }
 
-    const activeElement = document.activeElement as HTMLElement | null
-    const currentFocusIndex = focusableElements.indexOf(activeElement ?? (document.body as HTMLElement))
+    const activeElement = document.activeElement as HTMLElement | null;
+    const currentFocusIndex = focusableElements.indexOf(activeElement ?? (document.body as HTMLElement));
     const nextIndex = event.shiftKey
       ? (currentFocusIndex <= 0 ? focusableElements.length - 1 : currentFocusIndex - 1)
-      : (currentFocusIndex === -1 || currentFocusIndex === focusableElements.length - 1 ? 0 : currentFocusIndex + 1)
+      : (currentFocusIndex === -1 || currentFocusIndex === focusableElements.length - 1 ? 0 : currentFocusIndex + 1);
 
     if (currentFocusIndex === -1 || currentFocusIndex === 0 || currentFocusIndex === focusableElements.length - 1) {
-      event.preventDefault()
+      event.preventDefault();
       focusableElements[nextIndex]?.focus()
     }
-  }
+  };
 
   return (
     <div
       ref={(element) => {
-        dialogRef.current = element
+        dialogRef.current = element;
         infoBoxRef?.(element)
       }}
       className="tutorial-info-box"
@@ -166,7 +166,7 @@ export default function TutorialInfoBox({
             </span>
             <div className="tutorial-progress-dots" aria-hidden="true">
               {Array.from({ length: isInBranch ? branchStepCount : totalSteps }).map((_, index) => {
-                const activeIndex = isInBranch ? branchPosition - 1 : currentIndex
+                const activeIndex = isInBranch ? branchPosition - 1 : currentIndex;
                 return (
                   <span
                     key={`${step.id}-dot-${index}`}

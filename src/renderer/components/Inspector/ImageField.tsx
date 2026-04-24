@@ -9,38 +9,38 @@ interface ImageFieldProps {
 }
 
 function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
-  const [embedAsBase64, setEmbedAsBase64] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [sizeWarning, setSizeWarning] = useState<string | null>(null)
-  const [showPicker, setShowPicker] = useState(false)
+  const [embedAsBase64, setEmbedAsBase64] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sizeWarning, setSizeWarning] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
 
-  const isBase64 = value.startsWith('data:')
-  const isSvgPlaceholder = value.startsWith('data:image/svg+xml')
-  const hasPreviewableImage = value && (value.startsWith('data:') || value.startsWith('http') || value.startsWith('blob:') || value.startsWith('app-media://'))
+  const isBase64 = value.startsWith('data:');
+  const isSvgPlaceholder = value.startsWith('data:image/svg+xml');
+  const hasPreviewableImage = value && (value.startsWith('data:') || value.startsWith('http') || value.startsWith('blob:') || value.startsWith('app-media://'));
 
   const handleBrowse = useCallback(() => {
     setShowPicker(true)
-  }, [])
+  }, []);
 
   const handleSelectAsset = async (urls: string[]) => {
-    setShowPicker(false)
-    if (!urls.length) return
-    const filePath = urls[0]
+    setShowPicker(false);
+    if (!urls.length) return;
+    const filePath = urls[0];
     
     if (embedAsBase64) {
-      setLoading(true)
+      setLoading(true);
       try {
-        const api = getApi()
-        const base64Result = await api.assets.readFileAsBase64(filePath)
+        const api = getApi();
+        const base64Result = await api.assets.readFileAsBase64(filePath);
         if (!base64Result.success) {
-          setError(base64Result.error || 'Failed to read file')
-          setLoading(false)
+          setError(base64Result.error || 'Failed to read file');
+          setLoading(false);
           return
         }
 
-        const dataUri = base64Result.data as string
-        const sizeKB = Math.round((dataUri.length * 3) / 4 / 1024)
+        const dataUri = base64Result.data as string;
+        const sizeKB = Math.round((dataUri.length * 3) / 4 / 1024);
         if (sizeKB > 500) {
           setSizeWarning(`Embedded image is ${(sizeKB / 1024).toFixed(1)}MB. Large base64 images may slow down your project.`)
         }
@@ -54,21 +54,21 @@ function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
     } else {
       onChange(filePath)
     }
-  }
+  };
 
   const handleToggleBase64 = useCallback(async (checked: boolean) => {
-    setEmbedAsBase64(checked)
-    setError(null)
-    setSizeWarning(null)
+    setEmbedAsBase64(checked);
+    setError(null);
+    setSizeWarning(null);
 
     if (checked && value && !isBase64 && (value.startsWith('blob:') || value.startsWith('http'))) {
-      setLoading(true)
+      setLoading(true);
       try {
-        const api = getApi()
-        const result = await api.assets.readFileAsBase64(value)
+        const api = getApi();
+        const result = await api.assets.readFileAsBase64(value);
         if (result.success && result.data) {
-          const dataUri = result.data as string
-          const sizeKB = Math.round((dataUri.length * 3) / 4 / 1024)
+          const dataUri = result.data as string;
+          const sizeKB = Math.round((dataUri.length * 3) / 4 / 1024);
           if (sizeKB > 500) {
             setSizeWarning(`Embedded image is ${(sizeKB / 1024).toFixed(1)}MB. Large base64 images may slow down your project.`)
           }
@@ -79,7 +79,7 @@ function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
       }
       setLoading(false)
     }
-  }, [value, isBase64, onChange])
+  }, [value, isBase64, onChange]);
 
   return (
     <div className="image-field">
@@ -89,8 +89,8 @@ function ImageField({ value, onChange }: ImageFieldProps): JSX.Element {
           className="inspector-input image-field-url"
           value={isSvgPlaceholder ? '(placeholder)' : isBase64 ? '(base64 embedded)' : value}
           onChange={(e) => {
-            setError(null)
-            setSizeWarning(null)
+            setError(null);
+            setSizeWarning(null);
             onChange(e.target.value)
           }}
           placeholder="Image URL or path"

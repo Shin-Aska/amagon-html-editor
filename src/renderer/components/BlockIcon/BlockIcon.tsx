@@ -7,17 +7,17 @@ interface BlockIconProps {
 }
 
 function BlockIconInner({ name, className }: BlockIconProps): JSX.Element {
-  const IconComponent = getLucideIconComponent(name)
+  const IconComponent = getLucideIconComponent(name);
   if (IconComponent) {
     return <IconComponent className={className} size={16} />
   }
 
-  const LazyIcon = getLazyLucideIcon(name)
+  const LazyIcon = getLazyLucideIcon(name);
   if (LazyIcon) {
     return <LazyIcon className={className} size={16} />
   }
 
-  const DefaultIcon = getLucideIconComponent('default')!
+  const DefaultIcon = getLucideIconComponent('default')!;
   return <DefaultIcon className={className} size={16} />
 }
 

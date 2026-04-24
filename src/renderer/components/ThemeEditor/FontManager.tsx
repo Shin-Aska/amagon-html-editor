@@ -7,17 +7,17 @@ import GoogleFontBrowser from './GoogleFontBrowser'
 import './FontManager.css'
 
 export default function FontManager(): JSX.Element {
-  const fonts = useProjectStore((s) => s.fonts)
-  const addFonts = useProjectStore((s) => s.addFonts)
-  const removeFontStore = useProjectStore((s) => s.removeFont)
-  const showToast = useToastStore((s) => s.showToast)
-  const [showGoogleFonts, setShowGoogleFonts] = useState(false)
+  const fonts = useProjectStore((s) => s.fonts);
+  const addFonts = useProjectStore((s) => s.addFonts);
+  const removeFontStore = useProjectStore((s) => s.removeFont);
+  const showToast = useToastStore((s) => s.showToast);
+  const [showGoogleFonts, setShowGoogleFonts] = useState(false);
 
   const handleImportFile = async () => {
     try {
-      const res = await window.api.fonts.importFile()
+      const res = await window.api.fonts.importFile();
       if (res.success && res.fonts && res.fonts.length > 0) {
-        addFonts(res.fonts)
+        addFonts(res.fonts);
         showToast(`Imported ${res.fonts.length} font file${res.fonts.length > 1 ? 's' : ''}`, 'success')
       } else if (!res.canceled) {
         showToast('No fonts were imported', 'info')
@@ -25,13 +25,13 @@ export default function FontManager(): JSX.Element {
     } catch {
       showToast('Failed to import font', 'error')
     }
-  }
+  };
 
   const handleDeleteFont = async (font: FontAsset) => {
     try {
-      const res = await window.api.fonts.deleteFont({ relativePath: font.relativePath })
+      const res = await window.api.fonts.deleteFont({ relativePath: font.relativePath });
       if (res.success) {
-        removeFontStore(font.id)
+        removeFontStore(font.id);
         showToast(`Removed "${font.name}"`, 'success')
       } else {
         showToast('Failed to remove font file', 'error')
@@ -39,7 +39,7 @@ export default function FontManager(): JSX.Element {
     } catch {
       showToast('Error removing font', 'error')
     }
-  }
+  };
 
   // Inject @font-face rules so previews render correctly in the editor UI
   const fontFacesCSS = fonts
@@ -52,7 +52,7 @@ export default function FontManager(): JSX.Element {
   ${font.style ? `font-style: ${font.style};` : ''}
 }`
     )
-    .join('\n')
+    .join('\n');
 
   return (
     <div className="theme-font-manager">

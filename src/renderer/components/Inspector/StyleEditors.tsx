@@ -7,49 +7,49 @@ interface StyleEditorProps {
   onChange: (key: string, value: string | undefined) => void
 }
 
-const SIZE_UNITS = ['px', 'pt', 'rem', 'em', '%', 'vw', 'vh'] as const
+const SIZE_UNITS = ['px', 'pt', 'rem', 'em', '%', 'vw', 'vh'] as const;
 
 function isSimpleMeasurement(val?: string): boolean {
-  if (!val) return true
+  if (!val) return true;
   return /^[\d.]+\s*(px|pt|rem|em|%|vw|vh)$/.test(val)
 }
 
 function parseMeasurement(val?: string): { num: string; unit: string } {
-  if (!val) return { num: '', unit: 'px' }
-  const match = val.match(/^([\d.]+)\s*(px|pt|rem|em|%|vw|vh)$/)
-  if (match) return { num: match[1], unit: match[2] }
+  if (!val) return { num: '', unit: 'px' };
+  const match = val.match(/^([\d.]+)\s*(px|pt|rem|em|%|vw|vh)$/);
+  if (match) return { num: match[1], unit: match[2] };
   return { num: val.replace(/\D/g, '') || '', unit: 'px' }
 }
 
 export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.Element {
   const [fontSizeMode, setFontSizeMode] = useState<'simple' | 'complex'>(() =>
     isSimpleMeasurement(styles.fontSize) ? 'simple' : 'complex'
-  )
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     onChange(name, value || undefined)
-  }
+  };
 
-  const fontSizeParsed = parseMeasurement(styles.fontSize)
+  const fontSizeParsed = parseMeasurement(styles.fontSize);
 
   const handleFontSizeNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const num = e.target.value
+    const num = e.target.value;
     if (!num) {
-      onChange('fontSize', undefined)
+      onChange('fontSize', undefined);
       return
     }
     onChange('fontSize', `${num}${fontSizeParsed.unit}`)
-  }
+  };
 
   const handleFontSizeUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const unit = e.target.value
+    const unit = e.target.value;
     if (!fontSizeParsed.num) {
-      onChange('fontSize', undefined)
+      onChange('fontSize', undefined);
       return
     }
     onChange('fontSize', `${fontSizeParsed.num}${unit}`)
-  }
+  };
 
   return (
     <div className="style-editor-section">
@@ -209,9 +209,9 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
 
 export function BackgroundEditor({ styles, onChange }: StyleEditorProps): JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     onChange(name, value || undefined)
-  }
+  };
 
   return (
     <div className="style-editor-section">
@@ -286,9 +286,9 @@ export function BackgroundEditor({ styles, onChange }: StyleEditorProps): JSX.El
 
 export function BorderEditor({ styles, onChange }: StyleEditorProps): JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     onChange(name, value || undefined)
-  }
+  };
 
   return (
     <div className="style-editor-section">
@@ -338,9 +338,9 @@ export function BorderEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
 
 export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Element {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     onChange(name, value || undefined)
-  }
+  };
 
   return (
     <div className="style-editor-section">

@@ -13,29 +13,29 @@ interface TreeNodeProps {
 }
 
 function TreeNode({ block, depth, onContextMenu }: TreeNodeProps): JSX.Element {
-  const [expanded, setExpanded] = useState(true)
-  const { selectedBlockId, hoveredBlockId, selectBlock, hoverBlock } = useEditorStore()
+  const [expanded, setExpanded] = useState(true);
+  const { selectedBlockId, hoveredBlockId, selectBlock, hoverBlock } = useEditorStore();
 
-  const isSelected = selectedBlockId === block.id
-  const isHovered = hoveredBlockId === block.id
-  const hasChildren = block.children && block.children.length > 0
+  const isSelected = selectedBlockId === block.id;
+  const isHovered = hoveredBlockId === block.id;
+  const hasChildren = block.children && block.children.length > 0;
 
   const toggleExpand = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    e.stopPropagation();
     setExpanded(!expanded)
-  }
+  };
 
-  const def = componentRegistry.get(block.type)
-  const label = def?.label || block.type
-  const iconString = typeof def?.icon === 'string' ? def.icon.trim() : ''
+  const def = componentRegistry.get(block.type);
+  const label = def?.label || block.type;
+  const iconString = typeof def?.icon === 'string' ? def.icon.trim() : '';
   const renderTreeIcon = () => {
     if (block.type.startsWith('user:')) {
-      if (iconString.startsWith('lucide:')) return <BlockIcon name={iconString.replace(/^lucide:/, '')} />
-      if (iconString) return <span>{iconString}</span>
+      if (iconString.startsWith('lucide:')) return <BlockIcon name={iconString.replace(/^lucide:/, '')} />;
+      if (iconString) return <span>{iconString}</span>;
       return <BlockIcon name="user-block" />
     }
     return <BlockIcon name={block.type} />
-  }
+  };
 
   return (
     <>
@@ -70,17 +70,17 @@ function TreeNode({ block, depth, onContextMenu }: TreeNodeProps): JSX.Element {
 }
 
 export default function BlockTree(): JSX.Element {
-  const blocks = useEditorStore((s) => s.blocks)
-  const removeBlock = useEditorStore((s) => s.removeBlock)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null)
+  const blocks = useEditorStore((s) => s.blocks);
+  const removeBlock = useEditorStore((s) => s.removeBlock);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent, blockId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, blockId })
-  }
+  };
 
-  const closeContextMenu = () => setContextMenu(null)
+  const closeContextMenu = () => setContextMenu(null);
 
   if (blocks.length === 0) {
     return (

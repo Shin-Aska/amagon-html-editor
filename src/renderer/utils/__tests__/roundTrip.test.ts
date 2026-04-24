@@ -26,26 +26,26 @@ describe('round-trip: blocks → HTML → blocks', () => {
   it('preserves a simple heading', () => {
     const original: Block[] = [
       createBlock('heading', { props: { text: 'Hello', level: 2 } })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].type).toBe('heading')
-    expect(blocks[0].props.text).toBe('Hello')
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('heading');
+    expect(blocks[0].props.text).toBe('Hello');
     expect(blocks[0].props.level).toBe(2)
-  })
+  });
 
   it('preserves a paragraph', () => {
     const original: Block[] = [
       createBlock('paragraph', { props: { text: 'Body text' } })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].type).toBe('paragraph')
+    expect(blocks[0].type).toBe('paragraph');
     expect(blocks[0].props.text).toBe('Body text')
-  })
+  });
 
   it('preserves classes and styles', () => {
     const original: Block[] = [
@@ -53,15 +53,15 @@ describe('round-trip: blocks → HTML → blocks', () => {
         classes: ['container', 'mt-4'],
         styles: { backgroundColor: '#fff', padding: '20px' }
       })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].classes).toEqual(['container', 'mt-4'])
+    expect(blocks[0].classes).toEqual(['container', 'mt-4']);
     // jsdom may normalize color values, so just check the key exists
-    expect(blocks[0].styles.backgroundColor).toBeTruthy()
+    expect(blocks[0].styles.backgroundColor).toBeTruthy();
     expect(blocks[0].styles.padding).toBe('20px')
-  })
+  });
 
   it('preserves nested structure', () => {
     const original: Block[] = [
@@ -82,55 +82,55 @@ describe('round-trip: blocks → HTML → blocks', () => {
           })
         ]
       })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].classes).toContain('row')
-    expect(blocks[0].children).toHaveLength(2)
-    expect(blocks[0].children[0].classes).toContain('col-6')
-    expect(blocks[0].children[0].children[0].type).toBe('heading')
-    expect(blocks[0].children[0].children[0].props.text).toBe('Column 1')
-    expect(blocks[0].children[1].children[0].type).toBe('paragraph')
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].classes).toContain('row');
+    expect(blocks[0].children).toHaveLength(2);
+    expect(blocks[0].children[0].classes).toContain('col-6');
+    expect(blocks[0].children[0].children[0].type).toBe('heading');
+    expect(blocks[0].children[0].children[0].props.text).toBe('Column 1');
+    expect(blocks[0].children[1].children[0].type).toBe('paragraph');
     expect(blocks[0].children[1].children[0].props.text).toBe('Column 2 text')
-  })
+  });
 
   it('preserves a button with classes', () => {
     const original: Block[] = [
       createBlock('button', { props: { text: 'Submit' }, classes: ['btn', 'btn-primary'] })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].type).toBe('button')
-    expect(blocks[0].props.text).toBe('Submit')
+    expect(blocks[0].type).toBe('button');
+    expect(blocks[0].props.text).toBe('Submit');
     expect(blocks[0].classes).toEqual(['btn', 'btn-primary'])
-  })
+  });
 
   it('preserves an image with attributes', () => {
     const original: Block[] = [
       createBlock('image', { props: { src: 'photo.jpg', alt: 'My Photo' } })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].type).toBe('image')
-    expect(blocks[0].props.src).toBe('photo.jpg')
+    expect(blocks[0].type).toBe('image');
+    expect(blocks[0].props.src).toBe('photo.jpg');
     expect(blocks[0].props.alt).toBe('My Photo')
-  })
+  });
 
   it('preserves a link with href', () => {
     const original: Block[] = [
       createBlock('link', { props: { text: 'Click here', href: 'https://example.com' } })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].type).toBe('link')
-    expect(blocks[0].props.text).toBe('Click here')
+    expect(blocks[0].type).toBe('link');
+    expect(blocks[0].props.text).toBe('Click here');
     expect(blocks[0].props.href).toBe('https://example.com')
-  })
+  });
 
   it('preserves multiple top-level blocks', () => {
     const original: Block[] = [
@@ -138,27 +138,27 @@ describe('round-trip: blocks → HTML → blocks', () => {
       createBlock('paragraph', { props: { text: 'Intro' } }),
       createBlock('hr'),
       createBlock('container', { classes: ['content'] })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(4)
-    expect(blocks[0].type).toBe('heading')
-    expect(blocks[1].type).toBe('paragraph')
-    expect(blocks[2].type).toBe('hr')
-    expect(blocks[3].type).toBe('container')
+    expect(blocks).toHaveLength(4);
+    expect(blocks[0].type).toBe('heading');
+    expect(blocks[1].type).toBe('paragraph');
+    expect(blocks[2].type).toBe('hr');
+    expect(blocks[3].type).toBe('container');
     expect(blocks[3].classes).toContain('content')
-  })
+  });
 
   it('preserves tag overrides', () => {
     const original: Block[] = [
       createBlock('container', { tag: 'main', classes: ['wrapper'] })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
     expect(blocks[0].tag).toBe('main')
-  })
+  });
 
   it('preserves semantic sections', () => {
     const original: Block[] = [
@@ -168,15 +168,15 @@ describe('round-trip: blocks → HTML → blocks', () => {
           createBlock('paragraph', { props: { text: 'Section content' } })
         ]
       })
-    ]
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    ];
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].type).toBe('section')
-    expect(blocks[0].children).toHaveLength(2)
-    expect(blocks[0].children[0].type).toBe('heading')
+    expect(blocks[0].type).toBe('section');
+    expect(blocks[0].children).toHaveLength(2);
+    expect(blocks[0].children[0].type).toBe('heading');
     expect(blocks[0].children[1].type).toBe('paragraph')
-  })
+  });
 
   it('preserves checkbox blocks nested inside tabs', () => {
     const original: Block[] = [
@@ -195,19 +195,19 @@ describe('round-trip: blocks → HTML → blocks', () => {
           ]
         }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
-    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
+    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>;
 
-    expect(blocks[0].type).toBe('tabs')
-    expect(tabs).toHaveLength(1)
-    expect(tabs[0].blocks[0].type).toBe('paragraph')
-    expect(tabs[0].blocks[1].type).toBe('checkbox')
-    expect(tabs[0].blocks[1].props.label).toBe('Check me')
+    expect(blocks[0].type).toBe('tabs');
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].blocks[0].type).toBe('paragraph');
+    expect(tabs[0].blocks[1].type).toBe('checkbox');
+    expect(tabs[0].blocks[1].props.label).toBe('Check me');
     expect(tabs[0].blocks[1].props.checked).toBe(true)
-  })
+  });
 
   it('preserves icon blocks nested inside tabs through page HTML', () => {
     const original: Block[] = [
@@ -227,17 +227,17 @@ describe('round-trip: blocks → HTML → blocks', () => {
           ]
         }
       })
-    ]
+    ];
 
-    const html = pageToHtml(original, { includeEditorMetadata: true })
-    const { blocks } = htmlToBlocks(html)
-    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>
+    const html = pageToHtml(original, { includeEditorMetadata: true });
+    const { blocks } = htmlToBlocks(html);
+    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>;
 
-    expect(blocks[0].type).toBe('tabs')
-    expect(tabs).toHaveLength(1)
-    expect(tabs[0].blocks.map((block) => block.type)).toEqual(['paragraph', 'icon', 'image'])
+    expect(blocks[0].type).toBe('tabs');
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].blocks.map((block) => block.type)).toEqual(['paragraph', 'icon', 'image']);
     expect(tabs[0].blocks[1].props.iconClass).toBe('')
-  })
+  });
 
   it('preserves non-default icon selections nested inside tabs through page HTML', () => {
     const original: Block[] = [
@@ -256,19 +256,19 @@ describe('round-trip: blocks → HTML → blocks', () => {
           ]
         }
       })
-    ]
+    ];
 
-    const html = pageToHtml(original, { includeEditorMetadata: true })
-    const { blocks } = htmlToBlocks(html)
-    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>
+    const html = pageToHtml(original, { includeEditorMetadata: true });
+    const { blocks } = htmlToBlocks(html);
+    const tabs = blocks[0].props.tabs as Array<{ blocks: Array<{ type: string, props: Record<string, unknown> }> }>;
 
-    expect(blocks[0].type).toBe('tabs')
-    expect(tabs).toHaveLength(1)
-    expect(tabs[0].blocks[1].type).toBe('icon')
-    expect(tabs[0].blocks[1].props.iconClass).toBe('lucide:image')
-    expect(tabs[0].blocks[1].props.size).toBe('3rem')
+    expect(blocks[0].type).toBe('tabs');
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].blocks[1].type).toBe('icon');
+    expect(tabs[0].blocks[1].props.iconClass).toBe('lucide:image');
+    expect(tabs[0].blocks[1].props.size).toBe('3rem');
     expect(tabs[0].blocks[1].props.color).toBe('orange')
-  })
+  });
 
   it('preserves modal blocks through page HTML', () => {
     const original: Block[] = [
@@ -285,20 +285,20 @@ describe('round-trip: blocks → HTML → blocks', () => {
           createBlock('paragraph', { props: { text: 'Modal body text goes here.' } })
         ]
       })
-    ]
+    ];
 
-    const html = pageToHtml(original, { includeEditorMetadata: true })
-    const { blocks } = htmlToBlocks(html)
+    const html = pageToHtml(original, { includeEditorMetadata: true });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].type).toBe('modal')
-    expect(blocks[0].props.id).toBe('launch-modal')
-    expect(blocks[0].props.buttonText).toBe('Launch Modal')
-    expect(blocks[0].props.title).toBe('Example Modal')
-    expect(blocks[0].props.size).toBe('modal-lg')
-    expect(blocks[0].children).toHaveLength(1)
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('modal');
+    expect(blocks[0].props.id).toBe('launch-modal');
+    expect(blocks[0].props.buttonText).toBe('Launch Modal');
+    expect(blocks[0].props.title).toBe('Example Modal');
+    expect(blocks[0].props.size).toBe('modal-lg');
+    expect(blocks[0].children).toHaveLength(1);
     expect(blocks[0].children[0].type).toBe('paragraph')
-  })
+  });
 
   it('preserves carousel blocks through HTML round-trip', () => {
     const original: Block[] = [
@@ -314,21 +314,21 @@ describe('round-trip: blocks → HTML → blocks', () => {
           ]
         }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].type).toBe('carousel')
-    expect(blocks[0].props.id).toBe('hero-carousel')
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('carousel');
+    expect(blocks[0].props.id).toBe('hero-carousel');
     expect(blocks[0].props.slides).toEqual([
       { src: 'slide-1.jpg', alt: 'Slide 1', caption: 'First Slide' },
       { src: 'slide-2.jpg', alt: 'Slide 2', caption: '' }
-    ])
-    expect(blocks[0].props.imageHeightMode).toBe('fixed')
+    ]);
+    expect(blocks[0].props.imageHeightMode).toBe('fixed');
     expect(blocks[0].props.imageHeight).toBe('320px')
-  })
+  });
 
   it('preserves navbar sticky and brand image through HTML round-trip', () => {
     const original: Block[] = [
@@ -356,19 +356,19 @@ describe('round-trip: blocks → HTML → blocks', () => {
           })
         ]
       })
-    ]
+    ];
 
-    const html = blockToHtml(original)
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original);
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].type).toBe('navbar')
-    expect(blocks[0].props.sticky).toBe(true)
-    expect(blocks[0].props.stickyOffset).toBe('0')
-    expect(blocks[0].props.stickyZIndex).toBe(1030)
-    expect(blocks[0].props.brandImage).toBe('https://cdn.example.com/logo.png')
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('navbar');
+    expect(blocks[0].props.sticky).toBe(true);
+    expect(blocks[0].props.stickyOffset).toBe('0');
+    expect(blocks[0].props.stickyZIndex).toBe(1030);
+    expect(blocks[0].props.brandImage).toBe('https://cdn.example.com/logo.png');
     expect(blocks[0].props.brandText).toBe('Acme')
-  })
+  });
 
   it('preserves phase 2 medium blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -421,24 +421,24 @@ describe('round-trip: blocks → HTML → blocks', () => {
           outline: false
         }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(4)
-    expect(blocks[0].type).toBe('table')
-    expect(blocks[0].props.headers).toEqual(['Name', 'Role'])
-    expect(blocks[1].type).toBe('dropdown')
-    expect(blocks[1].props.label).toBe('Actions')
-    expect(blocks[1].props.split).toBe(true)
-    expect(blocks[2].type).toBe('offcanvas')
-    expect(blocks[2].props.id).toBe('settings-panel')
-    expect(blocks[2].props.placement).toBe('end')
-    expect(blocks[3].type).toBe('card')
-    expect(blocks[3].props.title).toBe('Card title')
+    expect(blocks).toHaveLength(4);
+    expect(blocks[0].type).toBe('table');
+    expect(blocks[0].props.headers).toEqual(['Name', 'Role']);
+    expect(blocks[1].type).toBe('dropdown');
+    expect(blocks[1].props.label).toBe('Actions');
+    expect(blocks[1].props.split).toBe(true);
+    expect(blocks[2].type).toBe('offcanvas');
+    expect(blocks[2].props.id).toBe('settings-panel');
+    expect(blocks[2].props.placement).toBe('end');
+    expect(blocks[3].type).toBe('card');
+    expect(blocks[3].props.title).toBe('Card title');
     expect(blocks[3].props.variant).toBe('primary')
-  })
+  });
 
   it('preserves phase 2 medium blocks through Tailwind HTML round-trip', () => {
     const original: Block[] = [
@@ -487,21 +487,21 @@ describe('round-trip: blocks → HTML → blocks', () => {
           outline: false
         }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'tailwind', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'tailwind', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(4)
-    expect(blocks[0].type).toBe('table')
-    expect(blocks[1].type).toBe('dropdown')
-    expect(blocks[1].props.direction).toBe('end')
-    expect(blocks[2].type).toBe('offcanvas')
-    expect(blocks[2].props.id).toBe('tw-panel')
-    expect(blocks[3].type).toBe('card')
-    expect(blocks[3].props.imagePosition).toBe('overlay')
+    expect(blocks).toHaveLength(4);
+    expect(blocks[0].type).toBe('table');
+    expect(blocks[1].type).toBe('dropdown');
+    expect(blocks[1].props.direction).toBe('end');
+    expect(blocks[2].type).toBe('offcanvas');
+    expect(blocks[2].props.id).toBe('tw-panel');
+    expect(blocks[3].type).toBe('card');
+    expect(blocks[3].props.imagePosition).toBe('overlay');
     expect(blocks[3].props.variant).toBe('dark')
-  })
+  });
 
   it('preserves phase 3 enhanced blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -594,10 +594,10 @@ describe('round-trip: blocks → HTML → blocks', () => {
         },
         classes: ['w-100', 'border']
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
     expect(blocks.map((block) => block.type)).toEqual([
       'image',
@@ -609,18 +609,18 @@ describe('round-trip: blocks → HTML → blocks', () => {
       'code-block',
       'icon',
       'iframe'
-    ])
-    expect(blocks[0].props.caption).toBe('Hero caption')
-    expect(blocks[0].props.lightbox).toBe(true)
-    expect(blocks[1].props.aspectRatio).toBe('21:9')
-    expect(blocks[2].props.loading).toBe(true)
-    expect(blocks[3].props.prepend).toBe('@')
-    expect(blocks[4].props.switch).toBe(true)
-    expect(blocks[5].props.optgroups).toBe(true)
-    expect(blocks[6].props.showLineNumbers).toBe(true)
-    expect(blocks[7].props.spin).toBe(true)
+    ]);
+    expect(blocks[0].props.caption).toBe('Hero caption');
+    expect(blocks[0].props.lightbox).toBe(true);
+    expect(blocks[1].props.aspectRatio).toBe('21:9');
+    expect(blocks[2].props.loading).toBe(true);
+    expect(blocks[3].props.prepend).toBe('@');
+    expect(blocks[4].props.switch).toBe(true);
+    expect(blocks[5].props.optgroups).toBe(true);
+    expect(blocks[6].props.showLineNumbers).toBe(true);
+    expect(blocks[7].props.spin).toBe(true);
     expect(blocks[8].props.aspectRatio).toBe('4:3')
-  })
+  });
 
   it('preserves phase 4 layout/component blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -647,46 +647,46 @@ describe('round-trip: blocks → HTML → blocks', () => {
         },
         classes: ['carousel', 'slide']
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: true })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: true });
+    const { blocks } = htmlToBlocks(html);
 
     expect(blocks.map((b) => b.type)).toEqual([
       'heading', 'paragraph', 'blockquote', 'list', 'accordion', 'tabs', 'carousel'
-    ])
+    ]);
 
     // heading anchorId + decorative
-    expect(blocks[0].props.anchorId).toBe('section-title')
-    expect(blocks[0].props.decorative).toBe('underline')
+    expect(blocks[0].props.anchorId).toBe('section-title');
+    expect(blocks[0].props.decorative).toBe('underline');
 
     // paragraph lead + dropCap + columns
-    expect(blocks[1].props.lead).toBe(true)
-    expect(blocks[1].props.dropCap).toBe(true)
-    expect(blocks[1].props.columns).toBe('2')
+    expect(blocks[1].props.lead).toBe(true);
+    expect(blocks[1].props.dropCap).toBe(true);
+    expect(blocks[1].props.columns).toBe('2');
 
     // blockquote author + source + decorative
-    expect(blocks[2].props.text).toBe('Wisdom quote')
-    expect(blocks[2].props.author).toBe('Aristotle')
-    expect(blocks[2].props.source).toBe('Nicomachean Ethics')
-    expect(blocks[2].props.decorative).toBe('border-left')
+    expect(blocks[2].props.text).toBe('Wisdom quote');
+    expect(blocks[2].props.author).toBe('Aristotle');
+    expect(blocks[2].props.source).toBe('Nicomachean Ethics');
+    expect(blocks[2].props.decorative).toBe('border-left');
 
     // list horizontal
-    expect(blocks[3].props.horizontal).toBe(true)
+    expect(blocks[3].props.horizontal).toBe(true);
 
     // accordion flush + alwaysOpen
-    expect(Array.isArray((blocks[4].props.items as unknown[]))).toBe(true)
-    expect((blocks[4].props.items as unknown[]).length).toBe(2)
+    expect(Array.isArray((blocks[4].props.items as unknown[]))).toBe(true);
+    expect((blocks[4].props.items as unknown[]).length).toBe(2);
 
     // tabs variant
-    expect(blocks[5].type).toBe('tabs')
+    expect(blocks[5].type).toBe('tabs');
 
     // carousel fade + interval
-    expect(blocks[6].type).toBe('carousel')
-    expect(blocks[6].props.transition).toBe('fade')
-    expect(blocks[6].props.fade).toBe(true)
+    expect(blocks[6].type).toBe('carousel');
+    expect(blocks[6].props.transition).toBe('fade');
+    expect(blocks[6].props.fade).toBe(true);
     expect(blocks[6].props.interval).toBe(4000)
-  })
+  });
 
   it('preserves modal size/scrollable/centered through export-mode round-trip', () => {
     // Export mode renders the actual Bootstrap modal markup (button + .modal div)
@@ -696,33 +696,33 @@ describe('round-trip: blocks → HTML → blocks', () => {
         props: { id: 'rt-modal', title: 'RT Modal', buttonText: 'Open', size: 'modal-lg', scrollable: true, centered: true },
         children: [createBlock('paragraph', { props: { text: 'Modal content' } })]
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks[0].type).toBe('modal')
-    expect(blocks[0].props.size).toBe('modal-lg')
-    expect(blocks[0].props.scrollable).toBe(true)
+    expect(blocks[0].type).toBe('modal');
+    expect(blocks[0].props.size).toBe('modal-lg');
+    expect(blocks[0].props.scrollable).toBe(true);
     expect(blocks[0].props.centered).toBe(true)
-  })
+  });
 
   it('preserves link-as-button through editor-mode round-trip', () => {
     const original: Block[] = [
       createBlock('link', {
         props: { text: 'Get Started', href: '/start', button: true, variant: 'primary', newTab: false, iconLeft: '', iconRight: '' }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: true })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: true });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].type).toBe('link')
-    expect(blocks[0].props.button).toBe(true)
-    expect(blocks[0].props.href).toBe('/start')
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].type).toBe('link');
+    expect(blocks[0].props.button).toBe(true);
+    expect(blocks[0].props.href).toBe('/start');
     expect(blocks[0].props.text).toBe('Get Started')
-  })
+  });
 
   it('preserves phase 1 simple blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -755,25 +755,25 @@ describe('round-trip: blocks → HTML → blocks', () => {
       createBlock('pagination', {
         props: { pages: 5, activePage: 2, size: 'default', alignment: 'center', showPrevNext: true, showFirstLast: false }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(6)
-    expect(blocks[0].type).toBe('alert')
-    expect(blocks[0].props.text).toContain('Important notice')
-    expect(blocks[1].type).toBe('badge')
-    expect(blocks[1].props.text).toBe('New')
-    expect(blocks[2].type).toBe('progress')
-    expect(blocks[2].props.value).toBe(75)
-    expect(blocks[3].type).toBe('spinner')
-    expect(blocks[4].type).toBe('breadcrumb')
-    expect(blocks[4].props.items).toHaveLength(3)
-    expect(blocks[5].type).toBe('pagination')
-    expect(blocks[5].props.pages).toBe(5)
+    expect(blocks).toHaveLength(6);
+    expect(blocks[0].type).toBe('alert');
+    expect(blocks[0].props.text).toContain('Important notice');
+    expect(blocks[1].type).toBe('badge');
+    expect(blocks[1].props.text).toBe('New');
+    expect(blocks[2].type).toBe('progress');
+    expect(blocks[2].props.value).toBe(75);
+    expect(blocks[3].type).toBe('spinner');
+    expect(blocks[4].type).toBe('breadcrumb');
+    expect(blocks[4].props.items).toHaveLength(3);
+    expect(blocks[5].type).toBe('pagination');
+    expect(blocks[5].props.pages).toBe(5);
     expect(blocks[5].props.showPrevNext).toBe(true)
-  })
+  });
 
   it('preserves phase 1 form blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -786,21 +786,21 @@ describe('round-trip: blocks → HTML → blocks', () => {
       createBlock('file-input', {
         props: { label: 'Upload CSV', accept: '.csv', multiple: false, disabled: false, size: 'default' }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(3)
-    expect(blocks[0].type).toBe('radio')
-    expect(blocks[0].props.name).toBe('color')
-    expect(blocks[0].props.value).toBe('red')
-    expect(blocks[1].type).toBe('range')
-    expect(blocks[1].props.min).toBe(0)
-    expect(blocks[1].props.max).toBe(100)
-    expect(blocks[2].type).toBe('file-input')
+    expect(blocks).toHaveLength(3);
+    expect(blocks[0].type).toBe('radio');
+    expect(blocks[0].props.name).toBe('color');
+    expect(blocks[0].props.value).toBe('red');
+    expect(blocks[1].type).toBe('range');
+    expect(blocks[1].props.min).toBe(0);
+    expect(blocks[1].props.max).toBe(100);
+    expect(blocks[2].type).toBe('file-input');
     expect(blocks[2].props.accept).toBe('.csv')
-  })
+  });
 
   it('preserves phase 5 section blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -855,19 +855,19 @@ describe('round-trip: blocks → HTML → blocks', () => {
           variant: 'both'
         }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(6)
-    expect(blocks[0].type).toBe('stats-section')
-    expect(blocks[1].type).toBe('team-grid')
-    expect(blocks[2].type).toBe('gallery')
-    expect(blocks[3].type).toBe('timeline')
-    expect(blocks[4].type).toBe('logo-cloud')
+    expect(blocks).toHaveLength(6);
+    expect(blocks[0].type).toBe('stats-section');
+    expect(blocks[1].type).toBe('team-grid');
+    expect(blocks[2].type).toBe('gallery');
+    expect(blocks[3].type).toBe('timeline');
+    expect(blocks[4].type).toBe('logo-cloud');
     expect(blocks[5].type).toBe('process-steps')
-  })
+  });
 
   it('preserves phase 6 utility blocks through Bootstrap HTML round-trip', () => {
     const original: Block[] = [
@@ -913,19 +913,19 @@ describe('round-trip: blocks → HTML → blocks', () => {
       createBlock('map-embed', {
         props: { embedUrl: 'https://maps.google.com/?q=123+Main+St', title: 'Office Location', height: '400px', borderRadius: '0' }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'bootstrap-5', includeDataAttributes: false });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(6)
-    expect(blocks[0].type).toBe('newsletter')
-    expect(blocks[1].type).toBe('contact-card')
-    expect(blocks[2].type).toBe('social-links')
-    expect(blocks[3].type).toBe('back-to-top')
-    expect(blocks[4].type).toBe('countdown')
+    expect(blocks).toHaveLength(6);
+    expect(blocks[0].type).toBe('newsletter');
+    expect(blocks[1].type).toBe('contact-card');
+    expect(blocks[2].type).toBe('social-links');
+    expect(blocks[3].type).toBe('back-to-top');
+    expect(blocks[4].type).toBe('countdown');
     expect(blocks[5].type).toBe('map-embed')
-  })
+  });
 
   it('preserves phase 1 blocks through Tailwind HTML round-trip (editor mode)', () => {
     // Editor mode (includeDataAttributes: true) embeds data-block-type so all blocks
@@ -955,17 +955,17 @@ describe('round-trip: blocks → HTML → blocks', () => {
       createBlock('pagination', {
         props: { pages: 3, activePage: 1, size: 'sm', alignment: 'end', showPrevNext: false, showFirstLast: true }
       })
-    ]
+    ];
 
-    const html = blockToHtml(original, { framework: 'tailwind', includeDataAttributes: true })
-    const { blocks } = htmlToBlocks(html)
+    const html = blockToHtml(original, { framework: 'tailwind', includeDataAttributes: true });
+    const { blocks } = htmlToBlocks(html);
 
-    expect(blocks).toHaveLength(5)
-    expect(blocks[0].type).toBe('alert')
-    expect(blocks[1].type).toBe('badge')
-    expect(blocks[2].type).toBe('progress')
-    expect(blocks[3].type).toBe('breadcrumb')
-    expect(blocks[3].props.items).toHaveLength(2)
+    expect(blocks).toHaveLength(5);
+    expect(blocks[0].type).toBe('alert');
+    expect(blocks[1].type).toBe('badge');
+    expect(blocks[2].type).toBe('progress');
+    expect(blocks[3].type).toBe('breadcrumb');
+    expect(blocks[3].props.items).toHaveLength(2);
     expect(blocks[4].type).toBe('pagination')
   })
-})
+});

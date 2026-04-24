@@ -12,10 +12,10 @@ import type {PublisherExtension} from '../../types/PublisherExtension'
 import {validateForNeocities} from '../../validators/neocitiesValidator'
 import {makeError} from '../../validators/validationHelpers'
 
-const API_BASE_URL = 'https://neocities.org/api'
-const INFO_ENDPOINT = `${API_BASE_URL}/info`
-const UPLOAD_ENDPOINT = `${API_BASE_URL}/upload`
-const UPLOAD_BATCH_SIZE = 10
+const API_BASE_URL = 'https://neocities.org/api';
+const INFO_ENDPOINT = `${API_BASE_URL}/info`;
+const UPLOAD_ENDPOINT = `${API_BASE_URL}/upload`;
+const UPLOAD_BATCH_SIZE = 10;
 
 interface NeocitiesApiResponse {
   result?: 'success' | 'error'
@@ -26,7 +26,7 @@ interface NeocitiesApiResponse {
 }
 
 function chunkFiles(files: ExportedFile[], size: number): ExportedFile[][] {
-  const chunks: ExportedFile[][] = []
+  const chunks: ExportedFile[][] = [];
   for (let i = 0; i < files.length; i += size) {
     chunks.push(files.slice(i, i + size))
   }
@@ -34,8 +34,8 @@ function chunkFiles(files: ExportedFile[], size: number): ExportedFile[][] {
 }
 
 function toArrayBuffer(content: Uint8Array): ArrayBuffer {
-  const buffer = new ArrayBuffer(content.byteLength)
-  new Uint8Array(buffer).set(content)
+  const buffer = new ArrayBuffer(content.byteLength);
+  new Uint8Array(buffer).set(content);
   return buffer
 }
 
@@ -70,14 +70,14 @@ function progressUpdate(
 }
 
 export class NeocitiesAdapter implements PublisherExtension {
-  readonly apiVersion = PUBLISHER_EXTENSION_API_VERSION
+  readonly apiVersion = PUBLISHER_EXTENSION_API_VERSION;
 
   readonly meta = {
     id: 'neocities',
     displayName: 'Neocities',
     websiteUrl: 'https://neocities.org',
     description: 'Indie-friendly static site hosting with a simple upload API'
-  }
+  };
 
   readonly credentialFields = [
     {
@@ -87,16 +87,16 @@ export class NeocitiesAdapter implements PublisherExtension {
       helpUrl: 'https://neocities.org/settings#api_key',
       sensitive: true
     }
-  ]
+  ];
 
   async validate(
     files: ExportedFile[],
     credentials: PublishCredentials
   ): Promise<ValidationResult> {
-    const result = validateForNeocities(files)
-    const issues: ValidationIssue[] = [...result.issues]
+    const result = validateForNeocities(files);
+    const issues: ValidationIssue[] = [...result.issues];
 
-    const apiKey = credentials.apiKey?.trim()
+    const apiKey = credentials.apiKey?.trim();
     if (!apiKey) {
       issues.push(
         makeError(
@@ -107,7 +107,7 @@ export class NeocitiesAdapter implements PublisherExtension {
       )
     }
 
-    const errorCount = issues.filter((issue) => issue.severity === 'error').length
+    const errorCount = issues.filter((issue) => issue.severity === 'error').length;
     return {
       ok: errorCount === 0,
       issues
@@ -119,8 +119,8 @@ export class NeocitiesAdapter implements PublisherExtension {
     credentials: PublishCredentials,
     onProgress: (progress: PublishProgress) => void
   ): Promise<PublishResult> {
-    onProgress({ phase: 'validating', percent: 0, message: 'Validating files...' })
-    const validation = await this.validate(files, credentials)
+    onProgress({ phase: 'validating', percent: 0, message: 'Validating files...' });
+    const validation = await this.validate(files, credentials);
     if (!validation.ok) {
       return {
         success: false,
@@ -129,17 +129,17 @@ export class NeocitiesAdapter implements PublisherExtension {
       }
     }
 
-    const apiKey = credentials.apiKey.trim()
-    onProgress({ phase: 'uploading', percent: 5, message: 'Connecting to Neocities...' })
+    const apiKey = credentials.apiKey.trim();
+    onProgress({ phase: 'uploading', percent: 5, message: 'Connecting to Neocities...' });
 
     const infoResponse = await net.fetch(INFO_ENDPOINT, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${apiKey}`
       }
-    })
+    });
 
-    const infoPayload = await readJsonSafe(infoResponse)
+    const infoPayload = await readJsonSafe(infoResponse);
     if (!infoResponse.ok || infoPayload?.result === 'error') {
       return {
         success: false,
@@ -148,7 +148,7 @@ export class NeocitiesAdapter implements PublisherExtension {
       }
     }
 
-    const sitename = infoPayload?.info?.sitename
+    const sitename = infoPayload?.info?.sitename;
     if (!sitename) {
       return {
         success: false,
@@ -157,11 +157,11 @@ export class NeocitiesAdapter implements PublisherExtension {
       }
     }
 
-    const totalFiles = files.length
-    let uploadedFiles = 0
+    const totalFiles = files.length;
+    let uploadedFiles = 0;
 
     for (const batch of chunkFiles(files, UPLOAD_BATCH_SIZE)) {
-      const form = new FormData()
+      const form = new FormData();
       for (const file of batch) {
         form.append(file.path, toBlob(file.content), file.path)
       }
@@ -172,9 +172,9 @@ export class NeocitiesAdapter implements PublisherExtension {
           Authorization: `Bearer ${apiKey}`
         },
         body: form
-      })
+      });
 
-      const uploadPayload = await readJsonSafe(uploadResponse)
+      const uploadPayload = await readJsonSafe(uploadResponse);
       if (!uploadResponse.ok || uploadPayload?.result === 'error') {
         return {
           success: false,
@@ -183,14 +183,14 @@ export class NeocitiesAdapter implements PublisherExtension {
         }
       }
 
-      uploadedFiles += batch.length
+      uploadedFiles += batch.length;
       if (totalFiles > 0) {
-        const percent = Math.min(95, Math.round((uploadedFiles / totalFiles) * 90 + 5))
+        const percent = Math.min(95, Math.round((uploadedFiles / totalFiles) * 90 + 5));
         progressUpdate(onProgress, percent, `Uploaded ${uploadedFiles} of ${totalFiles} files...`)
       }
     }
 
-    onProgress({ phase: 'done', percent: 100, message: 'Published!' })
+    onProgress({ phase: 'done', percent: 100, message: 'Published!' });
 
     return {
       success: true,

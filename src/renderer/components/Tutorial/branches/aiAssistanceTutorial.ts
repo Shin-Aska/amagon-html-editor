@@ -7,62 +7,62 @@ import {openGlobalSettings} from '../../../utils/settingsNavigation'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')
-}
+};
 
 const clickTarget = (selector: string) => {
-  const element = document.querySelector(selector) as HTMLElement | null
+  const element = document.querySelector(selector) as HTMLElement | null;
   if (element) element.click()
-}
+};
 
 const openSidebarTab = (selector: string) => {
-  ensureStandardLayout()
+  ensureStandardLayout();
   window.setTimeout(() => clickTarget(selector), 0)
-}
+};
 
 const ensureToolbarMenuOpen = () => {
-  if (!window.matchMedia('(max-width: 840px)').matches) return
+  if (!window.matchMedia('(max-width: 840px)').matches) return;
 
-  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null
-  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null
-  if (!toggleButton || !collapsible) return
+  const toggleButton = document.querySelector('[aria-label="Toggle toolbar menu"]') as HTMLButtonElement | null;
+  const collapsible = document.querySelector('.toolbar-collapsible') as HTMLElement | null;
+  if (!toggleButton || !collapsible) return;
 
-  if (collapsible.classList.contains('open')) return
+  if (collapsible.classList.contains('open')) return;
   toggleButton.click()
-}
+};
 
 const hasConfiguredAiProvider = async (): Promise<boolean> => {
   try {
-    const api = getApi()
-    const result = await api.app.getCredentials()
-    const credentials = Array.isArray(result?.credentials) ? result.credentials : []
+    const api = getApi();
+    const result = await api.app.getCredentials();
+    const credentials = Array.isArray(result?.credentials) ? result.credentials : [];
     return credentials.some((credential: any) => credential?.source === 'ai' && credential?.hasKey)
   } catch {
     return false
   }
-}
+};
 
-let aiKeyLinkCleanup: (() => void) | null = null
+let aiKeyLinkCleanup: (() => void) | null = null;
 
 const clearAiKeyLinkHandler = () => {
-  if (!aiKeyLinkCleanup) return
-  aiKeyLinkCleanup()
+  if (!aiKeyLinkCleanup) return;
+  aiKeyLinkCleanup();
   aiKeyLinkCleanup = null
-}
+};
 
 const installAiKeyLinkHandler = () => {
-  clearAiKeyLinkHandler()
+  clearAiKeyLinkHandler();
 
   const handler = (event: Event) => {
-    const target = event.target as HTMLElement | null
-    const link = target?.closest('[data-action="open-ai-keys"]') as HTMLAnchorElement | null
-    if (!link) return
-    event.preventDefault()
+    const target = event.target as HTMLElement | null;
+    const link = target?.closest('[data-action="open-ai-keys"]') as HTMLAnchorElement | null;
+    if (!link) return;
+    event.preventDefault();
     openGlobalSettings({ tab: 'keys' })
-  }
+  };
 
-  document.addEventListener('click', handler)
+  document.addEventListener('click', handler);
   aiKeyLinkCleanup = () => document.removeEventListener('click', handler)
-}
+};
 
 export const aiAssistanceSteps: TutorialStep[] = [
   {
@@ -89,7 +89,7 @@ export const aiAssistanceSteps: TutorialStep[] = [
     action: { type: 'ai-provider-configured' },
     autoAdvance: true,
     onEnter: () => {
-      ensureToolbarMenuOpen()
+      ensureToolbarMenuOpen();
       installAiKeyLinkHandler()
     },
     onExit: () => {
@@ -228,7 +228,7 @@ export const aiAssistanceSteps: TutorialStep[] = [
     action: { type: 'open-create-preset-modal' },
     autoAdvance: true,
     onEnter: () => {
-      const tab = document.querySelector('[data-tutorial="theme-presets-tab"]') as HTMLElement
+      const tab = document.querySelector('[data-tutorial="theme-presets-tab"]') as HTMLElement;
       tab?.click()
     }
   },
@@ -252,14 +252,14 @@ export const aiAssistanceSteps: TutorialStep[] = [
     action: { type: 'click' },
     autoAdvance: true,
     onEnter: () => {
-      const tab = document.querySelector('[data-tutorial="theme-custom-css-tab"]') as HTMLElement
-      tab?.click()
+      const tab = document.querySelector('[data-tutorial="theme-custom-css-tab"]') as HTMLElement;
+      tab?.click();
       // Skip this step if a CSS file already exists
       window.setTimeout(() => {
-        const files = useProjectStore.getState().settings?.theme?.customCssFiles ?? []
-        if (files.length === 0) return
-        const state = useTutorialStore.getState()
-        const currentStep = state.steps[state.currentStepIndex]
+        const files = useProjectStore.getState().settings?.theme?.customCssFiles ?? [];
+        if (files.length === 0) return;
+        const state = useTutorialStore.getState();
+        const currentStep = state.steps[state.currentStepIndex];
         if (state.isActive && currentStep?.id === 'ai-css-create-file') {
           state.nextStep()
         }
@@ -276,7 +276,7 @@ export const aiAssistanceSteps: TutorialStep[] = [
     action: { type: 'open-ai-css-modal' },
     autoAdvance: true,
     onEnter: () => {
-      const tab = document.querySelector('[data-tutorial="theme-custom-css-tab"]') as HTMLElement
+      const tab = document.querySelector('[data-tutorial="theme-custom-css-tab"]') as HTMLElement;
       tab?.click()
     }
   },
@@ -291,7 +291,7 @@ export const aiAssistanceSteps: TutorialStep[] = [
     action: { type: 'css-file-changed' },
     autoAdvance: true,
     onEnter: () => {
-      const tab = document.querySelector('[data-tutorial="theme-custom-css-tab"]') as HTMLElement
+      const tab = document.querySelector('[data-tutorial="theme-custom-css-tab"]') as HTMLElement;
       tab?.click()
     }
   },
@@ -305,4 +305,4 @@ export const aiAssistanceSteps: TutorialStep[] = [
     action: { type: 'none' },
     autoAdvance: false
   }
-]
+];

@@ -26,22 +26,22 @@ export default function SpotlightMask({
   borderRadius = 6,
   overlayOpacity = 0.65
 }: SpotlightMaskProps): JSX.Element {
-  const maskId = useId().replace(/:/g, '')
+  const maskId = useId().replace(/:/g, '');
 
-  const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
 
   const createCutout = (rect: SpotlightRect): SpotlightRect => ({
     x: clamp(rect.x - padding, 0, viewportWidth),
     y: clamp(rect.y - padding, 0, viewportHeight),
     width: clamp(rect.width + padding * 2, 0, viewportWidth),
     height: clamp(rect.height + padding * 2, 0, viewportHeight)
-  })
+  });
 
   const cutouts = [
     ...(targetRect ? [createCutout(targetRect)] : []),
     ...additionalRects.map(createCutout)
-  ]
+  ];
 
   return (
     <svg className="tutorial-spotlight-mask" width={viewportWidth} height={viewportHeight} aria-hidden="true">

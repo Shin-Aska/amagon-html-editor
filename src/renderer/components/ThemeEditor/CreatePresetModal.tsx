@@ -19,7 +19,7 @@ const COLOR_FIELDS: { key: keyof ThemeColors; label: string }[] = [
   { key: 'success', label: 'Success' },
   { key: 'warning', label: 'Warning' },
   { key: 'danger', label: 'Danger' }
-]
+];
 
 function safeJson(value: unknown): string {
   try {
@@ -34,20 +34,20 @@ function isValidHexColor(value: unknown): value is string {
 }
 
 function parseThemeColorsFromAi(content: string): ThemeColors | null {
-  const candidates: string[] = []
-  const fencedBlocks = content.match(/```(?:json)?\s*([\s\S]*?)```/gi) ?? []
+  const candidates: string[] = [];
+  const fencedBlocks = content.match(/```(?:json)?\s*([\s\S]*?)```/gi) ?? [];
 
   for (const block of fencedBlocks) {
-    const match = block.match(/```(?:json)?\s*([\s\S]*?)```/i)
+    const match = block.match(/```(?:json)?\s*([\s\S]*?)```/i);
     if (match?.[1]) candidates.push(match[1].trim())
   }
-  candidates.push(content.trim())
+  candidates.push(content.trim());
 
   for (const candidate of candidates) {
     try {
-      const parsed = JSON.parse(candidate) as Record<string, unknown>
-      const hasAll = COLOR_FIELDS.every(({ key }) => isValidHexColor(parsed[key]))
-      if (!hasAll) continue
+      const parsed = JSON.parse(candidate) as Record<string, unknown>;
+      const hasAll = COLOR_FIELDS.every(({ key }) => isValidHexColor(parsed[key]));
+      if (!hasAll) continue;
 
       return {
         primary: parsed.primary as string,
@@ -110,61 +110,61 @@ export default function CreatePresetModal({
   onClose: () => void
   onCreate: (name: string, colors: ThemeColors) => void
 }): JSX.Element | null {
-  const { hasConfiguredAiProvider } = useAiAvailability()
-  const [name, setName] = useState('')
-  const [aiDescription, setAiDescription] = useState('')
-  const [colors, setColors] = useState<ThemeColors>(initialTheme.colors)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isAiPreviewing, setIsAiPreviewing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { hasConfiguredAiProvider } = useAiAvailability();
+  const [name, setName] = useState('');
+  const [aiDescription, setAiDescription] = useState('');
+  const [colors, setColors] = useState<ThemeColors>(initialTheme.colors);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isAiPreviewing, setIsAiPreviewing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return
-    setName('')
-    setAiDescription('')
-    setColors(initialTheme.colors)
-    setError(null)
-    setIsGenerating(false)
+    if (!isOpen) return;
+    setName('');
+    setAiDescription('');
+    setColors(initialTheme.colors);
+    setError(null);
+    setIsGenerating(false);
     setIsAiPreviewing(false)
-  }, [initialTheme.colors, isOpen])
+  }, [initialTheme.colors, isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      e.stopPropagation()
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
       onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown, true)
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (!isAiPreviewing) return
-    const timer = window.setTimeout(() => setIsAiPreviewing(false), 900)
+    if (!isAiPreviewing) return;
+    const timer = window.setTimeout(() => setIsAiPreviewing(false), 900);
     return () => window.clearTimeout(timer)
-  }, [isAiPreviewing])
+  }, [isAiPreviewing]);
 
   const previewColors = useMemo(
     () => COLOR_FIELDS.map(({ key, label }) => ({ key, label, value: colors[key] })),
     [colors]
-  )
+  );
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const generateWithAi = async () => {
-    const prompt = aiDescription.trim()
+    const prompt = aiDescription.trim();
     if (!prompt) {
-      setError('Describe your desired color scheme first.')
+      setError('Describe your desired color scheme first.');
       return
     }
 
-    setError(null)
-    setIsGenerating(true)
+    setError(null);
+    setIsGenerating(true);
     try {
-      const api = getApi()
-      const system = buildColorGenerationSystemPrompt(initialTheme)
+      const api = getApi();
+      const system = buildColorGenerationSystemPrompt(initialTheme);
       const userContent = [
         `User goal: ${prompt}`,
         '',
@@ -172,43 +172,43 @@ export default function CreatePresetModal({
         '```json',
         safeJson(colors),
         '```'
-      ].join('\n')
+      ].join('\n');
 
       const result = await api.ai.chat({
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: userContent }
         ]
-      })
+      });
 
       if (!result.success || typeof result.content !== 'string') {
         throw new Error(result.error || 'AI generation failed.')
       }
 
-      const parsed = parseThemeColorsFromAi(result.content)
+      const parsed = parseThemeColorsFromAi(result.content);
       if (!parsed) {
         throw new Error('AI response did not include a valid ThemeColors JSON block.')
       }
 
-      setColors(parsed)
+      setColors(parsed);
       setIsAiPreviewing(true)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to generate colors.'
+      const message = err instanceof Error ? err.message : 'Failed to generate colors.';
       setError(message)
     } finally {
       setIsGenerating(false)
     }
-  }
+  };
 
   const handleCreate = () => {
-    const trimmed = name.trim()
+    const trimmed = name.trim();
     if (!trimmed) {
-      setError('Preset name is required.')
+      setError('Preset name is required.');
       return
     }
-    onCreate(trimmed, colors)
+    onCreate(trimmed, colors);
     onClose()
-  }
+  };
 
   return (
     <div className="create-preset-overlay" onClick={onClose}>

@@ -9,21 +9,21 @@ export class PublisherVersionMismatchError extends Error {
       `Publisher "${providerId}" has apiVersion "${received}" but the host ` +
       `requires "${PUBLISHER_EXTENSION_API_VERSION}". ` +
       `Update the extension to match the current API version.`
-    )
+    );
     this.name = 'PublisherVersionMismatchError'
   }
 }
 
 export class DuplicatePublisherError extends Error {
   constructor(providerId: string) {
-    super(`A publisher with id "${providerId}" is already registered.`)
+    super(`A publisher with id "${providerId}" is already registered.`);
     this.name = 'DuplicatePublisherError'
   }
 }
 
 // ─── Registry ────────────────────────────────────────────────────────────────
 
-const publishers = new Map<string, PublisherExtension>()
+const publishers = new Map<string, PublisherExtension>();
 
 /**
  * Register a publisher extension.

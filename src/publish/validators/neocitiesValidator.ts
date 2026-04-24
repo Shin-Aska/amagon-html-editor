@@ -27,13 +27,13 @@ export const NEOCITIES_ALLOWED_EXTENSIONS: readonly string[] = [
   '.otf',
   '.eot',
   '.pdf'
-]
+];
 
 export function validateForNeocities(files: ExportedFile[]): ValidationResult {
-  const issues: ValidationIssue[] = []
+  const issues: ValidationIssue[] = [];
 
   for (const file of files) {
-    const extension = getFileExtension(file.path)
+    const extension = getFileExtension(file.path);
 
     if (!NEOCITIES_ALLOWED_EXTENSIONS.includes(extension)) {
       issues.push(
@@ -46,7 +46,7 @@ export function validateForNeocities(files: ExportedFile[]): ValidationResult {
     }
 
     if ((extension === '.html' || extension === '.htm') && typeof file.content === 'string') {
-      const externalUrls = extractExternalUrls(file.content)
+      const externalUrls = extractExternalUrls(file.content);
       for (const url of externalUrls) {
         issues.push(
           makeWarning(
@@ -59,7 +59,7 @@ export function validateForNeocities(files: ExportedFile[]): ValidationResult {
     }
   }
 
-  const errorCount = issues.filter((issue) => issue.severity === 'error').length
+  const errorCount = issues.filter((issue) => issue.severity === 'error').length;
   return {
     ok: errorCount === 0,
     issues

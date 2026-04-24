@@ -1,14 +1,14 @@
 import {type BrowserWindow, Menu} from 'electron'
 
-const isMac = process.platform === 'darwin'
-const mod = isMac ? 'Cmd' : 'Ctrl'
+const isMac = process.platform === 'darwin';
+const mod = isMac ? 'Cmd' : 'Ctrl';
 
 export function buildAppMenu(mainWindow: BrowserWindow, isProjectLoaded: boolean = false): Menu {
   const send = (action: string) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('menu:action', action)
     }
-  }
+  };
 
   const template: Electron.MenuItemConstructorOptions[] = [
     // ── File ────────────────────────────────────────────────
@@ -183,7 +183,7 @@ export function buildAppMenu(mainWindow: BrowserWindow, isProjectLoaded: boolean
         }
       ]
     }
-  ]
+  ];
 
   // macOS: prepend app menu
   if (isMac) {

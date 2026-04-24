@@ -12,73 +12,73 @@ interface ExportDialogProps {
 type ExportMode = 'multi' | 'single'
 
 export default function ExportDialog({ onClose }: ExportDialogProps): JSX.Element {
-  const api = getApi()
+  const api = getApi();
 
-  const getProjectData = useProjectStore((s) => s.getProjectData)
-  const currentPageId = useProjectStore((s) => s.currentPageId)
-  const updatePage = useProjectStore((s) => s.updatePage)
-  const projectName = useProjectStore((s) => s.settings.name)
-  const projectFramework = useProjectStore((s) => s.settings.framework)
+  const getProjectData = useProjectStore((s) => s.getProjectData);
+  const currentPageId = useProjectStore((s) => s.currentPageId);
+  const updatePage = useProjectStore((s) => s.updatePage);
+  const projectName = useProjectStore((s) => s.settings.name);
+  const projectFramework = useProjectStore((s) => s.settings.framework);
 
-  const editorBlocks = useEditorStore((s) => s.blocks)
-  const customCss = useEditorStore((s) => s.customCss)
+  const editorBlocks = useEditorStore((s) => s.blocks);
+  const customCss = useEditorStore((s) => s.customCss);
 
-  const [mode, setMode] = useState<ExportMode>('multi')
-  const [minify, setMinify] = useState(false)
-  const [includeJs, setIncludeJs] = useState(true)
+  const [mode, setMode] = useState<ExportMode>('multi');
+  const [minify, setMinify] = useState(false);
+  const [includeJs, setIncludeJs] = useState(true);
 
-  const [exporting, setExporting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [progressWritten, setProgressWritten] = useState(0)
-  const [progressTotal, setProgressTotal] = useState(0)
-  const [lastExportDir, setLastExportDir] = useState<string | null>(null)
-  const [lastPreviewPath, setLastPreviewPath] = useState<string | null>(null)
+  const [progressWritten, setProgressWritten] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
+  const [lastExportDir, setLastExportDir] = useState<string | null>(null);
+  const [lastPreviewPath, setLastPreviewPath] = useState<string | null>(null);
 
   const defaultDirName = useMemo(() => {
-    const raw = String(projectName || 'export').trim()
-    const sanitized = raw.replace(/[^a-zA-Z0-9._ -]/g, '').trim()
+    const raw = String(projectName || 'export').trim();
+    const sanitized = raw.replace(/[^a-zA-Z0-9._ -]/g, '').trim();
     return sanitized || 'export'
-  }, [projectName])
+  }, [projectName]);
 
   const previewFile = useMemo(() => {
-    const data = getProjectData()
-    const index = data.pages.find((p) => (p.slug || '').toLowerCase() === 'index')
-    const page = index || data.pages[0]
-    const slug = (page?.slug || page?.title || 'index').toString().trim()
+    const data = getProjectData();
+    const index = data.pages.find((p) => (p.slug || '').toLowerCase() === 'index');
+    const page = index || data.pages[0];
+    const slug = (page?.slug || page?.title || 'index').toString().trim();
     const safe = slug
       .toLowerCase()
       .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-_]/g, '')
+      .replace(/[^a-z0-9-_]/g, '');
     return `${safe || 'index'}.html`
-  }, [getProjectData])
+  }, [getProjectData]);
 
   useEffect(() => {
     const cleanup = api.project.onExportProgress((data) => {
-      setProgressWritten(data.written)
+      setProgressWritten(data.written);
       setProgressTotal(data.total)
-    })
+    });
     return cleanup
-  }, [])
+  }, []);
 
   const handleExport = async (): Promise<void> => {
-    setError(null)
-    setLastExportDir(null)
-    setLastPreviewPath(null)
-    setProgressWritten(0)
-    setProgressTotal(0)
+    setError(null);
+    setLastExportDir(null);
+    setLastPreviewPath(null);
+    setProgressWritten(0);
+    setProgressTotal(0);
 
     if (!currentPageId) {
-      setError('No page selected.')
+      setError('No page selected.');
       return
     }
 
-    setExporting(true)
+    setExporting(true);
     try {
-      updatePage(currentPageId, { blocks: editorBlocks })
-      const projectData = getProjectData()
+      updatePage(currentPageId, { blocks: editorBlocks });
+      const projectData = getProjectData();
 
-      const isSingle = mode === 'single'
+      const isSingle = mode === 'single';
 
       const files = await exportProject(projectData, {
         customCss,
@@ -87,16 +87,16 @@ export default function ExportDialog({ onClose }: ExportDialogProps): JSX.Elemen
         onlyPageId: isSingle ? currentPageId : undefined,
         inlineCss: isSingle,
         inlineAssets: isSingle
-      })
+      });
 
       const result = await api.project.exportSite({
         files,
         defaultDirName: defaultDirName,
         previewFile: isSingle ? files.find((f) => f.path.endsWith('.html'))?.path || 'index.html' : previewFile
-      })
+      });
 
       if (result.success) {
-        setLastExportDir(result.directory || null)
+        setLastExportDir(result.directory || null);
         setLastPreviewPath((result as any).previewPath || null)
       } else if (!result.canceled) {
         setError(result.error || 'Export failed.')
@@ -106,21 +106,21 @@ export default function ExportDialog({ onClose }: ExportDialogProps): JSX.Elemen
     } finally {
       setExporting(false)
     }
-  }
+  };
 
   const handlePreview = async (): Promise<void> => {
-    if (!lastPreviewPath) return
+    if (!lastPreviewPath) return;
     try {
-      const result = await api.project.openInBrowser(lastPreviewPath)
+      const result = await api.project.openInBrowser(lastPreviewPath);
       if (!result.success && !result.canceled) {
         setError(result.error || 'Failed to open preview.')
       }
     } catch (err) {
       setError(String(err))
     }
-  }
+  };
 
-  const progressPct = progressTotal > 0 ? Math.round((progressWritten / progressTotal) * 100) : 0
+  const progressPct = progressTotal > 0 ? Math.round((progressWritten / progressTotal) * 100) : 0;
 
   return (
     <div className="export-overlay" onClick={onClose}>

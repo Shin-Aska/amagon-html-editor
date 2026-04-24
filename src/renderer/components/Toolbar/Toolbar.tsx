@@ -74,98 +74,98 @@ export default function Toolbar({
   onOpenPublish,
   onOpenKeyboardShortcuts
 }: ToolbarProps): JSX.Element {
-  const api = getApi()
+  const api = getApi();
 
-  const showToast = useToastStore((s) => s.showToast)
+  const showToast = useToastStore((s) => s.showToast);
   
   // Project Store
-  const getProjectData = useProjectStore((s) => s.getProjectData)
-  const setProject = useProjectStore((s) => s.setProject)
-  const filePath = useProjectStore((s) => s.filePath)
-  const setFilePath = useProjectStore((s) => s.setFilePath)
-  const currentPageId = useProjectStore((s) => s.currentPageId)
-  const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded)
-  const projectName = useProjectStore((s) => s.settings.name)
-  const pageThemePreviewMode = useProjectStore((s) => s.settings.themes?.previewMode ?? 'device')
-  const updateSettings = useProjectStore((s) => s.updateSettings)
-  const updatePage = useProjectStore((s) => s.updatePage)
-  const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode)
+  const getProjectData = useProjectStore((s) => s.getProjectData);
+  const setProject = useProjectStore((s) => s.setProject);
+  const filePath = useProjectStore((s) => s.filePath);
+  const setFilePath = useProjectStore((s) => s.setFilePath);
+  const currentPageId = useProjectStore((s) => s.currentPageId);
+  const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded);
+  const projectName = useProjectStore((s) => s.settings.name);
+  const pageThemePreviewMode = useProjectStore((s) => s.settings.themes?.previewMode ?? 'device');
+  const updateSettings = useProjectStore((s) => s.updateSettings);
+  const updatePage = useProjectStore((s) => s.updatePage);
+  const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode);
 
   // Editor Store
-  const editorBlocks = useEditorStore((s) => s.blocks)
-  const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-  const customCss = useEditorStore((s) => s.customCss)
-  const viewportMode = useEditorStore((s) => s.viewportMode)
-  const zoom = useEditorStore((s) => s.zoom)
-  const theme = useEditorStore((s) => s.theme)
-  const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines)
-  const markSaved = useEditorStore((s) => s.markSaved)
-  const setCustomCss = useEditorStore((s) => s.setCustomCss)
+  const editorBlocks = useEditorStore((s) => s.blocks);
+  const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+  const customCss = useEditorStore((s) => s.customCss);
+  const viewportMode = useEditorStore((s) => s.viewportMode);
+  const zoom = useEditorStore((s) => s.zoom);
+  const theme = useEditorStore((s) => s.theme);
+  const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines);
+  const markSaved = useEditorStore((s) => s.markSaved);
+  const setCustomCss = useEditorStore((s) => s.setCustomCss);
   
-  const addBlock = useEditorStore((s) => s.addBlock)
-  const removeBlock = useEditorStore((s) => s.removeBlock)
-  const setPageBlocks = useEditorStore((s) => s.setPageBlocks)
-  const setViewportMode = useEditorStore((s) => s.setViewportMode)
-  const setZoom = useEditorStore((s) => s.setZoom)
-  const setTheme = useEditorStore((s) => s.setTheme)
-  const setLayoutOutlines = useEditorStore((s) => s.setLayoutOutlines)
-  const undo = useEditorStore((s) => s.undo)
-  const redo = useEditorStore((s) => s.redo)
-  const getBlockById = useEditorStore((s) => s.getBlockById)
+  const addBlock = useEditorStore((s) => s.addBlock);
+  const removeBlock = useEditorStore((s) => s.removeBlock);
+  const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
+  const setViewportMode = useEditorStore((s) => s.setViewportMode);
+  const setZoom = useEditorStore((s) => s.setZoom);
+  const setTheme = useEditorStore((s) => s.setTheme);
+  const setLayoutOutlines = useEditorStore((s) => s.setLayoutOutlines);
+  const undo = useEditorStore((s) => s.undo);
+  const redo = useEditorStore((s) => s.redo);
+  const getBlockById = useEditorStore((s) => s.getBlockById);
 
-  const [showAssetManager, setShowAssetManager] = useState(false)
-  const [showCredentialManager, setShowCredentialManager] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settingsInitialTab, setSettingsInitialTab] = useState<GlobalSettingsTab>('general')
-  const [showNewProject, setShowNewProject] = useState(false)
-  const [showExport, setShowExport] = useState(false)
-  const [editingName, setEditingName] = useState(false)
-  const [tempName, setTempName] = useState(projectName)
-  const [isSaving, setIsSaving] = useState(false)
-  const [showLayoutMenu, setShowLayoutMenu] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [editingZoom, setEditingZoom] = useState(false)
-  const [tempZoom, setTempZoom] = useState(String(zoom))
+  const [showAssetManager, setShowAssetManager] = useState(false);
+  const [showCredentialManager, setShowCredentialManager] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<GlobalSettingsTab>('general');
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [tempName, setTempName] = useState(projectName);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showLayoutMenu, setShowLayoutMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [editingZoom, setEditingZoom] = useState(false);
+  const [tempZoom, setTempZoom] = useState(String(zoom));
 
   // Store access for pages (read-only for display)
-  const currentPage = useProjectStore((s) => s.getCurrentPage())
+  const currentPage = useProjectStore((s) => s.getCurrentPage());
 
   // Sync temp name when project name changes
   useEffect(() => {
     setTempName(projectName)
-  }, [projectName])
+  }, [projectName]);
 
   useEffect(() => {
     const handleOpenSettings = (event: Event) => {
-      const customEvent = event as CustomEvent<OpenGlobalSettingsDetail>
-      setSettingsInitialTab(customEvent.detail?.tab ?? 'general')
-      setShowSettings(true)
+      const customEvent = event as CustomEvent<OpenGlobalSettingsDetail>;
+      setSettingsInitialTab(customEvent.detail?.tab ?? 'general');
+      setShowSettings(true);
       setShowCredentialManager(false)
-    }
+    };
 
-    window.addEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener)
+    window.addEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener);
     return () => window.removeEventListener(OPEN_GLOBAL_SETTINGS_EVENT, handleOpenSettings as EventListener)
-  }, [])
+  }, []);
 
   // Auto-save listener
   useEffect(() => {
     const cleanup = api.autosave.onTick(() => {
       handleSave(true)
-    })
+    });
     return cleanup
-  }, [filePath, currentPageId])
+  }, [filePath, currentPageId]);
 
   const ensureBackendReadyAndFlushEdits = async (): Promise<boolean> => {
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
-    const isElectron = /electron/i.test(ua)
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isElectron = /electron/i.test(ua);
     if (isElectron && !window.api) {
-      showToast('Electron backend not available (window.api missing)', 'error')
+      showToast('Electron backend not available (window.api missing)', 'error');
       return false
     }
 
-    const active = document.activeElement as HTMLElement | null
-    active?.blur?.()
-    await new Promise((r) => setTimeout(r, 0))
+    const active = document.activeElement as HTMLElement | null;
+    active?.blur?.();
+    await new Promise((r) => setTimeout(r, 0));
 
     // If the user is typing in the code editor, wait for the debounce commit.
     // (HTML parse debounce is 800ms; CSS debounce is 500ms.)
@@ -173,24 +173,24 @@ export default function Toolbar({
       await new Promise((r) => setTimeout(r, 900))
     }
     return true
-  }
+  };
 
   const handleSave = async (silent = false): Promise<void> => {
-    if (isSaving) return
-    setIsSaving(true)
+    if (isSaving) return;
+    setIsSaving(true);
 
     try {
-      const ok = await ensureBackendReadyAndFlushEdits()
-      if (!ok) return
+      const ok = await ensureBackendReadyAndFlushEdits();
+      if (!ok) return;
 
-      const editorState = useEditorStore.getState()
-      const projectState = useProjectStore.getState()
-      const pageId = projectState.currentPageId
+      const editorState = useEditorStore.getState();
+      const projectState = useProjectStore.getState();
+      const pageId = projectState.currentPageId;
 
-      const baseProjectData = projectState.getProjectData()
+      const baseProjectData = projectState.getProjectData();
       const pages = projectState.pages.map((p) =>
         pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
-      )
+      );
 
       const content = JSON.stringify(
         {
@@ -200,7 +200,7 @@ export default function Toolbar({
         },
         null,
         2
-      )
+      );
 
       if (pageId) {
         projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
@@ -209,15 +209,15 @@ export default function Toolbar({
       const result = await api.project.save({
         filePath: projectState.filePath || undefined,
         content
-      })
+      });
 
       if (result.success) {
-        markSaved()
+        markSaved();
         if (result.filePath && result.filePath !== projectState.filePath) {
           projectState.setFilePath(result.filePath)
         }
         if (!silent) {
-          const shownPath = (result.filePath || projectState.filePath || '').toString()
+          const shownPath = (result.filePath || projectState.filePath || '').toString();
           showToast(shownPath ? `Saved: ${shownPath}` : 'Saved', 'success')
         }
       } else if (!result.canceled) {
@@ -228,43 +228,43 @@ export default function Toolbar({
     } finally {
       setIsSaving(false)
     }
-  }
+  };
 
   const handleLoad = async (): Promise<void> => {
-    const result = await api.project.load()
+    const result = await api.project.load();
     if (result.success && result.content) {
-      setProject(result.content as any, result.filePath)
-      const data = result.content as any
-      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      setProject(result.content as any, result.filePath);
+      const data = result.content as any;
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null;
       if (firstPage && Array.isArray(firstPage.blocks)) {
         useEditorStore.getState().loadPageBlocks(firstPage.blocks)
       }
-      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
-      markSaved()
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '');
+      markSaved();
       showToast('Project loaded', 'success')
     } else if (!result.canceled) {
       showToast(result.error || 'Load failed', 'error')
     }
-  }
+  };
 
   const handleExport = async (): Promise<void> => {
-    const ok = await ensureBackendReadyAndFlushEdits()
-    if (!ok) return
+    const ok = await ensureBackendReadyAndFlushEdits();
+    if (!ok) return;
     if (currentPageId) {
       updatePage(currentPageId, { blocks: useEditorStore.getState().getFullBlocks() })
     }
     setShowExport(true)
-  }
+  };
 
   const handleCopyHtml = async (): Promise<void> => {
     try {
-      const ok = await ensureBackendReadyAndFlushEdits()
-      if (!ok) return
+      const ok = await ensureBackendReadyAndFlushEdits();
+      if (!ok) return;
       if (currentPageId) {
         updatePage(currentPageId, { blocks: useEditorStore.getState().getFullBlocks() })
       }
-      const projectData = getProjectData()
-      const { exportProject } = await import('../../utils/exportEngine')
+      const projectData = getProjectData();
+      const { exportProject } = await import('../../utils/exportEngine');
 
       const files = await exportProject(projectData, {
         customCss,
@@ -273,53 +273,53 @@ export default function Toolbar({
         inlineAssets: true,
         includeJs: true,
         minify: false
-      })
+      });
 
-      const htmlFile = files.find((f) => f.path.endsWith('.html'))
-      const html = htmlFile && typeof htmlFile.content === 'string' ? htmlFile.content : ''
-      if (!html) return
+      const htmlFile = files.find((f) => f.path.endsWith('.html'));
+      const html = htmlFile && typeof htmlFile.content === 'string' ? htmlFile.content : '';
+      if (!html) return;
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(html)
-        console.log('Copied HTML to clipboard')
+        await navigator.clipboard.writeText(html);
+        console.log('Copied HTML to clipboard');
         return
       }
 
-      const el = document.createElement('textarea')
-      el.value = html
-      el.style.position = 'fixed'
-      el.style.left = '-9999px'
-      document.body.appendChild(el)
-      el.select()
-      document.execCommand('copy')
-      document.body.removeChild(el)
+      const el = document.createElement('textarea');
+      el.value = html;
+      el.style.position = 'fixed';
+      el.style.left = '-9999px';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
       console.log('Copied HTML to clipboard')
     } catch (err) {
       console.error('Copy HTML failed:', err)
     }
-  }
+  };
 
   // Simple clipboard implementation (memory-only for now)
-  const [clipboard, setClipboard] = useState<Block | null>(null)
+  const [clipboard, setClipboard] = useState<Block | null>(null);
 
   const handleCopy = () => {
     if (selectedBlockId) {
-      const block = getBlockById(selectedBlockId)
+      const block = getBlockById(selectedBlockId);
       if (block) {
         setClipboard(block)
       }
     }
-  }
+  };
 
   const handleCut = () => {
     if (selectedBlockId) {
-      const block = getBlockById(selectedBlockId)
+      const block = getBlockById(selectedBlockId);
       if (block) {
-        setClipboard(block)
+        setClipboard(block);
         removeBlock(selectedBlockId)
       }
     }
-  }
+  };
 
   const handlePaste = () => {
     if (clipboard) {
@@ -332,54 +332,54 @@ export default function Toolbar({
           content: b.content,
           children: b.children.map(cloneBlock)
         })
-      }
+      };
       
-      const newBlock = cloneBlock(clipboard)
+      const newBlock = cloneBlock(clipboard);
       addBlock(newBlock, selectedBlockId) // Add as child of selected, or root
     }
-  }
+  };
 
   const handleDelete = () => {
     if (selectedBlockId) {
       removeBlock(selectedBlockId)
     }
-  }
+  };
 
   // Name Editing
   const saveName = () => {
-    updateSettings({ name: tempName })
+    updateSettings({ name: tempName });
     setEditingName(false)
-  }
+  };
 
   const handleNameKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') saveName()
+    if (e.key === 'Enter') saveName();
     if (e.key === 'Escape') {
-      setTempName(projectName)
+      setTempName(projectName);
       setEditingName(false)
     }
-  }
+  };
 
   // Zoom editing handlers
   const commitZoom = () => {
-    const parsed = parseInt(tempZoom, 10)
+    const parsed = parseInt(tempZoom, 10);
     if (!isNaN(parsed)) {
       setZoom(parsed)
     }
     setEditingZoom(false)
-  }
+  };
 
   const handleZoomKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') commitZoom()
+    if (e.key === 'Enter') commitZoom();
     if (e.key === 'Escape') {
-      setTempZoom(String(zoom))
+      setTempZoom(String(zoom));
       setEditingZoom(false)
     }
-  }
+  };
 
   // Keep tempZoom in sync when zoom changes externally
   useEffect(() => {
     if (!editingZoom) setTempZoom(String(zoom))
-  }, [zoom, editingZoom])
+  }, [zoom, editingZoom]);
 
   return (
     <>

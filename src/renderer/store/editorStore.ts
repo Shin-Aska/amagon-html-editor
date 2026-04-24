@@ -3,12 +3,12 @@ import {useAppSettingsStore} from './appSettingsStore'
 import type {Block, EditorActions, EditorState, HistoryEntry} from './types'
 
 // Callback registered by projectStore to sync blocks on tab exit (avoids circular import)
-let _onExitTabEditMode: ((blocks: Block[]) => void) | null = null
+let _onExitTabEditMode: ((blocks: Block[]) => void) | null = null;
 export function setOnExitTabEditModeCallback(cb: (blocks: Block[]) => void) {
   _onExitTabEditMode = cb
 }
 
-const MAX_HISTORY = 50
+const MAX_HISTORY = 50;
 
 // ─── Deep clone helper ───────────────────────────────────────────────────────
 
@@ -20,8 +20,8 @@ function cloneBlocks(blocks: Block[]): Block[] {
 
 function findBlockById(blocks: Block[], id: string): Block | null {
   for (const block of blocks) {
-    if (block.id === id) return block
-    const found = findBlockById(block.children, id)
+    if (block.id === id) return block;
+    const found = findBlockById(block.children, id);
     if (found) return found
   }
   return null
@@ -29,26 +29,26 @@ function findBlockById(blocks: Block[], id: string): Block | null {
 
 function findBlockPath(blocks: Block[], id: string, path: string[] = []): string[] | null {
   for (const block of blocks) {
-    if (block.id === id) return [...path, block.id]
-    const found = findBlockPath(block.children, id, [...path, block.id])
+    if (block.id === id) return [...path, block.id];
+    const found = findBlockPath(block.children, id, [...path, block.id]);
     if (found) return found
   }
   return null
 }
 
 function removeBlockFromTree(blocks: Block[], id: string): { tree: Block[]; removed: Block | null } {
-  let removed: Block | null = null
+  let removed: Block | null = null;
 
   const filter = (items: Block[]): Block[] => {
     return items.reduce<Block[]>((acc, block) => {
       if (block.id === id) {
-        removed = block
+        removed = block;
         return acc
       }
-      acc.push({ ...block, children: filter(block.children) })
+      acc.push({ ...block, children: filter(block.children) });
       return acc
     }, [])
-  }
+  };
 
   return { tree: filter(blocks), removed }
 }
@@ -60,17 +60,17 @@ function insertBlockInTree(
   index: number
 ): Block[] {
   if (parentId === null) {
-    const newBlocks = [...blocks]
-    const clampedIndex = Math.max(0, Math.min(index, newBlocks.length))
-    newBlocks.splice(clampedIndex, 0, block)
+    const newBlocks = [...blocks];
+    const clampedIndex = Math.max(0, Math.min(index, newBlocks.length));
+    newBlocks.splice(clampedIndex, 0, block);
     return newBlocks
   }
 
   return blocks.map((b) => {
     if (b.id === parentId) {
-      const newChildren = [...b.children]
-      const clampedIndex = Math.max(0, Math.min(index, newChildren.length))
-      newChildren.splice(clampedIndex, 0, block)
+      const newChildren = [...b.children];
+      const clampedIndex = Math.max(0, Math.min(index, newChildren.length));
+      newChildren.splice(clampedIndex, 0, block);
       return { ...b, children: newChildren }
     }
     return { ...b, children: insertBlockInTree(b.children, block, parentId, index) }
@@ -87,9 +87,9 @@ const BUTTON_VARIANT_CLASSES = new Set([
   'btn-light',
   'btn-dark',
   'btn-link'
-])
+]);
 
-const BUTTON_SIZE_CLASSES = new Set(['btn-sm', 'btn-lg'])
+const BUTTON_SIZE_CLASSES = new Set(['btn-sm', 'btn-lg']);
 
 function syncButtonClasses(
   block: Block,
@@ -97,22 +97,22 @@ function syncButtonClasses(
   nextProps: Record<string, unknown>,
   nextClasses: string[]
 ): string[] {
-  if (block.type !== 'button') return nextClasses
+  if (block.type !== 'button') return nextClasses;
 
-  const updatesVariant = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'variant')
-  const updatesSize = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'size')
+  const updatesVariant = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'variant');
+  const updatesSize = !!propPatch && Object.prototype.hasOwnProperty.call(propPatch, 'size');
 
   const classes = nextClasses.filter((cls) => {
-    if (updatesVariant && BUTTON_VARIANT_CLASSES.has(cls)) return false
-    if (updatesSize && BUTTON_SIZE_CLASSES.has(cls)) return false
+    if (updatesVariant && BUTTON_VARIANT_CLASSES.has(cls)) return false;
+    if (updatesSize && BUTTON_SIZE_CLASSES.has(cls)) return false;
     return true
-  })
+  });
 
-  const variant = updatesVariant && typeof nextProps.variant === 'string' ? nextProps.variant.trim() : ''
-  const size = updatesSize && typeof nextProps.size === 'string' ? nextProps.size.trim() : ''
+  const variant = updatesVariant && typeof nextProps.variant === 'string' ? nextProps.variant.trim() : '';
+  const size = updatesSize && typeof nextProps.size === 'string' ? nextProps.size.trim() : '';
 
-  if (variant) classes.push(variant)
-  if (size) classes.push(size)
+  if (variant) classes.push(variant);
+  if (size) classes.push(size);
 
   return classes
 }
@@ -124,8 +124,8 @@ function updateBlockInTree(
 ): Block[] {
   return blocks.map((block) => {
     if (block.id === id) {
-      const newProps = patch.props ? { ...block.props, ...patch.props } : block.props
-      const newStyles = patch.styles ? { ...block.styles, ...patch.styles } : block.styles
+      const newProps = patch.props ? { ...block.props, ...patch.props } : block.props;
+      const newStyles = patch.styles ? { ...block.styles, ...patch.styles } : block.styles;
 
       if (patch.props) {
         for (const key in newProps) {
@@ -144,7 +144,7 @@ function updateBlockInTree(
         patch.props,
         newProps as Record<string, unknown>,
         patch.classes ? [...patch.classes] : [...block.classes]
-      )
+      );
 
       return {
         ...block,
@@ -159,8 +159,8 @@ function updateBlockInTree(
 }
 
 function isDescendantOf(blocks: Block[], ancestorId: string, descendantId: string): boolean {
-  const ancestor = findBlockById(blocks, ancestorId)
-  if (!ancestor) return false
+  const ancestor = findBlockById(blocks, ancestorId);
+  if (!ancestor) return false;
   return findBlockById(ancestor.children, descendantId) !== null
 }
 
@@ -171,18 +171,18 @@ function isFormBlock(block: Block): boolean {
 }
 
 function isInsideForm(blocks: Block[], parentId: string | null): boolean {
-  if (!parentId) return false
-  const path = findBlockPath(blocks, parentId)
-  if (!path) return false
+  if (!parentId) return false;
+  const path = findBlockPath(blocks, parentId);
+  if (!path) return false;
   for (const id of path) {
-    const b = findBlockById(blocks, id)
+    const b = findBlockById(blocks, id);
     if (b && isFormBlock(b)) return true
   }
   return false
 }
 
 function containsForm(block: Block): boolean {
-  if (isFormBlock(block)) return true
+  if (isFormBlock(block)) return true;
   for (const child of block.children) {
     if (containsForm(child)) return true
   }
@@ -203,9 +203,9 @@ function createHistoryEntry(blocks: Block[]): HistoryEntry {
 export const useEditorStore = create<EditorStore>((set, get) => {
   // Push a snapshot onto the history stack, truncating any redo entries
   function pushHistory(currentBlocks: Block[]): { history: HistoryEntry[]; historyIndex: number } {
-    const state = get()
-    const newHistory = state.history.slice(0, state.historyIndex + 1)
-    newHistory.push(createHistoryEntry(currentBlocks))
+    const state = get();
+    const newHistory = state.history.slice(0, state.historyIndex + 1);
+    newHistory.push(createHistoryEntry(currentBlocks));
 
     // Cap at MAX_HISTORY
     if (newHistory.length > MAX_HISTORY) {
@@ -221,7 +221,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
   // ─── Restore persisted theme preference ──────────────────────────────
   // The initial theme is now managed by appSettingsStore.
   // We default to 'dark' here; appSettingsStore will update it on load if needed.
-  const initialTheme: 'light' | 'dark' = 'dark'
+  const initialTheme: 'light' | 'dark' = 'dark';
 
   return {
     // ─── Initial State ─────────────────────────────────────────────────
@@ -262,14 +262,14 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         }
         // Prevent adding any block inside a form if it contains a nested form
         if (parentId) {
-          const parent = findBlockById(state.blocks, parentId)
+          const parent = findBlockById(state.blocks, parentId);
           if (parent && isFormBlock(parent) && containsForm(block)) {
             return state
           }
         }
 
-        const idx = index < 0 ? (parentId ? (findBlockById(state.blocks, parentId)?.children.length ?? 0) : state.blocks.length) : index
-        const newBlocks = insertBlockInTree(state.blocks, block, parentId, idx)
+        const idx = index < 0 ? (parentId ? (findBlockById(state.blocks, parentId)?.children.length ?? 0) : state.blocks.length) : index;
+        const newBlocks = insertBlockInTree(state.blocks, block, parentId, idx);
         return {
           blocks: newBlocks,
           isDirty: true,
@@ -280,7 +280,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     updateBlock: (id, patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & { props?: Record<string, unknown>; styles?: Record<string, string | undefined> }) => {
       set((state) => {
-        const newBlocks = updateBlockInTree(state.blocks, id, patch)
+        const newBlocks = updateBlockInTree(state.blocks, id, patch);
         return {
           blocks: newBlocks,
           isDirty: true,
@@ -297,7 +297,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         }
 
         // Prevent form-inside-form nesting on move
-        const movingBlock = findBlockById(state.blocks, id)
+        const movingBlock = findBlockById(state.blocks, id);
         if (movingBlock) {
           if (isFormBlock(movingBlock) && isInsideForm(state.blocks, newParentId)) {
             return state
@@ -306,17 +306,17 @@ export const useEditorStore = create<EditorStore>((set, get) => {
             return state
           }
           if (newParentId) {
-            const parent = findBlockById(state.blocks, newParentId)
+            const parent = findBlockById(state.blocks, newParentId);
             if (parent && isFormBlock(parent) && containsForm(movingBlock)) {
               return state
             }
           }
         }
 
-        const { tree, removed } = removeBlockFromTree(state.blocks, id)
-        if (!removed) return state
+        const { tree, removed } = removeBlockFromTree(state.blocks, id);
+        if (!removed) return state;
 
-        const newBlocks = insertBlockInTree(tree, removed, newParentId, newIndex)
+        const newBlocks = insertBlockInTree(tree, removed, newParentId, newIndex);
         return {
           blocks: newBlocks,
           isDirty: true,
@@ -327,8 +327,8 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     removeBlock: (id) => {
       set((state) => {
-        const { tree } = removeBlockFromTree(state.blocks, id)
-        const newSelectedId = state.selectedBlockId === id ? null : state.selectedBlockId
+        const { tree } = removeBlockFromTree(state.blocks, id);
+        const newSelectedId = state.selectedBlockId === id ? null : state.selectedBlockId;
         return {
           blocks: tree,
           selectedBlockId: newSelectedId,
@@ -359,7 +359,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     setTheme: (theme) => {
-      set({ theme })
+      set({ theme });
       useAppSettingsStore.getState().setTheme(theme)
     },
 
@@ -368,7 +368,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     setEditorLayout: (layout) => {
-      set({ editorLayout: layout })
+      set({ editorLayout: layout });
       useAppSettingsStore.getState().setDefaultLayout(layout)
     },
 
@@ -378,7 +378,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     setPageBlocks: (blocks) => {
       set((state) => {
-        const newBlocks = cloneBlocks(blocks)
+        const newBlocks = cloneBlocks(blocks);
         return {
           blocks: newBlocks,
           selectedBlockId: null,
@@ -391,7 +391,7 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     loadPageBlocks: (blocks) => {
       set((state) => {
-        const newBlocks = cloneBlocks(blocks)
+        const newBlocks = cloneBlocks(blocks);
         return {
           blocks: newBlocks,
           selectedBlockId: null,
@@ -427,9 +427,9 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     undo: () => {
       set((state) => {
-        if (state.historyIndex <= 0) return state
-        const newIndex = state.historyIndex - 1
-        const entry = state.history[newIndex]
+        if (state.historyIndex <= 0) return state;
+        const newIndex = state.historyIndex - 1;
+        const entry = state.history[newIndex];
         return {
           blocks: cloneBlocks(entry.blocks),
           historyIndex: newIndex,
@@ -441,9 +441,9 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     redo: () => {
       set((state) => {
-        if (state.historyIndex >= state.history.length - 1) return state
-        const newIndex = state.historyIndex + 1
-        const entry = state.history[newIndex]
+        if (state.historyIndex >= state.history.length - 1) return state;
+        const newIndex = state.historyIndex + 1;
+        const entry = state.history[newIndex];
         return {
           blocks: cloneBlocks(entry.blocks),
           historyIndex: newIndex,
@@ -464,16 +464,16 @@ export const useEditorStore = create<EditorStore>((set, get) => {
     },
 
     getFullBlocks: () => {
-      const state = get()
+      const state = get();
       if (!state.activeTabEditBlockId || !state.pageBlocksBackup || state.activeTabIndex === null) {
         return state.blocks
       }
       
       // We are in tab edit mode, merge current blocks back into the backup tree
-      const fullTree = cloneBlocks(state.pageBlocksBackup)
-      const tabBlock = findBlockById(fullTree, state.activeTabEditBlockId)
+      const fullTree = cloneBlocks(state.pageBlocksBackup);
+      const tabBlock = findBlockById(fullTree, state.activeTabEditBlockId);
       if (tabBlock && Array.isArray(tabBlock.props.tabs)) {
-        const tabs = tabBlock.props.tabs as any[]
+        const tabs = tabBlock.props.tabs as any[];
         if (tabs[state.activeTabIndex]) {
           tabs[state.activeTabIndex] = {
             ...tabs[state.activeTabIndex],
@@ -486,17 +486,17 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     enterTabEditMode: (blockId, tabIndex) => {
       set((state) => {
-        if (state.activeTabEditBlockId) return state // Already in edit mode
+        if (state.activeTabEditBlockId) return state; // Already in edit mode
         
-        const tabBlock = findBlockById(state.blocks, blockId)
-        if (!tabBlock || !Array.isArray(tabBlock.props.tabs)) return state
+        const tabBlock = findBlockById(state.blocks, blockId);
+        if (!tabBlock || !Array.isArray(tabBlock.props.tabs)) return state;
         
-        const tabs = tabBlock.props.tabs as any[]
-        const targetTab = tabs[tabIndex]
-        if (!targetTab) return state
+        const tabs = tabBlock.props.tabs as any[];
+        const targetTab = tabs[tabIndex];
+        if (!targetTab) return state;
 
         // Initialize blocks if they don't exist
-        let tabBlocks: Block[] = targetTab.blocks || []
+        let tabBlocks: Block[] = targetTab.blocks || [];
         if (tabBlocks.length === 0 && targetTab.content) {
           tabBlocks = [
             {
@@ -525,16 +525,16 @@ export const useEditorStore = create<EditorStore>((set, get) => {
 
     exitTabEditMode: () => {
       // Compute the merged full tree BEFORE clearing state
-      const currentState = get()
+      const currentState = get();
       if (!currentState.activeTabEditBlockId || !currentState.pageBlocksBackup || currentState.activeTabIndex === null) {
         return
       }
 
-      const fullTree = currentState.getFullBlocks()
+      const fullTree = currentState.getFullBlocks();
 
       // Immediately push merged tree to projectStore via callback so any
       // subsequent loadPageBlocks call reads the correct blocks, not a stale snapshot
-      _onExitTabEditMode?.(fullTree)
+      _onExitTabEditMode?.(fullTree);
 
       set({
         blocks: fullTree,
@@ -549,4 +549,4 @@ export const useEditorStore = create<EditorStore>((set, get) => {
       })
     }
   }
-})
+});

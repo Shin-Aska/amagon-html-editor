@@ -11,7 +11,7 @@ interface StoredPublishConfigFile {
   providers: Record<string, StoredProviderCredentials>
 }
 
-const PUBLISH_CONFIG_FILENAME = 'publish-config.json'
+const PUBLISH_CONFIG_FILENAME = 'publish-config.json';
 
 function getPublishConfigPath(): string {
   return path.join(app.getPath('userData'), PUBLISH_CONFIG_FILENAME)
@@ -22,17 +22,17 @@ function normalizeStoredConfig(raw: unknown): StoredPublishConfigFile {
     return { version: 1, providers: {} }
   }
 
-  const record = raw as Record<string, unknown>
+  const record = raw as Record<string, unknown>;
   const providersSource =
     record.providers && typeof record.providers === 'object'
       ? (record.providers as Record<string, unknown>)
-      : record
+      : record;
 
-  const providers: Record<string, StoredProviderCredentials> = {}
+  const providers: Record<string, StoredProviderCredentials> = {};
   for (const [providerId, value] of Object.entries(providersSource)) {
-    if (!value || typeof value !== 'object') continue
+    if (!value || typeof value !== 'object') continue;
 
-    const providerCredentials: StoredProviderCredentials = {}
+    const providerCredentials: StoredProviderCredentials = {};
     for (const [key, encodedValue] of Object.entries(value as Record<string, unknown>)) {
       if (typeof encodedValue === 'string') {
         providerCredentials[key] = encodedValue
@@ -46,7 +46,7 @@ function normalizeStoredConfig(raw: unknown): StoredPublishConfigFile {
 
 async function readStoredConfig(): Promise<StoredPublishConfigFile> {
   try {
-    const raw = await fs.readFile(getPublishConfigPath(), 'utf-8')
+    const raw = await fs.readFile(getPublishConfigPath(), 'utf-8');
     return normalizeStoredConfig(JSON.parse(raw))
   } catch {
     return { version: 1, providers: {} }
@@ -62,9 +62,9 @@ async function writeStoredConfig(config: StoredPublishConfigFile): Promise<void>
 }
 
 export async function loadPublishCredentials(providerId: string): Promise<PublishCredentials> {
-  const config = await readStoredConfig()
-  const stored = config.providers[providerId] ?? {}
-  const credentials: PublishCredentials = {}
+  const config = await readStoredConfig();
+  const stored = config.providers[providerId] ?? {};
+  const credentials: PublishCredentials = {};
 
   for (const [key, encodedValue] of Object.entries(stored)) {
     credentials[key] = decryptApiKey(encodedValue)
@@ -77,25 +77,25 @@ export async function savePublishCredentials(
   providerId: string,
   credentials: PublishCredentials
 ): Promise<void> {
-  const config = await readStoredConfig()
-  const encrypted: StoredProviderCredentials = {}
+  const config = await readStoredConfig();
+  const encrypted: StoredProviderCredentials = {};
 
   for (const [key, value] of Object.entries(credentials)) {
     encrypted[key] = encryptApiKey(value ?? '')
   }
 
-  config.providers[providerId] = encrypted
+  config.providers[providerId] = encrypted;
   await writeStoredConfig(config)
 }
 
 export async function deletePublishCredentials(providerId: string): Promise<void> {
-  const config = await readStoredConfig()
-  delete config.providers[providerId]
+  const config = await readStoredConfig();
+  delete config.providers[providerId];
   await writeStoredConfig(config)
 }
 
 export async function listConfiguredProviders(): Promise<string[]> {
-  const config = await readStoredConfig()
+  const config = await readStoredConfig();
   return Object.entries(config.providers)
     .filter(([, credentials]) => Object.values(credentials).some((value) => Boolean(value)))
     .map(([providerId]) => providerId)

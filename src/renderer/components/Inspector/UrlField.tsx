@@ -13,18 +13,18 @@ export default function UrlField({
     onChange,
     placeholder = 'e.g. https://... or select a page'
 }: UrlFieldProps): JSX.Element {
-    const [open, setOpen] = useState(false)
-    const [inputValue, setInputValue] = useState(value || '')
-    const wrapperRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
+    const [open, setOpen] = useState(false);
+    const [inputValue, setInputValue] = useState(value || '');
+    const wrapperRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const pages = useProjectStore((s) => s.pages)
-    const folders = useProjectStore((s) => s.folders)
+    const pages = useProjectStore((s) => s.pages);
+    const folders = useProjectStore((s) => s.folders);
 
     // Sync external value changes
     useEffect(() => {
         setInputValue(value || '')
-    }, [value])
+    }, [value]);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -32,17 +32,17 @@ export default function UrlField({
             if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
                 setOpen(false)
             }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
+        };
+        document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+    }, []);
 
     // Build page suggestions with folder paths
     const pageSuggestions = useMemo(() => {
         return pages.map((page) => {
-            const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null
-            const folderPrefix = folder ? `${folder.name}/` : ''
-            const url = `${folderPrefix}${page.slug}.html`
+            const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null;
+            const folderPrefix = folder ? `${folder.name}/` : '';
+            const url = `${folderPrefix}${page.slug}.html`;
             return {
                 id: page.id,
                 title: page.title,
@@ -51,49 +51,49 @@ export default function UrlField({
                 folderName: folder?.name || ''
             }
         })
-    }, [pages, folders])
+    }, [pages, folders]);
 
     // Filter suggestions based on input text
     const filtered = useMemo(() => {
-        const search = inputValue.toLowerCase().trim()
-        if (!search) return pageSuggestions
+        const search = inputValue.toLowerCase().trim();
+        if (!search) return pageSuggestions;
         return pageSuggestions.filter(
             (p) =>
                 p.title.toLowerCase().includes(search) ||
                 p.slug.toLowerCase().includes(search) ||
                 p.url.toLowerCase().includes(search)
         )
-    }, [inputValue, pageSuggestions])
+    }, [inputValue, pageSuggestions]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const v = e.target.value
-        setInputValue(v)
-        onChange(v)
+        const v = e.target.value;
+        setInputValue(v);
+        onChange(v);
         setOpen(true)
-    }
+    };
 
     const handleSelect = (url: string) => {
-        setInputValue(url)
-        onChange(url)
-        setOpen(false)
+        setInputValue(url);
+        onChange(url);
+        setOpen(false);
         inputRef.current?.focus()
-    }
+    };
 
     const handleFocus = () => {
         setOpen(true)
-    }
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Escape') {
             setOpen(false)
         }
-    }
+    };
 
     const handleClear = () => {
-        setInputValue('')
-        onChange('')
+        setInputValue('');
+        onChange('');
         inputRef.current?.focus()
-    }
+    };
 
     return (
         <div className="url-field-wrapper" ref={wrapperRef}>
@@ -127,7 +127,7 @@ export default function UrlField({
                             key={page.id}
                             className={`url-field-option ${page.url === inputValue ? 'selected' : ''}`}
                             onMouseDown={(e) => {
-                                e.preventDefault()
+                                e.preventDefault();
                                 handleSelect(page.url)
                             }}
                         >

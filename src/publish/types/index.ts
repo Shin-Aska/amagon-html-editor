@@ -4,7 +4,7 @@
 export type PublisherExtensionVersion = '1.0'
 
 /** Current API version all extensions must match to register. */
-export const PUBLISHER_EXTENSION_API_VERSION: PublisherExtensionVersion = '1.0'
+export const PUBLISHER_EXTENSION_API_VERSION: PublisherExtensionVersion = '1.0';
 
 // Re-export ExportFile so publisher code can reference it without reaching
 // into renderer internals.  The shape is intentionally duplicated here to

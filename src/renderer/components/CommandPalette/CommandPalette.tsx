@@ -62,27 +62,27 @@ export default function CommandPalette({
   onToggleLeftPanel,
   onToggleRightPanel
 }: CommandPaletteProps): JSX.Element | null {
-  const [query, setQuery] = useState('')
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Store access
-  const blocks = useEditorStore((s) => s.blocks)
-  const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-  const addBlock = useEditorStore((s) => s.addBlock)
-  const selectBlock = useEditorStore((s) => s.selectBlock)
-  const undo = useEditorStore((s) => s.undo)
-  const redo = useEditorStore((s) => s.redo)
-  const setClipboard = useEditorStore((s) => s.setClipboard)
-  const getBlockById = useEditorStore((s) => s.getBlockById)
-  const removeBlock = useEditorStore((s) => s.removeBlock)
-  const theme = useEditorStore((s) => s.theme)
-  const setTheme = useEditorStore((s) => s.setTheme)
-  const userBlocks = useProjectStore((s) => s.userBlocks)
+  const blocks = useEditorStore((s) => s.blocks);
+  const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+  const addBlock = useEditorStore((s) => s.addBlock);
+  const selectBlock = useEditorStore((s) => s.selectBlock);
+  const undo = useEditorStore((s) => s.undo);
+  const redo = useEditorStore((s) => s.redo);
+  const setClipboard = useEditorStore((s) => s.setClipboard);
+  const getBlockById = useEditorStore((s) => s.getBlockById);
+  const removeBlock = useEditorStore((s) => s.removeBlock);
+  const theme = useEditorStore((s) => s.theme);
+  const setTheme = useEditorStore((s) => s.setTheme);
+  const userBlocks = useProjectStore((s) => s.userBlocks);
 
   // Build palette items
   const items: PaletteItem[] = useMemo(() => {
-    const result: PaletteItem[] = []
+    const result: PaletteItem[] = [];
 
     // Commands
     result.push(
@@ -94,7 +94,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+N',
         keywords: ['new', 'project', 'create'],
         action: () => {
-          onNewProject()
+          onNewProject();
           onClose()
         }
       },
@@ -106,7 +106,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+O',
         keywords: ['open', 'load', 'project', 'file'],
         action: () => {
-          onOpen()
+          onOpen();
           onClose()
         }
       },
@@ -118,7 +118,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+S',
         keywords: ['save', 'project', 'file'],
         action: () => {
-          onSave()
+          onSave();
           onClose()
         }
       },
@@ -130,7 +130,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+E',
         keywords: ['export', 'html', 'download', 'build'],
         action: () => {
-          onExport()
+          onExport();
           onClose()
         }
       },
@@ -142,7 +142,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+Z',
         keywords: ['undo', 'revert', 'back'],
         action: () => {
-          undo()
+          undo();
           onClose()
         }
       },
@@ -154,7 +154,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+Y',
         keywords: ['redo', 'restore', 'forward'],
         action: () => {
-          redo()
+          redo();
           onClose()
         }
       },
@@ -167,9 +167,9 @@ export default function CommandPalette({
         keywords: ['cut', 'block', 'move'],
         action: () => {
           if (selectedBlockId) {
-            const block = getBlockById(selectedBlockId)
+            const block = getBlockById(selectedBlockId);
             if (block) {
-              setClipboard({ ...block, id: selectedBlockId })
+              setClipboard({ ...block, id: selectedBlockId });
               removeBlock(selectedBlockId)
             }
           }
@@ -185,7 +185,7 @@ export default function CommandPalette({
         keywords: ['copy', 'block', 'duplicate', 'clone'],
         action: () => {
           if (selectedBlockId) {
-            const block = getBlockById(selectedBlockId)
+            const block = getBlockById(selectedBlockId);
             if (block) {
               setClipboard({ ...block, id: selectedBlockId })
             }
@@ -227,7 +227,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+E',
         keywords: ['code', 'editor', 'html', 'toggle'],
         action: () => {
-          onToggleCodeEditor()
+          onToggleCodeEditor();
           onClose()
         }
       },
@@ -239,7 +239,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+\\',
         keywords: ['panel', 'left', 'sidebar', 'toggle', 'widgets'],
         action: () => {
-          onToggleLeftPanel()
+          onToggleLeftPanel();
           onClose()
         }
       },
@@ -251,7 +251,7 @@ export default function CommandPalette({
         shortcut: 'Ctrl+/',
         keywords: ['panel', 'right', 'inspector', 'toggle', 'properties'],
         action: () => {
-          onToggleRightPanel()
+          onToggleRightPanel();
           onClose()
         }
       },
@@ -262,11 +262,11 @@ export default function CommandPalette({
         icon: theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />,
         keywords: ['theme', 'dark', 'light', 'toggle', 'mode'],
         action: () => {
-          setTheme(theme === 'dark' ? 'light' : 'dark')
+          setTheme(theme === 'dark' ? 'light' : 'dark');
           onClose()
         }
       }
-    )
+    );
 
     // Block types from registry
     const blockCategories: Record<string, { icon: React.ReactNode; keywords: string[] }> = {
@@ -278,12 +278,12 @@ export default function CommandPalette({
       'image': { icon: <ImageIcon size={16} />, keywords: ['image', 'picture', 'photo', 'img'] },
       'button': { icon: <MousePointerClick size={16} />, keywords: ['button', 'btn', 'click'] },
       'divider': { icon: <SeparatorHorizontal size={16} />, keywords: ['divider', 'line', 'separator', 'hr'] }
-    }
+    };
 
     // Add blocks from registry
-    const registryBlocks = componentRegistry.getAll()
+    const registryBlocks = componentRegistry.getAll();
     for (const def of registryBlocks) {
-      const category = blockCategories[def.type] || { icon: <Box size={16} />, keywords: [def.type] }
+      const category = blockCategories[def.type] || { icon: <Box size={16} />, keywords: [def.type] };
       result.push({
         id: `block-${def.type}`,
         type: 'block',
@@ -294,13 +294,13 @@ export default function CommandPalette({
           const newBlock = createBlock(def.type, {
             props: buildDefaultBlockProps(def),
             classes: def.defaultClasses ? [...def.defaultClasses] : [],
-            styles: def.defaultStyles ? { ...def.defaultStyles } : {}
-          })
+            styles: {...def.defaultStyles}
+          });
           
           // Add as child of selected or at root
-          const parentId = selectedBlockId || null
-          addBlock(newBlock, parentId)
-          selectBlock(newBlock.id)
+          const parentId = selectedBlockId || null;
+          addBlock(newBlock, parentId);
+          selectBlock(newBlock.id);
           onClose()
         }
       })
@@ -328,58 +328,58 @@ export default function CommandPalette({
     selectBlock,
     setTheme,
     onClose
-  ])
+  ]);
 
   // Filter items based on query
   const filteredItems = useMemo(() => {
-    if (!query.trim()) return items
+    if (!query.trim()) return items;
 
-    const q = query.toLowerCase().trim()
+    const q = query.toLowerCase().trim();
     return items.filter(item => {
       return item.label.toLowerCase().includes(q) ||
              item.keywords.some(k => k.toLowerCase().includes(q))
     })
-  }, [items, query])
+  }, [items, query]);
 
   // Reset selection when filtered items change
   useEffect(() => {
     setSelectedIndex(0)
-  }, [filteredItems.length, query])
+  }, [filteredItems.length, query]);
 
   // Focus input on open
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50)
-      setQuery('')
+      setTimeout(() => inputRef.current?.focus(), 50);
+      setQuery('');
       setSelectedIndex(0)
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
-      e.preventDefault()
+      e.preventDefault();
       setSelectedIndex(prev => 
         prev < filteredItems.length - 1 ? prev + 1 : 0
       )
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
+      e.preventDefault();
       setSelectedIndex(prev => 
         prev > 0 ? prev - 1 : filteredItems.length - 1
       )
     } else if (e.key === 'Enter') {
-      e.preventDefault()
-      const item = filteredItems[selectedIndex]
+      e.preventDefault();
+      const item = filteredItems[selectedIndex];
       if (item) {
         item.action()
       }
     } else if (e.key === 'Escape') {
-      e.preventDefault()
+      e.preventDefault();
       onClose()
     }
-  }, [filteredItems, selectedIndex, onClose])
+  }, [filteredItems, selectedIndex, onClose]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="command-palette-overlay" onClick={onClose}>

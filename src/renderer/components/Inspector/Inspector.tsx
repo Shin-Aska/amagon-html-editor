@@ -37,7 +37,7 @@ const variantOptions = [
   { label: 'Info', value: 'info' },
   { label: 'Light', value: 'light' },
   { label: 'Dark', value: 'dark' }
-]
+];
 
 const socialPlatformOptions = [
   { label: 'Twitter', value: 'twitter' },
@@ -47,7 +47,7 @@ const socialPlatformOptions = [
   { label: 'Instagram', value: 'instagram' },
   { label: 'YouTube', value: 'youtube' },
   { label: 'Website', value: 'website' }
-]
+];
 
 const arrayEditorConfigs: Record<string, Record<string, ArrayEditorConfig>> = {
   breadcrumb: {
@@ -171,24 +171,24 @@ const arrayEditorConfigs: Record<string, Record<string, ArrayEditorConfig>> = {
       ]
     }
   }
-}
+};
 
 function getArrayEditorConfig(blockType: string, key: string): ArrayEditorConfig | undefined {
   return arrayEditorConfigs[blockType]?.[key]
 }
 
 function Inspector(): JSX.Element {
-  const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-  const blocks = useEditorStore((s) => s.blocks)
-  const getBlockById = useEditorStore((s) => s.getBlockById)
-  const updateBlock = useEditorStore((s) => s.updateBlock)
+  const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+  const blocks = useEditorStore((s) => s.blocks);
+  const getBlockById = useEditorStore((s) => s.getBlockById);
+  const updateBlock = useEditorStore((s) => s.updateBlock);
 
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const uniqueMetaKeys = useProjectStore((s) => s.uniqueMetaKeys)
+  const uniqueMetaKeys = useProjectStore((s) => s.uniqueMetaKeys);
 
-  const block = selectedBlockId ? getBlockById(selectedBlockId) : null
-  const definition = block ? componentRegistry.get(block.type) : null
+  const block = selectedBlockId ? getBlockById(selectedBlockId) : null;
+  const definition = block ? componentRegistry.get(block.type) : null;
 
   if (!block || !definition) {
     return (
@@ -213,7 +213,7 @@ function Inspector(): JSX.Element {
         [key]: value
       }
     })
-  }
+  };
 
   const handleStyleChange = (key: string, value: string | undefined) => {
     updateBlock(block.id, {
@@ -221,11 +221,11 @@ function Inspector(): JSX.Element {
         [key]: (value === undefined || value === '') ? undefined : value
       }
     })
-  }
+  };
 
   const handleClassesChange = (classes: string[]) => {
     updateBlock(block.id, { classes })
-  }
+  };
 
   const handleElementIdChange = (value: string) => {
     updateBlock(block.id, {
@@ -234,11 +234,11 @@ function Inspector(): JSX.Element {
         id: value.trim() || undefined
       }
     })
-  }
+  };
 
   // Render different input types based on the schema
   const renderField = (key: string, schema: PropSchema, value: any) => {
-    const val = value !== undefined ? value : schema.default
+    const val = value !== undefined ? value : schema.default;
 
     switch (schema.type) {
       case 'text':
@@ -249,7 +249,7 @@ function Inspector(): JSX.Element {
             value={val || ''}
             onChange={(e) => handlePropChange(key, e.target.value)}
           />
-        )
+        );
       case 'textarea':
         return (
           <textarea
@@ -258,7 +258,7 @@ function Inspector(): JSX.Element {
             onChange={(e) => handlePropChange(key, e.target.value)}
             rows={3}
           />
-        )
+        );
       case 'number':
         return (
           <input
@@ -270,7 +270,7 @@ function Inspector(): JSX.Element {
             step={schema.step}
             onChange={(e) => handlePropChange(key, e.target.value === '' ? undefined : Number(e.target.value))}
           />
-        )
+        );
       case 'boolean':
         return (
           <input
@@ -278,7 +278,7 @@ function Inspector(): JSX.Element {
             checked={!!val}
             onChange={(e) => handlePropChange(key, e.target.checked)}
           />
-        )
+        );
       case 'select':
         return (
           <select
@@ -292,7 +292,7 @@ function Inspector(): JSX.Element {
               </option>
             ))}
           </select>
-        )
+        );
       case 'color':
         return (
           <div className="color-picker-wrapper">
@@ -309,15 +309,15 @@ function Inspector(): JSX.Element {
               placeholder="#000000"
             />
           </div>
-        )
+        );
       case 'image':
-        return <ImageField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
+        return <ImageField value={val || ''} onChange={(v) => handlePropChange(key, v)} />;
       case 'video':
-        return <VideoField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
+        return <VideoField value={val || ''} onChange={(v) => handlePropChange(key, v)} />;
       case 'carousel':
-        return <CarouselField value={val || []} onChange={(v) => handlePropChange(key, v)} />
+        return <CarouselField value={val || []} onChange={(v) => handlePropChange(key, v)} />;
       case 'icon':
-        return <IconField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
+        return <IconField value={val || ''} onChange={(v) => handlePropChange(key, v)} />;
       case 'measurement':
         return (
           <input
@@ -327,15 +327,15 @@ function Inspector(): JSX.Element {
             onChange={(e) => handlePropChange(key, e.target.value)}
             placeholder="e.g. 16px, 2rem"
           />
-        )
+        );
       case 'combobox': {
-        let comboOptions: string[] = []
+        let comboOptions: string[] = [];
         if (schema.dataSource === 'tags') {
-          const pages = useProjectStore.getState().pages
-          const folders = useProjectStore.getState().folders
-          const tagSet = new Set<string>()
-          pages.forEach((p) => p.tags?.forEach((t) => tagSet.add(t)))
-          folders.forEach((f) => f.tags?.forEach((t) => tagSet.add(t)))
+          const pages = useProjectStore.getState().pages;
+          const folders = useProjectStore.getState().folders;
+          const tagSet = new Set<string>();
+          pages.forEach((p) => p.tags?.forEach((t) => tagSet.add(t)));
+          folders.forEach((f) => f.tags?.forEach((t) => tagSet.add(t)));
           comboOptions = Array.from(tagSet).sort()
         } else if (schema.dataSource === 'metaKeys') {
           comboOptions = uniqueMetaKeys
@@ -354,7 +354,7 @@ function Inspector(): JSX.Element {
         )
       }
       case 'multi-combobox': {
-        let multiOptions: string[] = []
+        let multiOptions: string[] = [];
         if (schema.dataSource === 'metaKeys') {
           multiOptions = uniqueMetaKeys
         } else if (schema.dataSource === 'pageListSortKeys') {
@@ -367,7 +367,7 @@ function Inspector(): JSX.Element {
           ? val.map((v) => String(v)).filter(Boolean)
           : typeof val === 'string'
             ? val.split(/[,\n]+/).map((k) => k.trim()).filter(Boolean)
-            : []
+            : [];
 
         return (
           <MultiComboboxField
@@ -384,14 +384,14 @@ function Inspector(): JSX.Element {
             value={val || ''}
             onChange={(v) => handlePropChange(key, v)}
           />
-        )
+        );
       case 'sortable-list': {
         const normalizeList = (v: any): string[] =>
           Array.isArray(v)
             ? v.map((x) => String(x).trim()).filter(Boolean)
             : typeof v === 'string'
               ? v.split(/[,\n]+/).map((x) => x.trim()).filter(Boolean)
-              : []
+              : [];
 
         const labelForKey = (k: string) =>
           k === 'title'
@@ -400,29 +400,29 @@ function Inspector(): JSX.Element {
               ? 'Date Published'
               : k
                 .replace(/[-_]+/g, ' ')
-                .replace(/^\w/, (c) => c.toUpperCase())
+                .replace(/^\w/, (c) => c.toUpperCase());
 
         if (schema.dataSource === 'pageListSortPriority') {
-          const selectedMetaKeys = normalizeList(block.props.metaKeys)
-          const available = ['title', ...selectedMetaKeys.filter((k) => k !== 'title')]
+          const selectedMetaKeys = normalizeList(block.props.metaKeys);
+          const available = ['title', ...selectedMetaKeys.filter((k) => k !== 'title')];
 
-          const current = normalizeList(val)
-          const inAvailable = new Set(available)
-          const next: string[] = []
-          const seen = new Set<string>()
+          const current = normalizeList(val);
+          const inAvailable = new Set(available);
+          const next: string[] = [];
+          const seen = new Set<string>();
 
           const push = (k: string) => {
-            const keyStr = String(k || '').trim()
-            if (!keyStr) return
-            if (seen.has(keyStr)) return
-            if (!inAvailable.has(keyStr)) return
-            seen.add(keyStr)
+            const keyStr = String(k || '').trim();
+            if (!keyStr) return;
+            if (seen.has(keyStr)) return;
+            if (!inAvailable.has(keyStr)) return;
+            seen.add(keyStr);
             next.push(keyStr)
-          }
+          };
 
-          current.forEach(push)
+          current.forEach(push);
 
-          available.forEach(push)
+          available.forEach(push);
 
           return (
             <SortableListField
@@ -433,7 +433,7 @@ function Inspector(): JSX.Element {
           )
         }
 
-        const items = normalizeList(val)
+        const items = normalizeList(val);
         return (
           <SortableListField
             items={items}
@@ -442,15 +442,15 @@ function Inspector(): JSX.Element {
         )
       }
       case 'array': {
-        const arrayConfig = getArrayEditorConfig(block.type, key)
+        const arrayConfig = getArrayEditorConfig(block.type, key);
         // Determine the item type based on the current value or block type
         const determineItemType = (): 'string' | 'tab' | 'accordion' | 'record' => {
-          if (arrayConfig) return 'record'
+          if (arrayConfig) return 'record';
           // Check if we have existing items to infer the type
           if (Array.isArray(val) && val.length > 0) {
-            const firstItem = val[0]
+            const firstItem = val[0];
             if (typeof firstItem === 'object' && firstItem !== null) {
-              if (Array.isArray(firstItem)) return 'string'
+              if (Array.isArray(firstItem)) return 'string';
               if ('label' in firstItem && 'content' in firstItem) {
                 return 'tab'
               }
@@ -461,12 +461,12 @@ function Inspector(): JSX.Element {
             }
           }
           // Infer from the prop key name as fallback
-          if (key === 'tabs') return 'tab'
-          if (key === 'items' && block?.type === 'accordion') return 'accordion'
+          if (key === 'tabs') return 'tab';
+          if (key === 'items' && block?.type === 'accordion') return 'accordion';
           return 'string'
-        }
+        };
 
-        const resolvedItemType = determineItemType()
+        const resolvedItemType = determineItemType();
         return (
           <ArrayField
             blockId={block.id}
@@ -484,19 +484,19 @@ function Inspector(): JSX.Element {
       default:
         return <span className="unsupported-prop">Unsupported type: {schema.type}</span>
     }
-  }
+  };
 
   // Group properties by their 'group' defined in the schema
-  const groupedProps: Record<string, { key: string; schema: PropSchema }[]> = {}
+  const groupedProps: Record<string, { key: string; schema: PropSchema }[]> = {};
 
   Object.entries(definition.propsSchema).forEach(([key, schema]) => {
-    if (schema.type === 'font-picker') return
-    const groupName = schema.group || 'General'
+    if (schema.type === 'font-picker') return;
+    const groupName = schema.group || 'General';
     if (!groupedProps[groupName]) {
       groupedProps[groupName] = []
     }
     groupedProps[groupName].push({ key, schema })
-  })
+  });
 
   return (
     <div className="inspector" data-tutorial="inspector">

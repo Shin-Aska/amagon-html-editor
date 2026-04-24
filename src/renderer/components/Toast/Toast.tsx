@@ -3,19 +3,19 @@ import {useToastStore} from '../../store/toastStore'
 import './Toast.css'
 
 export default function Toast(): JSX.Element | null {
-  const toast = useToastStore((s) => s.toast)
-  const clearToast = useToastStore((s) => s.clearToast)
+  const toast = useToastStore((s) => s.toast);
+  const clearToast = useToastStore((s) => s.clearToast);
 
   useEffect(() => {
-    if (!toast) return
-    if (toast.autoCloseMs === null || (toast.actions && toast.actions.length > 0)) return
+    if (!toast) return;
+    if (toast.autoCloseMs === null || (toast.actions && toast.actions.length > 0)) return;
     const t = setTimeout(() => {
       clearToast()
-    }, toast.autoCloseMs ?? 2200)
+    }, toast.autoCloseMs ?? 2200);
     return () => clearTimeout(t)
-  }, [toast, clearToast])
+  }, [toast, clearToast]);
 
-  if (!toast) return null
+  if (!toast) return null;
 
   return (
     <div className={`toast toast-${toast.type} toast-${toast.position ?? 'bottom-right'}`} role="status" aria-live="polite">

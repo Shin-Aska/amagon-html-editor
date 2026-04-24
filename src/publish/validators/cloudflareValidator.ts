@@ -1,8 +1,8 @@
-import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/index'
+import type {ExportedFile, ValidationIssue, ValidationResult} from '../types'
 import {extractExternalUrls, getFileExtension, makeError, makeWarning} from './validationHelpers'
 
-const MAX_FILE_BYTES = 25 * 1024 * 1024
-const MAX_FILE_COUNT = 500
+const MAX_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_FILE_COUNT = 500;
 
 export const CLOUDFLARE_PAGES_ALLOWED_EXTENSIONS: readonly string[] = [
   '.html',
@@ -45,7 +45,7 @@ export const CLOUDFLARE_PAGES_ALLOWED_EXTENSIONS: readonly string[] = [
   '.aac',
   '.flac',
   '.pdf'
-]
+];
 
 function getByteSize(content: string | Uint8Array): number {
   if (typeof content === 'string') {
@@ -55,7 +55,7 @@ function getByteSize(content: string | Uint8Array): number {
 }
 
 export function validateForCloudflarePages(files: ExportedFile[]): ValidationResult {
-  const issues: ValidationIssue[] = []
+  const issues: ValidationIssue[] = [];
 
   if (files.length > MAX_FILE_COUNT) {
     issues.push(
@@ -68,7 +68,7 @@ export function validateForCloudflarePages(files: ExportedFile[]): ValidationRes
   }
 
   for (const file of files) {
-    const size = getByteSize(file.content)
+    const size = getByteSize(file.content);
     if (size > MAX_FILE_BYTES) {
       issues.push(
         makeError(
@@ -79,9 +79,9 @@ export function validateForCloudflarePages(files: ExportedFile[]): ValidationRes
       )
     }
 
-    const extension = getFileExtension(file.path)
+    const extension = getFileExtension(file.path);
     if ((extension === '.html' || extension === '.htm') && typeof file.content === 'string') {
-      const externalUrls = extractExternalUrls(file.content)
+      const externalUrls = extractExternalUrls(file.content);
       for (const url of externalUrls) {
         issues.push(
           makeWarning(
@@ -94,7 +94,7 @@ export function validateForCloudflarePages(files: ExportedFile[]): ValidationRes
     }
   }
 
-  const errorCount = issues.filter((issue) => issue.severity === 'error').length
+  const errorCount = issues.filter((issue) => issue.severity === 'error').length;
   return {
     ok: errorCount === 0,
     issues

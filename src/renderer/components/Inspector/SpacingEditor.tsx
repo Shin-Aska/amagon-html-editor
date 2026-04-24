@@ -6,32 +6,32 @@ interface SpacingEditorProps {
   onChange: (key: string, value: string | undefined) => void
 }
 
-const SIDES = ['Top', 'Right', 'Bottom', 'Left'] as const
+const SIDES = ['Top', 'Right', 'Bottom', 'Left'] as const;
 const SPACING_PROPS = {
   margin: ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'],
   padding: ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']
-}
+};
 
 function parseValue(val?: string) {
-  if (!val) return ''
+  if (!val) return '';
   return val.replace(/px|pt|rem|em|%/g, '').trim()
 }
 
 export default function SpacingEditor({ styles, onChange }: SpacingEditorProps): JSX.Element {
-  const [activeSide, setActiveSide] = useState<{ type: 'margin' | 'padding', side: typeof SIDES[number] } | null>(null)
-  const [unit, setUnit] = useState('px')
-  const [inputValue, setInputValue] = useState('')
+  const [activeSide, setActiveSide] = useState<{ type: 'margin' | 'padding', side: typeof SIDES[number] } | null>(null);
+  const [unit, setUnit] = useState('px');
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => {
     if (activeSide) {
       const propKey = activeSide.type === 'margin' 
         ? SPACING_PROPS.margin[SIDES.indexOf(activeSide.side)]
-        : SPACING_PROPS.padding[SIDES.indexOf(activeSide.side)]
+        : SPACING_PROPS.padding[SIDES.indexOf(activeSide.side)];
       
-      const val = styles[propKey]
+      const val = styles[propKey];
       if (val) {
-        setInputValue(parseValue(val))
-        const match = val.match(/(px|pt|rem|em|%)$/)
+        setInputValue(parseValue(val));
+        const match = val.match(/(px|pt|rem|em|%)$/);
         if (match) setUnit(match[0])
       } else {
         setInputValue('')
@@ -39,41 +39,41 @@ export default function SpacingEditor({ styles, onChange }: SpacingEditorProps):
     } else {
       setInputValue('')
     }
-  }, [activeSide, styles])
+  }, [activeSide, styles]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value)
+    setInputValue(e.target.value);
     applyChange(e.target.value, unit)
-  }
+  };
 
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setUnit(e.target.value)
+    setUnit(e.target.value);
     if (inputValue) {
       applyChange(inputValue, e.target.value)
     }
-  }
+  };
 
   const applyChange = (val: string, currentUnit: string) => {
-    if (!activeSide) return
+    if (!activeSide) return;
 
     const propKey = activeSide.type === 'margin' 
       ? SPACING_PROPS.margin[SIDES.indexOf(activeSide.side)]
-      : SPACING_PROPS.padding[SIDES.indexOf(activeSide.side)]
+      : SPACING_PROPS.padding[SIDES.indexOf(activeSide.side)];
 
     if (!val.trim()) {
       onChange(propKey, undefined)
     } else {
       onChange(propKey, `${val}${currentUnit}`)
     }
-  }
+  };
 
   const renderSideBox = (type: 'margin' | 'padding', side: typeof SIDES[number], label: string) => {
     const propKey = type === 'margin' 
       ? SPACING_PROPS.margin[SIDES.indexOf(side)]
-      : SPACING_PROPS.padding[SIDES.indexOf(side)]
-    const value = parseValue(styles[propKey])
+      : SPACING_PROPS.padding[SIDES.indexOf(side)];
+    const value = parseValue(styles[propKey]);
     
-    const isActive = activeSide?.type === type && activeSide?.side === side
+    const isActive = activeSide?.type === type && activeSide?.side === side;
 
     return (
       <div 
@@ -83,7 +83,7 @@ export default function SpacingEditor({ styles, onChange }: SpacingEditorProps):
         <span className="box-value">{value || '-'}</span>
       </div>
     )
-  }
+  };
 
   return (
     <div className="spacing-editor">

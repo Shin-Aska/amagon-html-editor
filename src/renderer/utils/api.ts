@@ -26,12 +26,12 @@ export interface IpcResult {
 
 type MockAsset = { name: string; path: string; relativePath: string; type: 'image' | 'video' }
 
-const MOCK_ASSETS_KEY = 'mock-assets'
+const MOCK_ASSETS_KEY = 'mock-assets';
 
 function loadMockAssets(): MockAsset[] {
   try {
-    const raw = localStorage.getItem(MOCK_ASSETS_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
+    const raw = localStorage.getItem(MOCK_ASSETS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
@@ -47,10 +47,10 @@ function saveMockAssets(assets: MockAsset[]): void {
 }
 
 function upsertMockAssets(newAssets: MockAsset[]): void {
-  const existing = loadMockAssets()
-  const byPath = new Map<string, MockAsset>()
-  existing.forEach((a) => byPath.set(a.path, a))
-  newAssets.forEach((a) => byPath.set(a.path, a))
+  const existing = loadMockAssets();
+  const byPath = new Map<string, MockAsset>();
+  existing.forEach((a) => byPath.set(a.path, a));
+  newAssets.forEach((a) => byPath.set(a.path, a));
   saveMockAssets(Array.from(byPath.values()))
 }
 
@@ -58,9 +58,9 @@ const mockApi: ElectronApi = {
   project: {
     save: async (data: { filePath?: string; content: string }): Promise<IpcResult> => {
       try {
-        const key = data.filePath || 'untitled-project.json'
-        localStorage.setItem(`project:${key}`, data.content)
-        console.log('[Mock API] Project saved to localStorage:', key)
+        const key = data.filePath || 'untitled-project.json';
+        localStorage.setItem(`project:${key}`, data.content);
+        console.log('[Mock API] Project saved to localStorage:', key);
         return { success: true, filePath: key }
       } catch (error) {
         return { success: false, error: String(error) }
@@ -69,13 +69,13 @@ const mockApi: ElectronApi = {
 
     saveAs: async (data: { content: string }): Promise<IpcResult> => {
       try {
-        const blob = new Blob([data.content], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'project.json'
-        a.click()
-        URL.revokeObjectURL(url)
+        const blob = new Blob([data.content], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'project.json';
+        a.click();
+        URL.revokeObjectURL(url);
         return { success: true, filePath: 'project.json' }
       } catch (error) {
         return { success: false, error: String(error) }
@@ -84,25 +84,25 @@ const mockApi: ElectronApi = {
 
     load: async (): Promise<IpcResult> => {
       try {
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = '.json'
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
 
         return new Promise((resolve) => {
           input.onchange = async () => {
-            const file = input.files?.[0]
+            const file = input.files?.[0];
             if (!file) {
-              resolve({ success: false, canceled: true })
+              resolve({ success: false, canceled: true });
               return
             }
-            const text = await file.text()
+            const text = await file.text();
             resolve({
               success: true,
               filePath: file.name,
               content: JSON.parse(text)
             })
-          }
-          input.oncancel = () => resolve({ success: false, canceled: true })
+          };
+          input.oncancel = () => resolve({ success: false, canceled: true });
           input.click()
         })
       } catch (error) {
@@ -117,13 +117,13 @@ const mockApi: ElectronApi = {
 
     exportHtml: async (data: { html: string; defaultPath?: string }): Promise<IpcResult> => {
       try {
-        const blob = new Blob([data.html], { type: 'text/html' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = data.defaultPath || 'index.html'
-        a.click()
-        URL.revokeObjectURL(url)
+        const blob = new Blob([data.html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.defaultPath || 'index.html';
+        a.click();
+        URL.revokeObjectURL(url);
         return { success: true, filePath: data.defaultPath || 'index.html' }
       } catch (error) {
         return { success: false, error: String(error) }
@@ -137,31 +137,31 @@ const mockApi: ElectronApi = {
     }): Promise<IpcResult> => {
       try {
         for (const file of data.files || []) {
-          const relPath = String(file.path || '').replace(/^[/\\]+/, '')
-          if (!relPath) continue
+          const relPath = String(file.path || '').replace(/^[/\\]+/, '');
+          if (!relPath) continue;
 
-          const content: any = (file as any).content
-          let blob: Blob
+          const content: any = (file as any).content;
+          let blob: Blob;
 
           if (typeof content === 'string') {
             const ext = relPath.toLowerCase().endsWith('.css')
               ? 'text/css'
               : relPath.toLowerCase().endsWith('.html')
                 ? 'text/html'
-                : 'text/plain'
+                : 'text/plain';
             blob = new Blob([content], { type: ext })
           } else {
-            const bytes: Uint8Array = content instanceof Uint8Array ? content : new Uint8Array(content)
-            const ab = new ArrayBuffer(bytes.byteLength)
-            new Uint8Array(ab).set(bytes)
+            const bytes: Uint8Array = content instanceof Uint8Array ? content : new Uint8Array(content);
+            const ab = new ArrayBuffer(bytes.byteLength);
+            new Uint8Array(ab).set(bytes);
             blob = new Blob([ab], { type: 'application/octet-stream' })
           }
 
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = relPath.split('/').pop() || 'file'
-          a.click()
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = relPath.split('/').pop() || 'file';
+          a.click();
           URL.revokeObjectURL(url)
         }
 
@@ -173,7 +173,7 @@ const mockApi: ElectronApi = {
 
     openInBrowser: async (target: string): Promise<IpcResult> => {
       if (/^https?:\/\//i.test(target)) {
-        window.open(target, '_blank', 'noopener,noreferrer')
+        window.open(target, '_blank', 'noopener,noreferrer');
         return { success: true }
       }
 
@@ -188,12 +188,12 @@ const mockApi: ElectronApi = {
 
     getRecent: async (): Promise<IpcResult> => {
       try {
-        const raw = localStorage.getItem('recent-projects')
-        const projects: Array<string | { path: string; name: string }> = raw ? JSON.parse(raw) : []
+        const raw = localStorage.getItem('recent-projects');
+        const projects: Array<string | { path: string; name: string }> = raw ? JSON.parse(raw) : [];
         // Normalize to object format
         const normalized = projects.map((p) =>
           typeof p === 'string' ? { path: p, name: p.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled' } : p
-        )
+        );
         return { success: true, projects: normalized }
       } catch {
         return { success: true, projects: [] }
@@ -202,16 +202,16 @@ const mockApi: ElectronApi = {
 
     removeRecent: async (projectPath: string): Promise<IpcResult> => {
       try {
-        const raw = localStorage.getItem('recent-projects')
-        const projects: Array<string | { path: string; name: string }> = raw ? JSON.parse(raw) : []
+        const raw = localStorage.getItem('recent-projects');
+        const projects: Array<string | { path: string; name: string }> = raw ? JSON.parse(raw) : [];
         const filtered = projects.filter((p) =>
           typeof p === 'string' ? p !== projectPath : p.path !== projectPath
-        )
-        localStorage.setItem('recent-projects', JSON.stringify(filtered))
+        );
+        localStorage.setItem('recent-projects', JSON.stringify(filtered));
         // Return normalized format
         const normalized = filtered.map((p) =>
           typeof p === 'string' ? { path: p, name: p.split(/[/\\]/).pop()?.replace('.json', '') || 'Untitled' } : p
-        )
+        );
         return { success: true, projects: normalized }
       } catch {
         return { success: true, projects: [] }
@@ -243,7 +243,7 @@ const mockApi: ElectronApi = {
         ],
         folders: [],
         userBlocks: []
-      }
+      };
       return { success: true, filePath: 'project.json', content: projectData }
     },
 
@@ -255,32 +255,32 @@ const mockApi: ElectronApi = {
   assets: {
     selectImage: async (): Promise<IpcResult> => {
       try {
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = 'image/*'
-        input.multiple = true
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
 
         return new Promise((resolve) => {
           input.onchange = () => {
-            const files = input.files
+            const files = input.files;
             if (!files || files.length === 0) {
-              resolve({ success: false, canceled: true })
+              resolve({ success: false, canceled: true });
               return
             }
             const selected = Array.from(files).map((f) => {
-              const url = URL.createObjectURL(f)
+              const url = URL.createObjectURL(f);
               return {
                 name: f.name,
                 path: url,
                 relativePath: `assets/${f.name}`,
                 type: 'image' as const
               }
-            })
-            upsertMockAssets(selected)
-            const filePaths = selected.map((s) => s.path)
+            });
+            upsertMockAssets(selected);
+            const filePaths = selected.map((s) => s.path);
             resolve({ success: true, filePaths })
-          }
-          input.oncancel = () => resolve({ success: false, canceled: true })
+          };
+          input.oncancel = () => resolve({ success: false, canceled: true });
           input.click()
         })
       } catch (error) {
@@ -290,18 +290,18 @@ const mockApi: ElectronApi = {
 
     selectSingleImage: async (): Promise<IpcResult> => {
       try {
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = 'image/*'
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
 
         return new Promise((resolve) => {
           input.onchange = () => {
-            const file = input.files?.[0]
+            const file = input.files?.[0];
             if (!file) {
-              resolve({ success: false, canceled: true })
+              resolve({ success: false, canceled: true });
               return
             }
-            const blobUrl = URL.createObjectURL(file)
+            const blobUrl = URL.createObjectURL(file);
             upsertMockAssets([
               {
                 name: file.name,
@@ -309,15 +309,15 @@ const mockApi: ElectronApi = {
                 relativePath: `assets/${file.name}`,
                 type: 'image'
               }
-            ])
+            ]);
             resolve({
               success: true,
               filePath: blobUrl,
               data: file.name,
               mimeType: file.type
             })
-          }
-          input.oncancel = () => resolve({ success: false, canceled: true })
+          };
+          input.oncancel = () => resolve({ success: false, canceled: true });
           input.click()
         })
       } catch (error) {
@@ -327,18 +327,18 @@ const mockApi: ElectronApi = {
 
     selectVideo: async (): Promise<IpcResult> => {
       try {
-        const input = document.createElement('input')
-        input.type = 'file'
-        input.accept = 'video/*'
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'video/*';
 
         return new Promise((resolve) => {
           input.onchange = () => {
-            const file = input.files?.[0]
+            const file = input.files?.[0];
             if (!file) {
-              resolve({ success: false, canceled: true })
+              resolve({ success: false, canceled: true });
               return
             }
-            const blobUrl = URL.createObjectURL(file)
+            const blobUrl = URL.createObjectURL(file);
             upsertMockAssets([
               {
                 name: file.name,
@@ -346,15 +346,15 @@ const mockApi: ElectronApi = {
                 relativePath: `assets/${file.name}`,
                 type: 'video'
               }
-            ])
+            ]);
             resolve({
               success: true,
               filePath: blobUrl,
               data: file.name,
               mimeType: file.type
             })
-          }
-          input.oncancel = () => resolve({ success: false, canceled: true })
+          };
+          input.oncancel = () => resolve({ success: false, canceled: true });
           input.click()
         })
       } catch (error) {
@@ -364,24 +364,24 @@ const mockApi: ElectronApi = {
 
     readFileAsBase64: async (filePath: string): Promise<IpcResult> => {
       try {
-        const response = await fetch(filePath)
-        const blob = await response.blob()
-        const sizeMB = blob.size / (1024 * 1024)
+        const response = await fetch(filePath);
+        const blob = await response.blob();
+        const sizeMB = blob.size / (1024 * 1024);
         if (sizeMB > 5) {
           return { success: false, error: `File is too large (${sizeMB.toFixed(1)}MB). Max 5MB for base64 embedding.` }
         }
         return new Promise((resolve) => {
-          const reader = new FileReader()
+          const reader = new FileReader();
           reader.onload = () => {
             resolve({
               success: true,
               data: reader.result as string,
               mimeType: blob.type
             })
-          }
+          };
           reader.onerror = () => {
             resolve({ success: false, error: 'Failed to read file' })
-          }
+          };
           reader.readAsDataURL(blob)
         })
       } catch (error) {
@@ -395,9 +395,9 @@ const mockApi: ElectronApi = {
 
     delete: async (relativePath: string): Promise<IpcResult> => {
       try {
-        const existing = loadMockAssets()
-        const next = existing.filter((a) => a.relativePath !== relativePath)
-        saveMockAssets(next)
+        const existing = loadMockAssets();
+        const next = existing.filter((a) => a.relativePath !== relativePath);
+        saveMockAssets(next);
         return { success: true }
       } catch (error) {
         return { success: false, error: String(error) }
@@ -406,9 +406,9 @@ const mockApi: ElectronApi = {
 
     readAsset: async (assetPath: string): Promise<IpcResult> => {
       try {
-        const response = await fetch(assetPath)
-        const blob = await response.blob()
-        const reader = new FileReader()
+        const response = await fetch(assetPath);
+        const blob = await response.blob();
+        const reader = new FileReader();
 
         return new Promise((resolve) => {
           reader.onload = () => {
@@ -417,7 +417,7 @@ const mockApi: ElectronApi = {
               data: reader.result as string,
               mimeType: blob.type
             })
-          }
+          };
           reader.readAsDataURL(blob)
         })
       } catch (error) {
@@ -447,35 +447,35 @@ const mockApi: ElectronApi = {
 
   fonts: {
     listSystem: async (): Promise<IpcResult & { fonts: string[] }> => {
-      console.log('[Mock API] Listing system fonts (mocked)')
+      console.log('[Mock API] Listing system fonts (mocked)');
       const mockFonts = [
         'Arial', 'Verdana', 'Tahoma', 'Trebuchet MS', 'Times New Roman',
         'Georgia', 'Garamond', 'Courier New', 'Brush Script MT', 'Impact',
         'Comic Sans MS'
-      ]
+      ];
       return { success: true, fonts: mockFonts }
     },
     importFile: async (): Promise<IpcResult & { fonts: FontAsset[] }> => {
-      console.log('[Mock API] Importing font files (mocked)')
+      console.log('[Mock API] Importing font files (mocked)');
       return { success: false, canceled: true, fonts: [] }
     },
     downloadGoogleFont: async (_args: {
       family: string
       variants: { weight: string; style: string }[]
     }): Promise<IpcResult & { fonts: FontAsset[]; errors?: string[] }> => {
-      console.log('[Mock API] downloadGoogleFont (mocked)')
+      console.log('[Mock API] downloadGoogleFont (mocked)');
       return { success: false, error: 'Not supported in browser mode', fonts: [] }
     },
     copySystemFont: async (_args: { familyName: string; filePaths: string[] }): Promise<IpcResult & { fonts: FontAsset[] }> => {
-      console.log('[Mock API] copySystemFont (mocked)')
+      console.log('[Mock API] copySystemFont (mocked)');
       return { success: false, error: 'Not supported in browser mode', fonts: [] }
     },
     deleteFont: async (_args: { relativePath: string }): Promise<IpcResult> => {
-      console.log('[Mock API] deleteFont (mocked)')
+      console.log('[Mock API] deleteFont (mocked)');
       return { success: true }
     },
     listProject: async (): Promise<IpcResult & { fonts: FontAsset[] }> => {
-      console.log('[Mock API] listProject fonts (mocked)')
+      console.log('[Mock API] listProject fonts (mocked)');
       return { success: true, fonts: [] }
     }
   },
@@ -655,7 +655,7 @@ const mockApi: ElectronApi = {
       }
     },
     getCredentialDefinitions: async (): Promise<any> => {
-      const result = await mockApi.app.getCredentials()
+      const result = await mockApi.app.getCredentials();
       return { success: true, definitions: result.definitions }
     },
     getCredentialValues: async (_id: string): Promise<any> => {
@@ -669,14 +669,14 @@ const mockApi: ElectronApi = {
     },
     getSettings: async (): Promise<any> => {
       try {
-        const raw = localStorage.getItem('app-settings')
+        const raw = localStorage.getItem('app-settings');
         if (raw) return { success: true, settings: JSON.parse(raw) }
       } catch {}
       return { success: true, settings: null }
     },
     saveSettings: async (settings: any): Promise<any> => {
       try {
-        localStorage.setItem('app-settings', JSON.stringify(settings))
+        localStorage.setItem('app-settings', JSON.stringify(settings));
         return { success: true }
       } catch (err: any) {
         return { success: false, error: String(err) }
@@ -725,7 +725,7 @@ const mockApi: ElectronApi = {
 
     setConfig: async (_config: any): Promise<any> => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { apiKey: _, ...rest } = _config
+      const { apiKey: _, ...rest } = _config;
       return { success: true, config: { ...rest, apiKey: '' } }
     },
 
@@ -749,7 +749,7 @@ const mockApi: ElectronApi = {
 
     fetchModelsForProvider: async (data: { provider: string; apiKey: string; ollamaUrl?: string }): Promise<any> => {
       // Simulate a brief network delay
-      await new Promise((r) => setTimeout(r, 600))
+      await new Promise((r) => setTimeout(r, 600));
       const fallback: Record<string, string[]> = {
         openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
         anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
@@ -761,7 +761,7 @@ const mockApi: ElectronApi = {
         'gemini-cli': ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'],
         'github-cli': ['default'],
         'junie-cli': ['default', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview', 'gemini-flash', 'gemini-pro', 'gpt', 'gpt-5-2025-08-07', 'gpt-5.2-2025-12-11', 'gpt-5.3-codex', 'gpt-5.4', 'gpt-codex', 'grok', 'grok-4-1-fast-reasoning', 'opus', 'sonnet']
-      }
+      };
       if (data.provider.endsWith('-cli')) {
         return { success: true, models: fallback[data.provider] || [] }
       }
@@ -802,20 +802,20 @@ const mockApi: ElectronApi = {
       }
     }
   }
-}
+};
 
 // Export the API — in Electron mode, window.api will be set by the preload script.
 // In browser mode, we use this mock.
-let didWarnMissingElectronApi = false
+let didWarnMissingElectronApi = false;
 export function getApi(): ElectronApi {
   if (window.api) {
     return window.api
   }
 
-  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
-  const isElectron = /electron/i.test(ua)
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+  const isElectron = /electron/i.test(ua);
   if (isElectron && !didWarnMissingElectronApi) {
-    didWarnMissingElectronApi = true
+    didWarnMissingElectronApi = true;
     console.warn('[Amagon] window.api is missing in Electron. Falling back to mock API; save/load will not persist to disk.')
   }
   return mockApi

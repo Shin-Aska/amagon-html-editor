@@ -48,13 +48,13 @@ export interface BlockDefinition {
 }
 
 export function buildDefaultBlockProps(definition: BlockDefinition): Record<string, unknown> {
-  const props: Record<string, unknown> = {}
+  const props: Record<string, unknown> = {};
 
   Object.entries(definition.propsSchema).forEach(([key, schema]) => {
     if (schema.default !== undefined) {
       props[key] = schema.default
     }
-  })
+  });
 
   if (definition.defaultProps) {
     Object.assign(props, definition.defaultProps)
@@ -64,14 +64,14 @@ export function buildDefaultBlockProps(definition: BlockDefinition): Record<stri
 }
 
 class ComponentRegistry {
-  private definitions: Map<string, BlockDefinition> = new Map()
-  private categories: Set<string> = new Set()
+  private definitions: Map<string, BlockDefinition> = new Map();
+  private categories: Set<string> = new Set();
 
   register(definition: BlockDefinition): void {
     if (this.definitions.has(definition.type)) {
       console.warn(`Block type "${definition.type}" is already registered. Overwriting.`)
     }
-    this.definitions.set(definition.type, definition)
+    this.definitions.set(definition.type, definition);
     this.categories.add(definition.category)
   }
 
@@ -92,4 +92,4 @@ class ComponentRegistry {
   }
 }
 
-export const componentRegistry = new ComponentRegistry()
+export const componentRegistry = new ComponentRegistry();

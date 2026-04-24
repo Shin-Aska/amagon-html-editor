@@ -137,7 +137,7 @@ declare module 'prettier/standalone' {
 }
 
 declare module 'prettier/plugins/html' {
-  const plugin: unknown
+  const plugin: unknown;
   export default plugin
 }
 

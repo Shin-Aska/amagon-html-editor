@@ -1,9 +1,9 @@
-import type {ValidationIssue} from '../types/index'
+import type {ValidationIssue} from '../types'
 
 export function getFileExtension(filePath: string): string {
-  const normalizedPath = filePath.replace(/\\/g, '/')
-  const fileName = normalizedPath.split('/').pop() ?? ''
-  const lastDotIndex = fileName.lastIndexOf('.')
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const fileName = normalizedPath.split('/').pop() ?? '';
+  const lastDotIndex = fileName.lastIndexOf('.');
 
   if (lastDotIndex <= 0) {
     return ''
@@ -13,19 +13,19 @@ export function getFileExtension(filePath: string): string {
 }
 
 export function isExternalUrl(url: string): boolean {
-  const trimmed = url.trim().toLowerCase()
+  const trimmed = url.trim().toLowerCase();
   return (
     trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('//')
   )
 }
 
 export function extractExternalUrls(htmlContent: string): string[] {
-  const attrRegex = /\b(?:src|href)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/gi
-  const urls = new Set<string>()
-  let match: RegExpExecArray | null = attrRegex.exec(htmlContent)
+  const attrRegex = /\b(?:src|href)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/gi;
+  const urls = new Set<string>();
+  let match: RegExpExecArray | null = attrRegex.exec(htmlContent);
 
   while (match) {
-    const candidate = (match[1] ?? match[2] ?? match[3] ?? '').trim()
+    const candidate = (match[1] ?? match[2] ?? match[3] ?? '').trim();
     if (candidate && isExternalUrl(candidate)) {
       urls.add(candidate)
     }

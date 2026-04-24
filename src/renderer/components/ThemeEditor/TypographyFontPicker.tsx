@@ -54,9 +54,9 @@ const FONT_OPTIONS: FontOption[] = [
   { label: 'Fira Code', value: '"Fira Code", Consolas, monospace', group: 'Monospace' },
   { label: 'JetBrains Mono', value: '"JetBrains Mono", Menlo, monospace', group: 'Monospace' },
   { label: 'Courier New', value: '"Courier New", Courier, monospace', group: 'Monospace' },
-]
+];
 
-const GROUPS = ['Imported', 'System', 'Sans-Serif', 'Serif', 'Display', 'Monospace'] as const
+const GROUPS = ['Imported', 'System', 'Sans-Serif', 'Serif', 'Display', 'Monospace'] as const;
 
 interface Props {
   label: string
@@ -65,47 +65,47 @@ interface Props {
 }
 
 export default function TypographyFontPicker({ label, value, onChange }: Props): JSX.Element {
-  const managedFonts = useProjectStore((s) => s.fonts)
+  const managedFonts = useProjectStore((s) => s.fonts);
 
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [portalStyle, setPortalStyle] = useState<React.CSSProperties>({})
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [portalStyle, setPortalStyle] = useState<React.CSSProperties>({});
 
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // All options with managed fonts at top
   const allOptions = useMemo<FontOption[]>(() => {
     const managed: FontOption[] = managedFonts
       .filter((f) => f.name.trim())
-      .map((f) => ({ label: f.name, value: f.name, group: 'Imported' }))
+      .map((f) => ({ label: f.name, value: f.name, group: 'Imported' }));
     return [...managed, ...FONT_OPTIONS]
-  }, [managedFonts])
+  }, [managedFonts]);
 
   // Current option (for trigger display)
   const currentOption = useMemo(() => {
     return allOptions.find((o) => o.value === value) ?? { label: value || 'Select a font…', value: value || '', group: '' }
-  }, [allOptions, value])
+  }, [allOptions, value]);
 
   // Filtered by search
   const filteredOptions = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    if (!q) return allOptions
+    const q = search.toLowerCase().trim();
+    if (!q) return allOptions;
     return allOptions.filter((o) => o.label.toLowerCase().includes(q))
-  }, [allOptions, search])
+  }, [allOptions, search]);
 
   // Grouped filtered options
   const groups = useMemo(() => {
     return GROUPS
       .map((g) => ({ group: g, items: filteredOptions.filter((o) => o.group === g) }))
       .filter((g) => g.items.length > 0)
-  }, [filteredOptions])
+  }, [filteredOptions]);
 
   const openDropdown = () => {
-    if (!triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    const spaceBelow = window.innerHeight - rect.bottom
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
     setPortalStyle({
       position: 'fixed',
       top: rect.bottom + 3,
@@ -113,39 +113,39 @@ export default function TypographyFontPicker({ label, value, onChange }: Props):
       width: Math.max(rect.width, 240),
       maxHeight: Math.min(360, spaceBelow - 12),
       zIndex: 99999,
-    })
-    setSearch('')
+    });
+    setSearch('');
     setOpen(true)
-  }
+  };
 
   // Focus search and scroll to active item after open
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     setTimeout(() => {
-      searchRef.current?.focus()
-      const active = listRef.current?.querySelector('[data-active="true"]') as HTMLElement | null
+      searchRef.current?.focus();
+      const active = listRef.current?.querySelector('[data-active="true"]') as HTMLElement | null;
       active?.scrollIntoView({ block: 'center' })
     }, 0)
-  }, [open])
+  }, [open]);
 
   // Close on outside click
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handler = (e: MouseEvent) => {
-      const portal = document.getElementById('tfp-dropdown-portal')
+      const portal = document.getElementById('tfp-dropdown-portal');
       if (!triggerRef.current?.contains(e.target as Node) && !portal?.contains(e.target as Node)) {
         setOpen(false)
       }
-    }
-    document.addEventListener('mousedown', handler)
+    };
+    document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  }, [open]);
 
   const commit = (v: string) => {
-    onChange(v)
-    setOpen(false)
+    onChange(v);
+    setOpen(false);
     setSearch('')
-  }
+  };
 
   const dropdown = (
     <div id="tfp-dropdown-portal" className="tfp-dropdown" style={portalStyle}>
@@ -180,7 +180,7 @@ export default function TypographyFontPicker({ label, value, onChange }: Props):
           <div key={group}>
             <div className="tfp-group-header">{group}</div>
             {items.map((option) => {
-              const isActive = option.value === value
+              const isActive = option.value === value;
               return (
                 <button
                   key={option.value + option.group}
@@ -203,7 +203,7 @@ export default function TypographyFontPicker({ label, value, onChange }: Props):
         ))}
       </div>
     </div>
-  )
+  );
 
   return (
     <div className="tfp-field">

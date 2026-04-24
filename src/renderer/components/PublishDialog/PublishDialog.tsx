@@ -13,7 +13,7 @@ interface PublishDialogProps {
 
 type Step = 'select' | 'credentials' | 'validating' | 'validated' | 'publishing' | 'result'
 
-const STEPPER_LABELS = ['Select', 'Configure', 'Validate', 'Publish']
+const STEPPER_LABELS = ['Select', 'Configure', 'Validate', 'Publish'];
 const STEP_TO_INDEX: Record<Step, number> = {
   select: 0,
   credentials: 1,
@@ -21,175 +21,175 @@ const STEP_TO_INDEX: Record<Step, number> = {
   validated: 2,
   publishing: 3,
   result: 3,
-}
+};
 
 export default function PublishDialog({ open, onClose }: PublishDialogProps): JSX.Element | null {
-  const api = getApi()
+  const api = getApi();
 
-  const [step, setStep] = useState<Step>('select')
-  const [providers, setProviders] = useState<PublishProviderInfo[]>([])
-  const [selectedProvider, setSelectedProvider] = useState<PublishProviderInfo | null>(null)
-  const [credentials, setCredentials] = useState<Record<string, string>>({})
-  const [storedCredentialHints, setStoredCredentialHints] = useState<Record<string, string>>({})
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
-  const [publishResult, setPublishResult] = useState<PublishResult | null>(null)
-  const [progress, setProgress] = useState<PublishProgress | null>(null)
-  const [exportedFiles, setExportedFiles] = useState<ExportedFile[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [bindToProject, setBindToProject] = useState(false)
-  const [saveCredentialToApp, setSaveCredentialToApp] = useState(false)
+  const [step, setStep] = useState<Step>('select');
+  const [providers, setProviders] = useState<PublishProviderInfo[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<PublishProviderInfo | null>(null);
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [storedCredentialHints, setStoredCredentialHints] = useState<Record<string, string>>({});
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
+  const [progress, setProgress] = useState<PublishProgress | null>(null);
+  const [exportedFiles, setExportedFiles] = useState<ExportedFile[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [bindToProject, setBindToProject] = useState(false);
+  const [saveCredentialToApp, setSaveCredentialToApp] = useState(false);
 
-  const getProjectData = useProjectStore((s) => s.getProjectData)
-  const updatePage = useProjectStore((s) => s.updatePage)
-  const currentPageId = useProjectStore((s) => s.currentPageId)
-  const boundPublisherId = useProjectStore((s) => s.boundPublisherId)
-  const setPublisherBinding = useProjectStore((s) => s.setPublisherBinding)
-  const setPublishResultInStore = useProjectStore((s) => s.setPublishResult)
-  const editorBlocks = useEditorStore((s) => s.blocks)
-  const customCss = useEditorStore((s) => s.customCss)
+  const getProjectData = useProjectStore((s) => s.getProjectData);
+  const updatePage = useProjectStore((s) => s.updatePage);
+  const currentPageId = useProjectStore((s) => s.currentPageId);
+  const boundPublisherId = useProjectStore((s) => s.boundPublisherId);
+  const setPublisherBinding = useProjectStore((s) => s.setPublisherBinding);
+  const setPublishResultInStore = useProjectStore((s) => s.setPublishResult);
+  const editorBlocks = useEditorStore((s) => s.blocks);
+  const customCss = useEditorStore((s) => s.customCss);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
-    setStep('select')
-    setSelectedProvider(null)
-    setCredentials({})
-    setStoredCredentialHints({})
-    setValidationResult(null)
-    setPublishResult(null)
-    setProgress(null)
-    setExportedFiles([])
-    setError(null)
-    setBindToProject(Boolean(boundPublisherId))
-    setSaveCredentialToApp(false)
+    setStep('select');
+    setSelectedProvider(null);
+    setCredentials({});
+    setStoredCredentialHints({});
+    setValidationResult(null);
+    setPublishResult(null);
+    setProgress(null);
+    setExportedFiles([]);
+    setError(null);
+    setBindToProject(Boolean(boundPublisherId));
+    setSaveCredentialToApp(false);
 
     api.publish.getProviders().then((list) => {
       setProviders(list)
     })
-  }, [open, boundPublisherId])
+  }, [open, boundPublisherId]);
 
   useEffect(() => {
-    const handler = (nextProgress: PublishProgress) => setProgress(nextProgress)
-    const cleanup = api.publish.onProgress(handler)
+    const handler = (nextProgress: PublishProgress) => setProgress(nextProgress);
+    const cleanup = api.publish.onProgress(handler);
     return () => {
       cleanup()
     }
-  }, [])
+  }, []);
 
   const handleSelectProvider = async (provider: PublishProviderInfo): Promise<void> => {
-    setSelectedProvider(provider)
-    setError(null)
+    setSelectedProvider(provider);
+    setError(null);
 
-    const stored = await api.publish.getCredentials(provider.id)
-    const initial: Record<string, string> = {}
-    const hints: Record<string, string> = {}
+    const stored = await api.publish.getCredentials(provider.id);
+    const initial: Record<string, string> = {};
+    const hints: Record<string, string> = {};
 
     for (const field of provider.credentialFields) {
-      const storedValue = stored[field.key] ?? ''
-      initial[field.key] = field.sensitive ? '' : storedValue
+      const storedValue = stored[field.key] ?? '';
+      initial[field.key] = field.sensitive ? '' : storedValue;
       hints[field.key] = storedValue
     }
 
-    setCredentials(initial)
-    setStoredCredentialHints(hints)
-    setBindToProject(boundPublisherId === provider.id)
-    setSaveCredentialToApp(false)
+    setCredentials(initial);
+    setStoredCredentialHints(hints);
+    setBindToProject(boundPublisherId === provider.id);
+    setSaveCredentialToApp(false);
     setStep('credentials')
-  }
+  };
 
   const buildCredentialPayload = (): Record<string, string> => {
-    if (!selectedProvider) return {}
+    if (!selectedProvider) return {};
 
     return selectedProvider.credentialFields.reduce<Record<string, string>>((acc, field) => {
-      const value = credentials[field.key] ?? ''
-      const storedValue = storedCredentialHints[field.key] ?? ''
+      const value = credentials[field.key] ?? '';
+      const storedValue = storedCredentialHints[field.key] ?? '';
 
       if (field.sensitive && value === '' && storedValue) {
         return acc
       }
 
-      acc[field.key] = value
+      acc[field.key] = value;
       return acc
     }, {})
-  }
+  };
 
   const buildExportedFiles = async (): Promise<ExportedFile[]> => {
     if (currentPageId) {
       updatePage(currentPageId, { blocks: editorBlocks })
     }
 
-    const projectData = getProjectData()
+    const projectData = getProjectData();
     const files = await exportProject(projectData, {
       customCss,
       inlineCss: false,
       inlineAssets: false,
       minify: false
-    })
+    });
 
-    setExportedFiles(files)
+    setExportedFiles(files);
     return files
-  }
+  };
 
   const handleValidate = async (): Promise<void> => {
-    if (!selectedProvider) return
+    if (!selectedProvider) return;
 
-    setStep('validating')
-    setError(null)
+    setStep('validating');
+    setError(null);
 
     try {
-      const files = await buildExportedFiles()
-      const result = await api.publish.validate(selectedProvider.id, files, buildCredentialPayload())
-      setValidationResult(result)
+      const files = await buildExportedFiles();
+      const result = await api.publish.validate(selectedProvider.id, files, buildCredentialPayload());
+      setValidationResult(result);
       setStep('validated')
     } catch (err) {
-      setError(String(err))
+      setError(String(err));
       setStep('credentials')
     }
-  }
+  };
 
   const handlePublish = async (): Promise<void> => {
-    if (!selectedProvider) return
+    if (!selectedProvider) return;
 
-    setStep('publishing')
-    setProgress(null)
-    setError(null)
+    setStep('publishing');
+    setProgress(null);
+    setError(null);
 
     try {
-      const credentialPayload = buildCredentialPayload()
+      const credentialPayload = buildCredentialPayload();
 
-      setPublisherBinding(bindToProject ? selectedProvider.id : null)
+      setPublisherBinding(bindToProject ? selectedProvider.id : null);
       if (bindToProject && saveCredentialToApp) {
         await api.publish.saveCredentials(selectedProvider.id, credentialPayload)
       }
 
-      const files = exportedFiles.length > 0 ? exportedFiles : await buildExportedFiles()
-      const result = await api.publish.publish(selectedProvider.id, files, credentialPayload)
+      const files = exportedFiles.length > 0 ? exportedFiles : await buildExportedFiles();
+      const result = await api.publish.publish(selectedProvider.id, files, credentialPayload);
       if (result.success && result.url) {
         setPublishResultInStore(result.url, new Date().toISOString())
       }
-      setPublishResult(result)
+      setPublishResult(result);
       setStep('result')
     } catch (err) {
-      setPublishResult({ success: false, error: String(err), warnings: [] })
+      setPublishResult({ success: false, error: String(err), warnings: [] });
       setStep('result')
     }
-  }
+  };
 
   const handleCopyUrl = (url: string): void => {
     navigator.clipboard.writeText(url).catch(() => {})
-  }
+  };
 
   const handleOpenUrl = (url: string): void => {
     api.project.openInBrowser(url).catch(() => {})
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   const hasErrors = validationResult
     ? validationResult.issues.some((issue) => issue.severity === 'error')
-    : false
+    : false;
 
-  const activeStepIndex = STEP_TO_INDEX[step]
+  const activeStepIndex = STEP_TO_INDEX[step];
 
   return (
     <div className="publish-overlay" onClick={onClose}>
@@ -307,8 +307,8 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
                     type="checkbox"
                     checked={bindToProject}
                     onChange={(e) => {
-                      const checked = e.target.checked
-                      setBindToProject(checked)
+                      const checked = e.target.checked;
+                      setBindToProject(checked);
                       if (!checked) setSaveCredentialToApp(false)
                     }}
                   />
@@ -459,7 +459,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps): JS
             <button
               className="publish-btn-secondary"
               onClick={() => {
-                if (step === 'credentials') setStep('select')
+                if (step === 'credentials') setStep('select');
                 if (step === 'validated') setStep('credentials')
               }}
             >

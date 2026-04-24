@@ -14,45 +14,45 @@ const FRAMEWORK_OPTIONS: { id: FrameworkChoice; label: string; desc: string; ico
   { id: 'bootstrap-5', label: 'Bootstrap 5', desc: 'The most popular HTML/CSS/JS framework.', icon: 'B', color: '#7952b3' },
   { id: 'tailwind', label: 'Tailwind CSS', desc: 'A utility-first CSS framework.', icon: 'T', color: '#38bdf8' },
   { id: 'vanilla', label: 'Vanilla HTML/CSS', desc: 'No framework — pure semantic HTML and CSS.', icon: '<>', color: '#6c757d' }
-]
+];
 
 export default function NewProjectWizard({ onClose }: NewProjectWizardProps): JSX.Element {
-  const [projectName, setProjectName] = useState('My Website')
-  const [framework, setFramework] = useState<FrameworkChoice>('bootstrap-5')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [projectName, setProjectName] = useState('My Website');
+  const [framework, setFramework] = useState<FrameworkChoice>('bootstrap-5');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const setProject = useProjectStore((s) => s.setProject)
-  const setPageBlocks = useEditorStore((s) => s.setPageBlocks)
-  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
-  const api = getApi()
+  const setProject = useProjectStore((s) => s.setProject);
+  const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
+  const api = getApi();
 
   const handleCreate = async () => {
     if (!projectName.trim()) {
-      setError('Please enter a project name.')
+      setError('Please enter a project name.');
       return
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const result = await api.project.new({
         name: projectName.trim(),
         framework
-      })
+      });
 
       if (result.success && result.content) {
-        const data = result.content as any
-        setProject(data, result.filePath)
+        const data = result.content as any;
+        setProject(data, result.filePath);
 
         // Load the first page into the editor
         if (data.pages && data.pages.length > 0) {
           setPageBlocks(data.pages[0].blocks)
         }
 
-        const defaultLayout = useAppSettingsStore.getState().defaultLayout
-        setEditorLayout(defaultLayout)
+        const defaultLayout = useAppSettingsStore.getState().defaultLayout;
+        setEditorLayout(defaultLayout);
 
         onClose()
       } else if (!result.canceled) {
@@ -63,7 +63,7 @@ export default function NewProjectWizard({ onClose }: NewProjectWizardProps): JS
     } finally {
       setLoading(false)
     }
-  }
+  };
 
   return (
     <div className="npw-overlay" onClick={onClose}>

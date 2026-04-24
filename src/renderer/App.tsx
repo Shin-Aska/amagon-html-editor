@@ -1,14 +1,14 @@
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {Group as PanelGroup, Panel, Separator as PanelResizeHandle} from 'react-resizable-panels'
 import {
-    DndContext,
-    type DragCancelEvent,
-    type DragEndEvent,
-    DragOverlay,
-    type DragStartEvent,
-    PointerSensor,
-    useSensor,
-    useSensors
+  DndContext,
+  type DragCancelEvent,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors
 } from '@dnd-kit/core'
 import Sidebar from './components/Sidebar/Sidebar'
 import Canvas from './components/Canvas/Canvas'
@@ -37,13 +37,13 @@ import {tutorialSteps} from './components/Tutorial/tutorialSteps'
 import {OPEN_KEYBOARD_SHORTCUTS_EVENT} from './constants/tutorialEvents'
 
 // Lazy load heavy components for performance
-const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'))
-const AssetManager = lazy(() => import('./components/AssetManager/AssetManager'))
-const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'))
-const ExportDialog = lazy(() => import('./components/ExportDialog/ExportDialog'))
-const ThemeEditor = lazy(() => import('./components/ThemeEditor/ThemeEditor'))
-const PublishDialog = lazy(() => import('./components/PublishDialog/PublishDialog'))
-const AboutAmagon = lazy(() => import('./components/AboutAmagon/AboutAmagon'))
+const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'));
+const AssetManager = lazy(() => import('./components/AssetManager/AssetManager'));
+const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'));
+const ExportDialog = lazy(() => import('./components/ExportDialog/ExportDialog'));
+const ThemeEditor = lazy(() => import('./components/ThemeEditor/ThemeEditor'));
+const PublishDialog = lazy(() => import('./components/PublishDialog/PublishDialog'));
+const AboutAmagon = lazy(() => import('./components/AboutAmagon/AboutAmagon'));
 
 // Loading fallback component
 const DialogLoader = () => (
@@ -60,174 +60,174 @@ const DialogLoader = () => (
       Loading...
     </div>
   </div>
-)
+);
 
 function App(): JSX.Element {
-  const api = getApi()
+  const api = getApi();
 
-  const showToast = useToastStore((s) => s.showToast)
+  const showToast = useToastStore((s) => s.showToast);
 
-  const [codeEditorOpen, setCodeEditorOpen] = useState(false)
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [showNewProject, setShowNewProject] = useState(false)
-  const [showAssetManager, setShowAssetManager] = useState(false)
-  const [showExport, setShowExport] = useState(false)
-  const [showPublish, setShowPublish] = useState(false)
-  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
-  const [showThemeEditor, setShowThemeEditor] = useState(false)
-  const [showAbout, setShowAbout] = useState(false)
-  const [showWelcomeTour, setShowWelcomeTour] = useState(false)
+  const [codeEditorOpen, setCodeEditorOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [showAssetManager, setShowAssetManager] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showThemeEditor, setShowThemeEditor] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showWelcomeTour, setShowWelcomeTour] = useState(false);
 
-  const addBlock = useEditorStore((s) => s.addBlock)
-  const selectBlock = useEditorStore((s) => s.selectBlock)
-  const blocks = useEditorStore((s) => s.blocks)
-  const isTypingCode = useEditorStore((s) => s.isTypingCode)
-  const setIsDragging = useEditorStore((s) => s.setIsDragging)
-  const markSaved = useEditorStore((s) => s.markSaved)
-  const setCustomCss = useEditorStore((s) => s.setCustomCss)
-  const editorLayout = useEditorStore((s) => s.editorLayout)
-  const setEditorLayout = useEditorStore((s) => s.setEditorLayout)
-  const userBlocks = useProjectStore((s) => s.userBlocks)
-  const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded)
-  const currentPageId = useProjectStore((s) => s.currentPageId)
-  const settingsLoaded = useAppSettingsStore((s) => s.loaded)
-  const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled)
-  const tutorialCompleted = useAppSettingsStore((s) => s.tutorialCompleted)
-  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
-  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
-  const startTutorial = useTutorialStore((s) => s.startTutorial)
-  const isTutorialActive = useTutorialStore((s) => s.isActive)
-  const syncTutorialEnabled = useTutorialStore((s) => s.setTutorialEnabled)
-  const syncTutorialCompleted = useTutorialStore((s) => s.setTutorialCompleted)
+  const addBlock = useEditorStore((s) => s.addBlock);
+  const selectBlock = useEditorStore((s) => s.selectBlock);
+  const blocks = useEditorStore((s) => s.blocks);
+  const isTypingCode = useEditorStore((s) => s.isTypingCode);
+  const setIsDragging = useEditorStore((s) => s.setIsDragging);
+  const markSaved = useEditorStore((s) => s.markSaved);
+  const setCustomCss = useEditorStore((s) => s.setCustomCss);
+  const editorLayout = useEditorStore((s) => s.editorLayout);
+  const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
+  const userBlocks = useProjectStore((s) => s.userBlocks);
+  const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded);
+  const currentPageId = useProjectStore((s) => s.currentPageId);
+  const settingsLoaded = useAppSettingsStore((s) => s.loaded);
+  const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled);
+  const tutorialCompleted = useAppSettingsStore((s) => s.tutorialCompleted);
+  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled);
+  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted);
+  const startTutorial = useTutorialStore((s) => s.startTutorial);
+  const isTutorialActive = useTutorialStore((s) => s.isActive);
+  const syncTutorialEnabled = useTutorialStore((s) => s.setTutorialEnabled);
+  const syncTutorialCompleted = useTutorialStore((s) => s.setTutorialCompleted);
 
-  const prevPageIdRef = useRef<string | null>(null)
-  const prevProjectLoadedRef = useRef(false)
-  const shouldEvaluateWelcomeRef = useRef(true)
+  const prevPageIdRef = useRef<string | null>(null);
+  const prevProjectLoadedRef = useRef(false);
+  const shouldEvaluateWelcomeRef = useRef(true);
 
   useEffect(() => {
     if (!isProjectLoaded) {
-      prevPageIdRef.current = null
+      prevPageIdRef.current = null;
       return
     }
 
-    const projectState = useProjectStore.getState()
-    const nextPageId = projectState.currentPageId
-    if (!nextPageId) return
+    const projectState = useProjectStore.getState();
+    const nextPageId = projectState.currentPageId;
+    if (!nextPageId) return;
 
-    const prevPageId = prevPageIdRef.current
+    const prevPageId = prevPageIdRef.current;
     if (prevPageId && prevPageId !== nextPageId) {
-      const prevExists = projectState.pages.some((p) => p.id === prevPageId)
+      const prevExists = projectState.pages.some((p) => p.id === prevPageId);
       if (prevExists) {
         projectState.updatePage(prevPageId, { blocks: useEditorStore.getState().blocks })
       }
     }
 
-    const nextPage = projectState.pages.find((p) => p.id === nextPageId)
+    const nextPage = projectState.pages.find((p) => p.id === nextPageId);
     if (nextPage) {
       useEditorStore.getState().loadPageBlocks(nextPage.blocks)
     }
 
     prevPageIdRef.current = nextPageId
-  }, [currentPageId, isProjectLoaded])
+  }, [currentPageId, isProjectLoaded]);
 
   useEffect(() => {
     syncTutorialEnabled(tutorialEnabled)
-  }, [syncTutorialEnabled, tutorialEnabled])
+  }, [syncTutorialEnabled, tutorialEnabled]);
 
   useEffect(() => {
     syncTutorialCompleted(tutorialCompleted)
-  }, [syncTutorialCompleted, tutorialCompleted])
+  }, [syncTutorialCompleted, tutorialCompleted]);
 
   useEffect(() => {
     if (!isProjectLoaded) {
-      shouldEvaluateWelcomeRef.current = true
+      shouldEvaluateWelcomeRef.current = true;
       setShowWelcomeTour(false)
     } else if (!prevProjectLoadedRef.current && isProjectLoaded) {
       shouldEvaluateWelcomeRef.current = true
     }
 
     prevProjectLoadedRef.current = isProjectLoaded
-  }, [isProjectLoaded])
+  }, [isProjectLoaded]);
 
   useEffect(() => {
-    if (!isProjectLoaded || !settingsLoaded || !shouldEvaluateWelcomeRef.current) return
+    if (!isProjectLoaded || !settingsLoaded || !shouldEvaluateWelcomeRef.current) return;
 
-    shouldEvaluateWelcomeRef.current = false
+    shouldEvaluateWelcomeRef.current = false;
     if (tutorialEnabled && !tutorialCompleted) {
       setShowWelcomeTour(true)
     }
-  }, [isProjectLoaded, settingsLoaded, tutorialEnabled, tutorialCompleted])
+  }, [isProjectLoaded, settingsLoaded, tutorialEnabled, tutorialCompleted]);
 
   const handleStartWelcomeTour = useCallback(() => {
-    setShowWelcomeTour(false)
+    setShowWelcomeTour(false);
     startTutorial(tutorialSteps)
-  }, [startTutorial])
+  }, [startTutorial]);
 
   const handleSkipWelcomeTour = useCallback(() => {
     setShowWelcomeTour(false)
-  }, [])
+  }, []);
 
   const handleDontShowTourAgain = useCallback(() => {
-    setTutorialCompleted(true)
-    setTutorialEnabled(false)
+    setTutorialCompleted(true);
+    setTutorialEnabled(false);
     setShowWelcomeTour(false)
-  }, [setTutorialCompleted, setTutorialEnabled])
+  }, [setTutorialCompleted, setTutorialEnabled]);
 
   // Sync menu state with the main process based on project load status
   useEffect(() => {
     if (window.api && window.api.menu && window.api.menu.setProjectLoaded) {
       window.api.menu.setProjectLoaded(isProjectLoaded)
     }
-  }, [isProjectLoaded, api])
+  }, [isProjectLoaded, api]);
 
   // Auto-open code editor if switching to code-focus layout
   useEffect(() => {
     if (editorLayout === 'code-focus') {
       setCodeEditorOpen(true)
     }
-  }, [editorLayout])
+  }, [editorLayout]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 }
     })
-  )
+  );
 
   // Handlers for keyboard shortcuts - direct API calls
   const handleNewProject = useCallback(() => {
     setShowNewProject(true)
-  }, [])
+  }, []);
 
   const ensureBackendReadyAndFlushEdits = useCallback(async (): Promise<boolean> => {
-    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
-    const isElectron = /electron/i.test(ua)
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isElectron = /electron/i.test(ua);
     if (isElectron && !window.api) {
-      showToast('Electron backend not available (window.api missing)', 'error')
+      showToast('Electron backend not available (window.api missing)', 'error');
       return false
     }
 
-    const active = document.activeElement as HTMLElement | null
-    active?.blur?.()
-    await new Promise((r) => setTimeout(r, 0))
+    const active = document.activeElement as HTMLElement | null;
+    active?.blur?.();
+    await new Promise((r) => setTimeout(r, 0));
 
     if (useEditorStore.getState().isTypingCode) {
       await new Promise((r) => setTimeout(r, 900))
     }
     return true
-  }, [showToast])
+  }, [showToast]);
 
   const handleSave = useCallback(async () => {
-    const ok = await ensureBackendReadyAndFlushEdits()
-    if (!ok) return
+    const ok = await ensureBackendReadyAndFlushEdits();
+    if (!ok) return;
 
-    const editorState = useEditorStore.getState()
-    const projectState = useProjectStore.getState()
-    const pageId = projectState.currentPageId
+    const editorState = useEditorStore.getState();
+    const projectState = useProjectStore.getState();
+    const pageId = projectState.currentPageId;
 
-    const baseProjectData = projectState.getProjectData()
+    const baseProjectData = projectState.getProjectData();
     const pages = projectState.pages.map((p) =>
       pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
-    )
+    );
 
     const content = JSON.stringify(
       {
@@ -237,19 +237,19 @@ function App(): JSX.Element {
       },
       null,
       2
-    )
+    );
 
     if (pageId) {
       projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
     }
-    const filePath = projectState.filePath
+    const filePath = projectState.filePath;
 
     try {
-      const result = await api.project.save({ filePath: filePath || undefined, content })
+      const result = await api.project.save({ filePath: filePath || undefined, content });
       if (result.success && result.filePath) {
-        useProjectStore.getState().setFilePath(result.filePath)
-        markSaved()
-        showToast(`Saved: ${result.filePath}`, 'success')
+        useProjectStore.getState().setFilePath(result.filePath);
+        markSaved();
+        showToast(`Saved: ${result.filePath}`, 'success');
         return
       }
       if (!result.canceled) {
@@ -258,20 +258,20 @@ function App(): JSX.Element {
     } catch (err) {
       showToast(String(err), 'error')
     }
-  }, [api, ensureBackendReadyAndFlushEdits])
+  }, [api, ensureBackendReadyAndFlushEdits]);
 
   const handleSaveAs = useCallback(async () => {
-    const ok = await ensureBackendReadyAndFlushEdits()
-    if (!ok) return
+    const ok = await ensureBackendReadyAndFlushEdits();
+    if (!ok) return;
 
-    const editorState = useEditorStore.getState()
-    const projectState = useProjectStore.getState()
-    const pageId = projectState.currentPageId
+    const editorState = useEditorStore.getState();
+    const projectState = useProjectStore.getState();
+    const pageId = projectState.currentPageId;
 
-    const baseProjectData = projectState.getProjectData()
+    const baseProjectData = projectState.getProjectData();
     const pages = projectState.pages.map((p) =>
       pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
-    )
+    );
 
     const content = JSON.stringify(
       {
@@ -281,18 +281,18 @@ function App(): JSX.Element {
       },
       null,
       2
-    )
+    );
 
     if (pageId) {
       projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
     }
 
     try {
-      const result = await api.project.saveAs({ content })
+      const result = await api.project.saveAs({ content });
       if (result.success && result.filePath) {
-        useProjectStore.getState().setFilePath(result.filePath)
-        markSaved()
-        showToast(`Saved: ${result.filePath}`, 'success')
+        useProjectStore.getState().setFilePath(result.filePath);
+        markSaved();
+        showToast(`Saved: ${result.filePath}`, 'success');
         return
       }
       if (!result.canceled) {
@@ -301,62 +301,62 @@ function App(): JSX.Element {
     } catch (err) {
       showToast(String(err), 'error')
     }
-  }, [api, ensureBackendReadyAndFlushEdits])
+  }, [api, ensureBackendReadyAndFlushEdits]);
 
   const handleLoad = useCallback(async () => {
-    const result = await api.project.load()
+    const result = await api.project.load();
     if (result.success && result.content) {
-      useProjectStore.getState().setProject(result.content as any, result.filePath)
-      const data = result.content as any
-      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null
+      useProjectStore.getState().setProject(result.content as any, result.filePath);
+      const data = result.content as any;
+      const firstPage = Array.isArray(data.pages) ? data.pages[0] : null;
       if (firstPage && Array.isArray(firstPage.blocks)) {
         useEditorStore.getState().loadPageBlocks(firstPage.blocks)
       }
-      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '')
-      markSaved()
-      showToast('Project loaded', 'success')
+      setCustomCss(typeof data.customCss === 'string' ? data.customCss : '');
+      markSaved();
+      showToast('Project loaded', 'success');
       return
     }
     if (!result.canceled) {
       showToast(result.error || 'Load failed', 'error')
     }
-  }, [api])
+  }, [api]);
 
   const handleExport = useCallback(() => {
     setShowExport(true)
-  }, [])
+  }, []);
 
   const getLayoutPanels = useCallback((layout: typeof editorLayout) => {
-    const sidebar = layout === 'standard' || layout === 'no-inspector'
-    const inspector = layout === 'standard' || layout === 'no-sidebar' || layout === 'zen'
+    const sidebar = layout === 'standard' || layout === 'no-inspector';
+    const inspector = layout === 'standard' || layout === 'no-sidebar' || layout === 'zen';
     return { sidebar, inspector }
-  }, [])
+  }, []);
 
   const layoutFromPanels = useCallback(
     (sidebar: boolean, inspector: boolean): typeof editorLayout => {
-      if (sidebar && inspector) return 'standard'
-      if (!sidebar && inspector) return 'no-sidebar'
-      if (sidebar && !inspector) return 'no-inspector'
+      if (sidebar && inspector) return 'standard';
+      if (!sidebar && inspector) return 'no-sidebar';
+      if (sidebar && !inspector) return 'no-inspector';
       return 'canvas-only'
     },
     []
-  )
+  );
 
   const handleToggleSidebar = useCallback(() => {
-    const { sidebar, inspector } = getLayoutPanels(editorLayout)
+    const { sidebar, inspector } = getLayoutPanels(editorLayout);
     setEditorLayout(layoutFromPanels(!sidebar, inspector))
-  }, [editorLayout, getLayoutPanels, layoutFromPanels, setEditorLayout])
+  }, [editorLayout, getLayoutPanels, layoutFromPanels, setEditorLayout]);
 
   const handleToggleInspector = useCallback(() => {
-    const { sidebar, inspector } = getLayoutPanels(editorLayout)
+    const { sidebar, inspector } = getLayoutPanels(editorLayout);
     setEditorLayout(layoutFromPanels(sidebar, !inspector))
-  }, [editorLayout, getLayoutPanels, layoutFromPanels, setEditorLayout])
+  }, [editorLayout, getLayoutPanels, layoutFromPanels, setEditorLayout]);
 
   // Derived panel visibility from layout
-  const showSidebar = editorLayout === 'standard' || editorLayout === 'no-inspector'
-  const showInspector = editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'zen'
-  const showCodeEditor = codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen')
-  const showCanvas = editorLayout !== 'code-focus'  // Hide canvas in code-focus layout
+  const showSidebar = editorLayout === 'standard' || editorLayout === 'no-inspector';
+  const showInspector = editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'zen';
+  const showCodeEditor = codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen');
+  const showCanvas = editorLayout !== 'code-focus';  // Hide canvas in code-focus layout
   useKeyboardShortcuts({
     onSave: handleSave,
     onSaveAs: handleSaveAs,
@@ -370,51 +370,67 @@ function App(): JSX.Element {
     codeEditorOpen,
     onNewProject: handleNewProject,
     onSetEditorLayout: setEditorLayout
-  })
+  });
 
   // Command palette keyboard handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
+        e.preventDefault();
         setCommandPaletteOpen(prev => !prev)
       }
       // Keyboard shortcuts help: Ctrl+?
       if ((e.ctrlKey || e.metaKey) && e.key === '?') {
-        e.preventDefault()
+        e.preventDefault();
         setShowKeyboardShortcuts(prev => !prev)
       }
-    }
-    window.addEventListener('keydown', handleKeyDown)
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, []);
 
   useEffect(() => {
     const handleOpenKeyboardShortcuts = () => {
       setShowKeyboardShortcuts(true)
-    }
+    };
 
-    window.addEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts)
+    window.addEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts);
     return () => window.removeEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts)
-  }, [])
+  }, []);
 
   // Electron menu action listener
   useEffect(() => {
-    const cleanup = api.menu.onAction((action: string) => {
+    return api.menu.onAction((action: string) => {
       switch (action) {
-        case 'new-project': handleNewProject(); break
-        case 'open-project': handleLoad(); break
+        case 'new-project':
+          handleNewProject();
+          break;
+        case 'open-project':
+          handleLoad();
+          break;
         case 'close-project': {
-          useProjectStore.getState().closeProject()
-          useEditorStore.getState().loadPageBlocks([])
+          useProjectStore.getState().closeProject();
+          useEditorStore.getState().loadPageBlocks([]);
           break
         }
-        case 'save': handleSave(); break
-        case 'save-as': handleSaveAs(); break
-        case 'export': handleExport(); break
-        case 'publish': setShowPublish(true); break
-        case 'undo': useEditorStore.getState().undo(); break
-        case 'redo': useEditorStore.getState().redo(); break
+        case 'save':
+          handleSave();
+          break;
+        case 'save-as':
+          handleSaveAs();
+          break;
+        case 'export':
+          handleExport();
+          break;
+        case 'publish':
+          setShowPublish(true);
+          break;
+        case 'undo':
+          useEditorStore.getState().undo();
+          break;
+        case 'redo':
+          useEditorStore.getState().redo();
+          break;
         case 'cut':
         case 'copy':
         case 'paste':
@@ -422,48 +438,59 @@ function App(): JSX.Element {
         case 'delete':
           // These are handled by keyboard shortcuts via accelerators;
           // dispatch a synthetic keydown so the existing handler picks them up
+          break;
+        case 'toggle-sidebar':
+          handleToggleSidebar();
+          break;
+        case 'toggle-inspector':
+          handleToggleInspector();
+          break;
+        case 'toggle-code-editor':
+          setCodeEditorOpen(prev => !prev);
+          break;
+        case 'command-palette':
+          setCommandPaletteOpen(prev => !prev);
+          break;
+        case 'keyboard-shortcuts':
+          setShowKeyboardShortcuts(prev => !prev);
+          break;
+        case 'about':
+          setShowAbout(true);
           break
-        case 'toggle-sidebar': handleToggleSidebar(); break
-        case 'toggle-inspector': handleToggleInspector(); break
-        case 'toggle-code-editor': setCodeEditorOpen(prev => !prev); break
-        case 'command-palette': setCommandPaletteOpen(prev => !prev); break
-        case 'keyboard-shortcuts': setShowKeyboardShortcuts(prev => !prev); break
-        case 'about': setShowAbout(true); break
       }
     })
-    return cleanup
-  }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector])
+  }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector]);
 
-  const [activeWidget, setActiveWidget] = useState<{ widgetType: string; label?: string; icon?: string } | null>(null)
-  const [dropHint, setDropHint] = useState<DropTargetHint | null>(null)
+  const [activeWidget, setActiveWidget] = useState<{ widgetType: string; label?: string; icon?: string } | null>(null);
+  const [dropHint, setDropHint] = useState<DropTargetHint | null>(null);
 
   const findParentAndIndex = useCallback((tree: Block[], targetId: string): { parentId: string | null; index: number } | null => {
     const walk = (nodes: Block[], parentId: string | null): { parentId: string | null; index: number } | null => {
       for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i]
-        if (node.id === targetId) return { parentId, index: i }
-        const found = walk(node.children, node.id)
+        const node = nodes[i];
+        if (node.id === targetId) return { parentId, index: i };
+        const found = walk(node.children, node.id);
         if (found) return found
       }
       return null
-    }
+    };
     return walk(tree, null)
-  }, [])
+  }, []);
 
   // Helper to recursively create blocks from a definition (e.g. for defaultChildren)
   const createBlockFromDef = useCallback((def: any): Block => {
     const block = createBlock(def.type, {
-      props: def.props ? { ...def.props } : {},
+      props: {...def.props},
       classes: def.classes ? [...def.classes] : [],
-      styles: def.styles ? { ...def.styles } : {}
-    })
+      styles: {...def.styles}
+    });
 
     if (def.children && Array.isArray(def.children)) {
       block.children = def.children.map((child: any) => createBlockFromDef(child))
     }
 
     return block
-  }, [])
+  }, []);
 
   // Helper to deep clone a block and regenerate IDs
   const cloneBlockWithNewIds = useCallback((block: Block): Block => {
@@ -473,104 +500,104 @@ function App(): JSX.Element {
       styles: { ...block.styles },
       content: block.content,
       tag: block.tag
-    })
+    });
 
     if (block.children) {
       newBlock.children = block.children.map(child => cloneBlockWithNewIds(child))
     }
 
     return newBlock
-  }, [])
+  }, []);
 
   const createBlockFromWidget = useCallback((widgetType: string): Block | null => {
     // Check for User Block
     if (widgetType.startsWith('user:')) {
-      const userBlockId = widgetType.replace('user:', '')
-      const userBlock = userBlocks.find(ub => ub.id === userBlockId)
-      if (!userBlock) return null
+      const userBlockId = widgetType.replace('user:', '');
+      const userBlock = userBlocks.find(ub => ub.id === userBlockId);
+      if (!userBlock) return null;
       return cloneBlockWithNewIds(userBlock.content)
     }
 
-    const def = componentRegistry.get(widgetType)
-    if (!def) return null
+    const def = componentRegistry.get(widgetType);
+    if (!def) return null;
 
     const block = createBlock(def.type, {
       props: buildDefaultBlockProps(def),
       classes: def.defaultClasses ? [...def.defaultClasses] : [],
-      styles: def.defaultStyles ? { ...def.defaultStyles } : {}
-    })
+      styles: {...def.defaultStyles}
+    });
 
     if (def.defaultChildren && Array.isArray(def.defaultChildren)) {
       block.children = def.defaultChildren.map((child) => createBlockFromDef(child))
     }
 
     return block
-  }, [createBlockFromDef, cloneBlockWithNewIds, userBlocks])
+  }, [createBlockFromDef, cloneBlockWithNewIds, userBlocks]);
 
   const onDragStart = useCallback((event: DragStartEvent) => {
-    if (isTypingCode) return
-    setIsDragging(true)
-    const data = event.active.data.current as unknown as { widgetType?: string; label?: string; icon?: string } | undefined
+    if (isTypingCode) return;
+    setIsDragging(true);
+    const data = event.active.data.current as unknown as { widgetType?: string; label?: string; icon?: string } | undefined;
     if (data?.widgetType) {
       setActiveWidget({ widgetType: data.widgetType, label: data.label, icon: data.icon })
     }
-  }, [isTypingCode, setIsDragging])
+  }, [isTypingCode, setIsDragging]);
 
   const onDragCancel = useCallback((_event: DragCancelEvent) => {
-    setIsDragging(false)
-    setActiveWidget(null)
+    setIsDragging(false);
+    setActiveWidget(null);
     setDropHint(null)
-  }, [setIsDragging])
+  }, [setIsDragging]);
 
   const onDragEnd = useCallback(
     (_event: DragEndEvent) => {
-      setIsDragging(false)
+      setIsDragging(false);
       if (!activeWidget?.widgetType) {
-        setActiveWidget(null)
-        setDropHint(null)
+        setActiveWidget(null);
+        setDropHint(null);
         return
       }
 
-      const newBlock = createBlockFromWidget(activeWidget.widgetType)
+      const newBlock = createBlockFromWidget(activeWidget.widgetType);
       if (!newBlock) {
-        setActiveWidget(null)
-        setDropHint(null)
+        setActiveWidget(null);
+        setDropHint(null);
         return
       }
 
-      let parentId: string | null = null
-      let index = -1
+      let parentId: string | null = null;
+      let index = -1;
 
       if (dropHint) {
         if (dropHint.mode === 'inside') {
-          parentId = dropHint.targetBlockId
+          parentId = dropHint.targetBlockId;
           index = -1
         } else {
-          const loc = findParentAndIndex(blocks, dropHint.targetBlockId)
+          const loc = findParentAndIndex(blocks, dropHint.targetBlockId);
           if (loc) {
-            parentId = loc.parentId
+            parentId = loc.parentId;
             index = dropHint.mode === 'before' ? loc.index : loc.index + 1
           }
         }
       }
 
-      addBlock(newBlock, parentId, index)
-      selectBlock(newBlock.id)
+      addBlock(newBlock, parentId, index);
+      selectBlock(newBlock.id);
 
-      setActiveWidget(null)
+      setActiveWidget(null);
       setDropHint(null)
     },
     [activeWidget?.widgetType, addBlock, blocks, createBlockFromWidget, dropHint, findParentAndIndex, selectBlock, setIsDragging]
-  )
+  );
 
   const dragOverlayPreview = useMemo(() => {
-    if (!activeWidget) return null
-    const iconString = typeof activeWidget.icon === 'string' ? activeWidget.icon.trim() : ''
+    if (!activeWidget) return null;
+    const iconString = typeof activeWidget.icon === 'string' ? activeWidget.icon.trim() : '';
     const previewIcon = iconString.startsWith('lucide:')
       ? <BlockIcon name={iconString.replace(/^lucide:/, '')} />
       : activeWidget.widgetType.startsWith('user:')
         ? (iconString || <BlockIcon name="user-block" />)
-        : <BlockIcon name={activeWidget.widgetType} />
+        : <BlockIcon name={activeWidget.widgetType} />;
 
     return (
       <div className="widget-drag-preview">
@@ -578,7 +605,7 @@ function App(): JSX.Element {
         <div className="widget-drag-preview__label">{activeWidget.label ?? activeWidget.widgetType}</div>
       </div>
     )
-  }, [activeWidget])
+  }, [activeWidget]);
 
   const renderEditorContent = () => {
     if (!isProjectLoaded) {
@@ -671,7 +698,7 @@ function App(): JSX.Element {
         <DragOverlay dropAnimation={null}>{dragOverlayPreview}</DragOverlay>
       </DndContext>
     )
-  }
+  };
 
   return (
     <>

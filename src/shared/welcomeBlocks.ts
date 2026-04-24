@@ -12,9 +12,9 @@ interface WelcomeBlock {
     children: WelcomeBlock[]
 }
 
-let _counter = 0
+let _counter = 0;
 function genId(): string {
-    _counter++
+    _counter++;
     return `blk_${Date.now().toString(36)}_w${_counter.toString(36)}`
 }
 

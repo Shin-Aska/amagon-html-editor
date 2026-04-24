@@ -47,7 +47,7 @@ function ColorsTab({
     { key: 'success', label: 'Success' },
     { key: 'warning', label: 'Warning' },
     { key: 'danger', label: 'Danger' }
-  ]
+  ];
 
   return (
     <div className="theme-section">
@@ -127,7 +127,7 @@ function SpacingTab({
   spacing: ThemeSpacing
   onChange: (patch: Partial<ThemeSpacing>) => void
 }): JSX.Element {
-  const unit = parseFloat(spacing.baseUnit) || 8
+  const unit = parseFloat(spacing.baseUnit) || 8;
 
   return (
     <div className="theme-section">
@@ -245,32 +245,32 @@ function PresetsTab({
   onUpdatePreset: (name: string, preset: ProjectTheme) => void
   onDeletePreset: (name: string) => void
 }): JSX.Element {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [editingPreset, setEditingPreset] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const handleEditStart = (preset: ProjectTheme) => {
-    setEditingPreset(preset.name)
+    setEditingPreset(preset.name);
     setEditName(preset.name)
-  }
+  };
 
   const handleEditSave = (originalName: string) => {
     if (editName.trim() && editName.trim() !== originalName) {
-      const preset = customPresets.find(p => p.name === originalName)
+      const preset = customPresets.find(p => p.name === originalName);
       if (preset) {
         onUpdatePreset(originalName, { ...preset, name: editName.trim() })
       }
     }
-    setEditingPreset(null)
+    setEditingPreset(null);
     setEditName('')
-  }
+  };
 
   const handleEditCancel = () => {
-    setEditingPreset(null)
+    setEditingPreset(null);
     setEditName('')
-  }
+  };
 
-  const allPresets = [...themePresets, ...customPresets]
+  const allPresets = [...themePresets, ...customPresets];
 
   return (
     <div className="theme-section">
@@ -288,9 +288,9 @@ function PresetsTab({
 
       <div className="theme-preset-grid">
         {allPresets.map((preset) => {
-          const isCustom = preset.isCustom ?? false
-          const isActive = currentTheme.name === preset.name
-          const isEditing = editingPreset === preset.name
+          const isCustom = preset.isCustom ?? false;
+          const isActive = currentTheme.name === preset.name;
+          const isEditing = editingPreset === preset.name;
 
           return (
             <div
@@ -306,7 +306,7 @@ function PresetsTab({
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleEditSave(preset.name)
+                        if (e.key === 'Enter') handleEditSave(preset.name);
                         if (e.key === 'Escape') handleEditCancel()
                       }}
                       autoFocus
@@ -373,82 +373,82 @@ function PresetsTab({
 // ─── Main ThemeEditor ─────────────────────────────────────────────────────────
 
 export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.Element | null {
-  const [activeTab, setActiveTab] = useState<ThemeTab>('colors')
-  const [editingMode, setEditingMode] = useState<PageThemeMode>('light')
-  const theme = useProjectStore((s) => s.settings.theme)
-  const themeVariants = useProjectStore((s) => s.settings.themes)
-  const customPresets = useProjectStore((s) => s.customPresets)
-  const setProjectTheme = useProjectStore((s) => s.setProjectTheme)
-  const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode)
-  const addCustomPreset = useProjectStore((s) => s.addCustomPreset)
-  const updateCustomPreset = useProjectStore((s) => s.updateCustomPreset)
-  const deleteCustomPreset = useProjectStore((s) => s.deleteCustomPreset)
-  const updateThemeColors = useProjectStore((s) => s.updateThemeColors)
-  const updateThemeTypography = useProjectStore((s) => s.updateThemeTypography)
-  const updateThemeSpacing = useProjectStore((s) => s.updateThemeSpacing)
-  const updateThemeBorders = useProjectStore((s) => s.updateThemeBorders)
-  const showToast = useToastStore((s) => s.showToast)
-  const selectedTheme = getThemeVariant(theme, themeVariants, editingMode)
+  const [activeTab, setActiveTab] = useState<ThemeTab>('colors');
+  const [editingMode, setEditingMode] = useState<PageThemeMode>('light');
+  const theme = useProjectStore((s) => s.settings.theme);
+  const themeVariants = useProjectStore((s) => s.settings.themes);
+  const customPresets = useProjectStore((s) => s.customPresets);
+  const setProjectTheme = useProjectStore((s) => s.setProjectTheme);
+  const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode);
+  const addCustomPreset = useProjectStore((s) => s.addCustomPreset);
+  const updateCustomPreset = useProjectStore((s) => s.updateCustomPreset);
+  const deleteCustomPreset = useProjectStore((s) => s.deleteCustomPreset);
+  const updateThemeColors = useProjectStore((s) => s.updateThemeColors);
+  const updateThemeTypography = useProjectStore((s) => s.updateThemeTypography);
+  const updateThemeSpacing = useProjectStore((s) => s.updateThemeSpacing);
+  const updateThemeBorders = useProjectStore((s) => s.updateThemeBorders);
+  const showToast = useToastStore((s) => s.showToast);
+  const selectedTheme = getThemeVariant(theme, themeVariants, editingMode);
 
   const getUniquePresetName = useCallback((baseName: string) => {
-    const reserved = new Set<string>([...themePresets.map((p) => p.name), ...customPresets.map((p) => p.name)])
-    if (!reserved.has(baseName)) return baseName
-    let i = 2
-    while (reserved.has(`${baseName} (${i})`)) i++
+    const reserved = new Set<string>([...themePresets.map((p) => p.name), ...customPresets.map((p) => p.name)]);
+    if (!reserved.has(baseName)) return baseName;
+    let i = 2;
+    while (reserved.has(`${baseName} (${i})`)) i++;
     return `${baseName} (${i})`
-  }, [customPresets])
+  }, [customPresets]);
 
   // Close on Escape
   useEffect(() => {
-    if (!isOpen) return
-    setEditingMode('light')
+    if (!isOpen) return;
+    setEditingMode('light');
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return
+      if (e.defaultPrevented) return;
       if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
+    };
+    window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose]);
 
   const handleReset = useCallback(() => {
-    const resetTheme = editingMode === 'dark' ? createDefaultDarkTheme() : createDefaultTheme()
-    setProjectTheme(resetTheme, editingMode)
+    const resetTheme = editingMode === 'dark' ? createDefaultDarkTheme() : createDefaultTheme();
+    setProjectTheme(resetTheme, editingMode);
     showToast(`${editingMode === 'dark' ? 'Dark' : 'Light'} page theme reset to defaults`, 'success')
-  }, [editingMode, setProjectTheme, showToast])
+  }, [editingMode, setProjectTheme, showToast]);
 
   const handleExportTheme = useCallback(() => {
-    const exportTheme: ProjectTheme = { ...selectedTheme, isCustom: true }
-    const json = JSON.stringify(exportTheme, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${selectedTheme.name.toLowerCase().replace(/\s+/g, '-')}.hoarses-theme.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    const exportTheme: ProjectTheme = { ...selectedTheme, isCustom: true };
+    const json = JSON.stringify(exportTheme, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTheme.name.toLowerCase().replace(/\s+/g, '-')}.hoarses-theme.json`;
+    a.click();
+    URL.revokeObjectURL(url);
     showToast('Theme exported', 'success')
-  }, [selectedTheme, showToast])
+  }, [selectedTheme, showToast]);
 
   const handleImportTheme = useCallback(() => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json,.hoarses-theme.json'
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,.hoarses-theme.json';
     input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
+      const file = input.files?.[0];
+      if (!file) return;
       try {
-        const text = await file.text()
-        const parsed = JSON.parse(text) as Partial<ProjectTheme>
+        const text = await file.text();
+        const parsed = JSON.parse(text) as Partial<ProjectTheme>;
 
         // Validate required fields
         if (!parsed.colors || !parsed.typography || !parsed.spacing || !parsed.borders) {
-          showToast('Invalid theme file: missing required sections', 'error')
+          showToast('Invalid theme file: missing required sections', 'error');
           return
         }
 
         // Merge with defaults to fill any missing fields
-        const defaultTheme = createDefaultTheme()
-        const rawName = parsed.name || file.name.replace(/\..*$/, '')
+        const defaultTheme = createDefaultTheme();
+        const rawName = parsed.name || file.name.replace(/\..*$/, '');
         const imported: ProjectTheme = {
           name: getUniquePresetName(rawName),
           isCustom: true,
@@ -458,17 +458,17 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
           borders: { ...defaultTheme.borders, ...parsed.borders },
           customCss: typeof parsed.customCss === 'string' ? parsed.customCss : '',
           customCssFiles: Array.isArray(parsed.customCssFiles) ? parsed.customCssFiles : []
-        }
+        };
 
-        addCustomPreset(imported)
-        setProjectTheme(imported, editingMode)
+        addCustomPreset(imported);
+        setProjectTheme(imported, editingMode);
         showToast(`Theme "${imported.name}" imported and applied to ${editingMode} page`, 'success')
       } catch (err) {
         showToast('Failed to parse theme file', 'error')
       }
-    }
+    };
     input.click()
-  }, [setProjectTheme, showToast, addCustomPreset, getUniquePresetName, editingMode])
+  }, [setProjectTheme, showToast, addCustomPreset, getUniquePresetName, editingMode]);
 
   const handleApplyPreset = useCallback((preset: ProjectTheme) => {
     const mergedPreset: ProjectTheme = {
@@ -477,35 +477,35 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
       customCssFiles: Array.isArray(selectedTheme.customCssFiles)
         ? selectedTheme.customCssFiles.map((file) => ({ ...file }))
         : []
-    }
-    setProjectTheme(mergedPreset, editingMode)
+    };
+    setProjectTheme(mergedPreset, editingMode);
     showToast(`Applied "${preset.name}" to ${editingMode} page`, 'success')
-  }, [editingMode, selectedTheme, setProjectTheme, showToast])
+  }, [editingMode, selectedTheme, setProjectTheme, showToast]);
 
   const handleCreatePreset = useCallback((name: string, colors: ThemeColors) => {
-    const finalName = getUniquePresetName(name)
+    const finalName = getUniquePresetName(name);
     const presetToSave: ProjectTheme = {
       ...selectedTheme,
       name: finalName,
       colors,
       isCustom: true
-    }
-    addCustomPreset(presetToSave)
-    setProjectTheme(presetToSave, editingMode)
+    };
+    addCustomPreset(presetToSave);
+    setProjectTheme(presetToSave, editingMode);
     showToast(`Created preset "${finalName}"`, 'success')
-  }, [selectedTheme, addCustomPreset, showToast, getUniquePresetName, editingMode, setProjectTheme])
+  }, [selectedTheme, addCustomPreset, showToast, getUniquePresetName, editingMode, setProjectTheme]);
 
   const handleUpdatePreset = useCallback((name: string, preset: ProjectTheme) => {
-    updateCustomPreset(name, preset)
+    updateCustomPreset(name, preset);
     showToast(`Updated preset "${preset.name}"`, 'success')
-  }, [updateCustomPreset, showToast])
+  }, [updateCustomPreset, showToast]);
 
   const handleDeletePreset = useCallback((name: string) => {
-    deleteCustomPreset(name)
+    deleteCustomPreset(name);
     showToast(`Deleted preset "${name}"`, 'success')
-  }, [deleteCustomPreset, showToast])
+  }, [deleteCustomPreset, showToast]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const tabs: { id: ThemeTab; label: string }[] = [
     { id: 'presets', label: 'Presets' },
@@ -515,7 +515,7 @@ export default function ThemeEditor({ isOpen, onClose }: ThemeEditorProps): JSX.
     { id: 'spacing', label: 'Spacing' },
     { id: 'borders', label: 'Borders' },
     { id: 'customCss', label: 'Custom CSS' }
-  ]
+  ];
 
   return (
     <div className="theme-editor-overlay" onClick={onClose}>

@@ -13,9 +13,9 @@ import type {PublisherExtension} from '../../types/PublisherExtension'
 import {validateForAwsS3} from '../../validators/awsS3Validator'
 import {makeError} from '../../validators/validationHelpers'
 
-const SERVICE = 's3'
-const ALGORITHM = 'AWS4-HMAC-SHA256'
-const UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
+const SERVICE = 's3';
+const ALGORITHM = 'AWS4-HMAC-SHA256';
+const UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD';
 
 // ─── MIME type lookup ───────────────────────────────────────────────────────
 
@@ -49,12 +49,12 @@ const MIME_TYPES: Record<string, string> = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.ogg': 'audio/ogg'
-}
+};
 
 function getContentType(filePath: string): string {
   const ext = filePath.lastIndexOf('.') >= 0
     ? filePath.slice(filePath.lastIndexOf('.')).toLowerCase()
-    : ''
+    : '';
   return MIME_TYPES[ext] ?? 'application/octet-stream'
 }
 
@@ -69,7 +69,7 @@ function sha256Hex(data: string | Uint8Array): string {
 }
 
 function getDateStrings(date: Date): { dateStamp: string; amzDate: string } {
-  const iso = date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const iso = date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   return {
     dateStamp: iso.slice(0, 8),
     amzDate: iso
@@ -81,9 +81,9 @@ function getSigningKey(
   dateStamp: string,
   region: string
 ): Buffer {
-  const kDate = hmacSha256(`AWS4${secretKey}`, dateStamp)
-  const kRegion = hmacSha256(kDate, region)
-  const kService = hmacSha256(kRegion, SERVICE)
+  const kDate = hmacSha256(`AWS4${secretKey}`, dateStamp);
+  const kRegion = hmacSha256(kDate, region);
+  const kService = hmacSha256(kRegion, SERVICE);
   return hmacSha256(kService, 'aws4_request')
 }
 
@@ -99,13 +99,13 @@ function uriEncodePath(path: string): string {
 }
 
 function toBytes(content: string | Uint8Array): Uint8Array {
-  if (content instanceof Uint8Array) return content
+  if (content instanceof Uint8Array) return content;
   return new TextEncoder().encode(content)
 }
 
 function toArrayBuffer(content: Uint8Array): ArrayBuffer {
-  const buffer = new ArrayBuffer(content.byteLength)
-  new Uint8Array(buffer).set(content)
+  const buffer = new ArrayBuffer(content.byteLength);
+  new Uint8Array(buffer).set(content);
   return buffer
 }
 
@@ -123,22 +123,22 @@ function signRequest(
   contentType: string,
   date: Date
 ): SignedHeaders {
-  const { dateStamp, amzDate } = getDateStrings(date)
-  const credentialScope = `${dateStamp}/${region}/${SERVICE}/aws4_request`
-  const encodedKey = `/${uriEncodePath(objectKey)}`
+  const { dateStamp, amzDate } = getDateStrings(date);
+  const credentialScope = `${dateStamp}/${region}/${SERVICE}/aws4_request`;
+  const encodedKey = `/${uriEncodePath(objectKey)}`;
 
   const headers: Record<string, string> = {
     host: bucketHost,
     'x-amz-content-sha256': UNSIGNED_PAYLOAD,
     'x-amz-date': amzDate,
     'content-type': contentType
-  }
+  };
 
-  const sortedHeaderKeys = Object.keys(headers).sort()
-  const signedHeaders = sortedHeaderKeys.join(';')
+  const sortedHeaderKeys = Object.keys(headers).sort();
+  const signedHeaders = sortedHeaderKeys.join(';');
   const canonicalHeaders = sortedHeaderKeys
     .map((key) => `${key}:${headers[key]}\n`)
-    .join('')
+    .join('');
 
   const canonicalRequest = [
     method,
@@ -147,21 +147,21 @@ function signRequest(
     canonicalHeaders,
     signedHeaders,
     UNSIGNED_PAYLOAD
-  ].join('\n')
+  ].join('\n');
 
   const stringToSign = [
     ALGORITHM,
     amzDate,
     credentialScope,
     sha256Hex(canonicalRequest)
-  ].join('\n')
+  ].join('\n');
 
-  const signingKey = getSigningKey(secretAccessKey, dateStamp, region)
-  const signature = hmacSha256(signingKey, stringToSign).toString('hex')
+  const signingKey = getSigningKey(secretAccessKey, dateStamp, region);
+  const signature = hmacSha256(signingKey, stringToSign).toString('hex');
 
   const authorization =
     `${ALGORITHM} Credential=${accessKeyId}/${credentialScope}, ` +
-    `SignedHeaders=${signedHeaders}, Signature=${signature}`
+    `SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
   return {
     Authorization: authorization,
@@ -178,14 +178,14 @@ function credentialIssue(label: string): ValidationIssue {
 }
 
 export class AwsS3Adapter implements PublisherExtension {
-  readonly apiVersion = PUBLISHER_EXTENSION_API_VERSION
+  readonly apiVersion = PUBLISHER_EXTENSION_API_VERSION;
 
   readonly meta = {
     id: 'aws-s3',
     displayName: 'AWS S3',
     websiteUrl: 'https://aws.amazon.com/s3',
     description: 'Static site hosting on Amazon S3 with global availability'
-  }
+  };
 
   readonly credentialFields: CredentialField[] = [
     {
@@ -217,14 +217,14 @@ export class AwsS3Adapter implements PublisherExtension {
       placeholder: 'www.example.com',
       sensitive: false
     }
-  ]
+  ];
 
   async validate(
     files: ExportedFile[],
     credentials: PublishCredentials
   ): Promise<ValidationResult> {
-    const baseResult = validateForAwsS3(files)
-    const issues: ValidationIssue[] = [...baseResult.issues]
+    const baseResult = validateForAwsS3(files);
+    const issues: ValidationIssue[] = [...baseResult.issues];
 
     if (!credentials.accessKeyId?.trim()) {
       issues.push(credentialIssue('Access Key ID'))
@@ -239,7 +239,7 @@ export class AwsS3Adapter implements PublisherExtension {
       issues.push(credentialIssue('Region'))
     }
 
-    const ok = issues.every((issue) => issue.severity !== 'error')
+    const ok = issues.every((issue) => issue.severity !== 'error');
     return { ok, issues }
   }
 
@@ -252,9 +252,9 @@ export class AwsS3Adapter implements PublisherExtension {
       phase: 'validating',
       percent: 0,
       message: 'Validating files...'
-    })
+    });
 
-    const validation = await this.validate(files, credentials)
+    const validation = await this.validate(files, credentials);
     if (!validation.ok) {
       return {
         success: false,
@@ -263,24 +263,24 @@ export class AwsS3Adapter implements PublisherExtension {
       }
     }
 
-    const accessKeyId = credentials.accessKeyId.trim()
-    const secretAccessKey = credentials.secretAccessKey.trim()
-    const bucket = credentials.bucket.trim()
-    const region = credentials.region.trim()
-    const bucketHost = `${bucket}.s3.${region}.amazonaws.com`
+    const accessKeyId = credentials.accessKeyId.trim();
+    const secretAccessKey = credentials.secretAccessKey.trim();
+    const bucket = credentials.bucket.trim();
+    const region = credentials.region.trim();
+    const bucketHost = `${bucket}.s3.${region}.amazonaws.com`;
 
     onProgress({
       phase: 'uploading',
       percent: 5,
       message: 'Uploading files to S3...'
-    })
+    });
 
-    const totalFiles = files.length
+    const totalFiles = files.length;
     for (let i = 0; i < files.length; i += 1) {
-      const file = files[i]
-      const objectKey = normalizePath(file.path)
-      const contentType = getContentType(objectKey)
-      const body = toBytes(file.content)
+      const file = files[i];
+      const objectKey = normalizePath(file.path);
+      const contentType = getContentType(objectKey);
+      const body = toBytes(file.content);
 
       const headers = signRequest(
         'PUT',
@@ -291,16 +291,16 @@ export class AwsS3Adapter implements PublisherExtension {
         secretAccessKey,
         contentType,
         new Date()
-      )
+      );
 
       const response = await fetch(`https://${bucketHost}/${uriEncodePath(objectKey)}`, {
         method: 'PUT',
         headers,
         body: toArrayBuffer(body)
-      })
+      });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => response.statusText)
+        const errorText = await response.text().catch(() => response.statusText);
         return {
           success: false,
           error: `Failed to upload ${objectKey}: ${errorText}`,
@@ -308,7 +308,7 @@ export class AwsS3Adapter implements PublisherExtension {
         }
       }
 
-      const percent = Math.min(95, Math.round(((i + 1) / totalFiles) * 90) + 5)
+      const percent = Math.min(95, Math.round(((i + 1) / totalFiles) * 90) + 5);
       onProgress({
         phase: 'uploading',
         percent,
@@ -316,12 +316,12 @@ export class AwsS3Adapter implements PublisherExtension {
       })
     }
 
-    onProgress({ phase: 'done', percent: 100, message: 'Published!' })
+    onProgress({ phase: 'done', percent: 100, message: 'Published!' });
 
-    const customDomain = credentials.customDomain?.trim()
+    const customDomain = credentials.customDomain?.trim();
     const siteUrl = customDomain
       ? `https://${customDomain}`
-      : `http://${bucket}.s3-website.${region}.amazonaws.com`
+      : `http://${bucket}.s3-website.${region}.amazonaws.com`;
 
     return {
       success: true,

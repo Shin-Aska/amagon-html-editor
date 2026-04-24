@@ -16,7 +16,7 @@ interface ResponsiveOverridesProps {
 // correct combination of d-none / d-md-block / d-lg-none / etc.
 // to express exactly which viewports should be visible or hidden.
 
-const VISIBILITY_DISPLAY_CLASSES = /^d(-sm|-md|-lg|-xl|-xxl)?-(none|inline|inline-block|block|grid|table|table-row|table-cell|flex|inline-flex)$/
+const VISIBILITY_DISPLAY_CLASSES = /^d(-sm|-md|-lg|-xl|-xxl)?-(none|inline|inline-block|block|grid|table|table-row|table-cell|flex|inline-flex)$/;
 
 type Viewport = 'mobile' | 'tablet' | 'desktop'
 
@@ -30,7 +30,7 @@ const VIEWPORTS: ViewportConfig[] = [
   { id: 'desktop', label: 'Desktop', icon: <Monitor size={14} /> },
   { id: 'tablet', label: 'Tablet', icon: <Tablet size={14} /> },
   { id: 'mobile', label: 'Mobile', icon: <Smartphone size={14} /> },
-]
+];
 
 /**
  * Parse current classes to determine visibility at each viewport.
@@ -40,23 +40,23 @@ const VIEWPORTS: ViewportConfig[] = [
 function parseVisibility(classes: string[]): Record<Viewport, boolean> {
   // Collect display values at each breakpoint tier
   // Tiers in order: base, sm, md, lg, xl, xxl
-  const tiers = ['', '-sm', '-md', '-lg', '-xl', '-xxl']
-  const displayAtTier: Record<string, string | null> = {}
-  for (const t of tiers) displayAtTier[t] = null
+  const tiers = ['', '-sm', '-md', '-lg', '-xl', '-xxl'];
+  const displayAtTier: Record<string, string | null> = {};
+  for (const t of tiers) displayAtTier[t] = null;
 
   for (const cls of classes) {
-    const match = cls.match(/^d(-sm|-md|-lg|-xl|-xxl)?-(none|inline|inline-block|block|grid|table|table-row|table-cell|flex|inline-flex)$/)
+    const match = cls.match(/^d(-sm|-md|-lg|-xl|-xxl)?-(none|inline|inline-block|block|grid|table|table-row|table-cell|flex|inline-flex)$/);
     if (match) {
-      const infix = match[1] || ''
-      const display = match[2]
+      const infix = match[1] || '';
+      const display = match[2];
       displayAtTier[infix] = display
     }
   }
 
   // Resolve effective display at each tier by cascading
   // Each tier inherits from the previous unless overridden
-  const resolved: string[] = []
-  let current = 'block' // default visible
+  const resolved: string[] = [];
+  let current = 'block'; // default visible
   for (const t of tiers) {
     if (displayAtTier[t] !== null) {
       current = displayAtTier[t]!
@@ -80,7 +80,7 @@ function parseVisibility(classes: string[]): Record<Viewport, boolean> {
  * of Bootstrap display classes needed.
  */
 function computeClasses(vis: Record<Viewport, boolean>): string[] {
-  const result: string[] = []
+  const result: string[] = [];
 
   // We set display at 3 tiers: base (mobile), md (tablet), lg (desktop)
   // Only emit a class when the value changes from the previous tier.
@@ -105,22 +105,22 @@ function computeClasses(vis: Record<Viewport, boolean>): string[] {
 }
 
 export default function ResponsiveOverrides({ classes, onChange }: ResponsiveOverridesProps): JSX.Element {
-  const visibility = parseVisibility(classes)
+  const visibility = parseVisibility(classes);
 
   const handleToggle = (viewport: Viewport) => {
-    const newVis = { ...visibility, [viewport]: !visibility[viewport] }
+    const newVis = { ...visibility, [viewport]: !visibility[viewport] };
     // Remove all existing display utility classes
-    const nonDisplayClasses = classes.filter(c => !VISIBILITY_DISPLAY_CLASSES.test(c))
+    const nonDisplayClasses = classes.filter(c => !VISIBILITY_DISPLAY_CLASSES.test(c));
     // Add new computed classes
-    const newDisplayClasses = computeClasses(newVis)
+    const newDisplayClasses = computeClasses(newVis);
     onChange([...nonDisplayClasses, ...newDisplayClasses])
-  }
+  };
 
   return (
     <div className="responsive-overrides-editor">
       <div className="responsive-visibility-grid">
         {VIEWPORTS.map(vp => {
-          const isVisible = visibility[vp.id]
+          const isVisible = visibility[vp.id];
           return (
             <button
               key={vp.id}

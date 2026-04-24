@@ -12,10 +12,10 @@ const FRAMEWORK_META: Record<FrameworkChoice, { label: string; title: string; co
   'bootstrap-5': { label: 'B',   title: 'Bootstrap 5',     colorClass: 'sb-fw-bootstrap' },
   'tailwind':    { label: 'T',   title: 'Tailwind CSS',    colorClass: 'sb-fw-tailwind'  },
   'vanilla':     { label: '<>', title: 'Vanilla HTML/CSS', colorClass: 'sb-fw-vanilla'   }
-}
+};
 
 function countBlocks(blocks: Block[]): number {
-  let count = blocks.length
+  let count = blocks.length;
   for (const block of blocks) {
     count += countBlocks(block.children)
   }
@@ -23,31 +23,31 @@ function countBlocks(blocks: Block[]): number {
 }
 
 export default function StatusBar(): JSX.Element {
-  const zoom = useEditorStore((s) => s.zoom)
-  const blocks = useEditorStore((s) => s.blocks)
-  const isDirty = useEditorStore((s) => s.isDirty)
-  const startTutorial = useTutorialStore((s) => s.startTutorial)
-  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
-  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
+  const zoom = useEditorStore((s) => s.zoom);
+  const blocks = useEditorStore((s) => s.blocks);
+  const isDirty = useEditorStore((s) => s.isDirty);
+  const startTutorial = useTutorialStore((s) => s.startTutorial);
+  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled);
+  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted);
 
-  const currentPageId = useProjectStore((s) => s.currentPageId)
-  const pages = useProjectStore((s) => s.pages)
-  const framework = useProjectStore((s) => s.settings.framework)
+  const currentPageId = useProjectStore((s) => s.currentPageId);
+  const pages = useProjectStore((s) => s.pages);
+  const framework = useProjectStore((s) => s.settings.framework);
 
   const currentPage = useMemo(() =>
     pages.find(p => p.id === currentPageId),
     [pages, currentPageId]
-  )
+  );
 
-  const blockCount = useMemo(() => countBlocks(blocks), [blocks])
+  const blockCount = useMemo(() => countBlocks(blocks), [blocks]);
 
-  const fwMeta = FRAMEWORK_META[framework] ?? FRAMEWORK_META['vanilla']
+  const fwMeta = FRAMEWORK_META[framework] ?? FRAMEWORK_META['vanilla'];
 
   const handleRestartTutorial = () => {
-    setTutorialEnabled(true)
-    setTutorialCompleted(false)
+    setTutorialEnabled(true);
+    setTutorialCompleted(false);
     startTutorial(tutorialSteps)
-  }
+  };
 
   return (
     <div className="status-bar">

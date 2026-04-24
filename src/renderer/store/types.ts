@@ -216,47 +216,47 @@ export function getThemeVariant(
   variants: ProjectThemeVariants | undefined,
   mode: PageThemeMode
 ): ProjectTheme {
-  if (!variants) return baseTheme
+  if (!variants) return baseTheme;
   return mode === 'dark' ? variants.dark : variants.light
 }
 
 function buildThemeVariableLines(theme: ProjectTheme): string[] {
-  const lines: string[] = []
+  const lines: string[] = [];
 
-  lines.push(`  --theme-primary: ${theme.colors.primary};`)
-  lines.push(`  --theme-secondary: ${theme.colors.secondary};`)
-  lines.push(`  --theme-accent: ${theme.colors.accent};`)
-  lines.push(`  --theme-bg: ${theme.colors.background};`)
-  lines.push(`  --theme-surface: ${theme.colors.surface};`)
-  lines.push(`  --theme-text: ${theme.colors.text};`)
-  lines.push(`  --theme-text-muted: ${theme.colors.textMuted};`)
-  lines.push(`  --theme-border: ${theme.colors.border};`)
-  lines.push(`  --theme-success: ${theme.colors.success};`)
-  lines.push(`  --theme-warning: ${theme.colors.warning};`)
-  lines.push(`  --theme-danger: ${theme.colors.danger};`)
+  lines.push(`  --theme-primary: ${theme.colors.primary};`);
+  lines.push(`  --theme-secondary: ${theme.colors.secondary};`);
+  lines.push(`  --theme-accent: ${theme.colors.accent};`);
+  lines.push(`  --theme-bg: ${theme.colors.background};`);
+  lines.push(`  --theme-surface: ${theme.colors.surface};`);
+  lines.push(`  --theme-text: ${theme.colors.text};`);
+  lines.push(`  --theme-text-muted: ${theme.colors.textMuted};`);
+  lines.push(`  --theme-border: ${theme.colors.border};`);
+  lines.push(`  --theme-success: ${theme.colors.success};`);
+  lines.push(`  --theme-warning: ${theme.colors.warning};`);
+  lines.push(`  --theme-danger: ${theme.colors.danger};`);
 
-  lines.push(`  --theme-font-family: ${theme.typography.fontFamily};`)
-  lines.push(`  --theme-heading-font-family: ${theme.typography.headingFontFamily};`)
-  lines.push(`  --theme-font-size: ${theme.typography.baseFontSize};`)
-  lines.push(`  --theme-line-height: ${theme.typography.lineHeight};`)
-  lines.push(`  --theme-heading-line-height: ${theme.typography.headingLineHeight};`)
+  lines.push(`  --theme-font-family: ${theme.typography.fontFamily};`);
+  lines.push(`  --theme-heading-font-family: ${theme.typography.headingFontFamily};`);
+  lines.push(`  --theme-font-size: ${theme.typography.baseFontSize};`);
+  lines.push(`  --theme-line-height: ${theme.typography.lineHeight};`);
+  lines.push(`  --theme-heading-line-height: ${theme.typography.headingLineHeight};`);
 
-  lines.push(`  --theme-spacing-unit: ${theme.spacing.baseUnit};`)
-  const unit = parseFloat(theme.spacing.baseUnit) || 8
-  const unitSuffix = theme.spacing.baseUnit.replace(/[\d.]+/, '') || 'px'
+  lines.push(`  --theme-spacing-unit: ${theme.spacing.baseUnit};`);
+  const unit = parseFloat(theme.spacing.baseUnit) || 8;
+  const unitSuffix = theme.spacing.baseUnit.replace(/[\d.]+/, '') || 'px';
   theme.spacing.scale.forEach((mult, i) => {
     lines.push(`  --theme-space-${i}: ${mult * unit}${unitSuffix};`)
-  })
+  });
 
-  lines.push(`  --theme-border-radius: ${theme.borders.radius};`)
-  lines.push(`  --theme-border-width: ${theme.borders.width};`)
-  lines.push(`  --theme-border-color: ${theme.borders.color};`)
+  lines.push(`  --theme-border-radius: ${theme.borders.radius};`);
+  lines.push(`  --theme-border-width: ${theme.borders.width};`);
+  lines.push(`  --theme-border-color: ${theme.borders.color};`);
 
   return lines
 }
 
 function pushThemeVariableBlock(lines: string[], selector: string, theme: ProjectTheme, indent = ''): void {
-  lines.push(`${indent}${selector} {`)
+  lines.push(`${indent}${selector} {`);
   for (const line of buildThemeVariableLines(theme)) {
     lines.push(`${indent}${line}`)
   }
@@ -269,290 +269,290 @@ export function themeToCSS(
   fonts?: FontAsset[],
   options?: { fontUrlPrefix?: string }
 ): string {
-  const lines: string[] = []
+  const lines: string[] = [];
 
   const normalizedFontUrlPrefix = (() => {
-    const prefix = options?.fontUrlPrefix ?? 'app-media://project-asset/'
-    if (!prefix) return ''
-    if (prefix.endsWith('/') || prefix.endsWith('\\')) return prefix
+    const prefix = options?.fontUrlPrefix ?? 'app-media://project-asset/';
+    if (!prefix) return '';
+    if (prefix.endsWith('/') || prefix.endsWith('\\')) return prefix;
     return `${prefix}/`
-  })()
+  })();
 
   if (fonts && fonts.length > 0) {
     for (const font of fonts) {
-      const relativePath = String(font.relativePath || '').trim()
+      const relativePath = String(font.relativePath || '').trim();
 
       // Skip system-name stubs that have no physical file — they work via CSS name alone
-      if (!relativePath) continue
+      if (!relativePath) continue;
 
       const isAlreadyUrl =
         /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(relativePath) ||
         relativePath.startsWith('./') ||
-        relativePath.startsWith('../')
+        relativePath.startsWith('../');
 
       const srcUrl = isAlreadyUrl
         ? relativePath
-        : `${normalizedFontUrlPrefix}${relativePath.replace(/^\/+/, '')}`
+        : `${normalizedFontUrlPrefix}${relativePath.replace(/^\/+/, '')}`;
 
-      lines.push('@font-face {')
-      lines.push(`  font-family: "${font.name}";`)
-      lines.push(`  src: url("${srcUrl}");`)
-      if (font.weight) lines.push(`  font-weight: ${font.weight};`)
-      if (font.style) lines.push(`  font-style: ${font.style};`)
+      lines.push('@font-face {');
+      lines.push(`  font-family: "${font.name}";`);
+      lines.push(`  src: url("${srcUrl}");`);
+      if (font.weight) lines.push(`  font-weight: ${font.weight};`);
+      if (font.style) lines.push(`  font-style: ${font.style};`);
       lines.push('}')
     }
     lines.push('')
   }
 
-  const lightTheme = variants?.light ?? theme
-  const darkTheme = variants?.dark
+  const lightTheme = variants?.light ?? theme;
+  const darkTheme = variants?.dark;
 
-  pushThemeVariableBlock(lines, ':root', lightTheme)
+  pushThemeVariableBlock(lines, ':root', lightTheme);
 
   if (darkTheme) {
-    lines.push('')
-    lines.push(':root {')
-    lines.push('  color-scheme: light dark;')
-    lines.push('}')
-    lines.push('')
-    pushThemeVariableBlock(lines, 'html[data-page-theme="light"]', lightTheme)
-    lines.push('')
-    pushThemeVariableBlock(lines, 'html[data-page-theme="dark"]', darkTheme)
-    lines.push('')
-    lines.push('@media (prefers-color-scheme: dark) {')
-    pushThemeVariableBlock(lines, 'html:not([data-page-theme]), html[data-page-theme="device"]', darkTheme, '  ')
+    lines.push('');
+    lines.push(':root {');
+    lines.push('  color-scheme: light dark;');
+    lines.push('}');
+    lines.push('');
+    pushThemeVariableBlock(lines, 'html[data-page-theme="light"]', lightTheme);
+    lines.push('');
+    pushThemeVariableBlock(lines, 'html[data-page-theme="dark"]', darkTheme);
+    lines.push('');
+    lines.push('@media (prefers-color-scheme: dark) {');
+    pushThemeVariableBlock(lines, 'html:not([data-page-theme]), html[data-page-theme="device"]', darkTheme, '  ');
     lines.push('}')
   }
 
   // Base body styles using theme variables
-  lines.push('')
-  lines.push('body {')
-  lines.push('  font-family: var(--theme-font-family);')
-  lines.push('  font-size: var(--theme-font-size);')
-  lines.push('  line-height: var(--theme-line-height);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('  background-color: var(--theme-bg);')
-  lines.push('}')
-  lines.push('')
-  lines.push('h1, h2, h3, h4, h5, h6 {')
-  lines.push('  font-family: var(--theme-heading-font-family);')
-  lines.push('  line-height: var(--theme-heading-line-height);')
+  lines.push('');
+  lines.push('body {');
+  lines.push('  font-family: var(--theme-font-family);');
+  lines.push('  font-size: var(--theme-font-size);');
+  lines.push('  line-height: var(--theme-line-height);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('  background-color: var(--theme-bg);');
+  lines.push('}');
+  lines.push('');
+  lines.push('h1, h2, h3, h4, h5, h6 {');
+  lines.push('  font-family: var(--theme-heading-font-family);');
+  lines.push('  line-height: var(--theme-heading-line-height);');
   // Tailwind preflight normalizes headings to inherit font-size/font-weight.
   // Define a baseline typographic scale so changing H1->H2 is visually meaningful
   // in the editor, regardless of framework. Utility classes can still override.
-  lines.push('  font-weight: 600;')
-  lines.push('}')
+  lines.push('  font-weight: 600;');
+  lines.push('}');
 
   // Baseline heading sizes (mirrors browser defaults, scaled from the body font size).
-  lines.push('h1 { font-size: 2em; }')
-  lines.push('h2 { font-size: 1.5em; }')
-  lines.push('h3 { font-size: 1.17em; }')
-  lines.push('h4 { font-size: 1em; }')
-  lines.push('h5 { font-size: 0.83em; }')
-  lines.push('h6 { font-size: 0.67em; }')
+  lines.push('h1 { font-size: 2em; }');
+  lines.push('h2 { font-size: 1.5em; }');
+  lines.push('h3 { font-size: 1.17em; }');
+  lines.push('h4 { font-size: 1em; }');
+  lines.push('h5 { font-size: 0.83em; }');
+  lines.push('h6 { font-size: 0.67em; }');
 
   // Component Theme Overrides
-  lines.push('')
-  lines.push('/* Component Theme Overrides */')
-  lines.push('.card, .card-header, .card-body, .card-footer {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  border-color: var(--theme-border);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('}')
-  lines.push('.card-title, .card-text, .pricing-card-title, .list-unstyled, .list-unstyled li {')
-  lines.push('  color: inherit;')
-  lines.push('}')
-  lines.push('.accordion, .accordion-item, .accordion-body {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  border-color: var(--theme-border);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('}')
-  lines.push('.accordion-button {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('  border-color: var(--theme-border);')
-  lines.push('  box-shadow: none;')
-  lines.push('}')
-  lines.push('.accordion-button:not(.collapsed) {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('  box-shadow: inset 0 calc(-1 * var(--theme-border-width)) 0 var(--theme-border);')
-  lines.push('}')
-  lines.push('.accordion-button:focus {')
-  lines.push('  border-color: var(--theme-border);')
-  lines.push('  box-shadow: none;')
-  lines.push('}')
-  lines.push('.bg-light {')
-  lines.push('  background-color: var(--theme-surface) !important;')
-  lines.push('}')
-  lines.push('.text-body-emphasis {')
-  lines.push('  color: var(--theme-text) !important;')
-  lines.push('}')
-  lines.push('.text-muted {')
-  lines.push('  color: var(--theme-text-muted) !important;')
-  lines.push('}')
-  lines.push('.border-top, .border {')
-  lines.push('  border-color: var(--theme-border) !important;')
-  lines.push('}')
-  lines.push('.btn-primary {')
-  lines.push('  background-color: var(--theme-primary);')
-  lines.push('  border-color: var(--theme-primary);')
-  lines.push('  color: #fff;')
-  lines.push('}')
-  lines.push('.btn-primary:hover, .btn-primary:focus {')
-  lines.push('  background-color: var(--theme-primary);')
-  lines.push('  border-color: var(--theme-primary);')
-  lines.push('  filter: brightness(0.9);')
-  lines.push('}')
-  lines.push('.btn-outline-primary {')
-  lines.push('  color: var(--theme-primary);')
-  lines.push('  border-color: var(--theme-primary);')
-  lines.push('}')
-  lines.push('.btn-outline-primary:hover, .btn-outline-primary:focus {')
-  lines.push('  background-color: var(--theme-primary);')
-  lines.push('  color: #fff;')
-  lines.push('}')
-  lines.push('.blockquote {')
-  lines.push('  color: inherit;')
-  lines.push('}')
-  lines.push('.blockquote-footer {')
-  lines.push('  color: var(--theme-text-muted);')
-  lines.push('}')
-  lines.push('.form-control, .form-select {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('  border-color: var(--theme-border);')
-  lines.push('}')
-  lines.push('.form-control::placeholder {')
-  lines.push('  color: var(--theme-text-muted);')
-  lines.push('}')
-  lines.push('.form-control:focus, .form-select:focus {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('  border-color: var(--theme-primary);')
-  lines.push('  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);')
-  lines.push('}')
-  lines.push('.page-link {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  color: var(--theme-primary);')
-  lines.push('  border-color: var(--theme-border);')
-  lines.push('}')
-  lines.push('.page-link:hover, .page-link:focus {')
-  lines.push('  background-color: var(--theme-primary);')
-  lines.push('  color: #fff;')
-  lines.push('  border-color: var(--theme-primary);')
-  lines.push('}')
-  lines.push('.page-item.active .page-link {')
-  lines.push('  background-color: var(--theme-primary);')
-  lines.push('  color: #fff;')
-  lines.push('  border-color: var(--theme-primary);')
-  lines.push('}')
+  lines.push('');
+  lines.push('/* Component Theme Overrides */');
+  lines.push('.card, .card-header, .card-body, .card-footer {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  border-color: var(--theme-border);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('}');
+  lines.push('.card-title, .card-text, .pricing-card-title, .list-unstyled, .list-unstyled li {');
+  lines.push('  color: inherit;');
+  lines.push('}');
+  lines.push('.accordion, .accordion-item, .accordion-body {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  border-color: var(--theme-border);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('}');
+  lines.push('.accordion-button {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('  border-color: var(--theme-border);');
+  lines.push('  box-shadow: none;');
+  lines.push('}');
+  lines.push('.accordion-button:not(.collapsed) {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('  box-shadow: inset 0 calc(-1 * var(--theme-border-width)) 0 var(--theme-border);');
+  lines.push('}');
+  lines.push('.accordion-button:focus {');
+  lines.push('  border-color: var(--theme-border);');
+  lines.push('  box-shadow: none;');
+  lines.push('}');
+  lines.push('.bg-light {');
+  lines.push('  background-color: var(--theme-surface) !important;');
+  lines.push('}');
+  lines.push('.text-body-emphasis {');
+  lines.push('  color: var(--theme-text) !important;');
+  lines.push('}');
+  lines.push('.text-muted {');
+  lines.push('  color: var(--theme-text-muted) !important;');
+  lines.push('}');
+  lines.push('.border-top, .border {');
+  lines.push('  border-color: var(--theme-border) !important;');
+  lines.push('}');
+  lines.push('.btn-primary {');
+  lines.push('  background-color: var(--theme-primary);');
+  lines.push('  border-color: var(--theme-primary);');
+  lines.push('  color: #fff;');
+  lines.push('}');
+  lines.push('.btn-primary:hover, .btn-primary:focus {');
+  lines.push('  background-color: var(--theme-primary);');
+  lines.push('  border-color: var(--theme-primary);');
+  lines.push('  filter: brightness(0.9);');
+  lines.push('}');
+  lines.push('.btn-outline-primary {');
+  lines.push('  color: var(--theme-primary);');
+  lines.push('  border-color: var(--theme-primary);');
+  lines.push('}');
+  lines.push('.btn-outline-primary:hover, .btn-outline-primary:focus {');
+  lines.push('  background-color: var(--theme-primary);');
+  lines.push('  color: #fff;');
+  lines.push('}');
+  lines.push('.blockquote {');
+  lines.push('  color: inherit;');
+  lines.push('}');
+  lines.push('.blockquote-footer {');
+  lines.push('  color: var(--theme-text-muted);');
+  lines.push('}');
+  lines.push('.form-control, .form-select {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('  border-color: var(--theme-border);');
+  lines.push('}');
+  lines.push('.form-control::placeholder {');
+  lines.push('  color: var(--theme-text-muted);');
+  lines.push('}');
+  lines.push('.form-control:focus, .form-select:focus {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('  border-color: var(--theme-primary);');
+  lines.push('  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);');
+  lines.push('}');
+  lines.push('.page-link {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  color: var(--theme-primary);');
+  lines.push('  border-color: var(--theme-border);');
+  lines.push('}');
+  lines.push('.page-link:hover, .page-link:focus {');
+  lines.push('  background-color: var(--theme-primary);');
+  lines.push('  color: #fff;');
+  lines.push('  border-color: var(--theme-primary);');
+  lines.push('}');
+  lines.push('.page-item.active .page-link {');
+  lines.push('  background-color: var(--theme-primary);');
+  lines.push('  color: #fff;');
+  lines.push('  border-color: var(--theme-primary);');
+  lines.push('}');
   
   // Custom Navbar Theme Styles
-  lines.push('')
-  lines.push('/* Navbar Theme Variants */')
-  lines.push('.navbar-theme-light {')
-  lines.push('  background-color: var(--theme-surface);')
-  lines.push('  color: var(--theme-text);')
-  lines.push('}')
-  lines.push('.navbar-theme-light .navbar-brand, .navbar-theme-light .nav-link {')
-  lines.push('  color: inherit;')
-  lines.push('}')
-  lines.push('.navbar-theme-light .nav-link:hover, .navbar-theme-light .nav-link:focus {')
-  lines.push('  color: var(--theme-primary);')
-  lines.push('}')
-  lines.push('.navbar-theme-light .navbar-toggler {')
-  lines.push('  color: inherit;')
-  lines.push('  border-color: currentColor;')
-  lines.push('  opacity: 0.5;')
-  lines.push('}')
-  lines.push('.navbar-theme-light .navbar-toggler-icon {')
-  lines.push("  background-image: none;")
-  lines.push("  background-color: currentColor;")
-  lines.push("  mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");")
-  lines.push("  -webkit-mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");")
-  lines.push("  mask-repeat: no-repeat;")
-  lines.push("  -webkit-mask-repeat: no-repeat;")
-  lines.push("  mask-position: center;")
-  lines.push("  -webkit-mask-position: center;")
-  lines.push("  mask-size: 100%;")
-  lines.push("  -webkit-mask-size: 100%;")
-  lines.push('}')
+  lines.push('');
+  lines.push('/* Navbar Theme Variants */');
+  lines.push('.navbar-theme-light {');
+  lines.push('  background-color: var(--theme-surface);');
+  lines.push('  color: var(--theme-text);');
+  lines.push('}');
+  lines.push('.navbar-theme-light .navbar-brand, .navbar-theme-light .nav-link {');
+  lines.push('  color: inherit;');
+  lines.push('}');
+  lines.push('.navbar-theme-light .nav-link:hover, .navbar-theme-light .nav-link:focus {');
+  lines.push('  color: var(--theme-primary);');
+  lines.push('}');
+  lines.push('.navbar-theme-light .navbar-toggler {');
+  lines.push('  color: inherit;');
+  lines.push('  border-color: currentColor;');
+  lines.push('  opacity: 0.5;');
+  lines.push('}');
+  lines.push('.navbar-theme-light .navbar-toggler-icon {');
+  lines.push("  background-image: none;");
+  lines.push("  background-color: currentColor;");
+  lines.push("  mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");");
+  lines.push("  -webkit-mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");");
+  lines.push("  mask-repeat: no-repeat;");
+  lines.push("  -webkit-mask-repeat: no-repeat;");
+  lines.push("  mask-position: center;");
+  lines.push("  -webkit-mask-position: center;");
+  lines.push("  mask-size: 100%;");
+  lines.push("  -webkit-mask-size: 100%;");
+  lines.push('}');
   
-  lines.push('.navbar-theme-dark {')
-  lines.push('  background-color: #212529;')
-  lines.push('  color: #fff;')
-  lines.push('}')
-  lines.push('.navbar-theme-dark .navbar-brand, .navbar-theme-dark .nav-link {')
-  lines.push('  color: inherit;')
-  lines.push('  opacity: 0.85;')
-  lines.push('}')
-  lines.push('.navbar-theme-dark .nav-link:hover, .navbar-theme-dark .nav-link:focus {')
-  lines.push('  opacity: 1;')
-  lines.push('}')
-  lines.push('.navbar-theme-dark .navbar-toggler {')
-  lines.push('  color: inherit;')
-  lines.push('  border-color: currentColor;')
-  lines.push('  opacity: 0.2;')
-  lines.push('}')
-  lines.push('.navbar-theme-dark .navbar-toggler-icon {')
-  lines.push("  background-image: none;")
-  lines.push("  background-color: currentColor;")
-  lines.push("  mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");")
-  lines.push("  -webkit-mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");")
-  lines.push("  mask-repeat: no-repeat;")
-  lines.push("  -webkit-mask-repeat: no-repeat;")
-  lines.push("  mask-position: center;")
-  lines.push("  -webkit-mask-position: center;")
-  lines.push("  mask-size: 100%;")
-  lines.push("  -webkit-mask-size: 100%;")
-  lines.push('}')
+  lines.push('.navbar-theme-dark {');
+  lines.push('  background-color: #212529;');
+  lines.push('  color: #fff;');
+  lines.push('}');
+  lines.push('.navbar-theme-dark .navbar-brand, .navbar-theme-dark .nav-link {');
+  lines.push('  color: inherit;');
+  lines.push('  opacity: 0.85;');
+  lines.push('}');
+  lines.push('.navbar-theme-dark .nav-link:hover, .navbar-theme-dark .nav-link:focus {');
+  lines.push('  opacity: 1;');
+  lines.push('}');
+  lines.push('.navbar-theme-dark .navbar-toggler {');
+  lines.push('  color: inherit;');
+  lines.push('  border-color: currentColor;');
+  lines.push('  opacity: 0.2;');
+  lines.push('}');
+  lines.push('.navbar-theme-dark .navbar-toggler-icon {');
+  lines.push("  background-image: none;");
+  lines.push("  background-color: currentColor;");
+  lines.push("  mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");");
+  lines.push("  -webkit-mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");");
+  lines.push("  mask-repeat: no-repeat;");
+  lines.push("  -webkit-mask-repeat: no-repeat;");
+  lines.push("  mask-position: center;");
+  lines.push("  -webkit-mask-position: center;");
+  lines.push("  mask-size: 100%;");
+  lines.push("  -webkit-mask-size: 100%;");
+  lines.push('}');
   
-  lines.push('.navbar-theme-primary {')
-  lines.push('  background-color: var(--theme-primary);')
-  lines.push('  color: #fff;')
-  lines.push('}')
-  lines.push('.navbar-theme-primary .navbar-brand, .navbar-theme-primary .nav-link {')
-  lines.push('  color: inherit;')
-  lines.push('  opacity: 0.85;')
-  lines.push('}')
-  lines.push('.navbar-theme-primary .nav-link:hover, .navbar-theme-primary .nav-link:focus {')
-  lines.push('  opacity: 1;')
-  lines.push('}')
-  lines.push('.navbar-theme-primary .navbar-toggler {')
-  lines.push('  color: inherit;')
-  lines.push('  border-color: currentColor;')
-  lines.push('  opacity: 0.2;')
-  lines.push('}')
-  lines.push('.navbar-theme-primary .navbar-toggler-icon {')
-  lines.push("  background-image: none;")
-  lines.push("  background-color: currentColor;")
-  lines.push("  mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");")
-  lines.push("  -webkit-mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");")
-  lines.push("  mask-repeat: no-repeat;")
-  lines.push("  -webkit-mask-repeat: no-repeat;")
-  lines.push("  mask-position: center;")
-  lines.push("  -webkit-mask-position: center;")
-  lines.push("  mask-size: 100%;")
-  lines.push("  -webkit-mask-size: 100%;")
-  lines.push('}')
+  lines.push('.navbar-theme-primary {');
+  lines.push('  background-color: var(--theme-primary);');
+  lines.push('  color: #fff;');
+  lines.push('}');
+  lines.push('.navbar-theme-primary .navbar-brand, .navbar-theme-primary .nav-link {');
+  lines.push('  color: inherit;');
+  lines.push('  opacity: 0.85;');
+  lines.push('}');
+  lines.push('.navbar-theme-primary .nav-link:hover, .navbar-theme-primary .nav-link:focus {');
+  lines.push('  opacity: 1;');
+  lines.push('}');
+  lines.push('.navbar-theme-primary .navbar-toggler {');
+  lines.push('  color: inherit;');
+  lines.push('  border-color: currentColor;');
+  lines.push('  opacity: 0.2;');
+  lines.push('}');
+  lines.push('.navbar-theme-primary .navbar-toggler-icon {');
+  lines.push("  background-image: none;");
+  lines.push("  background-color: currentColor;");
+  lines.push("  mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");");
+  lines.push("  -webkit-mask-image: url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='black' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e\");");
+  lines.push("  mask-repeat: no-repeat;");
+  lines.push("  -webkit-mask-repeat: no-repeat;");
+  lines.push("  mask-position: center;");
+  lines.push("  -webkit-mask-position: center;");
+  lines.push("  mask-size: 100%;");
+  lines.push("  -webkit-mask-size: 100%;");
+  lines.push('}');
 
   // Append custom CSS (multi-file takes precedence over legacy single string)
   const cssFiles = lightTheme.customCssFiles && lightTheme.customCssFiles.length > 0
     ? lightTheme.customCssFiles
-    : null
+    : null;
 
   if (cssFiles) {
     for (const file of cssFiles) {
       if (file.enabled && file.css.trim()) {
-        lines.push('')
-        lines.push(`/* --- ${file.name} --- */`)
+        lines.push('');
+        lines.push(`/* --- ${file.name} --- */`);
         lines.push(file.css.trim())
       }
     }
   } else if (lightTheme.customCss.trim()) {
     // Legacy fallback: single customCss string
-    lines.push('')
+    lines.push('');
     lines.push(lightTheme.customCss.trim())
   }
 
@@ -685,10 +685,10 @@ export interface EditorActions {
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
 
-let _idCounter = 0
+let _idCounter = 0;
 
 export function generateBlockId(): string {
-  _idCounter++
+  _idCounter++;
   return `blk_${Date.now().toString(36)}_${_idCounter.toString(36)}`
 }
 

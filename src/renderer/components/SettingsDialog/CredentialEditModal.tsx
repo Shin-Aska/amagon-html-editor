@@ -17,98 +17,98 @@ const CATEGORY_OPTIONS: Array<{ value: CredentialCategory; label: string }> = [
   { value: 'ai', label: 'AI' },
   { value: 'multimedia', label: 'Multimedia' },
   { value: 'publisher', label: 'Publisher' }
-]
+];
 
 export default function CredentialEditModal({ open, mode, credential, definitions, onClose, onSaved }: Props): JSX.Element | null {
-  const overlayRef = useRef<HTMLDivElement>(null)
-  const [selectedCategory, setSelectedCategory] = useState<CredentialCategory>('ai')
-  const [selectedDefinitionId, setSelectedDefinitionId] = useState('')
-  const [values, setValues] = useState<Record<string, string>>({})
-  const [hints, setHints] = useState<Record<string, string>>({})
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CredentialCategory>('ai');
+  const [selectedDefinitionId, setSelectedDefinitionId] = useState('');
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [hints, setHints] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const definitionsForCategory = useMemo(
     () => definitions.filter((d) => d.category === selectedCategory),
     [definitions, selectedCategory]
-  )
+  );
 
   const selectedDefinition = useMemo(
     () => definitions.find((d) => d.id === selectedDefinitionId) ?? null,
     [definitions, selectedDefinitionId]
-  )
+  );
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
-    setError(null)
-    setSaving(false)
+    setError(null);
+    setSaving(false);
 
     if (mode === 'edit' && credential) {
-      setSelectedCategory(credential.category)
-      setSelectedDefinitionId(credential.id)
-      const api = getApi()
+      setSelectedCategory(credential.category);
+      setSelectedDefinitionId(credential.id);
+      const api = getApi();
       api.app.getCredentialValues(credential.id).then((result) => {
-        const rawValues = result.success ? (result.values ?? {}) : {}
-        const nextValues: Record<string, string> = {}
-        const nextHints: Record<string, string> = {}
+        const rawValues = result.success ? (result.values ?? {}) : {};
+        const nextValues: Record<string, string> = {};
+        const nextHints: Record<string, string> = {};
         for (const field of credential.fields) {
-          const v = rawValues[field.key] ?? ''
-          nextValues[field.key] = field.sensitive ? '' : v
+          const v = rawValues[field.key] ?? '';
+          nextValues[field.key] = field.sensitive ? '' : v;
           nextHints[field.key] = v
         }
-        setValues(nextValues)
+        setValues(nextValues);
         setHints(nextHints)
       })
     } else {
-      const fallback = definitions.find((d) => d.category === 'ai') ?? definitions[0]
-      setSelectedCategory('ai')
-      setSelectedDefinitionId(fallback?.id ?? '')
-      setValues({})
+      const fallback = definitions.find((d) => d.category === 'ai') ?? definitions[0];
+      setSelectedCategory('ai');
+      setSelectedDefinitionId(fallback?.id ?? '');
+      setValues({});
       setHints({})
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
+    };
+    document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose]);
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) onClose()
-  }
+  };
 
   const handleSave = async () => {
-    if (!selectedDefinition) return
-    setSaving(true)
-    setError(null)
+    if (!selectedDefinition) return;
+    setSaving(true);
+    setError(null);
 
     const payload = selectedDefinition.fields.reduce<Record<string, string>>((acc, field) => {
-      const value = values[field.key] ?? ''
-      const hint = hints[field.key] ?? ''
-      if (field.sensitive && value === '' && hint) return acc
-      acc[field.key] = value
+      const value = values[field.key] ?? '';
+      const hint = hints[field.key] ?? '';
+      if (field.sensitive && value === '' && hint) return acc;
+      acc[field.key] = value;
       return acc
-    }, {})
+    }, {});
 
-    const api = getApi()
-    const result = await api.app.saveCredential(selectedDefinition.id, payload)
-    setSaving(false)
+    const api = getApi();
+    const result = await api.app.saveCredential(selectedDefinition.id, payload);
+    setSaving(false);
     if (!result.success) {
-      setError(result.error || 'Could not save credential.')
+      setError(result.error || 'Could not save credential.');
       return
     }
 
-    dispatchAiAvailabilityChanged()
-    onSaved()
+    dispatchAiAvailabilityChanged();
+    onSaved();
     onClose()
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="cred-modal-overlay" ref={overlayRef} onClick={handleOverlayClick}>
@@ -128,11 +128,11 @@ export default function CredentialEditModal({ open, mode, credential, definition
                 <select
                   value={selectedCategory}
                   onChange={(e) => {
-                    const cat = e.target.value as CredentialCategory
-                    const fallback = definitions.find((d) => d.category === cat)
-                    setSelectedCategory(cat)
-                    setSelectedDefinitionId(fallback?.id ?? '')
-                    setValues({})
+                    const cat = e.target.value as CredentialCategory;
+                    const fallback = definitions.find((d) => d.category === cat);
+                    setSelectedCategory(cat);
+                    setSelectedDefinitionId(fallback?.id ?? '');
+                    setValues({});
                     setHints({})
                   }}
                   className="settings-input"
@@ -147,8 +147,8 @@ export default function CredentialEditModal({ open, mode, credential, definition
                 <select
                   value={selectedDefinitionId}
                   onChange={(e) => {
-                    setSelectedDefinitionId(e.target.value)
-                    setValues({})
+                    setSelectedDefinitionId(e.target.value);
+                    setValues({});
                     setHints({})
                   }}
                   className="settings-input"

@@ -30,192 +30,192 @@ interface SettingsDialogProps {
 type TabType = 'general' | 'keys' | 'ai' | 'media'
 
 export default function SettingsDialog({ open, onClose, initialTab = 'general' }: SettingsDialogProps): JSX.Element | null {
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
-  const overlayRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-  const theme = useAppSettingsStore((s) => s.theme)
-  const setTheme = useAppSettingsStore((s) => s.setTheme)
-  const defaultLayout = useAppSettingsStore((s) => s.defaultLayout)
-  const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout)
-  const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning)
-  const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning)
-  const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled)
-  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled)
-  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted)
-  const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures)
-  const setEnableDangerousFeatures = useAppSettingsStore((s) => s.setEnableDangerousFeatures)
-  const startTutorial = useTutorialStore((s) => s.startTutorial)
+  const theme = useAppSettingsStore((s) => s.theme);
+  const setTheme = useAppSettingsStore((s) => s.setTheme);
+  const defaultLayout = useAppSettingsStore((s) => s.defaultLayout);
+  const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout);
+  const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning);
+  const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning);
+  const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled);
+  const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled);
+  const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted);
+  const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures);
+  const setEnableDangerousFeatures = useAppSettingsStore((s) => s.setEnableDangerousFeatures);
+  const startTutorial = useTutorialStore((s) => s.startTutorial);
 
-  const aiConfig = useAiStore((s) => s.config)
-  const providerModels = useAiStore((s) => s.providerModels)
-  const loadAiConfig = useAiStore((s) => s.loadConfig)
-  const saveAiConfig = useAiStore((s) => s.saveConfig)
-  const loadAiModels = useAiStore((s) => s.loadModels)
-  const fetchModelsForProvider = useAiStore((s) => s.fetchModelsForProvider)
+  const aiConfig = useAiStore((s) => s.config);
+  const providerModels = useAiStore((s) => s.providerModels);
+  const loadAiConfig = useAiStore((s) => s.loadConfig);
+  const saveAiConfig = useAiStore((s) => s.saveConfig);
+  const loadAiModels = useAiStore((s) => s.loadModels);
+  const fetchModelsForProvider = useAiStore((s) => s.fetchModelsForProvider);
 
-  const [aiProvider, setAiProvider] = useState(aiConfig?.provider || 'openai')
-  const [aiModel, setAiModel] = useState(aiConfig?.model || '')
-  const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434')
+  const [aiProvider, setAiProvider] = useState(aiConfig?.provider || 'openai');
+  const [aiModel, setAiModel] = useState(aiConfig?.model || '');
+  const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434');
 
-  const [cliAvailability, setCliAvailability] = useState<Record<string, { available: boolean; path?: string; version?: string }>>({})
-  const [checkingCli, setCheckingCli] = useState(false)
+  const [cliAvailability, setCliAvailability] = useState<Record<string, { available: boolean; path?: string; version?: string }>>({});
+  const [checkingCli, setCheckingCli] = useState(false);
 
   const refreshCliAvailability = useCallback(async () => {
-    setCheckingCli(true)
+    setCheckingCli(true);
     try {
-      const api = getApi()
-      const result = await (api as any).ai.checkCliAvailability()
+      const api = getApi();
+      const result = await (api as any).ai.checkCliAvailability();
       if (result.success && result.availability) {
         setCliAvailability(result.availability)
       }
     } finally {
       setCheckingCli(false)
     }
-  }, [])
+  }, []);
 
-  const [mediaProvider, setMediaProvider] = useState('unsplash')
+  const [mediaProvider, setMediaProvider] = useState('unsplash');
 
-  const [credentials, setCredentials] = useState<CredentialRecordInfo[]>([])
-  const [definitions, setDefinitions] = useState<CredentialDefinitionInfo[]>([])
-  const [credentialLoading, setCredentialLoading] = useState(false)
+  const [credentials, setCredentials] = useState<CredentialRecordInfo[]>([]);
+  const [definitions, setDefinitions] = useState<CredentialDefinitionInfo[]>([]);
+  const [credentialLoading, setCredentialLoading] = useState(false);
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
-  const [modalCredential, setModalCredential] = useState<CredentialRecordInfo | null>(null)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [modalCredential, setModalCredential] = useState<CredentialRecordInfo | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const refreshCredentials = useCallback(async (): Promise<void> => {
-    setCredentialLoading(true)
+    setCredentialLoading(true);
     try {
-      const api = getApi()
-      const result = await api.app.getCredentials()
+      const api = getApi();
+      const result = await api.app.getCredentials();
       if (result.success) {
-        setCredentials(Array.isArray(result.credentials) ? result.credentials : [])
+        setCredentials(Array.isArray(result.credentials) ? result.credentials : []);
         setDefinitions(Array.isArray(result.definitions) ? result.definitions : [])
       }
     } finally {
       setCredentialLoading(false)
     }
-  }, [])
+  }, []);
 
   const refreshFeatureConfigs = useCallback(async (): Promise<void> => {
-    const api = getApi()
-    await loadAiConfig()
-    await loadAiModels()
+    const api = getApi();
+    await loadAiConfig();
+    await loadAiModels();
 
-    const result = await api.mediaSearch.getConfig()
+    const result = await api.mediaSearch.getConfig();
     if (result.success && result.config) {
       setMediaProvider(result.config.provider || 'unsplash')
     }
-  }, [loadAiConfig, loadAiModels])
+  }, [loadAiConfig, loadAiModels]);
 
   const refreshCredentialsAndFeatureConfigs = useCallback(async (): Promise<void> => {
     await Promise.all([refreshCredentials(), refreshFeatureConfigs(), refreshCliAvailability()])
-  }, [refreshCredentials, refreshFeatureConfigs, refreshCliAvailability])
+  }, [refreshCredentials, refreshFeatureConfigs, refreshCliAvailability]);
 
   useEffect(() => {
     if (open) {
-      setActiveTab(initialTab)
+      setActiveTab(initialTab);
       void refreshCredentialsAndFeatureConfigs()
     }
-  }, [open, initialTab, refreshCredentialsAndFeatureConfigs])
+  }, [open, initialTab, refreshCredentialsAndFeatureConfigs]);
 
   useEffect(() => {
     if (aiConfig) {
-      setAiProvider(aiConfig.provider)
-      setAiModel(aiConfig.model)
+      setAiProvider(aiConfig.provider);
+      setAiModel(aiConfig.model);
       setAiOllamaUrl(aiConfig.ollamaUrl || 'http://localhost:11434')
     }
-  }, [aiConfig])
+  }, [aiConfig]);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
+    };
+    document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose]);
 
   useEffect(() => {
-    if (!open || !aiProvider.endsWith('-cli')) return
+    if (!open || !aiProvider.endsWith('-cli')) return;
 
-    let cancelled = false
+    let cancelled = false;
     fetchModelsForProvider(aiProvider, '', aiOllamaUrl).then((models) => {
-      if (cancelled || models.length === 0) return
-      if (aiModel && models.includes(aiModel)) return
+      if (cancelled || models.length === 0) return;
+      if (aiModel && models.includes(aiModel)) return;
 
-      const nextModel = models[0]
-      setAiModel(nextModel)
+      const nextModel = models[0];
+      setAiModel(nextModel);
       void saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
-    })
+    });
 
     return () => {
       cancelled = true
     }
-  }, [open, aiProvider, aiOllamaUrl, aiModel, fetchModelsForProvider, saveAiConfig])
+  }, [open, aiProvider, aiOllamaUrl, aiModel, fetchModelsForProvider, saveAiConfig]);
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) {
       onClose()
     }
-  }
+  };
 
   const handleSaveAi = async () => {
-    const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '')
-    await saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
+    const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '');
+    await saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl });
     fetchModelsForProvider(aiProvider, '', aiOllamaUrl)
-  }
+  };
 
   const handleSaveMedia = async () => {
-    const api = getApi()
+    const api = getApi();
     await api.mediaSearch.setConfig({ provider: mediaProvider, apiKey: '' })
-  }
+  };
 
   const handleDeleteCredential = async (id: string) => {
-    const api = getApi()
-    const result = await api.app.deleteCredential(id)
+    const api = getApi();
+    const result = await api.app.deleteCredential(id);
     if (!result.success) {
-      setConfirmDeleteId(null)
+      setConfirmDeleteId(null);
       return
     }
-    dispatchAiAvailabilityChanged()
-    await refreshCredentialsAndFeatureConfigs()
+    dispatchAiAvailabilityChanged();
+    await refreshCredentialsAndFeatureConfigs();
     setConfirmDeleteId(null)
-  }
+  };
 
   const openCreateModal = () => {
-    setModalMode('create')
-    setModalCredential(null)
+    setModalMode('create');
+    setModalCredential(null);
     setModalOpen(true)
-  }
+  };
 
   const openEditModal = (credential: CredentialRecordInfo) => {
-    setModalMode('edit')
-    setModalCredential(credential)
+    setModalMode('edit');
+    setModalCredential(credential);
     setModalOpen(true)
-  }
+  };
 
   const handleRestartTutorial = () => {
-    setTutorialEnabled(true)
-    setTutorialCompleted(false)
-    onClose()
+    setTutorialEnabled(true);
+    setTutorialCompleted(false);
+    onClose();
     startTutorial(tutorialSteps)
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
-  const DANGEROUS_CLI_PROVIDERS = ['claude-cli', 'gemini-cli', 'junie-cli']
-  const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((p) => `ai:${p}`)
+  const DANGEROUS_CLI_PROVIDERS = ['claude-cli', 'gemini-cli', 'junie-cli'];
+  const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((p) => `ai:${p}`);
   const visibleCredentials = enableDangerousFeatures
     ? credentials
-    : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id))
+    : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id));
   const visibleDefinitions = enableDangerousFeatures
     ? definitions
-    : definitions.filter((d) => !DANGEROUS_CRED_IDS.includes(d.id))
-  const availableModels = providerModels[aiProvider] || []
-  const selectedAiModel = aiModel || availableModels[0] || ''
-  const isCliProvider = aiProvider.endsWith('-cli')
+    : definitions.filter((d) => !DANGEROUS_CRED_IDS.includes(d.id));
+  const availableModels = providerModels[aiProvider] || [];
+  const selectedAiModel = aiModel || availableModels[0] || '';
+  const isCliProvider = aiProvider.endsWith('-cli');
 
   return (
     <>
@@ -457,12 +457,12 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                       <select
                         value={aiProvider}
                         onChange={(e) => {
-                          const nextProvider = e.target.value as any
-                          setAiProvider(nextProvider)
-                          setAiModel('')
+                          const nextProvider = e.target.value as any;
+                          setAiProvider(nextProvider);
+                          setAiModel('');
                           fetchModelsForProvider(nextProvider, '', aiOllamaUrl).then((models) => {
-                            const nextModel = models[0] ?? ''
-                            setAiModel(nextModel)
+                            const nextModel = models[0] ?? '';
+                            setAiModel(nextModel);
                             saveAiConfig({ provider: nextProvider, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
                           })
                         }}
@@ -543,8 +543,8 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                       <select
                         value={selectedAiModel}
                         onChange={(e) => {
-                          const nextModel = e.target.value
-                          setAiModel(nextModel)
+                          const nextModel = e.target.value;
+                          setAiModel(nextModel);
                           saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
                         }}
                         className="settings-input"
@@ -587,15 +587,15 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                           type="checkbox"
                           checked={enableDangerousFeatures}
                           onChange={(e) => {
-                            const next = e.target.checked
-                            setEnableDangerousFeatures(next)
+                            const next = e.target.checked;
+                            setEnableDangerousFeatures(next);
                             if (!next && DANGEROUS_CLI_PROVIDERS.includes(aiProvider)) {
-                              const fallback = 'openai'
-                              setAiProvider(fallback)
-                              setAiModel('')
+                              const fallback = 'openai';
+                              setAiProvider(fallback);
+                              setAiModel('');
                               fetchModelsForProvider(fallback, '', aiOllamaUrl).then((models) => {
-                                const nextModel = models[0] ?? ''
-                                setAiModel(nextModel)
+                                const nextModel = models[0] ?? '';
+                                setAiModel(nextModel);
                                 saveAiConfig({ provider: fallback as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
                               })
                             }
@@ -617,7 +617,7 @@ export default function SettingsDialog({ open, onClose, initialTab = 'general' }
                       <select
                         value={mediaProvider}
                         onChange={(e) => {
-                          setMediaProvider(e.target.value)
+                          setMediaProvider(e.target.value);
                           setTimeout(handleSaveMedia, 0)
                         }}
                         className="settings-input"

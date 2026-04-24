@@ -62,13 +62,13 @@ const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
   'github-cli': 'GitHub Copilot CLI',
   'junie-cli': 'Junie CLI',
   'opencode-cli': 'Opencode CLI'
-}
+};
 
 const MEDIA_PROVIDER_LABELS: Record<MediaSearchProvider, string> = {
   unsplash: 'Unsplash',
   pexels: 'Pexels',
   pixabay: 'Pixabay'
-}
+};
 
 function createDefinition(
   category: CredentialCategory,
@@ -78,7 +78,7 @@ function createDefinition(
   fields: CredentialField[]
 ): CredentialDefinition {
   const categoryLabel =
-    category === 'ai' ? 'AI' : category === 'multimedia' ? 'Multimedia' : 'Publisher'
+    category === 'ai' ? 'AI' : category === 'multimedia' ? 'Multimedia' : 'Publisher';
 
   return {
     id: `${category}:${providerId}`,
@@ -95,7 +95,7 @@ export function getCredentialDefinitions(): CredentialDefinition[] {
   const aiDefinitions: CredentialDefinition[] = (
     Object.entries(AI_PROVIDER_LABELS) as [AiProvider, string][]
   ).map(([providerId, label]) => {
-    const isCliProvider = providerId.endsWith('-cli')
+    const isCliProvider = providerId.endsWith('-cli');
     return createDefinition(
       'ai',
       providerId,
@@ -117,7 +117,7 @@ export function getCredentialDefinitions(): CredentialDefinition[] {
             }
           ]
     )
-  })
+  });
 
   const mediaDefinitions: CredentialDefinition[] = (
     Object.entries(MEDIA_PROVIDER_LABELS) as [MediaSearchProvider, string][]
@@ -136,7 +136,7 @@ export function getCredentialDefinitions(): CredentialDefinition[] {
         }
       ]
     )
-  )
+  );
 
   const publisherDefinitions: CredentialDefinition[] = getAllPublishers().map((publisher) =>
     createDefinition(
@@ -146,7 +146,7 @@ export function getCredentialDefinitions(): CredentialDefinition[] {
       publisher.meta.description,
       publisher.credentialFields.map((field) => ({ ...field }))
     )
-  )
+  );
 
   return [...aiDefinitions, ...mediaDefinitions, ...publisherDefinitions]
 }
@@ -156,26 +156,26 @@ export function getCredentialDefinitionById(id: string): CredentialDefinition | 
 }
 
 function pickMaskedKey(fields: CredentialField[], values: PublishCredentials): string {
-  const sensitiveField = fields.find((field) => field.sensitive && values[field.key])
+  const sensitiveField = fields.find((field) => field.sensitive && values[field.key]);
   return sensitiveField ? values[sensitiveField.key] ?? '' : ''
 }
 
 export async function listCredentialRecords(): Promise<CredentialRecord[]> {
-  const definitions = getCredentialDefinitions()
-  const aiCredentials = await loadAllAiProviderCredentials()
-  const mediaCredentials = await loadAllMediaProviderCredentials()
-  const publishProviders = await listConfiguredProviders()
+  const definitions = getCredentialDefinitions();
+  const aiCredentials = await loadAllAiProviderCredentials();
+  const mediaCredentials = await loadAllMediaProviderCredentials();
+  const publishProviders = await listConfiguredProviders();
   const publishRecords = await Promise.all(
     publishProviders.map(async (providerId): Promise<CredentialRecord | null> => {
-      const definition = definitions.find((item) => item.id === `publisher:${providerId}`)
-      if (!definition) return null
+      const definition = definitions.find((item) => item.id === `publisher:${providerId}`);
+      if (!definition) return null;
 
-      const stored = await loadPublishCredentials(providerId)
+      const stored = await loadPublishCredentials(providerId);
       const values = definition.fields.reduce<PublishCredentials>((acc, field) => {
-        const value = stored[field.key] ?? ''
-        acc[field.key] = field.sensitive ? maskApiKey(value) : value
+        const value = stored[field.key] ?? '';
+        acc[field.key] = field.sensitive ? maskApiKey(value) : value;
         return acc
-      }, {})
+      }, {});
 
       return {
         ...definition,
@@ -186,14 +186,14 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
         hasKey: definition.fields.some((field) => Boolean(stored[field.key]))
       } satisfies CredentialRecord
     })
-  )
+  );
 
   const aiRecords: CredentialRecord[] = aiCredentials
     .map((credential): CredentialRecord | null => {
-      const definition = definitions.find((item) => item.id === `ai:${credential.provider}`)
-      if (!definition) return null
-      const isCliProvider = credential.provider.endsWith('-cli')
-      const values: PublishCredentials = { apiKey: credential.maskedKey }
+      const definition = definitions.find((item) => item.id === `ai:${credential.provider}`);
+      if (!definition) return null;
+      const isCliProvider = credential.provider.endsWith('-cli');
+      const values: PublishCredentials = { apiKey: credential.maskedKey };
       return {
         ...definition,
         source: definition.category,
@@ -203,13 +203,13 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
         hasKey: isCliProvider ? true : credential.hasKey
       } satisfies CredentialRecord
     })
-    .filter((record): record is CredentialRecord => record !== null)
+    .filter((record): record is CredentialRecord => record !== null);
 
   const mediaRecords: CredentialRecord[] = mediaCredentials
     .map((credential): CredentialRecord | null => {
-      const definition = definitions.find((item) => item.id === `multimedia:${credential.provider}`)
-      if (!definition) return null
-      const values: PublishCredentials = { apiKey: credential.maskedKey }
+      const definition = definitions.find((item) => item.id === `multimedia:${credential.provider}`);
+      if (!definition) return null;
+      const values: PublishCredentials = { apiKey: credential.maskedKey };
       return {
         ...definition,
         source: definition.category,
@@ -219,26 +219,26 @@ export async function listCredentialRecords(): Promise<CredentialRecord[]> {
         hasKey: credential.hasKey
       } satisfies CredentialRecord
     })
-    .filter((record): record is CredentialRecord => record !== null)
+    .filter((record): record is CredentialRecord => record !== null);
 
   return [...aiRecords, ...mediaRecords, ...publishRecords.filter((record): record is CredentialRecord => record !== null)]
 }
 
 export async function getCredentialValues(id: string): Promise<PublishCredentials> {
-  const definition = getCredentialDefinitionById(id)
-  if (!definition) return {}
+  const definition = getCredentialDefinitionById(id);
+  if (!definition) return {};
 
   if (definition.category === 'publisher') {
-    const stored = await loadPublishCredentials(definition.providerId)
+    const stored = await loadPublishCredentials(definition.providerId);
     return definition.fields.reduce<PublishCredentials>((acc, field) => {
-      const value = stored[field.key] ?? ''
-      acc[field.key] = field.sensitive ? maskApiKey(value) : value
+      const value = stored[field.key] ?? '';
+      acc[field.key] = field.sensitive ? maskApiKey(value) : value;
       return acc
     }, {})
   }
 
-  const records = await listCredentialRecords()
-  const record = records.find((item) => item.id === id)
+  const records = await listCredentialRecords();
+  const record = records.find((item) => item.id === id);
   return record?.values ?? {}
 }
 
@@ -247,10 +247,10 @@ function mergeSensitiveFields(
   existing: PublishCredentials,
   incoming: PublishCredentials
 ): PublishCredentials {
-  const merged: PublishCredentials = {}
+  const merged: PublishCredentials = {};
 
   for (const field of fields) {
-    const nextValue = incoming[field.key]
+    const nextValue = incoming[field.key];
     if (field.sensitive && typeof nextValue === 'string' && nextValue.startsWith(MASKED_KEY_PREFIX)) {
       merged[field.key] = existing[field.key] ?? ''
     } else if (typeof nextValue === 'string') {
@@ -264,7 +264,7 @@ function mergeSensitiveFields(
 }
 
 export async function saveCredentialRecord(id: string, values: PublishCredentials): Promise<void> {
-  const definition = getCredentialDefinitionById(id)
+  const definition = getCredentialDefinitionById(id);
   if (!definition) {
     throw new Error(`Unknown credential: ${id}`)
   }
@@ -273,28 +273,28 @@ export async function saveCredentialRecord(id: string, values: PublishCredential
     if (definition.providerId.endsWith('-cli')) {
       return // No-op for CLI providers
     }
-    const nextApiKey = typeof values.apiKey === 'string' ? values.apiKey : ''
-    const existing = { apiKey: await loadAiApiKeyForProvider(definition.providerId as AiProvider) }
-    const merged = mergeSensitiveFields(definition.fields, existing, { apiKey: nextApiKey })
-    await saveAiApiKeyForProvider(definition.providerId as AiProvider, merged.apiKey ?? '')
+    const nextApiKey = typeof values.apiKey === 'string' ? values.apiKey : '';
+    const existing = { apiKey: await loadAiApiKeyForProvider(definition.providerId as AiProvider) };
+    const merged = mergeSensitiveFields(definition.fields, existing, { apiKey: nextApiKey });
+    await saveAiApiKeyForProvider(definition.providerId as AiProvider, merged.apiKey ?? '');
     return
   }
 
   if (definition.category === 'multimedia') {
-    const nextApiKey = typeof values.apiKey === 'string' ? values.apiKey : ''
-    const existing = { apiKey: await loadMediaApiKeyForProvider(definition.providerId as MediaSearchProvider) }
-    const merged = mergeSensitiveFields(definition.fields, existing, { apiKey: nextApiKey })
-    await saveMediaApiKeyForProvider(definition.providerId as MediaSearchProvider, merged.apiKey ?? '')
+    const nextApiKey = typeof values.apiKey === 'string' ? values.apiKey : '';
+    const existing = { apiKey: await loadMediaApiKeyForProvider(definition.providerId as MediaSearchProvider) };
+    const merged = mergeSensitiveFields(definition.fields, existing, { apiKey: nextApiKey });
+    await saveMediaApiKeyForProvider(definition.providerId as MediaSearchProvider, merged.apiKey ?? '');
     return
   }
 
-  const existing = await loadPublishCredentials(definition.providerId)
-  const merged = mergeSensitiveFields(definition.fields, existing, values)
+  const existing = await loadPublishCredentials(definition.providerId);
+  const merged = mergeSensitiveFields(definition.fields, existing, values);
   await savePublishCredentials(definition.providerId, merged)
 }
 
 export async function deleteCredentialRecord(id: string): Promise<void> {
-  const definition = getCredentialDefinitionById(id)
+  const definition = getCredentialDefinitionById(id);
   if (!definition) {
     throw new Error(`Unknown credential: ${id}`)
   }
@@ -303,12 +303,12 @@ export async function deleteCredentialRecord(id: string): Promise<void> {
     if (definition.providerId.endsWith('-cli')) {
       return // No-op for CLI providers
     }
-    await clearAiApiKeyForProvider(definition.providerId as AiProvider)
+    await clearAiApiKeyForProvider(definition.providerId as AiProvider);
     return
   }
 
   if (definition.category === 'multimedia') {
-    await clearMediaApiKeyForProvider(definition.providerId as MediaSearchProvider)
+    await clearMediaApiKeyForProvider(definition.providerId as MediaSearchProvider);
     return
   }
 

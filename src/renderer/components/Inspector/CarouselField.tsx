@@ -14,50 +14,50 @@ interface CarouselFieldProps {
 }
 
 function CarouselField({ value = [], onChange }: CarouselFieldProps): JSX.Element {
-  const [showPicker, setShowPicker] = useState(false)
+  const [showPicker, setShowPicker] = useState(false);
 
   const handleAddSlides = useCallback(() => {
     setShowPicker(true)
-  }, [])
+  }, []);
 
   const handleSelectAssets = (urls: string[]) => {
-    setShowPicker(false)
-    if (!urls.length) return
+    setShowPicker(false);
+    if (!urls.length) return;
 
     const newSlides = urls.map(url => {
-      const fileName = url.split('/').pop() || 'slide'
-      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '')
+      const fileName = url.split('/').pop() || 'slide';
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
       return {
         src: url,
         alt: nameWithoutExt,
         caption: ''
       }
-    })
+    });
 
     onChange([...value, ...newSlides])
-  }
+  };
 
   const updateSlide = (index: number, updates: Partial<CarouselSlide>) => {
-    const next = [...value]
-    next[index] = { ...next[index], ...updates }
+    const next = [...value];
+    next[index] = { ...next[index], ...updates };
     onChange(next)
-  }
+  };
 
   const moveSlide = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-    if (newIndex < 0 || newIndex >= value.length) return
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= value.length) return;
 
-    const next = [...value]
-    const [item] = next.splice(index, 1)
-    next.splice(newIndex, 0, item)
+    const next = [...value];
+    const [item] = next.splice(index, 1);
+    next.splice(newIndex, 0, item);
     onChange(next)
-  }
+  };
 
   const removeSlide = (index: number) => {
-    const next = [...value]
-    next.splice(index, 1)
+    const next = [...value];
+    next.splice(index, 1);
     onChange(next)
-  }
+  };
 
   return (
     <div className="carousel-field" data-tutorial="carousel-field">

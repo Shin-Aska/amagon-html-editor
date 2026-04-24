@@ -8,21 +8,21 @@ interface VideoFieldProps {
 }
 
 function VideoField({ value, onChange }: VideoFieldProps): JSX.Element {
-  const [showPicker, setShowPicker] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [showPicker, setShowPicker] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const hasPreviewableVideo = value && (value.startsWith('http') || value.startsWith('blob:') || value.startsWith('app-media://'))
+  const hasPreviewableVideo = value && (value.startsWith('http') || value.startsWith('blob:') || value.startsWith('app-media://'));
 
   const handleBrowse = useCallback(() => {
     setShowPicker(true)
-  }, [])
+  }, []);
 
   const handleSelectAsset = (urls: string[]) => {
-    setShowPicker(false)
-    if (!urls.length) return
-    const filePath = urls[0]
+    setShowPicker(false);
+    if (!urls.length) return;
+    const filePath = urls[0];
     onChange(filePath)
-  }
+  };
 
   return (
     <div className="video-field">
@@ -32,7 +32,7 @@ function VideoField({ value, onChange }: VideoFieldProps): JSX.Element {
           className="inspector-input video-field-url"
           value={value}
           onChange={(e) => {
-            setError(null)
+            setError(null);
             onChange(e.target.value)
           }}
           placeholder="Video URL or path"

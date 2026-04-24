@@ -9,33 +9,33 @@ const camelToKebab = (value: string): string =>
   value
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/_/g, '-')
-    .toLowerCase()
+    .toLowerCase();
 
 const kebabToCamel = (value: string): string =>
   value
     .trim()
     .toLowerCase()
     .replace(/^-+/, '')
-    .replace(/-+([a-z0-9])/g, (_, char: string) => char.toUpperCase())
+    .replace(/-+([a-z0-9])/g, (_, char: string) => char.toUpperCase());
 
 function InlineStylesEditor({ styles, onChange }: InlineStylesEditorProps): JSX.Element {
-  const [newProp, setNewProp] = useState('')
-  const [newValue, setNewValue] = useState('')
+  const [newProp, setNewProp] = useState('');
+  const [newValue, setNewValue] = useState('');
 
   const entries = useMemo(
     () => Object.entries(styles || {}).sort(([a], [b]) => a.localeCompare(b)),
     [styles]
-  )
+  );
 
   const handleAdd = () => {
-    const normalizedProp = kebabToCamel(newProp)
-    const normalizedValue = newValue.trim()
-    if (!normalizedProp || !normalizedValue) return
+    const normalizedProp = kebabToCamel(newProp);
+    const normalizedValue = newValue.trim();
+    if (!normalizedProp || !normalizedValue) return;
 
-    onChange(normalizedProp, normalizedValue)
-    setNewProp('')
+    onChange(normalizedProp, normalizedValue);
+    setNewProp('');
     setNewValue('')
-  }
+  };
 
   return (
     <div className="inline-styles-editor">
@@ -60,7 +60,7 @@ function InlineStylesEditor({ styles, onChange }: InlineStylesEditorProps): JSX.
                     className="inspector-input"
                     value={value}
                     onChange={(e) => {
-                      const nextValue = e.target.value
+                      const nextValue = e.target.value;
                       onChange(key, nextValue === '' ? undefined : nextValue)
                     }}
                   />

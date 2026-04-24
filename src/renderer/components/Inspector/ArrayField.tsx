@@ -54,7 +54,7 @@ function cloneDefault(value: unknown): unknown {
 }
 
 function createRecordItem(fields: ArrayRecordField[] | undefined): ArrayRecordItem {
-  if (!fields || fields.length === 0) return { label: 'New Item' }
+  if (!fields || fields.length === 0) return { label: 'New Item' };
 
   return fields.reduce<ArrayRecordItem>((acc, field) => {
     if (field.default !== undefined) {
@@ -86,11 +86,11 @@ function formatRecordSummary(item: ArrayRecordItem, index: number, labelKey?: st
     'value',
     'date',
     'number'
-  ].filter(Boolean) as string[]
+  ].filter(Boolean) as string[];
 
   for (const key of preferredKeys) {
-    const value = item[key]
-    if (typeof value === 'string' && value.trim()) return value.trim()
+    const value = item[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
     if (typeof value === 'number' && Number.isFinite(value)) return String(value)
   }
 
@@ -119,15 +119,15 @@ function JsonField({
     } catch {
       return ''
     }
-  }, [fallback])
+  }, [fallback]);
 
-  const [draft, setDraft] = useState(() => stringify(value))
-  const [error, setError] = useState('')
+  const [draft, setDraft] = useState(() => stringify(value));
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setDraft(stringify(value))
+    setDraft(stringify(value));
     setError('')
-  }, [stringify, value])
+  }, [stringify, value]);
 
   return (
     <div className="array-json-field">
@@ -138,7 +138,7 @@ function JsonField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => {
           try {
-            onChange(draft.trim() ? JSON.parse(draft) : cloneDefault(fallback ?? {}))
+            onChange(draft.trim() ? JSON.parse(draft) : cloneDefault(fallback ?? {}));
             setError('')
           } catch {
             setError('Invalid JSON')
@@ -151,7 +151,7 @@ function JsonField({
 }
 
 function normalizeSocialMap(value: unknown): Record<string, string> {
-  if (!isRecordItem(value)) return {}
+  if (!isRecordItem(value)) return {};
 
   return Object.fromEntries(
     Object.entries(value)
@@ -167,12 +167,12 @@ function SocialMapField({
   value: unknown
   onChange: (value: Record<string, string>) => void
 }): JSX.Element {
-  const current = normalizeSocialMap(value)
-  const keys = Array.from(new Set(['twitter', 'linkedin', 'github', ...Object.keys(current)]))
+  const current = normalizeSocialMap(value);
+  const keys = Array.from(new Set(['twitter', 'linkedin', 'github', ...Object.keys(current)]));
 
   const updatePlatform = (platform: string, url: string) => {
     onChange({ ...current, [platform]: url })
-  }
+  };
 
   return (
     <div className="array-nested-field">
@@ -198,7 +198,7 @@ interface FeatureItem {
 }
 
 function normalizeFeatures(value: unknown): FeatureItem[] {
-  if (!Array.isArray(value)) return []
+  if (!Array.isArray(value)) return [];
 
   return value.map((feature) => {
     if (isRecordItem(feature)) {
@@ -222,19 +222,19 @@ function FeatureListField({
   value: unknown
   onChange: (value: FeatureItem[]) => void
 }): JSX.Element {
-  const features = normalizeFeatures(value)
+  const features = normalizeFeatures(value);
 
   const updateFeature = (index: number, updates: Partial<FeatureItem>) => {
-    const next = [...features]
-    next[index] = { ...next[index], ...updates }
+    const next = [...features];
+    next[index] = { ...next[index], ...updates };
     onChange(next)
-  }
+  };
 
   const removeFeature = (index: number) => {
-    const next = [...features]
-    next.splice(index, 1)
+    const next = [...features];
+    next.splice(index, 1);
     onChange(next)
-  }
+  };
 
   return (
     <div className="array-nested-field">
@@ -282,23 +282,23 @@ function ArrayField({
   onDefaultChange,
   onChangeBoth
 }: ArrayFieldProps): JSX.Element {
-  const [newItemText, setNewItemText] = useState('')
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const [newItemText, setNewItemText] = useState('');
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const normalizeValue = useCallback((): ArrayItem[] => {
-    if (!Array.isArray(value)) return []
+    if (!Array.isArray(value)) return [];
     return value
-  }, [value])
+  }, [value]);
 
   const handleAddStringItem = useCallback(() => {
-    if (!newItemText.trim()) return
-    const current = normalizeValue()
-    onChange([...current, newItemText.trim()])
+    if (!newItemText.trim()) return;
+    const current = normalizeValue();
+    onChange([...current, newItemText.trim()]);
     setNewItemText('')
-  }, [newItemText, normalizeValue, onChange])
+  }, [newItemText, normalizeValue, onChange]);
 
   const handleAddObjectItem = useCallback(() => {
-    const current = normalizeValue()
+    const current = normalizeValue();
     let newItem;
     if (itemType === 'tab') {
       newItem = { label: 'New Tab', content: '' }
@@ -308,48 +308,48 @@ function ArrayField({
       newItem = createRecordItem(itemFields)
     }
     if (newItem) {
-      onChange([...current, newItem])
+      onChange([...current, newItem]);
       setExpandedIndex(current.length)
     }
-  }, [itemFields, itemType, normalizeValue, onChange])
+  }, [itemFields, itemType, normalizeValue, onChange]);
 
   const updateItem = (index: number, updates: Partial<TabItem | AccordionItem>) => {
-    const next = [...normalizeValue()]
-    const item = next[index]
+    const next = [...normalizeValue()];
+    const item = next[index];
     if (isRecordItem(item)) {
-      next[index] = { ...item, ...updates }
+      next[index] = { ...item, ...updates };
       onChange(next)
     }
-  }
+  };
 
   const updateRecordField = (index: number, fieldKey: string, fieldValue: unknown) => {
-    const next = [...normalizeValue()]
-    const item = next[index]
+    const next = [...normalizeValue()];
+    const item = next[index];
     next[index] = {
       ...(isRecordItem(item) ? item : {}),
       [fieldKey]: fieldValue
-    }
+    };
     onChange(next)
-  }
+  };
 
   const updateStringItem = (index: number, newValue: string) => {
-    const next = [...normalizeValue()]
-    next[index] = newValue
+    const next = [...normalizeValue()];
+    next[index] = newValue;
     onChange(next)
-  }
+  };
 
   const moveItem = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1
-    const current = normalizeValue()
-    if (newIndex < 0 || newIndex >= current.length) return
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    const current = normalizeValue();
+    if (newIndex < 0 || newIndex >= current.length) return;
 
-    const next = [...current]
-    const [item] = next.splice(index, 1)
-    next.splice(newIndex, 0, item)
+    const next = [...current];
+    const [item] = next.splice(index, 1);
+    next.splice(newIndex, 0, item);
 
-    let newDefault = defaultIndex
-    if (defaultIndex === index) newDefault = newIndex
-    else if (defaultIndex === newIndex) newDefault = index
+    let newDefault = defaultIndex;
+    if (defaultIndex === index) newDefault = newIndex;
+    else if (defaultIndex === newIndex) newDefault = index;
 
     if (expandedIndex === index) {
       setExpandedIndex(newIndex)
@@ -360,17 +360,17 @@ function ArrayField({
     if (onChangeBoth && newDefault !== defaultIndex) {
       onChangeBoth(next, newDefault)
     } else {
-      onChange(next)
+      onChange(next);
       if (onDefaultChange && newDefault !== defaultIndex) {
         onDefaultChange(newDefault)
       }
     }
-  }
+  };
 
   const removeItem = (index: number) => {
-    const next = [...normalizeValue()]
-    next.splice(index, 1)
-    onChange(next)
+    const next = [...normalizeValue()];
+    next.splice(index, 1);
+    onChange(next);
     
     if (expandedIndex === index) {
       setExpandedIndex(null)
@@ -385,12 +385,12 @@ function ArrayField({
         onDefaultChange(defaultIndex - 1)
       }
     }
-  }
+  };
 
   const renderRecordField = (item: ArrayItem, index: number, field: ArrayRecordField) => {
-    const record = isRecordItem(item) ? item : {}
-    const fieldValue = record[field.key] ?? field.default
-    const fieldType = field.type || 'text'
+    const record = isRecordItem(item) ? item : {};
+    const fieldValue = record[field.key] ?? field.default;
+    const fieldType = field.type || 'text';
 
     if (fieldType === 'boolean') {
       return (
@@ -512,7 +512,7 @@ function ArrayField({
       )
     }
 
-    const inputType = fieldType === 'number' ? 'number' : 'text'
+    const inputType = fieldType === 'number' ? 'number' : 'text';
     return (
       <label key={field.key} className="array-record-field">
         <span>{field.label}</span>
@@ -523,22 +523,22 @@ function ArrayField({
           onChange={(e) => {
             const nextValue = fieldType === 'number'
               ? (e.target.value === '' ? undefined : Number(e.target.value))
-              : e.target.value
+              : e.target.value;
             updateRecordField(index, field.key, nextValue)
           }}
           placeholder={field.placeholder}
         />
       </label>
     )
-  }
+  };
 
-  const items = normalizeValue()
+  const items = normalizeValue();
 
-  const isStringArray = itemType === 'string'
-  const isTabArray = itemType === 'tab'
-  const isAccordionArray = itemType === 'accordion'
-  const isRecordArray = itemType === 'record'
-  const addLabel = isTabArray ? 'Tab' : 'Item'
+  const isStringArray = itemType === 'string';
+  const isTabArray = itemType === 'tab';
+  const isAccordionArray = itemType === 'accordion';
+  const isRecordArray = itemType === 'record';
+  const addLabel = isTabArray ? 'Tab' : 'Item';
 
   return (
     <div className="array-field">
@@ -553,7 +553,7 @@ function ArrayField({
               onChange={(e) => setNewItemText(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  e.preventDefault()
+                  e.preventDefault();
                   handleAddStringItem()
                 }
               }}

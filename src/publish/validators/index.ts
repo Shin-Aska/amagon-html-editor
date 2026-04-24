@@ -1,4 +1,4 @@
-import type {ExportedFile, ValidationResult} from '../types/index'
+import type {ExportedFile, ValidationResult} from '../types'
 import {CLOUDFLARE_PAGES_ALLOWED_EXTENSIONS, validateForCloudflarePages} from './cloudflareValidator'
 import {validateForGithubPages} from './githubPagesValidator'
 import {NEOCITIES_ALLOWED_EXTENSIONS, validateForNeocities} from './neocitiesValidator'
@@ -15,7 +15,7 @@ export { validateForAwsS3 } from './awsS3Validator'
 
 export class UnknownProviderError extends Error {
   constructor(providerId: string) {
-    super(`Unknown publish provider "${providerId}".`)
+    super(`Unknown publish provider "${providerId}".`);
     this.name = 'UnknownProviderError'
   }
 }
@@ -23,13 +23,13 @@ export class UnknownProviderError extends Error {
 export function validateForProvider(providerId: string, files: ExportedFile[]): ValidationResult {
   switch (providerId) {
     case 'neocities':
-      return validateForNeocities(files)
+      return validateForNeocities(files);
     case 'cloudflare-pages':
-      return validateForCloudflarePages(files)
+      return validateForCloudflarePages(files);
     case 'github-pages':
-      return validateForGithubPages(files)
+      return validateForGithubPages(files);
     case 'aws-s3':
-      return validateForAwsS3(files)
+      return validateForAwsS3(files);
     default:
       throw new UnknownProviderError(providerId)
   }

@@ -27,18 +27,18 @@ const PROVIDER_LABELS: Record<string, string> = {
   unsplash: 'Unsplash',
   pexels: 'Pexels',
   pixabay: 'Pixabay'
-}
+};
 
-const SEARCH_RESULTS_PER_PAGE = 20
-const VISIBLE_RESULTS_PER_PAGE = 8
+const SEARCH_RESULTS_PER_PAGE = 20;
+const VISIBLE_RESULTS_PER_PAGE = 8;
 
 function mergeResults(existing: MediaSearchResult[], incoming: MediaSearchResult[]): MediaSearchResult[] {
-  const merged = [...existing]
-  const seen = new Set(existing.map((result) => result.id))
+  const merged = [...existing];
+  const seen = new Set(existing.map((result) => result.id));
 
   for (const result of incoming) {
-    if (seen.has(result.id)) continue
-    seen.add(result.id)
+    if (seen.has(result.id)) continue;
+    seen.add(result.id);
     merged.push(result)
   }
 
@@ -52,58 +52,58 @@ export default function MediaSearchPanel({
   multiSelect = false,
   confirmLabel = 'Confirm Selection'
 }: MediaSearchPanelProps): JSX.Element {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<MediaSearchResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [config, setConfig] = useState<{ enabled: boolean; provider: string; apiKey: string } | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [page, setPage] = useState(1)
-  const [currentVisiblePage, setCurrentVisiblePage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [showConfig, setShowConfig] = useState(false)
-  const [configForm, setConfigForm] = useState({ enabled: false, provider: 'unsplash', apiKey: '' })
-  const [encryptionSecure, setEncryptionSecure] = useState(true)
-  const searchInputRef = useRef<HTMLInputElement>(null)
-  const api = getApi()
-  const totalVisiblePages = Math.max(1, Math.ceil(results.length / VISIBLE_RESULTS_PER_PAGE))
-  const visibleStartIndex = (currentVisiblePage - 1) * VISIBLE_RESULTS_PER_PAGE
-  const visibleResults = results.slice(visibleStartIndex, visibleStartIndex + VISIBLE_RESULTS_PER_PAGE)
-  const visibleStart = results.length === 0 ? 0 : visibleStartIndex + 1
-  const visibleEnd = Math.min(visibleStartIndex + VISIBLE_RESULTS_PER_PAGE, results.length)
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<MediaSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [config, setConfig] = useState<{ enabled: boolean; provider: string; apiKey: string } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
+  const [currentVisiblePage, setCurrentVisiblePage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
+  const [configForm, setConfigForm] = useState({ enabled: false, provider: 'unsplash', apiKey: '' });
+  const [encryptionSecure, setEncryptionSecure] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const api = getApi();
+  const totalVisiblePages = Math.max(1, Math.ceil(results.length / VISIBLE_RESULTS_PER_PAGE));
+  const visibleStartIndex = (currentVisiblePage - 1) * VISIBLE_RESULTS_PER_PAGE;
+  const visibleResults = results.slice(visibleStartIndex, visibleStartIndex + VISIBLE_RESULTS_PER_PAGE);
+  const visibleStart = results.length === 0 ? 0 : visibleStartIndex + 1;
+  const visibleEnd = Math.min(visibleStartIndex + VISIBLE_RESULTS_PER_PAGE, results.length);
 
   // Load config on mount + check encryption status
   useEffect(() => {
-    loadConfig()
+    loadConfig();
     api.app.isEncryptionSecure().then((res: any) => {
       if (res && typeof res.secure === 'boolean') setEncryptionSecure(res.secure)
     }).catch(() => { /* ignore */ })
-  }, [])
+  }, []);
 
   // Focus search input when enabled
   useEffect(() => {
     if (config?.enabled && searchInputRef.current) {
       searchInputRef.current.focus()
     }
-  }, [config?.enabled])
+  }, [config?.enabled]);
 
   const loadConfig = async () => {
     try {
-      const result = await api.mediaSearch.getConfig()
+      const result = await api.mediaSearch.getConfig();
       if (result.success && result.config) {
-        setConfig(result.config)
+        setConfig(result.config);
         setConfigForm(result.config)
       }
     } catch (err) {
       console.error('Failed to load media search config', err)
     }
-  }
+  };
 
   const handleSearch = useCallback(async (searchQuery: string, pageNum: number = 1, append: boolean = false) => {
-    if (!searchQuery.trim()) return
+    if (!searchQuery.trim()) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const result = await api.mediaSearch.search({
@@ -111,15 +111,15 @@ export default function MediaSearchPanel({
         perPage: SEARCH_RESULTS_PER_PAGE,
         page: pageNum,
         type: mode
-      })
+      });
 
       if (result.error) {
-        setError(result.error)
+        setError(result.error);
         if (!append) {
           setResults([])
         }
       } else {
-        const newResults = result.results || []
+        const newResults = result.results || [];
         if (append) {
           setResults(prev => mergeResults(prev, newResults))
         } else {
@@ -132,39 +132,39 @@ export default function MediaSearchPanel({
     } finally {
       setLoading(false)
     }
-  }, [mode, api])
+  }, [mode, api]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPage(1)
-    setCurrentVisiblePage(1)
-    setSelectedIds(new Set())
+    e.preventDefault();
+    setPage(1);
+    setCurrentVisiblePage(1);
+    setSelectedIds(new Set());
     handleSearch(query, 1, false)
-  }
+  };
 
   const loadMore = () => {
-    const nextPage = page + 1
-    setPage(nextPage)
+    const nextPage = page + 1;
+    setPage(nextPage);
     handleSearch(query, nextPage, true)
-  }
+  };
 
   useEffect(() => {
-    setResults([])
-    setSelectedIds(new Set())
-    setPage(1)
-    setCurrentVisiblePage(1)
-    setHasMore(true)
+    setResults([]);
+    setSelectedIds(new Set());
+    setPage(1);
+    setCurrentVisiblePage(1);
+    setHasMore(true);
     setError(null)
-  }, [mode])
+  }, [mode]);
 
   useEffect(() => {
     setCurrentVisiblePage((prev) => Math.min(prev, totalVisiblePages))
-  }, [totalVisiblePages])
+  }, [totalVisiblePages]);
 
   const handleResultClick = (result: MediaSearchResult) => {
     if (multiSelect) {
       setSelectedIds(prev => {
-        const next = new Set(prev)
+        const next = new Set(prev);
         if (next.has(result.id)) {
           next.delete(result.id)
         } else {
@@ -175,40 +175,40 @@ export default function MediaSearchPanel({
     } else {
       onSelect([result])
     }
-  }
+  };
 
   const handleResultDoubleClick = (result: MediaSearchResult) => {
     onSelect([result])
-  }
+  };
 
   const handleConfirmSelection = () => {
-    const selected = results.filter(r => selectedIds.has(r.id))
+    const selected = results.filter(r => selectedIds.has(r.id));
     onSelect(selected)
-  }
+  };
 
   const saveConfig = async () => {
     try {
-      const result = await api.mediaSearch.setConfig(configForm)
+      const result = await api.mediaSearch.setConfig(configForm);
       if (result.success) {
-        setConfig(result.config)
+        setConfig(result.config);
         setShowConfig(false)
       }
     } catch (err) {
       console.error('Failed to save config', err)
     }
-  }
+  };
 
   // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent, result: MediaSearchResult) => {
     if (e.key === 'Enter') {
-      e.preventDefault()
+      e.preventDefault();
       if (multiSelect) {
         handleResultClick(result)
       } else {
         onSelect([result])
       }
     }
-  }
+  };
 
   if (showConfig) {
     return (
@@ -347,7 +347,7 @@ export default function MediaSearchPanel({
 
       <div className="msp-results-grid" data-tutorial="media-search-results">
         {visibleResults.map((result) => {
-          const isSelected = selectedIds.has(result.id)
+          const isSelected = selectedIds.has(result.id);
           return (
             <div
               key={result.id}

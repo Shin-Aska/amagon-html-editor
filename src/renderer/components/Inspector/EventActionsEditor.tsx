@@ -25,7 +25,7 @@ const AVAILABLE_EVENTS = [
     { value: 'onmouseleave', label: 'On Mouse Leave' },
     { value: 'onload', label: 'On Load' },
     { value: 'onerror', label: 'On Error' }
-]
+];
 
 // Prepopulated code templates for each event type
 const EVENT_TEMPLATES: Record<string, string> = {
@@ -95,7 +95,7 @@ const EVENT_TEMPLATES: Record<string, string> = {
   // Runs when an error occurs on this element
   
 }).call(this, event)`
-}
+};
 
 interface EventActionsEditorProps {
     blockId: string
@@ -110,45 +110,45 @@ interface PendingAiReview {
 }
 
 function normalizeProposalToFullCode(currentCode: string, proposal: AiCodeProposal): string {
-    const nextCode = proposal.code.trim()
-    if (!nextCode) return currentCode
-    if (nextCode.includes('(function') && nextCode.includes('.call(this, event)')) return nextCode
+    const nextCode = proposal.code.trim();
+    if (!nextCode) return currentCode;
+    if (nextCode.includes('(function') && nextCode.includes('.call(this, event)')) return nextCode;
     return `(function(event) {\n  ${nextCode.replace(/\n/g, '\n  ')}\n}).call(this, event)`
 }
 
 function insertSnippetAtAnchor(currentCode: string, proposal: AiCodeProposal): string {
-    const snippet = proposal.code.trim()
-    if (!snippet) return currentCode
+    const snippet = proposal.code.trim();
+    if (!snippet) return currentCode;
 
     const appendWithSpacing = (base: string, addition: string): string => {
-        if (!base.trim()) return addition
-        const separator = base.endsWith('\n') ? '' : '\n'
+        if (!base.trim()) return addition;
+        const separator = base.endsWith('\n') ? '' : '\n';
         return `${base}${separator}${addition}`
-    }
+    };
 
     if (proposal.anchor === 'inside_function_start') {
-        const match = currentCode.match(/\(function\(event\)\s*\{\n?/)
+        const match = currentCode.match(/\(function\(event\)\s*\{\n?/);
         if (match && typeof match.index === 'number') {
-            const insertAt = match.index + match[0].length
+            const insertAt = match.index + match[0].length;
             return `${currentCode.slice(0, insertAt)}\n  ${snippet.replace(/\n/g, '\n  ')}${currentCode.slice(insertAt)}`
         }
     }
 
     if (proposal.anchor === 'inside_function_end') {
-        const closingIndex = currentCode.lastIndexOf('}).call(this, event)')
+        const closingIndex = currentCode.lastIndexOf('}).call(this, event)');
         if (closingIndex >= 0) {
-            const beforeClosing = currentCode.slice(0, closingIndex).replace(/\s*$/, '')
-            const afterClosing = currentCode.slice(closingIndex)
+            const beforeClosing = currentCode.slice(0, closingIndex).replace(/\s*$/, '');
+            const afterClosing = currentCode.slice(closingIndex);
             return `${beforeClosing}\n  ${snippet.replace(/\n/g, '\n  ')}\n${afterClosing}`
         }
     }
 
     if (proposal.matchText) {
-        const lines = currentCode.split('\n')
-        const lineIndex = lines.findIndex((line) => line.includes(proposal.matchText!))
+        const lines = currentCode.split('\n');
+        const lineIndex = lines.findIndex((line) => line.includes(proposal.matchText!));
         if (lineIndex >= 0) {
-            const insertIndex = proposal.anchor === 'before_line_containing' ? lineIndex : lineIndex + 1
-            lines.splice(insertIndex, 0, ...snippet.split('\n'))
+            const insertIndex = proposal.anchor === 'before_line_containing' ? lineIndex : lineIndex + 1;
+            lines.splice(insertIndex, 0, ...snippet.split('\n'));
             return lines.join('\n')
         }
     }
@@ -166,8 +166,8 @@ function applyProposalToCode(
     }
 
     if (proposal.mode === 'replace_selection' && selectionSnapshot?.text.trim()) {
-        const target = selectionSnapshot.text
-        const index = currentCode.indexOf(target)
+        const target = selectionSnapshot.text;
+        const index = currentCode.indexOf(target);
         if (index >= 0) {
             return `${currentCode.slice(0, index)}${proposal.code}${currentCode.slice(index + target.length)}`
         }
@@ -177,89 +177,89 @@ function applyProposalToCode(
 }
 
 export default function EventActionsEditor({ blockId, events }: EventActionsEditorProps): JSX.Element {
-    const updateBlock = useEditorStore((s) => s.updateBlock)
-    const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode)
-    const getBlockById = useEditorStore((s) => s.getBlockById)
-    const { hasConfiguredAiProvider } = useAiAvailability()
-    const [editingEvent, setEditingEvent] = useState<string | null>(null)
-    const [editorCode, setEditorCode] = useState('')
-    const [showAddDropdown, setShowAddDropdown] = useState(false)
-    const [showAiAssist, setShowAiAssist] = useState(false)
-    const [aiRequestText, setAiRequestText] = useState('')
-    const [selection, setSelection] = useState<AiCodeSelection | null>(null)
-    const [pendingAiReview, setPendingAiReview] = useState<PendingAiReview | null>(null)
-    const dropdownRef = useRef<HTMLDivElement>(null)
-    const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null)
+    const updateBlock = useEditorStore((s) => s.updateBlock);
+    const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode);
+    const getBlockById = useEditorStore((s) => s.getBlockById);
+    const { hasConfiguredAiProvider } = useAiAvailability();
+    const [editingEvent, setEditingEvent] = useState<string | null>(null);
+    const [editorCode, setEditorCode] = useState('');
+    const [showAddDropdown, setShowAddDropdown] = useState(false);
+    const [showAiAssist, setShowAiAssist] = useState(false);
+    const [aiRequestText, setAiRequestText] = useState('');
+    const [selection, setSelection] = useState<AiCodeSelection | null>(null);
+    const [pendingAiReview, setPendingAiReview] = useState<PendingAiReview | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null);
 
-    const currentEvents = events || {}
-    const eventEntries = Object.entries(currentEvents).filter(([, v]) => v !== undefined)
-    const block = getBlockById(blockId)
+    const currentEvents = events || {};
+    const eventEntries = Object.entries(currentEvents).filter(([, v]) => v !== undefined);
+    const block = getBlockById(blockId);
 
     // Close dropdown when clicking outside
     useEffect(() => {
-        if (!showAddDropdown) return
+        if (!showAddDropdown) return;
         const handleClickOutside = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setShowAddDropdown(false)
             }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
+        };
+        document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [showAddDropdown])
+    }, [showAddDropdown]);
 
     const handleAddEvent = useCallback((eventName: string) => {
         const template = EVENT_TEMPLATES[eventName] || `(function(event) {
   // Your code here
 
-}).call(this, event)`
-        setShowAddDropdown(false)
+}).call(this, event)`;
+        setShowAddDropdown(false);
         // Open editor for new event — only persist when user clicks Save
-        setEditingEvent(eventName)
-        setEditorCode(template)
-        setAiRequestText('')
-        setSelection(null)
+        setEditingEvent(eventName);
+        setEditorCode(template);
+        setAiRequestText('');
+        setSelection(null);
         setPendingAiReview(null)
-    }, [])
+    }, []);
 
     const handleRemoveEvent = useCallback((eventName: string) => {
-        const newEvents = { ...currentEvents }
-        delete newEvents[eventName]
+        const newEvents = { ...currentEvents };
+        delete newEvents[eventName];
         updateBlock(blockId, { events: newEvents })
-    }, [blockId, currentEvents, updateBlock])
+    }, [blockId, currentEvents, updateBlock]);
 
     const handleEditEvent = useCallback((eventName: string) => {
-        setEditingEvent(eventName)
-        setEditorCode(currentEvents[eventName] || '')
-        setAiRequestText('')
-        setSelection(null)
+        setEditingEvent(eventName);
+        setEditorCode(currentEvents[eventName] || '');
+        setAiRequestText('');
+        setSelection(null);
         setPendingAiReview(null)
-    }, [currentEvents])
+    }, [currentEvents]);
 
     const handleSaveCode = useCallback(() => {
-        if (!editingEvent) return
-        const newEvents = { ...currentEvents, [editingEvent]: editorCode }
-        updateBlock(blockId, { events: newEvents })
-        setEditingEvent(null)
-        setEditorCode('')
-        setAiRequestText('')
+        if (!editingEvent) return;
+        const newEvents = { ...currentEvents, [editingEvent]: editorCode };
+        updateBlock(blockId, { events: newEvents });
+        setEditingEvent(null);
+        setEditorCode('');
+        setAiRequestText('');
         setPendingAiReview(null)
-    }, [blockId, editingEvent, editorCode, currentEvents, updateBlock])
+    }, [blockId, editingEvent, editorCode, currentEvents, updateBlock]);
 
     const handleSaveAndClose = useCallback(() => {
-        handleSaveCode()
-        setShowAiAssist(false)
+        handleSaveCode();
+        setShowAiAssist(false);
         setIsTypingCode(false)
-    }, [handleSaveCode, setIsTypingCode])
+    }, [handleSaveCode, setIsTypingCode]);
 
     const handleCancelEdit = useCallback(() => {
-        setShowAiAssist(false)
-        setEditingEvent(null)
-        setEditorCode('')
-        setAiRequestText('')
-        setSelection(null)
-        setPendingAiReview(null)
+        setShowAiAssist(false);
+        setEditingEvent(null);
+        setEditorCode('');
+        setAiRequestText('');
+        setSelection(null);
+        setPendingAiReview(null);
         setIsTypingCode(false)
-    }, [setIsTypingCode])
+    }, [setIsTypingCode]);
 
     // Set isTypingCode when editor opens/closes
     useEffect(() => {
@@ -268,36 +268,36 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         } else {
             setIsTypingCode(false)
         }
-    }, [editingEvent, setIsTypingCode])
+    }, [editingEvent, setIsTypingCode]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
             setIsTypingCode(false)
         }
-    }, [setIsTypingCode])
+    }, [setIsTypingCode]);
     const availableToAdd = AVAILABLE_EVENTS.filter(
         (e) => !Object.prototype.hasOwnProperty.call(currentEvents, e.value)
-    )
+    );
 
     const getEventLabel = (eventName: string): string => {
-        const found = AVAILABLE_EVENTS.find((e) => e.value === eventName)
+        const found = AVAILABLE_EVENTS.find((e) => e.value === eventName);
         return found ? found.label : eventName
-    }
+    };
 
     const handleEditorMount: OnMount = (editor) => {
-        editorRef.current = editor
+        editorRef.current = editor;
         const updateSelectionState = () => {
-            const model = editor.getModel()
-            const currentSelection = editor.getSelection()
+            const model = editor.getModel();
+            const currentSelection = editor.getSelection();
             if (!model || !currentSelection) {
-                setSelection(null)
+                setSelection(null);
                 return
             }
 
-            const text = model.getValueInRange(currentSelection)
+            const text = model.getValueInRange(currentSelection);
             if (!text.trim()) {
-                setSelection(null)
+                setSelection(null);
                 return
             }
 
@@ -306,59 +306,59 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                 startLineNumber: currentSelection.startLineNumber,
                 endLineNumber: currentSelection.endLineNumber
             })
-        }
+        };
         
         // Focus the editor when it mounts
-        editor.focus()
+        editor.focus();
         
         // Listen for blur/focus to update isTypingCode
         const disposableBlur = editor.onDidBlurEditorWidget(() => {
             // We keep isTypingCode true while the modal is open
             // even if the editor loses focus, to prevent accidental block operations
-        })
+        });
         
         const disposableFocus = editor.onDidFocusEditorWidget(() => {
             setIsTypingCode(true)
-        })
+        });
 
         const disposableSelection = editor.onDidChangeCursorSelection(() => {
             updateSelectionState()
-        })
+        });
         
         return () => {
-            disposableBlur.dispose()
-            disposableFocus.dispose()
+            disposableBlur.dispose();
+            disposableFocus.dispose();
             disposableSelection.dispose()
         }
-    }
+    };
 
     const handleProposalGenerated = useCallback(
         (proposal: AiCodeProposal) => {
-            const selectionSnapshot = selection ? { ...selection } : null
-            const sourceCode = editorCode
-            const previewCode = applyProposalToCode(sourceCode, proposal, selectionSnapshot)
+            const selectionSnapshot = selection ? { ...selection } : null;
+            const sourceCode = editorCode;
+            const previewCode = applyProposalToCode(sourceCode, proposal, selectionSnapshot);
             setPendingAiReview({
                 proposal,
                 sourceCode,
                 previewCode,
                 selectionSnapshot
-            })
+            });
             setShowAiAssist(false)
         },
         [editorCode, selection]
-    )
+    );
 
     const handleApplyAiReview = useCallback(() => {
-        if (!pendingAiReview) return
-        setEditorCode(pendingAiReview.previewCode)
-        setPendingAiReview(null)
+        if (!pendingAiReview) return;
+        setEditorCode(pendingAiReview.previewCode);
+        setPendingAiReview(null);
         setSelection(null)
-    }, [pendingAiReview])
+    }, [pendingAiReview]);
 
     const handleDiscardAiReview = useCallback(() => {
-        setPendingAiReview(null)
+        setPendingAiReview(null);
         setShowAiAssist(true)
-    }, [])
+    }, []);
 
     return (
         <div className="event-actions-editor" data-tutorial="event-actions-editor">
@@ -457,7 +457,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                             defaultLanguage="javascript"
                                             value={editorCode}
                                             onChange={(value) => {
-                                                setEditorCode(value || '')
+                                                setEditorCode(value || '');
                                                 if (pendingAiReview) setPendingAiReview(null)
                                             }}
                                             theme="vs-dark"
@@ -481,7 +481,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                     className="event-editor-btn ai"
                                     data-tutorial="event-ai-assist-btn"
                                     onClick={() => {
-                                        if (!hasConfiguredAiProvider) return
+                                        if (!hasConfiguredAiProvider) return;
                                         setShowAiAssist((prev) => !prev)
                                     }}
                                     type="button"

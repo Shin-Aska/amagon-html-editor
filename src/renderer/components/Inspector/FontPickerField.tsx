@@ -51,51 +51,51 @@ const PRESET_FONTS: FontOption[] = [
   { label: 'Fira Code', value: '"Fira Code", Consolas, monospace', group: 'Monospace' },
   { label: 'JetBrains Mono', value: '"JetBrains Mono", Menlo, monospace', group: 'Monospace' },
   { label: 'Courier New', value: '"Courier New", Courier, monospace', group: 'Monospace' },
-]
+];
 
-const GROUPS = ['Imported', 'System', 'Sans-Serif', 'Serif', 'Display', 'Monospace'] as const
+const GROUPS = ['Imported', 'System', 'Sans-Serif', 'Serif', 'Display', 'Monospace'] as const;
 
 export default function FontPickerField({ value, onChange }: FontPickerFieldProps): JSX.Element {
-  const managedFonts = useProjectStore((s) => s.fonts)
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState('')
-  const [portalStyle, setPortalStyle] = useState<{ [k: string]: string | number }>({})
+  const managedFonts = useProjectStore((s) => s.fonts);
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [portalStyle, setPortalStyle] = useState<{ [k: string]: string | number }>({});
 
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const allOptions = useMemo<FontOption[]>(() => {
     const managed: FontOption[] = managedFonts
       .filter((f) => f.name.trim())
-      .map((f) => ({ label: f.name, value: f.name, group: 'Imported' }))
+      .map((f) => ({ label: f.name, value: f.name, group: 'Imported' }));
     return [...managed, ...PRESET_FONTS]
-  }, [managedFonts])
+  }, [managedFonts]);
 
   const currentOption = useMemo(() => {
     return allOptions.find((o) => o.value === value) ?? { label: value || 'Inherit', value: value || '', group: '' }
-  }, [allOptions, value])
+  }, [allOptions, value]);
 
   const filteredOptions = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    if (!q) return allOptions
+    const q = search.toLowerCase().trim();
+    if (!q) return allOptions;
     return allOptions.filter((o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
-  }, [allOptions, search])
+  }, [allOptions, search]);
 
   const groups = useMemo(() => {
     return GROUPS
       .map((g) => ({ group: g, items: filteredOptions.filter((o) => o.group === g) }))
       .filter((g) => g.items.length > 0)
-  }, [filteredOptions])
+  }, [filteredOptions]);
 
   const openDropdown = () => {
-    if (!triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    const spaceBelow = window.innerHeight - rect.bottom
-    const spaceAbove = rect.top
-    const dropH = 300
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const dropH = 300;
     // flip up if not enough space below
-    const flipUp = spaceBelow < dropH + 12 && spaceAbove > spaceBelow
+    const flipUp = spaceBelow < dropH + 12 && spaceAbove > spaceBelow;
     setPortalStyle({
       position: 'fixed',
       top: flipUp ? rect.top - Math.min(dropH, spaceAbove - 12) : rect.bottom + 3,
@@ -103,33 +103,33 @@ export default function FontPickerField({ value, onChange }: FontPickerFieldProp
       width: Math.max(rect.width, 220),
       maxHeight: flipUp ? Math.min(dropH, spaceAbove - 12) : Math.min(dropH, spaceBelow - 12),
       zIndex: 99999,
-    })
-    setSearch('')
+    });
+    setSearch('');
     setOpen(true)
-  }
+  };
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     setTimeout(() => {
-      searchRef.current?.focus()
-      const active = listRef.current?.querySelector('[data-active="true"]') as HTMLElement | null
+      searchRef.current?.focus();
+      const active = listRef.current?.querySelector('[data-active="true"]') as HTMLElement | null;
       active?.scrollIntoView({ block: 'nearest' })
     }, 0)
-  }, [open])
+  }, [open]);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handler = (e: MouseEvent) => {
-      const portal = document.getElementById('font-picker-portal')
+      const portal = document.getElementById('font-picker-portal');
       if (!triggerRef.current?.contains(e.target as Node) && !portal?.contains(e.target as Node)) {
         setOpen(false)
       }
-    }
-    document.addEventListener('mousedown', handler)
+    };
+    document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler)
-  }, [open])
+  }, [open]);
 
-  const commit = (v: string) => { onChange(v); setOpen(false); setSearch('') }
+  const commit = (v: string) => { onChange(v); setOpen(false); setSearch('') };
 
   const dropdown = (
     <div id="font-picker-portal" className="fp-dropdown" style={portalStyle as React.CSSProperties}>
@@ -155,7 +155,7 @@ export default function FontPickerField({ value, onChange }: FontPickerFieldProp
           <div key={group}>
             <div className="fp-group-header">{group}</div>
             {items.map((opt) => {
-              const isActive = opt.value === value
+              const isActive = opt.value === value;
               return (
                 <button
                   key={opt.value + opt.group}
@@ -178,7 +178,7 @@ export default function FontPickerField({ value, onChange }: FontPickerFieldProp
         ))}
       </div>
     </div>
-  )
+  );
 
   return (
     <div className="font-picker">

@@ -117,7 +117,7 @@ const genericLucideIcons: Record<string, LucideIcon> = {
   search: Search,
   wrench: Wrench,
   trophy: Trophy
-}
+};
 
 const blockAliasIcons: Record<string, LucideIcon> = {
   container: Square,
@@ -185,14 +185,14 @@ const blockAliasIcons: Record<string, LucideIcon> = {
   item: CircleDot,
   'user-block': Puzzle,
   default: BoxSelect
-}
+};
 
 export const lucideIconComponents: Record<string, LucideIcon> = {
   ...genericLucideIcons,
   ...Object.fromEntries(
     Object.entries(blockAliasIcons).map(([key, component]) => [normalizeLucideKey(key), component])
   )
-}
+};
 
 export const lucidePickerIcons = [
   'star',
@@ -225,56 +225,56 @@ export const lucidePickerIcons = [
   'search',
   'wrench',
   'trophy'
-]
+];
 
 export function getLucideIconComponent(name: string): LucideIcon | null {
   return lucideIconComponents[normalizeLucideKey(name)] || null
 }
 
 export function mapLegacyBootstrapIcon(value: string): string | null {
-  const trimmed = String(value || '').trim().toLowerCase()
-  if (!trimmed.startsWith('bi-')) return null
-  if (trimmed.includes('star')) return 'star'
-  if (trimmed.includes('image') || trimmed.includes('card-image')) return 'image'
-  if (trimmed.includes('play') || trimmed.includes('camera-video') || trimmed.includes('film')) return 'video'
-  if (trimmed.includes('link')) return 'link'
-  if (trimmed.includes('globe')) return 'globe'
-  if (trimmed.includes('code')) return 'code'
-  if (trimmed.includes('chat') || trimmed.includes('message')) return 'messagecircle'
-  if (trimmed.includes('book')) return 'bookopen'
-  if (trimmed.includes('newspaper')) return 'newspaper'
-  if (trimmed.includes('sparkle') || trimmed.includes('magic')) return 'sparkles'
-  if (trimmed.includes('layout') || trimmed.includes('window')) return 'layouttemplate'
+  const trimmed = String(value || '').trim().toLowerCase();
+  if (!trimmed.startsWith('bi-')) return null;
+  if (trimmed.includes('star')) return 'star';
+  if (trimmed.includes('image') || trimmed.includes('card-image')) return 'image';
+  if (trimmed.includes('play') || trimmed.includes('camera-video') || trimmed.includes('film')) return 'video';
+  if (trimmed.includes('link')) return 'link';
+  if (trimmed.includes('globe')) return 'globe';
+  if (trimmed.includes('code')) return 'code';
+  if (trimmed.includes('chat') || trimmed.includes('message')) return 'messagecircle';
+  if (trimmed.includes('book')) return 'bookopen';
+  if (trimmed.includes('newspaper')) return 'newspaper';
+  if (trimmed.includes('sparkle') || trimmed.includes('magic')) return 'sparkles';
+  if (trimmed.includes('layout') || trimmed.includes('window')) return 'layouttemplate';
   return null
 }
 
 export function isRenderableGlyph(value: string): boolean {
-  const trimmed = String(value || '').trim()
-  if (!trimmed) return false
-  if (trimmed.startsWith('lucide:')) return true
-  if (trimmed.startsWith('bi-')) return false
-  if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(trimmed)) return false
-  if (trimmed === '☐' || trimmed === '☑' || trimmed === '▢' || trimmed === '▣' || trimmed === '▭' || trimmed === '🔲' || trimmed === '🔳') return false
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('lucide:')) return true;
+  if (trimmed.startsWith('bi-')) return false;
+  if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(trimmed)) return false;
+  if (trimmed === '☐' || trimmed === '☑' || trimmed === '▢' || trimmed === '▣' || trimmed === '▭' || trimmed === '🔲' || trimmed === '🔳') return false;
   return true
 }
 
-const dynamicImportsMap = dynamicIconImports as Record<string, () => Promise<{ default: LucideIcon }>>
+const dynamicImportsMap = dynamicIconImports as Record<string, () => Promise<{ default: LucideIcon }>>;
 
-export const allLucideIconNames: string[] = Object.keys(dynamicImportsMap).sort()
+export const allLucideIconNames: string[] = Object.keys(dynamicImportsMap).sort();
 
-const normalizedDynamicImports = new Map<string, () => Promise<{ default: LucideIcon }>>()
+const normalizedDynamicImports = new Map<string, () => Promise<{ default: LucideIcon }>>();
 Object.entries(dynamicImportsMap).forEach(([rawName, loader]) => {
   normalizedDynamicImports.set(normalizeLucideKey(rawName), loader)
-})
+});
 
 type LazyIconComponent = React.ComponentType<{ size?: number; className?: string }>
 
-const lazyIconCache = new Map<string, LazyIconComponent>()
+const lazyIconCache = new Map<string, LazyIconComponent>();
 
 export function getLazyLucideIcon(name: string): LazyIconComponent | null {
-  const key = normalizeLucideKey(name)
-  const loader = normalizedDynamicImports.get(key)
-  if (!loader) return null
+  const key = normalizeLucideKey(name);
+  const loader = normalizedDynamicImports.get(key);
+  if (!loader) return null;
   if (!lazyIconCache.has(key)) {
     lazyIconCache.set(key, React.lazy(loader))
   }
@@ -282,31 +282,31 @@ export function getLazyLucideIcon(name: string): LazyIconComponent | null {
 }
 
 export function isKnownLucideIcon(name: string): boolean {
-  const key = normalizeLucideKey(name)
+  const key = normalizeLucideKey(name);
   return !!lucideIconComponents[key] || normalizedDynamicImports.has(key)
 }
 
 type IconNode = [string, Record<string, string>]
 
-const normalizedIconCatalog = new Map<string, IconNode[]>()
-const rawIconCatalog = lucideIconCatalog as Record<string, unknown>
+const normalizedIconCatalog = new Map<string, IconNode[]>();
+const rawIconCatalog = lucideIconCatalog as Record<string, unknown>;
 
 Object.entries(rawIconCatalog).forEach(([rawName, rawNodes]) => {
   const nodes: IconNode[] = Array.isArray(rawNodes)
     ? rawNodes.flatMap((rawNode) => {
-        if (!Array.isArray(rawNode) || rawNode.length !== 2) return []
+        if (!Array.isArray(rawNode) || rawNode.length !== 2) return [];
 
-        const [tag, attrs] = rawNode
-        if (typeof tag !== 'string' || !attrs || typeof attrs !== 'object' || Array.isArray(attrs)) return []
+        const [tag, attrs] = rawNode;
+        if (typeof tag !== 'string' || !attrs || typeof attrs !== 'object' || Array.isArray(attrs)) return [];
 
         return [[tag, Object.fromEntries(
           Object.entries(attrs).map(([key, value]) => [key, String(value)])
         )]]
       })
-    : []
+    : [];
 
   normalizedIconCatalog.set(normalizeLucideKey(rawName), nodes)
-})
+});
 
 function escapeSvgAttr(value: string): string {
   return value
@@ -321,7 +321,7 @@ function iconNodeToSvgMarkup(nodes: IconNode[]): string {
     .map(([tag, attrs]) => {
       const attrStr = Object.entries(attrs)
         .map(([k, v]) => `${k}="${escapeSvgAttr(v)}"`)
-        .join(' ')
+        .join(' ');
       return `<${tag} ${attrStr}></${tag}>`
     })
     .join('')
@@ -331,13 +331,13 @@ export function renderLucideIconSvg(
   name: string,
   options: { size?: string | number; strokeWidth?: number } = {}
 ): string | null {
-  const key = normalizeLucideKey(name)
-  const nodes = normalizedIconCatalog.get(key)
-  if (!nodes || nodes.length === 0) return null
+  const key = normalizeLucideKey(name);
+  const nodes = normalizedIconCatalog.get(key);
+  if (!nodes || nodes.length === 0) return null;
 
-  const size = options.size ?? '1em'
-  const strokeWidth = options.strokeWidth ?? 2.25
-  const sizeAttr = typeof size === 'number' ? `${size}px` : size
+  const size = options.size ?? '1em';
+  const strokeWidth = options.strokeWidth ?? 2.25;
+  const sizeAttr = typeof size === 'number' ? `${size}px` : size;
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${escapeSvgAttr(sizeAttr)}" height="${escapeSvgAttr(sizeAttr)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">` +

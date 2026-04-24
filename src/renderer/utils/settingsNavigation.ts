@@ -1,4 +1,4 @@
-export const OPEN_GLOBAL_SETTINGS_EVENT = 'hoarses:open-global-settings'
+export const OPEN_GLOBAL_SETTINGS_EVENT = 'hoarses:open-global-settings';
 
 export type GlobalSettingsTab = 'general' | 'keys'
 

@@ -29,7 +29,7 @@ export function registerBlocks(): void {
         group: 'Form'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'row',
@@ -40,7 +40,7 @@ export function registerBlocks(): void {
     propsSchema: {
       gutters: { type: 'boolean', label: 'Gutters', default: true }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'column',
@@ -75,7 +75,7 @@ export function registerBlocks(): void {
       offset: { type: 'number', label: 'Offset (0-11)', default: 0, min: 0, max: 11 },
       order: { type: 'number', label: 'Order (0-12)', default: 0, min: 0, max: 12 }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'divider',
@@ -102,7 +102,7 @@ export function registerBlocks(): void {
       withText: { type: 'text', label: 'Center Text', default: '' },
       withIcon: { type: 'icon', label: 'Center Icon', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'spacer',
@@ -118,7 +118,7 @@ export function registerBlocks(): void {
       responsiveLg: { type: 'text', label: 'LG Height', default: '', description: 'Override height at lg breakpoint' },
       responsiveXl: { type: 'text', label: 'XL Height', default: '', description: 'Override height at xl breakpoint' }
     }
-  })
+  });
 
   // ─── Typography ──────────────────────────────────────────────────────────────
   componentRegistry.register({
@@ -163,7 +163,7 @@ export function registerBlocks(): void {
       },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'paragraph',
@@ -196,7 +196,7 @@ export function registerBlocks(): void {
       },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   // ─── Media ───────────────────────────────────────────────────────────────────
   componentRegistry.register({
@@ -255,7 +255,7 @@ export function registerBlocks(): void {
       lazyLoad: { type: 'boolean', label: 'Lazy Load', default: true },
       lightbox: { type: 'boolean', label: 'Lightbox Link', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'video',
@@ -302,7 +302,7 @@ export function registerBlocks(): void {
         default: '16:9'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'icon',
@@ -328,7 +328,7 @@ export function registerBlocks(): void {
       spin: { type: 'boolean', label: 'Spin', default: false },
       fixedWidth: { type: 'boolean', label: 'Fixed Width', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'carousel',
@@ -379,7 +379,7 @@ export function registerBlocks(): void {
       thumbnails: { type: 'boolean', label: 'Show Thumbnails', default: false },
       interval: { type: 'number', label: 'Interval (ms)', default: 5000, min: 1000, max: 30000 }
     }
-  })
+  });
 
   // ─── Interactive ─────────────────────────────────────────────────────────────
   componentRegistry.register({
@@ -444,7 +444,7 @@ export function registerBlocks(): void {
       disabled: { type: 'boolean', label: 'Disabled', default: false },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'link',
@@ -484,7 +484,7 @@ export function registerBlocks(): void {
       iconLeft: { type: 'icon', label: 'Left Icon', default: '' },
       iconRight: { type: 'icon', label: 'Right Icon', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'form',
@@ -515,7 +515,7 @@ export function registerBlocks(): void {
       },
       validated: { type: 'boolean', label: 'Mark as Validated', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'input',
@@ -553,7 +553,7 @@ export function registerBlocks(): void {
       validationMessage: { type: 'text', label: 'Validation Message', default: '' },
       helpText: { type: 'text', label: 'Help Text', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'textarea',
@@ -566,7 +566,7 @@ export function registerBlocks(): void {
       placeholder: { type: 'text', label: 'Placeholder', default: '' },
       name: { type: 'text', label: 'Name', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'checkbox',
@@ -581,7 +581,7 @@ export function registerBlocks(): void {
       switch: { type: 'boolean', label: 'Switch Style', default: false },
       inline: { type: 'boolean', label: 'Inline', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'select',
@@ -605,7 +605,7 @@ export function registerBlocks(): void {
       size: { type: 'number', label: 'Visible Rows', default: 4, min: 2, max: 20 },
       optgroups: { type: 'boolean', label: 'Use Option Groups', default: false }
     }
-  })
+  });
 
   // ─── Components ──────────────────────────────────────────────────────────────
   componentRegistry.register({
@@ -660,7 +660,7 @@ export function registerBlocks(): void {
         ]
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'hero',
@@ -711,7 +711,7 @@ export function registerBlocks(): void {
       ctaButtons: { type: 'array', label: 'CTA Buttons', default: [], group: 'Content' },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '', group: 'Typography' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'feature-card',
@@ -738,7 +738,7 @@ export function registerBlocks(): void {
     propsSchema: {
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'footer',
@@ -779,7 +779,7 @@ export function registerBlocks(): void {
       copyrightText: { type: 'text', label: 'Copyright Text', default: '' },
       showBackToTop: { type: 'boolean', label: 'Show Back to Top', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'accordion',
@@ -802,7 +802,7 @@ export function registerBlocks(): void {
       flush: { type: 'boolean', label: 'Flush (no borders/rounded)', default: false },
       alwaysOpen: { type: 'boolean', label: 'Always Open (multiple)', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'tabs',
@@ -839,7 +839,7 @@ export function registerBlocks(): void {
       justified: { type: 'boolean', label: 'Justified', default: false },
       fill: { type: 'boolean', label: 'Fill Width', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'pricing-table',
@@ -879,7 +879,7 @@ export function registerBlocks(): void {
     propsSchema: {
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'testimonial',
@@ -904,7 +904,7 @@ export function registerBlocks(): void {
     propsSchema: {
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'cta-section',
@@ -932,7 +932,7 @@ export function registerBlocks(): void {
       }
     ],
     propsSchema: {}
-  })
+  });
 
   componentRegistry.register({
     type: 'modal',
@@ -976,7 +976,7 @@ export function registerBlocks(): void {
       scrollable: { type: 'boolean', label: 'Scrollable Body', default: false },
       centered: { type: 'boolean', label: 'Vertically Centered', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'page-list',
@@ -1070,7 +1070,7 @@ export function registerBlocks(): void {
         dataSource: 'metaKeys'
       }
     }
-  })
+  });
 
   // ─── Embed ───────────────────────────────────────────────────────────────────
   componentRegistry.register({
@@ -1081,7 +1081,7 @@ export function registerBlocks(): void {
     propsSchema: {
       content: { type: 'textarea', label: 'HTML Code', default: '<div>Raw HTML content</div>' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'iframe',
@@ -1108,7 +1108,7 @@ export function registerBlocks(): void {
       allowFullscreen: { type: 'boolean', label: 'Allow Fullscreen', default: true },
       lazy: { type: 'boolean', label: 'Lazy Load', default: false }
     }
-  })
+  });
 
   // ─── Missing Typography/Layout ───────────────────────────────────────────────
   componentRegistry.register({
@@ -1118,7 +1118,7 @@ export function registerBlocks(): void {
     icon: '▭',
     defaultClasses: ['py-5'],
     propsSchema: {}
-  })
+  });
 
   componentRegistry.register({
     type: 'blockquote',
@@ -1150,7 +1150,7 @@ export function registerBlocks(): void {
       },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'list',
@@ -1175,7 +1175,7 @@ export function registerBlocks(): void {
       horizontal: { type: 'boolean', label: 'Horizontal (Inline)', default: false },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'code-block',
@@ -1208,7 +1208,7 @@ export function registerBlocks(): void {
       filename: { type: 'text', label: 'Filename', default: '' },
       copyButton: { type: 'boolean', label: 'Show Copy Button', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'alert',
@@ -1237,7 +1237,7 @@ export function registerBlocks(): void {
       dismissible: { type: 'boolean', label: 'Dismissible', default: false },
       icon: { type: 'icon', label: 'Icon', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'badge',
@@ -1265,7 +1265,7 @@ export function registerBlocks(): void {
       },
       pill: { type: 'boolean', label: 'Pill Shape', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'progress',
@@ -1295,7 +1295,7 @@ export function registerBlocks(): void {
       animated: { type: 'boolean', label: 'Animated', default: false },
       label: { type: 'text', label: 'Label', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'spinner',
@@ -1339,7 +1339,7 @@ export function registerBlocks(): void {
         default: 'default'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'radio',
@@ -1356,7 +1356,7 @@ export function registerBlocks(): void {
       inline: { type: 'boolean', label: 'Inline', default: false },
       disabled: { type: 'boolean', label: 'Disabled', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'range',
@@ -1373,7 +1373,7 @@ export function registerBlocks(): void {
       value: { type: 'number', label: 'Value', default: 50 },
       disabled: { type: 'boolean', label: 'Disabled', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'file-input',
@@ -1398,7 +1398,7 @@ export function registerBlocks(): void {
         default: 'default'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'breadcrumb',
@@ -1427,7 +1427,7 @@ export function registerBlocks(): void {
         default: 'slash'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'pagination',
@@ -1462,7 +1462,7 @@ export function registerBlocks(): void {
       showPrevNext: { type: 'boolean', label: 'Show Prev/Next', default: true },
       showFirstLast: { type: 'boolean', label: 'Show First/Last', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'table',
@@ -1509,7 +1509,7 @@ export function registerBlocks(): void {
         default: 'default'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'dropdown',
@@ -1570,7 +1570,7 @@ export function registerBlocks(): void {
       },
       split: { type: 'boolean', label: 'Split Button', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'offcanvas',
@@ -1604,7 +1604,7 @@ export function registerBlocks(): void {
       scroll: { type: 'boolean', label: 'Allow Body Scroll', default: false },
       id: { type: 'text', label: 'Offcanvas ID', default: 'offcanvas-example' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'card',
@@ -1658,7 +1658,7 @@ export function registerBlocks(): void {
       outline: { type: 'boolean', label: 'Outline Variant', default: false },
       fontFamily: { type: 'font-picker', label: 'Font Family', default: '' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'stats-section',
@@ -1708,7 +1708,7 @@ export function registerBlocks(): void {
         default: 'center'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'team-grid',
@@ -1767,7 +1767,7 @@ export function registerBlocks(): void {
       },
       showSocial: { type: 'boolean', label: 'Show Social Links', default: true }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'gallery',
@@ -1823,7 +1823,7 @@ export function registerBlocks(): void {
         default: 'grid'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'timeline',
@@ -1854,7 +1854,7 @@ export function registerBlocks(): void {
       alternating: { type: 'boolean', label: 'Alternating Layout', default: true },
       lineColor: { type: 'color', label: 'Line Color', default: '#6c757d' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'logo-cloud',
@@ -1901,7 +1901,7 @@ export function registerBlocks(): void {
         default: 'simple'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'process-steps',
@@ -1950,7 +1950,7 @@ export function registerBlocks(): void {
         default: 'both'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'newsletter',
@@ -2003,7 +2003,7 @@ export function registerBlocks(): void {
         default: 'simple'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'comparison-table',
@@ -2021,7 +2021,7 @@ export function registerBlocks(): void {
       plans: { type: 'array', label: 'Plans', default: [] },
       columns: { type: 'number', label: 'Columns', default: 2, min: 1, max: 4 }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'contact-card',
@@ -2056,7 +2056,7 @@ export function registerBlocks(): void {
       },
       showMap: { type: 'boolean', label: 'Show Map', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'social-links',
@@ -2097,7 +2097,7 @@ export function registerBlocks(): void {
       },
       colorful: { type: 'boolean', label: 'Brand Colors', default: false }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'cookie-banner',
@@ -2136,7 +2136,7 @@ export function registerBlocks(): void {
         default: 'simple'
       }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'back-to-top',
@@ -2183,7 +2183,7 @@ export function registerBlocks(): void {
       },
       offset: { type: 'number', label: 'Scroll Offset', default: 300 }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'countdown',
@@ -2215,7 +2215,7 @@ export function registerBlocks(): void {
       },
       expiredMessage: { type: 'text', label: 'Expired Message', default: 'Event has started!' }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'before-after',
@@ -2246,7 +2246,7 @@ export function registerBlocks(): void {
       },
       initialPosition: { type: 'number', label: 'Initial Position (%)', default: 50, min: 0, max: 100 }
     }
-  })
+  });
 
   componentRegistry.register({
     type: 'map-embed',

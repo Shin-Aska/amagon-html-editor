@@ -8,15 +8,15 @@ type Props = {
 
 function SortableListField({ items, onChange, labelForItem }: Props): JSX.Element {
   const move = (from: number, to: number) => {
-    if (from === to) return
-    if (from < 0 || from >= items.length) return
-    if (to < 0 || to >= items.length) return
+    if (from === to) return;
+    if (from < 0 || from >= items.length) return;
+    if (to < 0 || to >= items.length) return;
 
-    const next = items.slice()
-    const [item] = next.splice(from, 1)
-    next.splice(to, 0, item)
+    const next = items.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
     onChange(next)
-  }
+  };
 
   return (
     <div className="sortable-list">

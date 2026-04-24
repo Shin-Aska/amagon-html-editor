@@ -88,24 +88,24 @@ const shortcutCategories: ShortcutCategory[] = [
       { key: 'Ctrl+?', description: 'Show this help dialog', icon: <HelpCircle size={14} /> },
     ]
   }
-]
+];
 
 export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelpProps): JSX.Element | null {
   // Close on Escape key
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
     
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose()
       }
-    }
+    };
     
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose]);
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="shortcuts-overlay" onClick={onClose}>

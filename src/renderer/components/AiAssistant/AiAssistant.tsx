@@ -29,18 +29,18 @@ function stripCopilotCliDecorations(content: string): string {
 }
 
 function findJsonObjectCandidate(content: string): { json: string; start: number; end: number } | null {
-    const blocksIndex = content.indexOf('"blocks"')
-    if (blocksIndex === -1) return null
+    const blocksIndex = content.indexOf('"blocks"');
+    if (blocksIndex === -1) return null;
 
-    const start = content.lastIndexOf('{', blocksIndex)
-    if (start === -1) return null
+    const start = content.lastIndexOf('{', blocksIndex);
+    if (start === -1) return null;
 
-    let depth = 0
-    let inString = false
-    let escaped = false
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
 
     for (let i = start; i < content.length; i += 1) {
-        const char = content[i]
+        const char = content[i];
 
         if (inString) {
             if (escaped) {
@@ -58,7 +58,7 @@ function findJsonObjectCandidate(content: string): { json: string; start: number
         } else if (char === '{') {
             depth += 1
         } else if (char === '}') {
-            depth -= 1
+            depth -= 1;
             if (depth === 0) {
                 return { json: content.slice(start, i + 1), start, end: i + 1 }
             }
@@ -69,20 +69,20 @@ function findJsonObjectCandidate(content: string): { json: string; start: number
 }
 
 function repairTerminalWrappedJson(json: string): string {
-    let result = ''
-    let inString = false
-    let escaped = false
+    let result = '';
+    let inString = false;
+    let escaped = false;
 
     for (let i = 0; i < json.length; i += 1) {
-        const char = json[i]
+        const char = json[i];
 
         if (inString && (char === '\n' || char === '\r')) {
-            while (json[i + 1] === ' ' || json[i + 1] === '\t') i += 1
-            escaped = false
+            while (json[i + 1] === ' ' || json[i + 1] === '\t') i += 1;
+            escaped = false;
             continue
         }
 
-        result += char
+        result += char;
 
         if (inString) {
             if (escaped) {
@@ -102,24 +102,24 @@ function repairTerminalWrappedJson(json: string): string {
 
 /** Parse an AI response into explanatory text + optional blocks */
 function parseAiResponse(content: string): ParsedAiResponse {
-    const normalizedContent = stripCopilotCliDecorations(content)
+    const normalizedContent = stripCopilotCliDecorations(content);
 
     try {
-        const candidate = findJsonObjectCandidate(normalizedContent)
+        const candidate = findJsonObjectCandidate(normalizedContent);
 
         if (candidate) {
-            const parsed = JSON.parse(repairTerminalWrappedJson(candidate.json))
+            const parsed = JSON.parse(repairTerminalWrappedJson(candidate.json));
             if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
                 // Extract the text portion (everything that isn't the JSON)
                 let text = `${normalizedContent.slice(0, candidate.start)}${normalizedContent.slice(candidate.end)}`
                     .replace(/```(?:json)?/g, '')
                     .replace(/```/g, '')
-                    .trim()
+                    .trim();
 
                 // Clean up markdown artifacts
-                text = text.replace(/^\s*```\s*/gm, '').replace(/\s*```\s*$/gm, '').trim()
+                text = text.replace(/^\s*```\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
 
-                const blocks = parsed.blocks.map(buildBlockFromAiData)
+                const blocks = parsed.blocks.map(buildBlockFromAiData);
                 return { text, blocks }
             }
         }
@@ -147,30 +147,30 @@ function buildBlockFromAiData(data: any): Block {
 // ---------------------------------------------------------------------------
 
 function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
-    const iframeRef = useRef<HTMLIFrameElement>(null)
-    const [height, setHeight] = useState(120)
-    const [zoom, setZoom] = useState(1)
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [height, setHeight] = useState(120);
+    const [zoom, setZoom] = useState(1);
     const [systemUiTheme, setSystemUiTheme] = useState<'light' | 'dark'>(() =>
         document.body.classList.contains('dark') ? 'dark' : 'light'
-    )
+    );
 
-    const projectTheme = useProjectStore((s) => s.settings.theme)
-    const projectThemeVariants = useProjectStore((s) => s.settings.themes)
-    const projectFonts = useProjectStore((s) => s.fonts)
-    const previewMode = projectThemeVariants?.previewMode ?? 'device'
-    const previewTheme = previewMode === 'device' ? systemUiTheme : previewMode
+    const projectTheme = useProjectStore((s) => s.settings.theme);
+    const projectThemeVariants = useProjectStore((s) => s.settings.themes);
+    const projectFonts = useProjectStore((s) => s.fonts);
+    const previewMode = projectThemeVariants?.previewMode ?? 'device';
+    const previewTheme = previewMode === 'device' ? systemUiTheme : previewMode;
     const activeTheme = useMemo(
         () => previewTheme === 'dark'
             ? (projectThemeVariants?.dark ?? projectTheme)
             : (projectThemeVariants?.light ?? projectTheme),
         [previewTheme, projectTheme, projectThemeVariants]
-    )
+    );
     const themeCss = useMemo(
         () => themeToCSS(activeTheme, undefined, projectFonts),
         [activeTheme, projectFonts]
-    )
+    );
 
-    const html = useMemo(() => blockToHtml(blocks), [blocks])
+    const html = useMemo(() => blockToHtml(blocks), [blocks]);
 
     const previewDoc = useMemo(() => `<!DOCTYPE html>
 <html>
@@ -209,7 +209,7 @@ ${themeCss}
     window.addEventListener('load', sendHeight);
     new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
 <\/script>
-</html>`, [html, themeCss])
+</html>`, [html, themeCss]);
 
     useEffect(() => {
         const onMessage = (e: MessageEvent) => {
@@ -219,41 +219,41 @@ ${themeCss}
                     setHeight(Math.min(Math.max(e.data.height, 60), 400))
                 }
             }
-        }
-        window.addEventListener('message', onMessage)
+        };
+        window.addEventListener('message', onMessage);
         return () => window.removeEventListener('message', onMessage)
-    }, [])
+    }, []);
 
     useEffect(() => {
         const syncTheme = () => {
             setSystemUiTheme(document.body.classList.contains('dark') ? 'dark' : 'light')
-        }
+        };
 
-        syncTheme()
+        syncTheme();
 
-        const observer = new MutationObserver(syncTheme)
+        const observer = new MutationObserver(syncTheme);
         observer.observe(document.body, {
             attributes: true,
             attributeFilter: ['class']
-        })
+        });
 
         return () => observer.disconnect()
-    }, [])
+    }, []);
 
     useEffect(() => {
-        const iframe = iframeRef.current
-        const doc = iframe?.contentDocument
-        if (!iframe || !doc) return
+        const iframe = iframeRef.current;
+        const doc = iframe?.contentDocument;
+        if (!iframe || !doc) return;
 
-        doc.documentElement.setAttribute('data-page-theme', previewTheme)
-        doc.documentElement.setAttribute('data-bs-theme', previewTheme)
-        doc.documentElement.style.colorScheme = previewTheme
+        doc.documentElement.setAttribute('data-page-theme', previewTheme);
+        doc.documentElement.setAttribute('data-bs-theme', previewTheme);
+        doc.documentElement.style.colorScheme = previewTheme;
 
-        const themeStyle = doc.getElementById('hoarses-theme-css')
+        const themeStyle = doc.getElementById('hoarses-theme-css');
         if (themeStyle) {
             themeStyle.textContent = themeCss
         }
-    }, [previewTheme, themeCss])
+    }, [previewTheme, themeCss]);
 
     return (
         <div className="ai-preview-container">
@@ -314,37 +314,37 @@ function AiMessageBubble({
     onCopy: (content: string) => void
 }): JSX.Element {
     const parsed = useMemo(() => {
-        if (msg.role !== 'assistant' || msg.isError) return null
+        if (msg.role !== 'assistant' || msg.isError) return null;
         return parseAiResponse(msg.content)
-    }, [msg.role, msg.content, msg.isError])
+    }, [msg.role, msg.content, msg.isError]);
 
-    const hasBlocks = parsed?.blocks && parsed.blocks.length > 0
+    const hasBlocks = parsed?.blocks && parsed.blocks.length > 0;
 
     // Build display text: use AI's text if available, otherwise auto-generate a summary
     const displayText = useMemo(() => {
-        if (msg.role === 'user' || msg.isError) return msg.content
-        if (!parsed) return msg.content
-        if (parsed.text) return parsed.text
+        if (msg.role === 'user' || msg.isError) return msg.content;
+        if (!parsed) return msg.content;
+        if (parsed.text) return parsed.text;
         // Fallback: auto-generate summary when the AI sent only JSON
         if (hasBlocks && parsed.blocks) {
-            const types = [...new Set(parsed.blocks.map((b) => b.type))]
-            const typeList = types.slice(0, 4).join(', ') + (types.length > 4 ? '…' : '')
+            const types = [...new Set(parsed.blocks.map((b) => b.type))];
+            const typeList = types.slice(0, 4).join(', ') + (types.length > 4 ? '…' : '');
             return `Generated ${parsed.blocks.length} block${parsed.blocks.length > 1 ? 's' : ''}: ${typeList}. Click "Insert" to add ${parsed.blocks.length > 1 ? 'them' : 'it'} to your page.`
         }
         return msg.content
-    }, [msg.role, msg.content, msg.isError, parsed, hasBlocks])
+    }, [msg.role, msg.content, msg.isError, parsed, hasBlocks]);
 
-    const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-    const getBlockById = useEditorStore((s) => s.getBlockById)
+    const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+    const getBlockById = useEditorStore((s) => s.getBlockById);
 
     // Determine insert target label
     const insertTargetLabel = useMemo(() => {
-        if (!selectedBlockId) return 'page root'
-        const block = getBlockById(selectedBlockId)
-        if (!block) return 'page root'
-        const label = (block.props?.text as string) || block.type
+        if (!selectedBlockId) return 'page root';
+        const block = getBlockById(selectedBlockId);
+        if (!block) return 'page root';
+        const label = (block.props?.text as string) || block.type;
         return label.length > 20 ? label.slice(0, 20) + '…' : label
-    }, [selectedBlockId, getBlockById])
+    }, [selectedBlockId, getBlockById]);
 
     return (
         <div className={`ai-message ${msg.role} ${msg.isError ? 'error' : ''}`}>
@@ -399,76 +399,76 @@ const SUGGESTIONS = [
     'Build a pricing table with 3 tiers',
     'Make a footer with copyright and social links',
     'Add a contact form with name, email, and message'
-]
+];
 
 export default function AiAssistant(): JSX.Element {
-    const { messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig } = useAiStore()
-    const { hasConfiguredAiProvider } = useAiAvailability()
-    const addBlock = useEditorStore((s) => s.addBlock)
-    const selectedBlockId = useEditorStore((s) => s.selectedBlockId)
-    const [input, setInput] = useState('')
-    const messagesEndRef = useRef<HTMLDivElement>(null)
-    const inputRef = useRef<HTMLTextAreaElement>(null)
+    const { messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig } = useAiStore();
+    const { hasConfiguredAiProvider } = useAiAvailability();
+    const addBlock = useEditorStore((s) => s.addBlock);
+    const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
+    const [input, setInput] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Auto-resize textarea based on content
     const adjustTextareaHeight = useCallback(() => {
-        const textarea = inputRef.current
-        if (!textarea) return
+        const textarea = inputRef.current;
+        if (!textarea) return;
         
         // Reset to auto to get correct scrollHeight
-        textarea.style.height = 'auto'
+        textarea.style.height = 'auto';
         
         // Set new height (clamped to max-height in CSS: 100px)
-        const newHeight = Math.min(textarea.scrollHeight, 100)
+        const newHeight = Math.min(textarea.scrollHeight, 100);
         textarea.style.height = `${newHeight}px`
-    }, [])
+    }, []);
 
     // Load config on mount
     useEffect(() => {
         if (!configLoaded) {
             loadConfig()
         }
-    }, [configLoaded, loadConfig])
+    }, [configLoaded, loadConfig]);
 
     // Auto-scroll to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages, isLoading])
+    }, [messages, isLoading]);
 
     const handleSend = () => {
-        const text = input.trim()
-        if (!text || isLoading || !modelsLoaded || !configLoaded) return
-        setInput('')
+        const text = input.trim();
+        if (!text || isLoading || !modelsLoaded || !configLoaded) return;
+        setInput('');
         // Reset textarea height after sending
         if (inputRef.current) {
             inputRef.current.style.height = 'auto'
         }
-        sendMessage(text)
+        sendMessage(text);
         inputRef.current?.focus()
-    }
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
+            e.preventDefault();
             handleSend()
         }
-    }
+    };
 
     const handleInsertBlocks = (blocks: Block[]) => {
         // Insert into selected container, or at page root
-        const parentId = selectedBlockId || null
+        const parentId = selectedBlockId || null;
         for (const block of blocks) {
             addBlock(block, parentId)
         }
-    }
+    };
 
     const handleCopy = (content: string) => {
         navigator.clipboard.writeText(content).catch(() => {
             // fallback — ignore
         })
-    }
+    };
 
-    const aiEnabled = hasConfiguredAiProvider
+    const aiEnabled = hasConfiguredAiProvider;
 
     return (
         <div className={`ai-assistant ${!aiEnabled ? 'is-disabled' : ''}`}>
@@ -520,7 +520,7 @@ export default function AiAssistant(): JSX.Element {
                                         key={s}
                                         className="ai-suggestion-btn"
                                         onClick={() => {
-                                            setInput(s)
+                                            setInput(s);
                                             inputRef.current?.focus()
                                         }}
                                     >
@@ -564,7 +564,7 @@ export default function AiAssistant(): JSX.Element {
                     data-tutorial="ai-input"
                     value={input}
                     onChange={(e) => {
-                        setInput(e.target.value)
+                        setInput(e.target.value);
                         // Adjust height on next tick to get correct scrollHeight
                         requestAnimationFrame(adjustTextareaHeight)
                     }}

@@ -12,7 +12,7 @@ type CanvasRuntimeMessage =
   | { source: 'canvas-runtime'; type: 'ready' }
 
 function getCanvasIframe(): HTMLIFrameElement | null {
-  const el = document.querySelector('iframe.canvas-iframe')
+  const el = document.querySelector('iframe.canvas-iframe');
   return el instanceof HTMLIFrameElement ? el : null
 }
 
@@ -21,72 +21,72 @@ export default function DragOverlayManager({
 }: {
   onDropTargetChange: (target: DropTargetHint | null) => void
 }): JSX.Element | null {
-  const { active } = useDndContext()
-  const isDragging = Boolean(active)
+  const { active } = useDndContext();
+  const isDragging = Boolean(active);
 
-  const lastSentRef = useRef<{ x: number; y: number } | null>(null)
-  const rafRef = useRef<number | null>(null)
-  const [iframeRect, setIframeRect] = useState<DOMRect | null>(null)
+  const lastSentRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const [iframeRect, setIframeRect] = useState<DOMRect | null>(null);
 
   const overlayStyle = useMemo(() => {
-    if (!iframeRect) return undefined
+    if (!iframeRect) return undefined;
     return {
       top: iframeRect.top,
       left: iframeRect.left,
       width: iframeRect.width,
       height: iframeRect.height
     } satisfies CSSProperties
-  }, [iframeRect])
+  }, [iframeRect]);
 
   useEffect(() => {
     if (!isDragging) {
-      setIframeRect(null)
-      onDropTargetChange(null)
-      const iframe = getCanvasIframe()
-      iframe?.contentWindow?.postMessage({ type: 'dragEnd' }, '*')
+      setIframeRect(null);
+      onDropTargetChange(null);
+      const iframe = getCanvasIframe();
+      iframe?.contentWindow?.postMessage({ type: 'dragEnd' }, '*');
       return
     }
 
     const updateRect = () => {
-      const iframe = getCanvasIframe()
-      if (!iframe) return
+      const iframe = getCanvasIframe();
+      if (!iframe) return;
       setIframeRect(iframe.getBoundingClientRect())
-    }
+    };
 
-    updateRect()
-    window.addEventListener('scroll', updateRect, true)
-    window.addEventListener('resize', updateRect)
+    updateRect();
+    window.addEventListener('scroll', updateRect, true);
+    window.addEventListener('resize', updateRect);
     return () => {
-      window.removeEventListener('scroll', updateRect, true)
+      window.removeEventListener('scroll', updateRect, true);
       window.removeEventListener('resize', updateRect)
     }
-  }, [isDragging, onDropTargetChange])
+  }, [isDragging, onDropTargetChange]);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
-      const data = event.data as CanvasRuntimeMessage
-      if (!data || data.source !== 'canvas-runtime') return
+      const data = event.data as CanvasRuntimeMessage;
+      if (!data || data.source !== 'canvas-runtime') return;
       if (data.type === 'dropTarget') {
         onDropTargetChange(data.dropTarget ?? null)
       }
-    }
+    };
 
-    window.addEventListener('message', onMessage)
+    window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage)
-  }, [onDropTargetChange])
+  }, [onDropTargetChange]);
 
   const sendDragMove = (x: number, y: number) => {
-    lastSentRef.current = { x, y }
-    if (rafRef.current !== null) return
+    lastSentRef.current = { x, y };
+    if (rafRef.current !== null) return;
 
     rafRef.current = window.requestAnimationFrame(() => {
-      rafRef.current = null
-      const iframe = getCanvasIframe()
-      const last = lastSentRef.current
-      if (!iframe || !last) return
+      rafRef.current = null;
+      const iframe = getCanvasIframe();
+      const last = lastSentRef.current;
+      if (!iframe || !last) return;
       iframe.contentWindow?.postMessage({ type: 'dragMove', x: last.x, y: last.y }, '*')
     })
-  }
+  };
 
   if (!isDragging || !iframeRect || iframeRect.width <= 0 || iframeRect.height <= 0) {
     return null
@@ -97,13 +97,13 @@ export default function DragOverlayManager({
       className="canvas-dnd-overlay"
       style={overlayStyle}
       onPointerMove={(e) => {
-        const x = e.clientX - iframeRect.left
-        const y = e.clientY - iframeRect.top
+        const x = e.clientX - iframeRect.left;
+        const y = e.clientY - iframeRect.top;
         sendDragMove(x, y)
       }}
       onPointerLeave={() => {
-        onDropTargetChange(null)
-        const iframe = getCanvasIframe()
+        onDropTargetChange(null);
+        const iframe = getCanvasIframe();
         iframe?.contentWindow?.postMessage({ type: 'dragMove', x: -1, y: -1 }, '*')
       }}
     />

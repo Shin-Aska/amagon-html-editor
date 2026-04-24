@@ -38,25 +38,25 @@ interface CredentialManagerProps {
 }
 
 export default function CredentialManager({ open, onClose }: CredentialManagerProps): JSX.Element | null {
-  const [credentials, setCredentials] = useState<Credential[]>([])
-  const [secure, setSecure] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [showSecurityInfo, setShowSecurityInfo] = useState(false)
-  const popoverRef = useRef<HTMLDivElement>(null)
-  const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures)
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [secure, setSecure] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showSecurityInfo, setShowSecurityInfo] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures);
 
-  const DANGEROUS_CRED_IDS = ['ai:claude-cli', 'ai:gemini-cli', 'ai:junie-cli']
+  const DANGEROUS_CRED_IDS = ['ai:claude-cli', 'ai:gemini-cli', 'ai:junie-cli'];
   const visibleCredentials = enableDangerousFeatures
     ? credentials
-    : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id))
+    : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id));
 
   const fetchCredentials = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const api = getApi()
-      const result = await api.app.getCredentials()
+      const api = getApi();
+      const result = await api.app.getCredentials();
       if (result.success) {
-        setCredentials(result.credentials || [])
+        setCredentials(result.credentials || []);
         if (typeof result.secure === 'boolean') setSecure(result.secure)
       }
     } catch {
@@ -64,61 +64,61 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (open) fetchCredentials()
-  }, [open, fetchCredentials])
+  }, [open, fetchCredentials]);
 
   // Close on outside click
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handler = (e: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         onClose()
       }
-    }
+    };
     // Delay to avoid the triggering click from closing immediately
-    const timeout = setTimeout(() => document.addEventListener('mousedown', handler), 0)
+    const timeout = setTimeout(() => document.addEventListener('mousedown', handler), 0);
     return () => {
-      clearTimeout(timeout)
+      clearTimeout(timeout);
       document.removeEventListener('mousedown', handler)
     }
-  }, [open, onClose])
+  }, [open, onClose]);
 
   // Close on Escape
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
+    };
+    document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose]);
 
   const handleDelete = async (id: string) => {
     try {
-      const api = getApi()
-      const result = await api.app.deleteCredential(id)
+      const api = getApi();
+      const result = await api.app.deleteCredential(id);
       if (result.success) {
-        dispatchAiAvailabilityChanged()
+        dispatchAiAvailabilityChanged();
         await fetchCredentials()
       }
     } catch {
       // ignore
     }
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   const sourceIcon = (source: string) => {
     switch (source) {
-      case 'ai': return <Sparkles size={14} />
-      case 'multimedia': return <ImageIcon size={14} />
-      case 'publisher': return <KeyRound size={14} />
+      case 'ai': return <Sparkles size={14} />;
+      case 'multimedia': return <ImageIcon size={14} />;
+      case 'publisher': return <KeyRound size={14} />;
       default: return <KeyRound size={14} />
     }
-  }
+  };
 
   return (
     <div className="cred-manager-popover" ref={popoverRef}>
@@ -230,7 +230,7 @@ export default function CredentialManager({ open, onClose }: CredentialManagerPr
         <button
           className="cred-manager-manage-btn"
           onClick={() => {
-            openGlobalSettings({ tab: 'keys' })
+            openGlobalSettings({ tab: 'keys' });
             onClose()
           }}
         >
