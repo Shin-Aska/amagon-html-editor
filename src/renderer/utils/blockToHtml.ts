@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { IMAGE_PLACEHOLDER } from './placeholders'
 import hljs from 'highlight.js'
-import { getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon } from './iconCatalog'
+import { getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon, renderLucideIconSvg } from './iconCatalog'
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 
@@ -350,15 +350,18 @@ function stripLegacyBootstrapIconClasses(classes: string[]): string[] {
 
 function renderLucideIconMarkup(name: string): string {
   const IconComponent = getLucideIconComponent(name)
-  if (!IconComponent) return ''
-  return renderToStaticMarkup(
-    createElement(IconComponent, {
-      size: '1em',
-      'aria-hidden': 'true',
-      focusable: 'false',
-      strokeWidth: 2.25
-    })
-  )
+  if (IconComponent) {
+    return renderToStaticMarkup(
+      createElement(IconComponent, {
+        size: '1em',
+        'aria-hidden': 'true',
+        focusable: 'false',
+        strokeWidth: 2.25
+      })
+    )
+  }
+  const svg = renderLucideIconSvg(name, { size: '1em', strokeWidth: 2.25 })
+  return svg || ''
 }
 
 function normalizeVariantToken(value: unknown, fallback = 'primary'): string {

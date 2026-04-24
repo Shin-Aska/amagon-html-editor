@@ -46,7 +46,7 @@ import {
   Footprints,
   Images,
   ListOrdered,
-  Map,
+  Map as MapIcon,
   PanelLeft,
   Radio,
   SlidersHorizontal,
@@ -66,6 +66,9 @@ import {
   Wrench,
   Trophy
 } from 'lucide-react'
+import dynamicIconImports from 'lucide-react/dynamicIconImports'
+import React from 'react'
+import lucideIconCatalog from '../data/lucideIconCatalog.json'
 
 function normalizeLucideKey(value: string): string {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -174,7 +177,7 @@ const blockAliasIcons: Record<string, LucideIcon> = {
   'back-to-top': ArrowUp,
   countdown: Timer,
   'before-after': SquareChartGantt,
-  'map-embed': Map,
+  'map-embed': MapIcon,
   spacer: ChevronsUpDown,
   list: List,
   link: Link,
@@ -253,4 +256,77 @@ export function isRenderableGlyph(value: string): boolean {
   if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(trimmed)) return false
   if (trimmed === '☐' || trimmed === '☑' || trimmed === '▢' || trimmed === '▣' || trimmed === '▭' || trimmed === '🔲' || trimmed === '🔳') return false
   return true
+}
+
+const dynamicImportsMap = dynamicIconImports as Record<string, () => Promise<{ default: LucideIcon }>>
+
+export const allLucideIconNames: string[] = Object.keys(dynamicImportsMap).sort()
+
+const normalizedDynamicImports = new Map<string, () => Promise<{ default: LucideIcon }>>()
+Object.entries(dynamicImportsMap).forEach(([rawName, loader]) => {
+  normalizedDynamicImports.set(normalizeLucideKey(rawName), loader)
+})
+
+type LazyIconComponent = React.ComponentType<{ size?: number; className?: string }>
+
+const lazyIconCache = new Map<string, LazyIconComponent>()
+
+export function getLazyLucideIcon(name: string): LazyIconComponent | null {
+  const key = normalizeLucideKey(name)
+  const loader = normalizedDynamicImports.get(key)
+  if (!loader) return null
+  if (!lazyIconCache.has(key)) {
+    lazyIconCache.set(key, React.lazy(loader))
+  }
+  return lazyIconCache.get(key)!
+}
+
+export function isKnownLucideIcon(name: string): boolean {
+  const key = normalizeLucideKey(name)
+  return !!lucideIconComponents[key] || normalizedDynamicImports.has(key)
+}
+
+type IconNode = [string, Record<string, string>]
+
+const normalizedIconCatalog = new Map<string, IconNode[]>()
+Object.entries(lucideIconCatalog as Record<string, IconNode[]>).forEach(([rawName, nodes]) => {
+  normalizedIconCatalog.set(normalizeLucideKey(rawName), nodes)
+})
+
+function escapeSvgAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function iconNodeToSvgMarkup(nodes: IconNode[]): string {
+  return nodes
+    .map(([tag, attrs]) => {
+      const attrStr = Object.entries(attrs)
+        .map(([k, v]) => `${k}="${escapeSvgAttr(v)}"`)
+        .join(' ')
+      return `<${tag} ${attrStr}></${tag}>`
+    })
+    .join('')
+}
+
+export function renderLucideIconSvg(
+  name: string,
+  options: { size?: string | number; strokeWidth?: number } = {}
+): string | null {
+  const key = normalizeLucideKey(name)
+  const nodes = normalizedIconCatalog.get(key)
+  if (!nodes || nodes.length === 0) return null
+
+  const size = options.size ?? '1em'
+  const strokeWidth = options.strokeWidth ?? 2.25
+  const sizeAttr = typeof size === 'number' ? `${size}px` : size
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${escapeSvgAttr(sizeAttr)}" height="${escapeSvgAttr(sizeAttr)}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">` +
+    iconNodeToSvgMarkup(nodes) +
+    `</svg>`
+  )
 }
