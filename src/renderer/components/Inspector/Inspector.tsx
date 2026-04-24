@@ -16,7 +16,7 @@ import SortableListField from './SortableListField'
 import VideoField from './VideoField'
 import CarouselField from './CarouselField'
 import IconField from './IconField'
-import FontPickerField from './FontPickerField'
+
 import { useProjectStore } from '../../store/projectStore'
 import ArrayField, { type ArrayRecordField } from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
@@ -310,13 +310,6 @@ function Inspector(): JSX.Element {
             />
           </div>
         )
-      case 'font-picker':
-        return (
-          <FontPickerField
-            value={typeof block.styles.fontFamily === 'string' ? block.styles.fontFamily : ''}
-            onChange={(v) => updateBlock(block.id, { styles: { fontFamily: v || undefined } })}
-          />
-        )
       case 'image':
         return <ImageField value={val || ''} onChange={(v) => handlePropChange(key, v)} />
       case 'video':
@@ -497,6 +490,7 @@ function Inspector(): JSX.Element {
   const groupedProps: Record<string, { key: string; schema: PropSchema }[]> = {}
 
   Object.entries(definition.propsSchema).forEach(([key, schema]) => {
+    if (schema.type === 'font-picker') return
     const groupName = schema.group || 'General'
     if (!groupedProps[groupName]) {
       groupedProps[groupName] = []

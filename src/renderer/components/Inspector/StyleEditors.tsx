@@ -1,15 +1,16 @@
 import './StyleEditor.css'
+import FontPickerField from './FontPickerField'
 
 interface StyleEditorProps {
   styles: Record<string, string>
   onChange: (key: string, value: string | undefined) => void
 }
 
-const SIZE_UNITS = ['px', 'rem', 'em', '%', 'vw', 'vh'] as const
+const SIZE_UNITS = ['px', 'pt', 'rem', 'em', '%', 'vw', 'vh'] as const
 
 function parseMeasurement(val?: string): { num: string; unit: string } {
   if (!val) return { num: '', unit: 'px' }
-  const match = val.match(/^([\d.]+)\s*(px|rem|em|%|vw|vh)$/)
+  const match = val.match(/^([\d.]+)\s*(px|pt|rem|em|%|vw|vh)$/)
   if (match) return { num: match[1], unit: match[2] }
   return { num: val.replace(/\D/g, '') || '', unit: 'px' }
 }
@@ -45,17 +46,10 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
       <div className="style-row">
         <div className="style-col">
           <label className="style-label">Font Family</label>
-          <select className="inspector-select" name="fontFamily" value={styles.fontFamily || ''} onChange={handleChange}>
-            <option value="">Default</option>
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="'Helvetica Neue', Helvetica, sans-serif">Helvetica</option>
-            <option value="'Times New Roman', Times, serif">Times New Roman</option>
-            <option value="'Courier New', Courier, serif">Courier New</option>
-            <option value="Verdana, monospace">Verdana</option>
-            <option value="Georgia, serif">Georgia</option>
-            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-            <option value="system-ui, -apple-system, sans-serif">System UI</option>
-          </select>
+          <FontPickerField
+            value={styles.fontFamily || ''}
+            onChange={(v) => onChange('fontFamily', v || undefined)}
+          />
         </div>
         <div className="style-col">
           <label className="style-label">Size</label>

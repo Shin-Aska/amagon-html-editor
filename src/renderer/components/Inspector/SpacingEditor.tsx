@@ -14,7 +14,7 @@ const SPACING_PROPS = {
 
 function parseValue(val?: string) {
   if (!val) return ''
-  return val.replace(/px|rem|em|%/g, '').trim()
+  return val.replace(/px|pt|rem|em|%/g, '').trim()
 }
 
 export default function SpacingEditor({ styles, onChange }: SpacingEditorProps): JSX.Element {
@@ -31,7 +31,7 @@ export default function SpacingEditor({ styles, onChange }: SpacingEditorProps):
       const val = styles[propKey]
       if (val) {
         setInputValue(parseValue(val))
-        const match = val.match(/(px|rem|em|%)$/)
+        const match = val.match(/(px|pt|rem|em|%)$/)
         if (match) setUnit(match[0])
       } else {
         setInputValue('')
@@ -124,6 +124,7 @@ export default function SpacingEditor({ styles, onChange }: SpacingEditorProps):
             />
             <select className="inspector-select" value={unit} onChange={handleUnitChange}>
               <option value="px">px</option>
+              <option value="pt">pt</option>
               <option value="rem">rem</option>
               <option value="em">em</option>
               <option value="%">%</option>
