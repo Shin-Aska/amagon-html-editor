@@ -70,23 +70,29 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
         <div className="style-col">
           <div className="style-label-row">
             <label className="style-label">Size</label>
-            <div className="style-mode-toggle">
-              <button
-                type="button"
-                className={`style-mode-btn ${fontSizeMode === 'simple' ? 'active' : ''}`}
-                onClick={() => setFontSizeMode('simple')}
-                title="Simple value"
-              >
-                123
-              </button>
-              <button
-                type="button"
-                className={`style-mode-btn ${fontSizeMode === 'complex' ? 'active' : ''}`}
-                onClick={() => setFontSizeMode('complex')}
-                title="CSS value"
-              >
-                {'{}'}
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                className="style-info-btn"
+                title="Switch between simple number+unit or advanced CSS values like clamp()."
+              >?</span>
+              <div className="style-mode-toggle">
+                <button
+                  type="button"
+                  className={`style-mode-btn ${fontSizeMode === 'simple' ? 'active' : ''}`}
+                  onClick={() => setFontSizeMode('simple')}
+                  title="Simple value"
+                >
+                  123
+                </button>
+                <button
+                  type="button"
+                  className={`style-mode-btn ${fontSizeMode === 'complex' ? 'active' : ''}`}
+                  onClick={() => setFontSizeMode('complex')}
+                  title="CSS value"
+                >
+                  {'{}'}
+                </button>
+              </div>
             </div>
           </div>
           {fontSizeMode === 'simple' ? (
@@ -118,7 +124,13 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Weight</label>
+          <div className="style-label-row">
+            <label className="style-label">Weight</label>
+            <span
+              className="style-info-btn"
+              title="Font weight from 100 (thin) to 900 (black). Leave empty to inherit."
+            >?</span>
+          </div>
           <select className="inspector-select" name="fontWeight" value={styles.fontWeight || ''} onChange={handleChange}>
             <option value="">Default</option>
             <option value="100">100 - Thin</option>
@@ -133,17 +145,35 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
           </select>
         </div>
         <div className="style-col">
-          <label className="style-label">Line Height</label>
+          <div className="style-label-row">
+            <label className="style-label">Line Height</label>
+            <span
+              className="style-info-btn"
+              title="Space between lines. Use unitless (1.5) or absolute (24px) values."
+            >?</span>
+          </div>
           <input className="inspector-input" type="text" name="lineHeight" value={styles.lineHeight || ''} onChange={handleChange} placeholder="e.g. 1.5, 24px" />
         </div>
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Letter Spacing</label>
+          <div className="style-label-row">
+            <label className="style-label">Letter Spacing</label>
+            <span
+              className="style-info-btn"
+              title="Space between characters. Positive values spread text apart."
+            >?</span>
+          </div>
           <input className="inspector-input" type="text" name="letterSpacing" value={styles.letterSpacing || ''} onChange={handleChange} placeholder="e.g. 1px, 0.1em" />
         </div>
         <div className="style-col">
-          <label className="style-label">Color</label>
+          <div className="style-label-row">
+            <label className="style-label">Color</label>
+            <span
+              className="style-info-btn"
+              title="Text color in hex (#rrggbb) or named color format."
+            >?</span>
+          </div>
           <div className="color-picker-wrapper">
             <input type="color" name="color" value={styles.color || '#000000'} onChange={handleChange} />
             <input type="text" className="inspector-input color-hex-input" name="color" value={styles.color || ''} onChange={handleChange} placeholder="#000000" />
@@ -152,7 +182,13 @@ export function TypographyEditor({ styles, onChange }: StyleEditorProps): JSX.El
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Align</label>
+          <div className="style-label-row">
+            <label className="style-label">Align</label>
+            <span
+              className="style-info-btn"
+              title="Horizontal text alignment within the element."
+            >?</span>
+          </div>
           <div className="button-group">
             {['left', 'center', 'right', 'justify'].map(align => (
               <button
@@ -181,7 +217,10 @@ export function BackgroundEditor({ styles, onChange }: StyleEditorProps): JSX.El
     <div className="style-editor-section">
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Color</label>
+          <div className="style-label-row">
+            <label className="style-label">Color</label>
+            <span className="style-info-btn" title="Background color in hex (#rrggbb) or named color format.">?</span>
+          </div>
           <div className="color-picker-wrapper">
             <input type="color" name="backgroundColor" value={styles.backgroundColor || '#ffffff'} onChange={handleChange} />
             <input type="text" className="inspector-input color-hex-input" name="backgroundColor" value={styles.backgroundColor || ''} onChange={handleChange} placeholder="transparent" />
@@ -190,13 +229,19 @@ export function BackgroundEditor({ styles, onChange }: StyleEditorProps): JSX.El
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Image URL</label>
+          <div className="style-label-row">
+            <label className="style-label">Image URL</label>
+            <span className="style-info-btn" title="URL to a background image. The image will be wrapped in url() automatically.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="backgroundImage" value={styles.backgroundImage?.replace(/url\(['"]?(.*?)['"]?\)/, '$1') || ''} onChange={(e) => onChange('backgroundImage', e.target.value ? `url('${e.target.value}')` : undefined)} placeholder="e.g. https://..." />
         </div>
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Size</label>
+          <div className="style-label-row">
+            <label className="style-label">Size</label>
+            <span className="style-info-btn" title="How the background image is sized within the element.">?</span>
+          </div>
           <select className="inspector-select" name="backgroundSize" value={styles.backgroundSize || ''} onChange={handleChange}>
             <option value="">Default</option>
             <option value="cover">Cover</option>
@@ -206,7 +251,10 @@ export function BackgroundEditor({ styles, onChange }: StyleEditorProps): JSX.El
           </select>
         </div>
         <div className="style-col">
-          <label className="style-label">Position</label>
+          <div className="style-label-row">
+            <label className="style-label">Position</label>
+            <span className="style-info-btn" title="Starting position of the background image.">?</span>
+          </div>
           <select className="inspector-select" name="backgroundPosition" value={styles.backgroundPosition || ''} onChange={handleChange}>
             <option value="">Default</option>
             <option value="center">Center</option>
@@ -219,7 +267,10 @@ export function BackgroundEditor({ styles, onChange }: StyleEditorProps): JSX.El
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Repeat</label>
+          <div className="style-label-row">
+            <label className="style-label">Repeat</label>
+            <span className="style-info-btn" title="Whether the background image tiles or appears once.">?</span>
+          </div>
           <select className="inspector-select" name="backgroundRepeat" value={styles.backgroundRepeat || ''} onChange={handleChange}>
             <option value="">Default</option>
             <option value="no-repeat">No Repeat</option>
@@ -243,17 +294,26 @@ export function BorderEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
     <div className="style-editor-section">
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Radius</label>
+          <div className="style-label-row">
+            <label className="style-label">Radius</label>
+            <span className="style-info-btn" title="Corner roundness. Use px for fixed or % for elliptical corners.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="borderRadius" value={styles.borderRadius || ''} onChange={handleChange} placeholder="e.g. 4px, 50%" />
         </div>
         <div className="style-col">
-          <label className="style-label">Width</label>
+          <div className="style-label-row">
+            <label className="style-label">Width</label>
+            <span className="style-info-btn" title="Thickness of the element border on all sides.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="borderWidth" value={styles.borderWidth || ''} onChange={handleChange} placeholder="e.g. 1px" />
         </div>
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Style</label>
+          <div className="style-label-row">
+            <label className="style-label">Style</label>
+            <span className="style-info-btn" title="Visual style of the border line.">?</span>
+          </div>
           <select className="inspector-select" name="borderStyle" value={styles.borderStyle || ''} onChange={handleChange}>
             <option value="">Default (none)</option>
             <option value="solid">Solid</option>
@@ -262,7 +322,10 @@ export function BorderEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
           </select>
         </div>
         <div className="style-col">
-          <label className="style-label">Color</label>
+          <div className="style-label-row">
+            <label className="style-label">Color</label>
+            <span className="style-info-btn" title="Border color in hex (#rrggbb) or named color format.">?</span>
+          </div>
           <div className="color-picker-wrapper">
             <input type="color" name="borderColor" value={styles.borderColor || '#000000'} onChange={handleChange} />
             <input type="text" className="inspector-input color-hex-input" name="borderColor" value={styles.borderColor || ''} onChange={handleChange} placeholder="#000000" />
@@ -283,7 +346,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
     <div className="style-editor-section">
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Display</label>
+          <div className="style-label-row">
+            <label className="style-label">Display</label>
+            <span className="style-info-btn" title="CSS display mode. Flex enables the flexbox controls below.">?</span>
+          </div>
           <select className="inspector-select" name="display" value={styles.display || ''} onChange={handleChange}>
             <option value="">Default</option>
             <option value="block">Block</option>
@@ -296,7 +362,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Position</label>
+          <div className="style-label-row">
+            <label className="style-label">Position</label>
+            <span className="style-info-btn" title="How the element is positioned in the document. Relative/absolute/fixed require top/bottom/left/right.">?</span>
+          </div>
           <select className="inspector-select" name="position" value={styles.position || ''} onChange={handleChange}>
             <option value="">Default</option>
             <option value="static">Static</option>
@@ -307,17 +376,26 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
           </select>
         </div>
         <div className="style-col">
-          <label className="style-label">Z-Index</label>
+          <div className="style-label-row">
+            <label className="style-label">Z-Index</label>
+            <span className="style-info-btn" title="Stacking order. Higher values appear above lower ones. Only works on positioned elements.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="zIndex" value={styles.zIndex || ''} onChange={handleChange} placeholder="e.g. 10, 1030" />
         </div>
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Top</label>
+          <div className="style-label-row">
+            <label className="style-label">Top</label>
+            <span className="style-info-btn" title="Offset from the top edge. Only applies to relative, absolute, fixed, or sticky positioning.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="top" value={styles.top || ''} onChange={handleChange} placeholder="e.g. 0, 1rem" />
         </div>
         <div className="style-col">
-          <label className="style-label">Bottom</label>
+          <div className="style-label-row">
+            <label className="style-label">Bottom</label>
+            <span className="style-info-btn" title="Offset from the bottom edge. Only applies to relative, absolute, fixed, or sticky positioning.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="bottom" value={styles.bottom || ''} onChange={handleChange} placeholder="e.g. 0, 1rem" />
         </div>
       </div>
@@ -326,7 +404,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
         <>
           <div className="style-row">
             <div className="style-col">
-              <label className="style-label">Flex Direction</label>
+              <div className="style-label-row">
+                <label className="style-label">Flex Direction</label>
+                <span className="style-info-btn" title="Main axis direction for flex children.">?</span>
+              </div>
               <select className="inspector-select" name="flexDirection" value={styles.flexDirection || ''} onChange={handleChange}>
                 <option value="">Default (row)</option>
                 <option value="row">Row</option>
@@ -336,7 +417,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
               </select>
             </div>
             <div className="style-col">
-              <label className="style-label">Flex Wrap</label>
+              <div className="style-label-row">
+                <label className="style-label">Flex Wrap</label>
+                <span className="style-info-btn" title="Whether flex children wrap onto multiple lines when they overflow.">?</span>
+              </div>
               <select className="inspector-select" name="flexWrap" value={styles.flexWrap || ''} onChange={handleChange}>
                 <option value="">Default (nowrap)</option>
                 <option value="nowrap">No Wrap</option>
@@ -347,7 +431,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
           </div>
           <div className="style-row">
             <div className="style-col">
-              <label className="style-label">Justify Content</label>
+              <div className="style-label-row">
+                <label className="style-label">Justify Content</label>
+                <span className="style-info-btn" title="Alignment along the main axis (horizontal in row, vertical in column).">?</span>
+              </div>
               <select className="inspector-select" name="justifyContent" value={styles.justifyContent || ''} onChange={handleChange}>
                 <option value="">Default (flex-start)</option>
                 <option value="flex-start">Flex Start</option>
@@ -361,7 +448,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
           </div>
           <div className="style-row">
             <div className="style-col">
-              <label className="style-label">Align Items</label>
+              <div className="style-label-row">
+                <label className="style-label">Align Items</label>
+                <span className="style-info-btn" title="Alignment along the cross axis (vertical in row, horizontal in column).">?</span>
+              </div>
               <select className="inspector-select" name="alignItems" value={styles.alignItems || ''} onChange={handleChange}>
                 <option value="">Default (stretch)</option>
                 <option value="flex-start">Flex Start</option>
@@ -371,7 +461,10 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
               </select>
             </div>
             <div className="style-col">
-              <label className="style-label">Gap</label>
+              <div className="style-label-row">
+                <label className="style-label">Gap</label>
+                <span className="style-info-btn" title="Space between flex children.">?</span>
+              </div>
               <input className="inspector-input" type="text" name="gap" value={styles.gap || ''} onChange={handleChange} placeholder="e.g. 16px, 1rem" />
             </div>
           </div>
@@ -380,21 +473,33 @@ export function LayoutEditor({ styles, onChange }: StyleEditorProps): JSX.Elemen
       
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Width</label>
+          <div className="style-label-row">
+            <label className="style-label">Width</label>
+            <span className="style-info-btn" title="Element width. Use % for responsive or px for fixed.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="width" value={styles.width || ''} onChange={handleChange} placeholder="e.g. 100%, 200px" />
         </div>
         <div className="style-col">
-          <label className="style-label">Height</label>
+          <div className="style-label-row">
+            <label className="style-label">Height</label>
+            <span className="style-info-btn" title="Element height. Use auto to let content decide.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="height" value={styles.height || ''} onChange={handleChange} placeholder="e.g. auto, 100vh" />
         </div>
       </div>
       <div className="style-row">
         <div className="style-col">
-          <label className="style-label">Min Width</label>
+          <div className="style-label-row">
+            <label className="style-label">Min Width</label>
+            <span className="style-info-btn" title="Minimum width the element can shrink to.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="minWidth" value={styles.minWidth || ''} onChange={handleChange} />
         </div>
         <div className="style-col">
-          <label className="style-label">Min Height</label>
+          <div className="style-label-row">
+            <label className="style-label">Min Height</label>
+            <span className="style-info-btn" title="Minimum height the element can shrink to.">?</span>
+          </div>
           <input className="inspector-input" type="text" name="minHeight" value={styles.minHeight || ''} onChange={handleChange} />
         </div>
       </div>

@@ -553,42 +553,66 @@ function Inspector(): JSX.Element {
         ))}
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Layout</h4>
+          <h4 className="inspector-group-title">
+            Layout
+            <span className="style-info-btn" title="Display mode, positioning, sizing, and flexbox settings.">?</span>
+          </h4>
           <LayoutEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Spacing</h4>
+          <h4 className="inspector-group-title">
+            Spacing
+            <span className="style-info-btn" title="Margin (outside space) and padding (inside space) for each side.">?</span>
+          </h4>
           <SpacingEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Typography</h4>
+          <h4 className="inspector-group-title">
+            Typography
+            <span className="style-info-btn" title="Font, size, weight, line height, spacing, color, and alignment.">?</span>
+          </h4>
           <TypographyEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Background</h4>
+          <h4 className="inspector-group-title">
+            Background
+            <span className="style-info-btn" title="Background color, image, sizing, position, and repeat behavior.">?</span>
+          </h4>
           <BackgroundEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Border</h4>
+          <h4 className="inspector-group-title">
+            Border
+            <span className="style-info-btn" title="Corner radius, border width, style, and color.">?</span>
+          </h4>
           <BorderEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Inline Styles</h4>
+          <h4 className="inspector-group-title">
+            Inline Styles
+            <span className="style-info-btn" title="Raw CSS property-value pairs applied directly to this element. Useful for properties not covered above.">?</span>
+          </h4>
           <InlineStylesEditor styles={block.styles} onChange={handleStyleChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Responsive</h4>
+          <h4 className="inspector-group-title">
+            Responsive
+            <span className="style-info-btn" title="Bootstrap utility classes that apply only at specific screen sizes (e.g. d-md-none).">?</span>
+          </h4>
           <ResponsiveOverrides classes={block.classes} onChange={handleClassesChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Element ID</h4>
+          <h4 className="inspector-group-title">
+            Element ID
+            <span className="style-info-btn" title="Unique identifier for this element. Used for anchors, JavaScript targeting, and linking.">?</span>
+          </h4>
           <div className="inspector-field">
             <div className="inspector-field-header">
               <label className="inspector-label">ID</label>
@@ -609,17 +633,26 @@ function Inspector(): JSX.Element {
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">CSS Classes</h4>
+          <h4 className="inspector-group-title">
+            CSS Classes
+            <span className="style-info-btn" title="Bootstrap or custom CSS classes added to this element. Multiple classes are space-separated.">?</span>
+          </h4>
           <CssClassesEditor classes={block.classes} onChange={handleClassesChange} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Event Actions</h4>
+          <h4 className="inspector-group-title">
+            Event Actions
+            <span className="style-info-btn" title="JavaScript to run when events like click or hover fire on this element.">?</span>
+          </h4>
           <EventActionsEditor blockId={block.id} events={block.events || {}} />
         </div>
 
         <div className="inspector-group">
-          <h4 className="inspector-group-title">Block Actions</h4>
+          <h4 className="inspector-group-title">
+            Block Actions
+            <span className="style-info-btn" title="Quick operations on this block: duplicate, delete, move up/down, or save as a reusable component.">?</span>
+          </h4>
           <BlockActions blockId={block.id} blockType={block.type} />
         </div>
       </div>

@@ -67,6 +67,14 @@
   color: var(--color-text-secondary);
   font-weight: 600;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspector-group-title .style-info-btn {
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* Fields */
