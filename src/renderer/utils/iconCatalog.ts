@@ -289,7 +289,22 @@ export function isKnownLucideIcon(name: string): boolean {
 type IconNode = [string, Record<string, string>]
 
 const normalizedIconCatalog = new Map<string, IconNode[]>()
-Object.entries(lucideIconCatalog as Record<string, IconNode[]>).forEach(([rawName, nodes]) => {
+const rawIconCatalog = lucideIconCatalog as Record<string, unknown>
+
+Object.entries(rawIconCatalog).forEach(([rawName, rawNodes]) => {
+  const nodes: IconNode[] = Array.isArray(rawNodes)
+    ? rawNodes.flatMap((rawNode) => {
+        if (!Array.isArray(rawNode) || rawNode.length !== 2) return []
+
+        const [tag, attrs] = rawNode
+        if (typeof tag !== 'string' || !attrs || typeof attrs !== 'object' || Array.isArray(attrs)) return []
+
+        return [[tag, Object.fromEntries(
+          Object.entries(attrs).map(([key, value]) => [key, String(value)])
+        )]]
+      })
+    : []
+
   normalizedIconCatalog.set(normalizeLucideKey(rawName), nodes)
 })
 
