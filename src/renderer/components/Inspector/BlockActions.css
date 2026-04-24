@@ -1,70 +1,70 @@
 .block-actions-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .action-buttons-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
 .action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px;
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .action-btn:hover:not(:disabled) {
-  background-color: var(--color-bg-secondary);
+    background-color: var(--color-bg-secondary);
 }
 
 .action-btn.active {
-  background-color: rgba(23, 106, 255, 0.1);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+    background-color: rgba(23, 106, 255, 0.1);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
 }
 
 .action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .action-icon {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 .primary-action-btn {
-  background-color: var(--color-accent);
-  color: white;
-  border-color: var(--color-accent);
+    background-color: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
 }
 
 .primary-action-btn:hover:not(:disabled) {
-  background-color: #0b5ed7; /* Darker blue */
-  color: white;
+    background-color: #0b5ed7; /* Darker blue */
+    color: white;
 }
 
 .danger-action-btn {
-  color: #dc3545;
-  border-color: #dc3545;
+    color: #dc3545;
+    border-color: #dc3545;
 }
 
 .danger-action-btn:hover:not(:disabled) {
-  background-color: #dc3545;
-  color: white;
+    background-color: #dc3545;
+    color: white;
 }
 
 .mt-2 {
-  margin-top: 8px;
+    margin-top: 8px;
 }

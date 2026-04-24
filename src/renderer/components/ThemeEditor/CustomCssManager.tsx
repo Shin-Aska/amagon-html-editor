@@ -30,7 +30,7 @@ function findBalancedCssBlock(css: string, startIndex: number): { start: number;
                 while (blockStart > 0 && css[blockStart - 1] !== '\n') blockStart -= 1;
                 let blockEnd = index + 1;
                 while (blockEnd < css.length && /\s/.test(css[blockEnd])) blockEnd += 1;
-                return { start: blockStart, end: blockEnd }
+                return {start: blockStart, end: blockEnd}
             }
         }
     }
@@ -48,7 +48,7 @@ function findMatchRange(css: string, matchText: string): { start: number; end: n
     const balancedBlock = findBalancedCssBlock(css, directIndex);
     if (balancedBlock) return balancedBlock;
 
-    return { start: directIndex, end: directIndex + trimmedMatch.length }
+    return {start: directIndex, end: directIndex + trimmedMatch.length}
 }
 
 export function applyCssProposal(currentCss: string, proposal: AiCssProposal): string {
@@ -90,8 +90,8 @@ export function applyCssProposal(currentCss: string, proposal: AiCssProposal): s
     return `${currentCss.replace(/\s*$/, '')}\n\n${snippet}`
 }
 
-export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JSX.Element {
-    const { hasConfiguredAiProvider } = useAiAvailability();
+export default function CustomCssManager({theme}: { theme: ProjectTheme }): JSX.Element {
+    const {hasConfiguredAiProvider} = useAiAvailability();
     const addCssFile = useProjectStore((s) => s.addCssFile);
     const removeCssFile = useProjectStore((s) => s.removeCssFile);
     const updateCssFile = useProjectStore((s) => s.updateCssFile);
@@ -143,7 +143,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
 
     const handleCssChange = useCallback((value: string | undefined) => {
         if (selectedFileId) {
-            updateCssFile(selectedFileId, { css: value || '' });
+            updateCssFile(selectedFileId, {css: value || ''});
             setPendingCssReview(null)
         }
     }, [selectedFileId, updateCssFile]);
@@ -155,7 +155,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
 
     const handleFinishRename = useCallback(() => {
         if (renamingId && renameValue.trim()) {
-            updateCssFile(renamingId, { name: renameValue.trim() })
+            updateCssFile(renamingId, {name: renameValue.trim()})
         }
         setRenamingId(null);
         setRenameValue('')
@@ -177,7 +177,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
         const x = Math.min(event.clientX, window.innerWidth - menuWidth - padding);
         const y = Math.min(event.clientY, window.innerHeight - menuHeight - padding);
         setSelectedFileId(file.id);
-        setContextMenu({ x, y, file })
+        setContextMenu({x, y, file})
     }, []);
 
     const handleProposalGenerated = useCallback((proposal: AiCssProposal) => {
@@ -193,7 +193,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
 
     const handleAcceptProposal = useCallback(() => {
         if (!pendingCssReview || !selectedFileId) return;
-        updateCssFile(selectedFileId, { css: pendingCssReview.previewCss });
+        updateCssFile(selectedFileId, {css: pendingCssReview.previewCss});
         setPendingCssReview(null);
         setAiPrompt('')
     }, [pendingCssReview, selectedFileId, updateCssFile]);
@@ -242,7 +242,10 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                     onBlur={handleFinishRename}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') handleFinishRename();
-                                        if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+                                        if (e.key === 'Escape') {
+                                            setRenamingId(null);
+                                            setRenameValue('')
+                                        }
                                     }}
                                     autoFocus
                                     onClick={(e) => e.stopPropagation()}
@@ -250,7 +253,10 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                             ) : (
                                 <span
                                     className="css-manager-file-name"
-                                    onDoubleClick={(e) => { e.stopPropagation(); handleStartRename(file) }}
+                                    onDoubleClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStartRename(file)
+                                    }}
                                     title="Double-click to rename"
                                 >
                                     {file.name}
@@ -270,12 +276,12 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                     title={
                                         pendingCssReview
                                             ? 'Apply or deny the current AI proposal first'
-                                        : !hasConfiguredAiProvider
-                                              ? AI_API_KEY_REQUIRED_MESSAGE
-                                              : 'Assist with AI'
+                                            : !hasConfiguredAiProvider
+                                                ? AI_API_KEY_REQUIRED_MESSAGE
+                                                : 'Assist with AI'
                                     }
                                 >
-                                    <Sparkles size={12} strokeWidth={2.5} />
+                                    <Sparkles size={12} strokeWidth={2.5}/>
                                 </button>
                                 <button
                                     className="css-manager-icon-btn"
@@ -322,7 +328,8 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                 <span className="css-manager-editor-disabled-badge">Disabled</span>
                             )}
                         </div>
-                        <div className={`css-manager-editor-body ${pendingCssReview && selectedFileId === selectedFile.id ? 'has-review-panel' : ''}`}>
+                        <div
+                            className={`css-manager-editor-body ${pendingCssReview && selectedFileId === selectedFile.id ? 'has-review-panel' : ''}`}>
                             {pendingCssReview && selectedFileId === selectedFile.id ? (
                                 <AiProposalReviewPanel
                                     explanation={pendingCssReview.proposal.explanation}
@@ -343,14 +350,14 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                                     onChange={handleCssChange}
                                     theme="vs-dark"
                                     options={{
-                                        minimap: { enabled: false },
+                                        minimap: {enabled: false},
                                         fontSize: 13,
                                         lineNumbers: 'on',
                                         scrollBeyondLastLine: false,
                                         wordWrap: 'on',
                                         tabSize: 2,
                                         automaticLayout: true,
-                                        padding: { top: 8 }
+                                        padding: {top: 8}
                                     }}
                                 />
                             )}
@@ -366,7 +373,7 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
             {contextMenu && (
                 <div
                     className="css-manager-context-menu"
-                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                    style={{top: contextMenu.y, left: contextMenu.x}}
                     onPointerDown={(e) => e.stopPropagation()}
                     onContextMenu={(e) => e.preventDefault()}
                 >
@@ -380,20 +387,20 @@ export default function CustomCssManager({ theme }: { theme: ProjectTheme }): JS
                             setContextMenu(null)
                         }}
                     >
-                        <Sparkles size={14} /> Assist with AI
+                        <Sparkles size={14}/> Assist with AI
                     </button>
                     {!hasConfiguredAiProvider && (
                         <button
                             className="css-manager-context-note"
                             onClick={() => {
                                 setContextMenu(null);
-                                openGlobalSettings({ tab: 'keys' })
+                                openGlobalSettings({tab: 'keys'})
                             }}
                         >
                             {AI_API_KEY_REQUIRED_MESSAGE}
                         </button>
                     )}
-                    <div className="css-manager-context-divider" />
+                    <div className="css-manager-context-divider"/>
                 </div>
             )}
 

@@ -1,4 +1,4 @@
-export { GitHubPagesAdapter } from './GitHubPagesAdapter'
+export {GitHubPagesAdapter} from './GitHubPagesAdapter'
 
 import {GitHubPagesAdapter} from './GitHubPagesAdapter'
 

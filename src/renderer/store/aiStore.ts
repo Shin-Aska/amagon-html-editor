@@ -13,7 +13,18 @@ import {useProjectStore} from './projectStore'
 // Types
 // ---------------------------------------------------------------------------
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
+export type AiProvider =
+    'openai'
+    | 'anthropic'
+    | 'google'
+    | 'ollama'
+    | 'mistral'
+    | 'claude-cli'
+    | 'codex-cli'
+    | 'gemini-cli'
+    | 'github-cli'
+    | 'junie-cli'
+    | 'opencode-cli'
 
 export interface ChatMessage {
     id: string
@@ -92,7 +103,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
     // ─── Initial State ─────────────────────────────────────────────────
     messages: [],
     isLoading: false,
-    config: { ...DEFAULT_CONFIG },
+    config: {...DEFAULT_CONFIG},
     providerModels: {},
     configLoaded: false,
     modelsLoaded: false,
@@ -115,7 +126,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
         try {
             const api = getApi();
-            const { messages } = get();
+            const {messages} = get();
 
             const projectTheme = useProjectStore.getState().settings.theme;
             const uiTheme = useEditorStore.getState().theme;
@@ -164,7 +175,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
     },
 
     clearChat: () => {
-        set({ messages: [] })
+        set({messages: []})
     },
 
     loadConfig: async () => {
@@ -172,17 +183,17 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const api = getApi();
             const result = await (api as any).ai.getConfig();
             if (result.success && result.config) {
-                set({ config: result.config, configLoaded: true })
+                set({config: result.config, configLoaded: true})
             }
         } catch {
-            set({ configLoaded: true })
+            set({configLoaded: true})
         }
     },
 
     saveConfig: async (partial: Partial<AiConfig>) => {
         const current = get().config;
-        const merged = { ...current, ...partial };
-        set({ config: merged });
+        const merged = {...current, ...partial};
+        set({config: merged});
 
         try {
             const api = getApi();
@@ -190,7 +201,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
             if (result.success && result.config) {
                 // Update state with masked config from main process so the
                 // raw API key isn't retained in renderer memory.
-                set({ config: result.config });
+                set({config: result.config});
                 dispatchAiAvailabilityChanged()
             }
         } catch {
@@ -203,23 +214,23 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const api = getApi();
             const result = await (api as any).ai.getModels();
             if (result.success && result.models) {
-                set({ providerModels: result.models, modelsLoaded: true });
+                set({providerModels: result.models, modelsLoaded: true});
                 return
             }
         } catch {
             // use defaults
         }
-        set({ modelsLoaded: true })
+        set({modelsLoaded: true})
     },
 
     fetchModelsForProvider: async (provider: string, apiKey: string, ollamaUrl?: string): Promise<string[]> => {
         try {
             const api = getApi();
-            const result = await (api as any).ai.fetchModelsForProvider({ provider, apiKey, ollamaUrl });
+            const result = await (api as any).ai.fetchModelsForProvider({provider, apiKey, ollamaUrl});
             if (result.success && result.models) {
                 // Merge into providerModels so the dropdown can use them
                 set((state) => ({
-                    providerModels: { ...state.providerModels, [provider]: result.models }
+                    providerModels: {...state.providerModels, [provider]: result.models}
                 }));
                 return result.models as string[]
             }
@@ -230,6 +241,6 @@ export const useAiStore = create<AiStore>((set, get) => ({
     },
 
     setShowSettings: (show: boolean) => {
-        set({ showSettings: show })
+        set({showSettings: show})
     }
 }));

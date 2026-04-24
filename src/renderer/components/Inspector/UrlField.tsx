@@ -9,10 +9,10 @@ interface UrlFieldProps {
 }
 
 export default function UrlField({
-    value,
-    onChange,
-    placeholder = 'e.g. https://... or select a page'
-}: UrlFieldProps): JSX.Element {
+                                     value,
+                                     onChange,
+                                     placeholder = 'e.g. https://... or select a page'
+                                 }: UrlFieldProps): JSX.Element {
     const [open, setOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value || '');
     const wrapperRef = useRef<HTMLDivElement>(null);

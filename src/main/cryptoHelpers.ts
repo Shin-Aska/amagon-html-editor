@@ -41,6 +41,7 @@ function getMachineSeed(): string {
 
 /** Derive a 256-bit AES key from machine-specific data. Cached after first call. */
 let _derivedKey: Buffer | null = null;
+
 function getDerivedKey(): Buffer {
     if (_derivedKey) return _derivedKey;
     const seed = getMachineSeed();

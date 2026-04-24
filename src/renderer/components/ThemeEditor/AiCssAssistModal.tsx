@@ -108,12 +108,22 @@ function extractJsonObject(content: string): string | null {
 function repairJson(json: string): string {
     let inStr = false, escaped = false, out = '';
     for (const ch of json) {
-        if (escaped) { out += ch; escaped = false }
-        else if (ch === '\\' && inStr) { out += ch; escaped = true }
-        else if (ch === '"') { out += ch; inStr = !inStr }
-        else if (inStr && ch === '\n') { out += '\\n' }
-        else if (inStr && ch === '\r') { out += '\\r' }
-        else { out += ch }
+        if (escaped) {
+            out += ch;
+            escaped = false
+        } else if (ch === '\\' && inStr) {
+            out += ch;
+            escaped = true
+        } else if (ch === '"') {
+            out += ch;
+            inStr = !inStr
+        } else if (inStr && ch === '\n') {
+            out += '\\n'
+        } else if (inStr && ch === '\r') {
+            out += '\\r'
+        } else {
+            out += ch
+        }
     }
     return out
 }
@@ -145,8 +155,8 @@ function buildProposalFromParsed(
             requestedMode === 'delete_match'
                 ? requestedMode
                 : currentCss.trim()
-                  ? 'insert'
-                  : 'replace',
+                    ? 'insert'
+                    : 'replace',
         css,
         explanation:
             typeof parsed.explanation === 'string' && parsed.explanation.trim()
@@ -208,7 +218,7 @@ function extractCssFieldFromJsonLike(jsonLike: string): { css: string; mode: AiC
     const css = extractJsonLikeStringField(jsonLike, 'css');
     if (!css) return null;
     const modeMatch = jsonLike.match(/"mode"\s*:\s*"(insert|replace|replace_match|delete_match)"/);
-    return { css, mode: (modeMatch?.[1] as AiCssMode) ?? null }
+    return {css, mode: (modeMatch?.[1] as AiCssMode) ?? null}
 }
 
 export function parseCssProposal(content: string, currentCss: string): AiCssProposal | null {
@@ -265,16 +275,16 @@ export function parseCssProposal(content: string, currentCss: string): AiCssProp
 }
 
 export default function AiCssAssistModal({
-    isOpen,
-    file,
-    allFileNames,
-    theme,
-    prompt,
-    onPromptChange,
-    onClose,
-    onProposalGenerated
-}: AiCssAssistModalProps): JSX.Element | null {
-    const { hasConfiguredAiProvider } = useAiAvailability();
+                                             isOpen,
+                                             file,
+                                             allFileNames,
+                                             theme,
+                                             prompt,
+                                             onPromptChange,
+                                             onClose,
+                                             onProposalGenerated
+                                         }: AiCssAssistModalProps): JSX.Element | null {
+    const {hasConfiguredAiProvider} = useAiAvailability();
     const modelsLoaded = useAiStore((s) => s.modelsLoaded);
     const configLoaded = useAiStore((s) => s.configLoaded);
     const isReady = configLoaded && modelsLoaded;
@@ -359,8 +369,8 @@ ${themeVariables}`;
 
             const result = await (api as any).ai.chat({
                 messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
+                    {role: 'system', content: systemPrompt},
+                    {role: 'user', content: userPrompt}
                 ]
             });
 
@@ -388,13 +398,14 @@ ${themeVariables}`;
 
     return (
         <div className="ai-css-assist-overlay" onClick={onClose}>
-            <div className="ai-css-assist-dialog" data-tutorial="ai-css-assist-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="ai-css-assist-dialog" data-tutorial="ai-css-assist-dialog"
+                 onClick={(e) => e.stopPropagation()}>
                 <div className="ai-css-assist-header">
                     <div>
-                        <div className="ai-css-assist-title">Assist with AI <Sparkles size={14} /></div>
+                        <div className="ai-css-assist-title">Assist with AI <Sparkles size={14}/></div>
                         <div className="ai-css-assist-subtitle">{file.name}</div>
                     </div>
-                    <AiProviderSelector />
+                    <AiProviderSelector/>
                     <button className="ai-css-assist-close" onClick={onClose} aria-label="Close">×</button>
                 </div>
 
@@ -412,7 +423,7 @@ ${themeVariables}`;
                     {!hasConfiguredAiProvider && (
                         <div className="ai-css-assist-disabled-note">
                             <span>{AI_API_KEY_REQUIRED_MESSAGE}</span>
-                            <button type="button" onClick={() => openGlobalSettings({ tab: 'keys' })}>
+                            <button type="button" onClick={() => openGlobalSettings({tab: 'keys'})}>
                                 Open Global Settings
                             </button>
                         </div>

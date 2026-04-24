@@ -1,247 +1,247 @@
 /* GoogleFontBrowser.css */
 .google-font-browser {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
 }
 
 .gfont-warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.3);
-  border-radius: var(--radius-md);
-  font-size: 12px;
-  color: var(--color-text-secondary);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    color: var(--color-text-secondary);
 }
 
 .gfont-warning svg {
-  color: #eab308;
-  flex-shrink: 0;
-  margin-top: 1px;
+    color: #eab308;
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
 .gfont-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .gfont-search {
-  position: relative;
-  display: flex;
-  align-items: center;
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .gfont-search-icon {
-  position: absolute;
-  left: 12px;
-  color: var(--color-text-muted);
+    position: absolute;
+    left: 12px;
+    color: var(--color-text-muted);
 }
 
 .gfont-search input {
-  width: 100%;
-  padding: 8px 12px 8px 36px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-primary);
-  font-size: 14px;
-  transition: border-color 0.15s;
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: 14px;
+    transition: border-color 0.15s;
 }
 
 .gfont-search input:focus {
-  outline: none;
-  border-color: var(--color-accent);
+    outline: none;
+    border-color: var(--color-accent);
 }
 
 .gfont-categories {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .gfont-cat-btn {
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  border-radius: 100px;
-  padding: 4px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-transform: capitalize;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    border-radius: 100px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: capitalize;
 }
 
 .gfont-cat-btn:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .gfont-cat-btn.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: #fff;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
 }
 
 .gfont-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  min-height: 200px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    min-height: 200px;
 }
 
 .gfont-empty {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 40px;
-  color: var(--color-text-muted);
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--color-border);
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: var(--color-text-muted);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--color-border);
 }
 
 .gfont-card {
-  transition: transform 0.15s, box-shadow 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .gfont-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: var(--color-border-hover, #555);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--color-border-hover, #555);
 }
 
 .gfont-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 .gfont-status.success {
-  color: #22c55e;
+    color: #22c55e;
 }
 
 .gfont-pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
 }
 
 .gfont-page-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: var(--radius-md);
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
 }
 
 .gfont-page-btn:hover:not(:disabled) {
-  background: var(--color-bg-hover);
+    background: var(--color-bg-hover);
 }
 
 .gfont-page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Modal variant picker */
 .gfont-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
 }
 
 .gfont-modal {
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  width: 100%;
-  max-width: 400px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 400px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
 }
 
 .gfont-modal-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--color-border);
+    padding: 20px;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .gfont-modal-header h3 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  color: var(--color-text-primary);
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    color: var(--color-text-primary);
 }
 
 .gfont-modal-header p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--color-text-secondary);
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-secondary);
 }
 
 .gfont-variant-list {
-  padding: 16px 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    padding: 16px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .gfont-variant-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    cursor: pointer;
 }
 
 .gfont-variant-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-accent);
-  cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
 }
 
 .gfont-modal-actions {
-  padding: 16px 20px;
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  background: var(--color-bg-surface);
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: var(--color-bg-surface);
 }
 
 /* Popularity rank badge — subtle amber accent to distinguish from category/style badges */
 .gfont-popularity-badge {
-  background: rgba(234, 179, 8, 0.15);
-  color: #ca8a04;
-  border-color: rgba(234, 179, 8, 0.3);
+    background: rgba(234, 179, 8, 0.15);
+    color: #ca8a04;
+    border-color: rgba(234, 179, 8, 0.3);
 }

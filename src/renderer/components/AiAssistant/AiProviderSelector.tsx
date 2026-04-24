@@ -49,19 +49,23 @@ export default function AiProviderSelector(): JSX.Element {
 
     const handleProviderChange = (provider: AiProvider) => {
         const firstModel = (providerModels[provider] || [])[0] || '';
-        saveConfig({ provider, model: firstModel })
+        saveConfig({provider, model: firstModel})
     };
 
     const handleModelChange = (model: string) => {
-        saveConfig({ model })
+        saveConfig({model})
     };
 
     // Config hasn't loaded yet — show skeleton selects so layout doesn't shift
     if (!configLoaded) {
         return (
             <div className="ai-provider-selector ai-provider-selector--loading">
-                <select className="ai-provider-select" disabled><option>Loading…</option></select>
-                <select className="ai-provider-select ai-model-select" disabled><option>Loading…</option></select>
+                <select className="ai-provider-select" disabled>
+                    <option>Loading…</option>
+                </select>
+                <select className="ai-provider-select ai-model-select" disabled>
+                    <option>Loading…</option>
+                </select>
             </div>
         )
     }

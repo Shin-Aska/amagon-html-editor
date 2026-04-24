@@ -23,17 +23,17 @@ function formatDateYYYYMMDD(d: Date): string {
 }
 
 export default function PageModal({
-    mode,
-    initialName = '',
-    initialPageTitle = '',
-    initialTags = [],
-    initialPath = '',
-    initialDescription = '',
-    initialMeta = {},
-    initialFullWidthFormControls = true,
-    onSave,
-    onCancel
-}: PageModalProps): JSX.Element {
+                                      mode,
+                                      initialName = '',
+                                      initialPageTitle = '',
+                                      initialTags = [],
+                                      initialPath = '',
+                                      initialDescription = '',
+                                      initialMeta = {},
+                                      initialFullWidthFormControls = true,
+                                      onSave,
+                                      onCancel
+                                  }: PageModalProps): JSX.Element {
     const [name, setName] = useState(initialName);
     const [pageTitleInput, setPageTitleInput] = useState(initialPageTitle);
     const [tagsInput, setTagsInput] = useState(initialTags.join(', '));
@@ -43,12 +43,12 @@ export default function PageModal({
     const [metaEntries, setMetaEntries] = useState<Array<{ key: string; value: string }>>(() => {
         const entries = Object.entries(initialMeta)
             .filter(([k]) => k !== 'description') // description has its own field
-            .map(([key, value]) => ({ key, value }));
+            .map(([key, value]) => ({key, value}));
 
         if (entries.length > 0) return entries;
 
         if (mode === 'create') {
-            return [{ key: 'datePublished', value: formatDateYYYYMMDD(new Date()) }]
+            return [{key: 'datePublished', value: formatDateYYYYMMDD(new Date())}]
         }
 
         return []
@@ -95,7 +95,7 @@ export default function PageModal({
     };
 
     const addMetaEntry = () => {
-        setMetaEntries((prev) => [...prev, { key: '', value: '' }])
+        setMetaEntries((prev) => [...prev, {key: '', value: ''}])
     };
 
     const removeMetaEntry = (index: number) => {
@@ -104,7 +104,7 @@ export default function PageModal({
 
     const updateMetaEntry = (index: number, field: 'key' | 'value', value: string) => {
         setMetaEntries((prev) =>
-            prev.map((entry, i) => (i === index ? { ...entry, [field]: value } : entry))
+            prev.map((entry, i) => (i === index ? {...entry, [field]: value} : entry))
         )
     };
 
@@ -202,16 +202,19 @@ export default function PageModal({
 
                     {!isFolder && (
                         <div className="page-modal-field">
-                            <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <label className="checkbox-label"
+                                   style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
                                 <input
                                     type="checkbox"
                                     checked={fullWidthFormControls}
                                     onChange={(e) => setFullWidthFormControls(e.target.checked)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSave()
+                                    }}
                                 />
                                 Full-Width Form Controls
                             </label>
-                            <span className="field-hint" style={{ marginTop: 4, display: 'block' }}>
+                            <span className="field-hint" style={{marginTop: 4, display: 'block'}}>
                                 Stretches inputs, textareas, and selects to 100% width by default.
                             </span>
                         </div>
@@ -220,7 +223,7 @@ export default function PageModal({
                     {!isFolder && (
                         <div className="page-modal-field">
                             <label>Meta Tags</label>
-                            <span className="field-hint" style={{ marginBottom: 6 }}>
+                            <span className="field-hint" style={{marginBottom: 6}}>
                                 Custom &lt;meta&gt; tags for this page. Common tags like charset and viewport are set automatically.
                             </span>
                             {metaEntries.map((entry, index) => (

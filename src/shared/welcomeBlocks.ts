@@ -13,6 +13,7 @@ interface WelcomeBlock {
 }
 
 let _counter = 0;
+
 function genId(): string {
     _counter++;
     return `blk_${Date.now().toString(36)}_w${_counter.toString(36)}`
@@ -31,7 +32,7 @@ function block(
     return {
         id: genId(),
         type,
-        ...(opts.tag ? { tag: opts.tag } : {}),
+        ...(opts.tag ? {tag: opts.tag} : {}),
         props: opts.props ?? {},
         styles: opts.styles ?? {},
         classes: opts.classes ?? [],
@@ -51,7 +52,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                     classes: ['container', 'text-center'],
                     children: [
                         block('heading', {
-                            props: { text: `Welcome to ${projectName}`, level: 1 },
+                            props: {text: `Welcome to ${projectName}`, level: 1},
                             classes: ['display-5', 'fw-bold', 'mb-3']
                         }),
                         block('paragraph', {
@@ -73,7 +74,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                     classes: ['container'],
                     children: [
                         block('heading', {
-                            props: { text: 'Getting Started', level: 2 },
+                            props: {text: 'Getting Started', level: 2},
                             classes: ['mb-4', 'text-center']
                         }),
                         block('row', {
@@ -89,7 +90,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                                                     classes: ['card-body', 'text-center'],
                                                     children: [
                                                         block('heading', {
-                                                            props: { text: 'Widgets', level: 4 },
+                                                            props: {text: 'Widgets', level: 4},
                                                             classes: ['card-title']
                                                         }),
                                                         block('paragraph', {
@@ -114,7 +115,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                                                     classes: ['card-body', 'text-center'],
                                                     children: [
                                                         block('heading', {
-                                                            props: { text: 'Inspector', level: 4 },
+                                                            props: {text: 'Inspector', level: 4},
                                                             classes: ['card-title']
                                                         }),
                                                         block('paragraph', {
@@ -139,7 +140,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                                                     classes: ['card-body', 'text-center'],
                                                     children: [
                                                         block('heading', {
-                                                            props: { text: 'Preview & Export', level: 4 },
+                                                            props: {text: 'Preview & Export', level: 4},
                                                             classes: ['card-title']
                                                         }),
                                                         block('paragraph', {
@@ -170,7 +171,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
                     classes: ['container'],
                     children: [
                         block('paragraph', {
-                            props: { text: `© ${new Date().getFullYear()} ${projectName}` },
+                            props: {text: `© ${new Date().getFullYear()} ${projectName}`},
                             classes: ['text-muted', 'text-center', 'mb-0']
                         })
                     ]
@@ -185,7 +186,7 @@ export function createWelcomeBlocks(projectName: string): WelcomeBlock[] {
 export function createPageHeaderBlock(pageTitle: string): WelcomeBlock[] {
     return [
         block('heading', {
-            props: { text: pageTitle, level: 1, alignment: 'text-center' },
+            props: {text: pageTitle, level: 1, alignment: 'text-center'},
             classes: ['text-center', 'py-4']
         })
     ]

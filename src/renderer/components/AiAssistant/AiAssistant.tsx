@@ -60,7 +60,7 @@ function findJsonObjectCandidate(content: string): { json: string; start: number
         } else if (char === '}') {
             depth -= 1;
             if (depth === 0) {
-                return { json: content.slice(start, i + 1), start, end: i + 1 }
+                return {json: content.slice(start, i + 1), start, end: i + 1}
             }
         }
     }
@@ -120,14 +120,14 @@ function parseAiResponse(content: string): ParsedAiResponse {
                 text = text.replace(/^\s*```\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
 
                 const blocks = parsed.blocks.map(buildBlockFromAiData);
-                return { text, blocks }
+                return {text, blocks}
             }
         }
     } catch {
         // Not valid JSON — treat as text-only response
     }
 
-    return { text: normalizedContent, blocks: null }
+    return {text: normalizedContent, blocks: null}
 }
 
 function buildBlockFromAiData(data: any): Block {
@@ -146,7 +146,7 @@ function buildBlockFromAiData(data: any): Block {
 // Block Preview Component
 // ---------------------------------------------------------------------------
 
-function BlockPreview({ blocks }: { blocks: Block[] }): JSX.Element {
+function BlockPreview({blocks}: { blocks: Block[] }): JSX.Element {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [height, setHeight] = useState(120);
     const [zoom, setZoom] = useState(1);
@@ -258,7 +258,7 @@ ${themeCss}
     return (
         <div className="ai-preview-container">
             <div className="ai-preview-label">
-                <Eye size={11} />
+                <Eye size={11}/>
                 <span>Preview</span>
                 <div className="ai-preview-zoom">
                     <button
@@ -267,7 +267,7 @@ ${themeCss}
                         title="Zoom out"
                         disabled={zoom <= 0.25}
                     >
-                        <ZoomOut size={10} />
+                        <ZoomOut size={10}/>
                     </button>
                     <span className="ai-preview-zoom-level">{Math.round(zoom * 100)}%</span>
                     <button
@@ -276,11 +276,11 @@ ${themeCss}
                         title="Zoom in"
                         disabled={zoom >= 2}
                     >
-                        <ZoomIn size={10} />
+                        <ZoomIn size={10}/>
                     </button>
                 </div>
             </div>
-            <div className="ai-preview-viewport" style={{ height: `${height * zoom}px` }}>
+            <div className="ai-preview-viewport" style={{height: `${height * zoom}px`}}>
                 <iframe
                     ref={iframeRef}
                     className="ai-preview-iframe"
@@ -305,10 +305,10 @@ ${themeCss}
 // ---------------------------------------------------------------------------
 
 function AiMessageBubble({
-    msg,
-    onInsertBlocks,
-    onCopy
-}: {
+                             msg,
+                             onInsertBlocks,
+                             onCopy
+                         }: {
     msg: { id: string; role: string; content: string; timestamp: number; isError?: boolean }
     onInsertBlocks: (blocks: Block[]) => void
     onCopy: (content: string) => void
@@ -355,7 +355,7 @@ function AiMessageBubble({
 
             {/* Live preview for block responses */}
             {hasBlocks && parsed?.blocks && (
-                <BlockPreview blocks={parsed.blocks} />
+                <BlockPreview blocks={parsed.blocks}/>
             )}
 
             {/* Timestamp */}
@@ -375,7 +375,7 @@ function AiMessageBubble({
                         onClick={() => onInsertBlocks(parsed.blocks!)}
                         title={`Insert into ${insertTargetLabel}`}
                     >
-                        <ArrowDownToLine size={12} /> Insert into {insertTargetLabel}
+                        <ArrowDownToLine size={12}/> Insert into {insertTargetLabel}
                     </button>
                 )}
                 <button
@@ -383,7 +383,7 @@ function AiMessageBubble({
                     onClick={() => onCopy(msg.content)}
                     title={msg.role === 'user' ? 'Copy message' : 'Copy response'}
                 >
-                    <Copy size={12} /> Copy
+                    <Copy size={12}/> Copy
                 </button>
             </div>
         </div>
@@ -402,8 +402,8 @@ const SUGGESTIONS = [
 ];
 
 export default function AiAssistant(): JSX.Element {
-    const { messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig } = useAiStore();
-    const { hasConfiguredAiProvider } = useAiAvailability();
+    const {messages, isLoading, config, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig} = useAiStore();
+    const {hasConfiguredAiProvider} = useAiAvailability();
     const addBlock = useEditorStore((s) => s.addBlock);
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
     const [input, setInput] = useState('');
@@ -414,10 +414,10 @@ export default function AiAssistant(): JSX.Element {
     const adjustTextareaHeight = useCallback(() => {
         const textarea = inputRef.current;
         if (!textarea) return;
-        
+
         // Reset to auto to get correct scrollHeight
         textarea.style.height = 'auto';
-        
+
         // Set new height (clamped to max-height in CSS: 100px)
         const newHeight = Math.min(textarea.scrollHeight, 100);
         textarea.style.height = `${newHeight}px`
@@ -432,7 +432,7 @@ export default function AiAssistant(): JSX.Element {
 
     // Auto-scroll to bottom
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        messagesEndRef.current?.scrollIntoView({behavior: 'smooth'})
     }, [messages, isLoading]);
 
     const handleSend = () => {
@@ -475,18 +475,18 @@ export default function AiAssistant(): JSX.Element {
             {/* Header */}
             <div className="ai-header">
                 <div className="ai-header-left">
-                    <Sparkles size={14} />
+                    <Sparkles size={14}/>
                     <span>AI Assistant</span>
                 </div>
                 <div className="ai-header-actions">
-                    <AiProviderSelector />
+                    <AiProviderSelector/>
                     {messages.length > 0 && (
                         <button
                             className="ai-header-btn"
                             title="Clear chat"
                             onClick={clearChat}
                         >
-                            <Trash2 size={14} />
+                            <Trash2 size={14}/>
                         </button>
                     )}
                 </div>
@@ -497,7 +497,7 @@ export default function AiAssistant(): JSX.Element {
                 {messages.length === 0 && !isLoading ? (
                     <div className="ai-empty">
                         <div className="ai-empty-icon">
-                            <Sparkles size={28} strokeWidth={2.2} />
+                            <Sparkles size={28} strokeWidth={2.2}/>
                         </div>
                         <div className="ai-empty-title">AI Assistant</div>
                         <div className="ai-empty-subtitle">
@@ -508,7 +508,7 @@ export default function AiAssistant(): JSX.Element {
                         {!aiEnabled && (
                             <button
                                 className="ai-suggestion-btn"
-                                onClick={() => openGlobalSettings({ tab: 'keys' })}
+                                onClick={() => openGlobalSettings({tab: 'keys'})}
                             >
                                 Manage API Keys
                             </button>
@@ -544,16 +544,16 @@ export default function AiAssistant(): JSX.Element {
                         {isLoading && (
                             <div className="ai-loading">
                                 <div className="ai-loading-dots">
-                                    <span />
-                                    <span />
-                                    <span />
+                                    <span/>
+                                    <span/>
+                                    <span/>
                                 </div>
                                 Thinking...
                             </div>
                         )}
                     </>
                 )}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef}/>
             </div>
 
             {/* Input bar */}
@@ -580,13 +580,14 @@ export default function AiAssistant(): JSX.Element {
                     disabled={!input.trim() || isLoading || !aiEnabled || !modelsLoaded || !configLoaded}
                     title="Send message"
                 >
-                    <Send size={16} />
+                    <Send size={16}/>
                 </button>
             </div>
             {!aiEnabled && (
                 <div className="ai-disabled-note">
                     <span>{AI_API_KEY_REQUIRED_MESSAGE}</span>
-                    <button type="button" className="ai-disabled-link" onClick={() => openGlobalSettings({ tab: 'keys' })}>
+                    <button type="button" className="ai-disabled-link"
+                            onClick={() => openGlobalSettings({tab: 'keys'})}>
                         Open Global Settings
                     </button>
                 </div>

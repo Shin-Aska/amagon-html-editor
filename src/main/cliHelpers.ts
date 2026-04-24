@@ -105,7 +105,7 @@ async function readTextFile(filePath: string): Promise<string> {
 
 async function listJsonFiles(dirPath: string): Promise<string[]> {
     try {
-        const entries = await fs.readdir(dirPath, { withFileTypes: true });
+        const entries = await fs.readdir(dirPath, {withFileTypes: true});
         return entries
             .filter((entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === '.json')
             .map((entry) => path.join(dirPath, entry.name))
@@ -311,7 +311,7 @@ function resolveWindowsNodeShim(binary: string): { binary: string; argsPrefix: s
             .replace(/%~dp0\\?/ig, `${shimDir}${path.sep}`)
             .replace(/%dp0%\\?/ig, `${shimDir}${path.sep}`);
 
-        return { binary: nodeBinary, argsPrefix: [path.normalize(scriptPath)] }
+        return {binary: nodeBinary, argsPrefix: [path.normalize(scriptPath)]}
     }
 
     return undefined
@@ -334,7 +334,7 @@ function getProcessInvocation(binary: string, args: string[]): { binary: string;
     }
 
     if (!isWindowsCommandShim(binary)) {
-        return { binary, args }
+        return {binary, args}
     }
 
     const nodeShim = resolveWindowsNodeShim(binary);
@@ -353,7 +353,7 @@ function getProcessInvocation(binary: string, args: string[]): { binary: string;
 }
 
 function getCliChildEnv(): NodeJS.ProcessEnv {
-    const env = { ...process.env };
+    const env = {...process.env};
     env.COLUMNS = '20000';
     env.NO_COLOR = '1';
     delete env.ELECTRON_RUN_AS_NODE;
@@ -377,7 +377,11 @@ function runProcess(
         let child: ReturnType<typeof execFile>;
 
         try {
-            child = execFile(invocation.binary, invocation.args, { env: getCliChildEnv(), maxBuffer: 10 * 1024 * 1024, windowsHide: true }, (error, stdout, stderr) => {
+            child = execFile(invocation.binary, invocation.args, {
+                env: getCliChildEnv(),
+                maxBuffer: 10 * 1024 * 1024,
+                windowsHide: true
+            }, (error, stdout, stderr) => {
                 if (timeout) clearTimeout(timeout);
                 if (settled) return;
                 settled = true;
@@ -386,7 +390,7 @@ function runProcess(
                 const normalizedStderr = typeof stderr === 'string' ? stderr : String(stderr ?? '');
 
                 if (!error) {
-                    resolve({ stdout: normalizedStdout, stderr: normalizedStderr, exitCode: 0 });
+                    resolve({stdout: normalizedStdout, stderr: normalizedStderr, exitCode: 0});
                     return
                 }
 
@@ -397,7 +401,7 @@ function runProcess(
                 }
 
                 if (typeof err.code === 'number') {
-                    resolve({ stdout: normalizedStdout, stderr: normalizedStderr, exitCode: err.code });
+                    resolve({stdout: normalizedStdout, stderr: normalizedStderr, exitCode: err.code});
                     return
                 }
 
@@ -449,7 +453,7 @@ export async function detectCli(
     name: CliBinary
 ): Promise<{ available: boolean; path?: string; version?: string }> {
     const path = await findBinaryPath(name);
-    if (!path) return { available: false };
+    if (!path) return {available: false};
 
     const versionArgs = CLI_VERSION_ARGS[name] ?? ['--version'];
     const versionResult = await runProcess(path, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null);
@@ -461,7 +465,7 @@ export async function detectCli(
     return {
         available: true,
         path,
-        ...(version ? { version } : {})
+        ...(version ? {version} : {})
     }
 }
 
@@ -626,7 +630,7 @@ async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> 
         ...getConfigArrayStrings(userConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location'])
     ];
     const useDefaultModelLocations = getConfigBoolean(
-        { value: process.env.JUNIE_MODEL_DEFAULT_LOCATIONS },
+        {value: process.env.JUNIE_MODEL_DEFAULT_LOCATIONS},
         ['value']
     ) ?? getConfigBoolean(
         projectConfig,

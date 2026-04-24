@@ -13,870 +13,885 @@ import {useToastStore} from '../../store/toastStore'
 import {getApi} from '../../utils/api'
 import PageModal from '../PageModal/PageModal'
 
-function WidgetItem({ widget, onContextMenu }: { widget: BlockDefinition; onContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void }): JSX.Element {
-  const isTypingCode = useEditorStore((s) => s.isTypingCode);
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `widget:${widget.type}`,
-    disabled: isTypingCode,
-    data: { widgetType: widget.type, label: widget.label, icon: widget.icon }
-  });
+function WidgetItem({widget, onContextMenu}: {
+    widget: BlockDefinition;
+    onContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void
+}): JSX.Element {
+    const isTypingCode = useEditorStore((s) => s.isTypingCode);
+    const {attributes, listeners, setNodeRef, transform, isDragging} = useDraggable({
+        id: `widget:${widget.type}`,
+        disabled: isTypingCode,
+        data: {widgetType: widget.type, label: widget.label, icon: widget.icon}
+    });
 
-  const iconString = typeof widget.icon === 'string' ? widget.icon.trim() : '';
-  const isBadIconGlyph = (s: string): boolean => {
-    if (!s) return true;
-    if (s.startsWith('lucide:')) return false;
-    if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true;
-    if (s === '☐' || s === '☑' || s === '▢' || s === '▣' || s === '▭' || s === '🔲' || s === '🔳') return true;
-    return false
-  };
+    const iconString = typeof widget.icon === 'string' ? widget.icon.trim() : '';
+    const isBadIconGlyph = (s: string): boolean => {
+        if (!s) return true;
+        if (s.startsWith('lucide:')) return false;
+        if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true;
+        if (s === '☐' || s === '☑' || s === '▢' || s === '▣' || s === '▭' || s === '🔲' || s === '🔳') return true;
+        return false
+    };
 
-  const style = transform ? {
-  } : undefined;
+    const style = transform ? {} : undefined;
 
-  return (
-    <div
-      ref={setNodeRef}
-      className={`widget-item ${widget.type.startsWith('user:') ? 'custom' : ''} ${isDragging ? 'dragging' : ''}`}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onContextMenu={(e) => onContextMenu?.(e, widget)}
-    >
-      <div className="widget-icon">
-        {widget.type.startsWith('user:') ? (
-          iconString && iconString.startsWith('lucide:') ? (
-            <BlockIcon name={iconString.replace(/^lucide:/, '')} />
-          ) : iconString && !isBadIconGlyph(iconString) ? (
-            iconString
-          ) : (
-            <BlockIcon name="user-block" />
-          )
-        ) : (
-          <BlockIcon name={widget.type} />
-        )}
-      </div>
-      <span>{widget.label}</span>
-    </div>
-  )
+    return (
+        <div
+            ref={setNodeRef}
+            className={`widget-item ${widget.type.startsWith('user:') ? 'custom' : ''} ${isDragging ? 'dragging' : ''}`}
+            style={style}
+            {...attributes}
+            {...listeners}
+            onContextMenu={(e) => onContextMenu?.(e, widget)}
+        >
+            <div className="widget-icon">
+                {widget.type.startsWith('user:') ? (
+                    iconString && iconString.startsWith('lucide:') ? (
+                        <BlockIcon name={iconString.replace(/^lucide:/, '')}/>
+                    ) : iconString && !isBadIconGlyph(iconString) ? (
+                        iconString
+                    ) : (
+                        <BlockIcon name="user-block"/>
+                    )
+                ) : (
+                    <BlockIcon name={widget.type}/>
+                )}
+            </div>
+            <span>{widget.label}</span>
+        </div>
+    )
 }
 
 function WidgetCategory({
-  title,
-  widgets,
-  onWidgetContextMenu
-}: {
-  title: string
-  widgets: BlockDefinition[]
-  onWidgetContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void
+                            title,
+                            widgets,
+                            onWidgetContextMenu
+                        }: {
+    title: string
+    widgets: BlockDefinition[]
+    onWidgetContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void
 }): JSX.Element {
-  if (widgets.length === 0) return <></>;
+    if (widgets.length === 0) return <></>;
 
-  return (
-    <div className="widget-category">
-      <div className="category-title">{title}</div>
-      <div className="widget-grid">
-        {widgets.map((w) => (
-          <WidgetItem key={w.type} widget={w} onContextMenu={onWidgetContextMenu} />
-        ))}
-      </div>
-    </div>
-  )
+    return (
+        <div className="widget-category">
+            <div className="category-title">{title}</div>
+            <div className="widget-grid">
+                {widgets.map((w) => (
+                    <WidgetItem key={w.type} widget={w} onContextMenu={onWidgetContextMenu}/>
+                ))}
+            </div>
+        </div>
+    )
 }
 
 function Sidebar(): JSX.Element {
-  const api = getApi();
-  const categories = componentRegistry.getCategories();
-  const userBlocks = useProjectStore((s) => s.userBlocks);
-  const removeUserBlock = useProjectStore((s) => s.removeUserBlock);
-  const showToast = useToastStore((s) => s.showToast);
-  const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets');
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null);
-  const [widgetSearch, setWidgetSearch] = useState('');
+    const api = getApi();
+    const categories = componentRegistry.getCategories();
+    const userBlocks = useProjectStore((s) => s.userBlocks);
+    const removeUserBlock = useProjectStore((s) => s.removeUserBlock);
+    const showToast = useToastStore((s) => s.showToast);
+    const [activeTab, setActiveTab] = useState<'widgets' | 'layers' | 'pages' | 'ai'>('widgets');
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null);
+    const [widgetSearch, setWidgetSearch] = useState('');
 
-  // Page management
-  const pages = useProjectStore((s) => s.pages);
-  const currentPageId = useProjectStore((s) => s.currentPageId);
-  const setCurrentPage = useProjectStore((s) => s.setCurrentPage);
-  const addPage = useProjectStore((s) => s.addPage);
-  const removePage = useProjectStore((s) => s.removePage);
-  const updatePage = useProjectStore((s) => s.updatePage);
-  const getEffectiveTags = useProjectStore((s) => s.getEffectiveTags);
-  const reorderPages = useProjectStore((s) => s.reorderPages);
+    // Page management
+    const pages = useProjectStore((s) => s.pages);
+    const currentPageId = useProjectStore((s) => s.currentPageId);
+    const setCurrentPage = useProjectStore((s) => s.setCurrentPage);
+    const addPage = useProjectStore((s) => s.addPage);
+    const removePage = useProjectStore((s) => s.removePage);
+    const updatePage = useProjectStore((s) => s.updatePage);
+    const getEffectiveTags = useProjectStore((s) => s.getEffectiveTags);
+    const reorderPages = useProjectStore((s) => s.reorderPages);
 
-  // Folder management
-  const folders = useProjectStore((s) => s.folders);
-  const addFolder = useProjectStore((s) => s.addFolder);
-  const removeFolder = useProjectStore((s) => s.removeFolder);
-  const updateFolder = useProjectStore((s) => s.updateFolder);
+    // Folder management
+    const folders = useProjectStore((s) => s.folders);
+    const addFolder = useProjectStore((s) => s.addFolder);
+    const removeFolder = useProjectStore((s) => s.removeFolder);
+    const updateFolder = useProjectStore((s) => s.updateFolder);
 
-  // UI state
-  const [pageModal, setPageModal] = useState<{
-    mode: 'create' | 'edit' | 'create-folder' | 'edit-folder'
-    pageId?: string
-    folderId?: string
-    initialName?: string
-    initialPageTitle?: string
-    initialTags?: string[]
-    initialPath?: string
-    initialDescription?: string
-    initialMeta?: Record<string, string>
-    initialFullWidthFormControls?: boolean
-    targetFolderId?: string // folder to place new page into
-  } | null>(null);
+    // UI state
+    const [pageModal, setPageModal] = useState<{
+        mode: 'create' | 'edit' | 'create-folder' | 'edit-folder'
+        pageId?: string
+        folderId?: string
+        initialName?: string
+        initialPageTitle?: string
+        initialTags?: string[]
+        initialPath?: string
+        initialDescription?: string
+        initialMeta?: Record<string, string>
+        initialFullWidthFormControls?: boolean
+        targetFolderId?: string // folder to place new page into
+    } | null>(null);
 
-  const [pageContextMenu, setPageContextMenu] = useState<{
-    x: number
-    y: number
-    pageId?: string
-    folderId?: string
-  } | null>(null);
+    const [pageContextMenu, setPageContextMenu] = useState<{
+        x: number
+        y: number
+        pageId?: string
+        folderId?: string
+    } | null>(null);
 
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  // Page drag-reorder state
-  const [dragPageId, setDragPageId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null);
-  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
-  const dragPageIdRef = useRef<string | null>(null);
+    // Page drag-reorder state
+    const [dragPageId, setDragPageId] = useState<string | null>(null);
+    const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+    const [dropPosition, setDropPosition] = useState<'above' | 'below' | null>(null);
+    const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+    const dragPageIdRef = useRef<string | null>(null);
 
-  // Define a specific order for categories if desired, or just use the insertion order
-  const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed'];
+    // Define a specific order for categories if desired, or just use the insertion order
+    const orderedCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed'];
 
-  // Convert user blocks to BlockDefinition format for display
-  const userBlockDefinitions: BlockDefinition[] = userBlocks.map((ub) => ({
-    type: `user:${ub.id}`,
-    label: ub.label,
-    category: ub.category || 'User Blocks',
-    icon:
-      typeof ub.icon === 'string' && ub.icon.trim() && ub.icon.trim().startsWith('lucide:')
-        ? ub.icon.trim()
-        : typeof ub.icon === 'string' && ub.icon.trim() && !/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(ub.icon.trim())
-          ? ub.icon.trim()
-          : 'lucide:user-block',
-    propsSchema: {}
-  }));
+    // Convert user blocks to BlockDefinition format for display
+    const userBlockDefinitions: BlockDefinition[] = userBlocks.map((ub) => ({
+        type: `user:${ub.id}`,
+        label: ub.label,
+        category: ub.category || 'User Blocks',
+        icon:
+            typeof ub.icon === 'string' && ub.icon.trim() && ub.icon.trim().startsWith('lucide:')
+                ? ub.icon.trim()
+                : typeof ub.icon === 'string' && ub.icon.trim() && !/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(ub.icon.trim())
+                    ? ub.icon.trim()
+                    : 'lucide:user-block',
+        propsSchema: {}
+    }));
 
-  const allRegistryCategories = Array.from(new Set([...orderedCategories, ...categories]));
-  const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)));
-  const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c));
-  const allCategories = [...allRegistryCategories, ...customOnlyCategories];
+    const allRegistryCategories = Array.from(new Set([...orderedCategories, ...categories]));
+    const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)));
+    const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c));
+    const allCategories = [...allRegistryCategories, ...customOnlyCategories];
 
-  // Filter widgets by search query
-  const filteredWidgetsByCategory = useMemo(() => {
-    const q = widgetSearch.trim().toLowerCase();
-    const result: Record<string, BlockDefinition[]> = {};
-    for (const category of allCategories) {
-      const widgets = [
-        ...componentRegistry.getByCategory(category),
-        ...userBlockDefinitions.filter((w) => w.category === category)
-      ];
-      if (!q) {
-        result[category] = widgets
-      } else {
-        result[category] = widgets.filter(
-          (w) =>
-            w.label.toLowerCase().includes(q) ||
-            w.type.toLowerCase().includes(q) ||
-            category.toLowerCase().includes(q)
-        )
-      }
-    }
-    return result
-  }, [widgetSearch, allCategories, userBlockDefinitions]);
-
-  const handleWidgetContextMenu = (e: MouseEvent, widget: BlockDefinition) => {
-    if (!widget.type.startsWith('user:')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, widget })
-  };
-
-  const closeContextMenu = () => setContextMenu(null);
-
-  // ── Page/Folder handlers ──────────────────────────────────────────────
-
-  const handleSwitchPage = (pageId: string) => {
-    if (currentPageId && currentPageId !== pageId) {
-      updatePage(currentPageId, { blocks: useEditorStore.getState().blocks })
-    }
-    setCurrentPage(pageId)
-  };
-
-  const handlePageContextMenu = (e: MouseEvent, pageId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPageContextMenu({ x: e.clientX, y: e.clientY, pageId })
-  };
-
-  const handleFolderContextMenu = (e: MouseEvent, folderId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPageContextMenu({ x: e.clientX, y: e.clientY, folderId })
-  };
-
-  const closePageContextMenu = () => setPageContextMenu(null);
-
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(folderId)) next.delete(folderId);
-      else next.add(folderId);
-      return next
-    })
-  };
-
-  const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
-    const created = addPage(name, path || undefined);
-    const patch: Record<string, unknown> = {};
-    if (pageTitle) patch.pageTitle = pageTitle;
-    if (fullWidth !== undefined) patch.fullWidthFormControls = fullWidth;
-    if (tags.length > 0) patch.tags = tags;
-    if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId;
-    // Merge provided meta with the defaults already on the page
-    if (description || meta) {
-      const existing = created.meta || {};
-      const merged = { ...existing };
-      if (description) merged.description = description;
-      if (meta) Object.assign(merged, meta);
-      patch.meta = merged
-    }
-    if (Object.keys(patch).length > 0) updatePage(created.id, patch);
-    setPageModal(null)
-  };
-
-  const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
-    if (!pageModal?.pageId) return;
-    const page = pages.find((p) => p.id === pageModal.pageId);
-    const patch: Record<string, unknown> = { title: name, tags, pageTitle, fullWidthFormControls: fullWidth };
-    if (path) patch.slug = path;
-    // Build final meta: start from existing, update description, merge custom meta
-    const existingMeta = { ...(page?.meta || {}) };
-    if (description !== undefined) existingMeta.description = description || '';
-    if (meta) {
-      // Remove old custom entries not in the new meta (but keep default ones)
-      const newKeys = new Set(Object.keys(meta));
-      for (const k of Object.keys(existingMeta)) {
-        if (k !== 'description' && k !== 'charset' && k !== 'viewport' && k !== 'datePublished' && !newKeys.has(k)) {
-          delete existingMeta[k]
+    // Filter widgets by search query
+    const filteredWidgetsByCategory = useMemo(() => {
+        const q = widgetSearch.trim().toLowerCase();
+        const result: Record<string, BlockDefinition[]> = {};
+        for (const category of allCategories) {
+            const widgets = [
+                ...componentRegistry.getByCategory(category),
+                ...userBlockDefinitions.filter((w) => w.category === category)
+            ];
+            if (!q) {
+                result[category] = widgets
+            } else {
+                result[category] = widgets.filter(
+                    (w) =>
+                        w.label.toLowerCase().includes(q) ||
+                        w.type.toLowerCase().includes(q) ||
+                        category.toLowerCase().includes(q)
+                )
+            }
         }
-      }
-      Object.assign(existingMeta, meta)
-    }
-    patch.meta = existingMeta;
-    updatePage(pageModal.pageId, patch);
-    setPageModal(null)
-  };
+        return result
+    }, [widgetSearch, allCategories, userBlockDefinitions]);
 
-  const handleCreateFolder = (name: string, tags: string[]) => {
-    const folder = addFolder(name, tags);
-    setExpandedFolders((prev) => new Set(prev).add(folder.id));
-    setPageModal(null)
-  };
+    const handleWidgetContextMenu = (e: MouseEvent, widget: BlockDefinition) => {
+        if (!widget.type.startsWith('user:')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({x: e.clientX, y: e.clientY, widget})
+    };
 
-  const handleEditFolder = (name: string, tags: string[]) => {
-    if (!pageModal?.folderId) return;
-    updateFolder(pageModal.folderId, { name, tags: tags.length > 0 ? tags : undefined });
-    setPageModal(null)
-  };
+    const closeContextMenu = () => setContextMenu(null);
 
-  const handleDeletePage = (pageId: string) => {
-    if (pages.length <= 1) {
-      alert('Cannot delete the last page.');
-      return
-    }
-    if (confirm('Are you sure you want to delete this page?')) {
-      removePage(pageId)
-    }
-  };
+    // ── Page/Folder handlers ──────────────────────────────────────────────
 
-  const handleDeleteFolder = (folderId: string) => {
-    if (confirm('Delete this folder? Pages inside will be moved to the root level.')) {
-      removeFolder(folderId)
-    }
-  };
+    const handleSwitchPage = (pageId: string) => {
+        if (currentPageId && currentPageId !== pageId) {
+            updatePage(currentPageId, {blocks: useEditorStore.getState().blocks})
+        }
+        setCurrentPage(pageId)
+    };
 
-  // ── Folder move submenu ──────────────────────────────────────────────
+    const handlePageContextMenu = (e: MouseEvent, pageId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setPageContextMenu({x: e.clientX, y: e.clientY, pageId})
+    };
 
-  const buildMoveToItems = (pageId: string) => {
-    const page = pages.find((p) => p.id === pageId);
-    if (!page) return [];
+    const handleFolderContextMenu = (e: MouseEvent, folderId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setPageContextMenu({x: e.clientX, y: e.clientY, folderId})
+    };
 
-    const items: Array<{ label: string; action: () => void; disabled?: boolean }> = [];
+    const closePageContextMenu = () => setPageContextMenu(null);
 
-    // Move to root
-    if (page.folderId) {
-      items.push({
-        label: '📁 (Root)',
-        action: () => updatePage(pageId, { folderId: undefined })
-      })
-    }
+    const toggleFolder = (folderId: string) => {
+        setExpandedFolders((prev) => {
+            const next = new Set(prev);
+            if (next.has(folderId)) next.delete(folderId);
+            else next.add(folderId);
+            return next
+        })
+    };
 
-    // Move to specific folder
-    for (const folder of folders) {
-      items.push({
-        label: `📁 ${folder.name}`,
-        disabled: page.folderId === folder.id,
-        action: () => updatePage(pageId, { folderId: folder.id })
-      })
-    }
+    const handleCreatePage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
+        const created = addPage(name, path || undefined);
+        const patch: Record<string, unknown> = {};
+        if (pageTitle) patch.pageTitle = pageTitle;
+        if (fullWidth !== undefined) patch.fullWidthFormControls = fullWidth;
+        if (tags.length > 0) patch.tags = tags;
+        if (pageModal?.targetFolderId) patch.folderId = pageModal.targetFolderId;
+        // Merge provided meta with the defaults already on the page
+        if (description || meta) {
+            const existing = created.meta || {};
+            const merged = {...existing};
+            if (description) merged.description = description;
+            if (meta) Object.assign(merged, meta);
+            patch.meta = merged
+        }
+        if (Object.keys(patch).length > 0) updatePage(created.id, patch);
+        setPageModal(null)
+    };
 
-    return items
-  };
+    const handleEditPage = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string, fullWidth?: boolean) => {
+        if (!pageModal?.pageId) return;
+        const page = pages.find((p) => p.id === pageModal.pageId);
+        const patch: Record<string, unknown> = {title: name, tags, pageTitle, fullWidthFormControls: fullWidth};
+        if (path) patch.slug = path;
+        // Build final meta: start from existing, update description, merge custom meta
+        const existingMeta = {...(page?.meta || {})};
+        if (description !== undefined) existingMeta.description = description || '';
+        if (meta) {
+            // Remove old custom entries not in the new meta (but keep default ones)
+            const newKeys = new Set(Object.keys(meta));
+            for (const k of Object.keys(existingMeta)) {
+                if (k !== 'description' && k !== 'charset' && k !== 'viewport' && k !== 'datePublished' && !newKeys.has(k)) {
+                    delete existingMeta[k]
+                }
+            }
+            Object.assign(existingMeta, meta)
+        }
+        patch.meta = existingMeta;
+        updatePage(pageModal.pageId, patch);
+        setPageModal(null)
+    };
 
-  // ── Derived data ─────────────────────────────────────────────────────
+    const handleCreateFolder = (name: string, tags: string[]) => {
+        const folder = addFolder(name, tags);
+        setExpandedFolders((prev) => new Set(prev).add(folder.id));
+        setPageModal(null)
+    };
 
-  const ungroupedPages = pages.filter((p) => !p.folderId);
-  const pagesByFolder = (folderId: string) => pages.filter((p) => p.folderId === folderId);
+    const handleEditFolder = (name: string, tags: string[]) => {
+        if (!pageModal?.folderId) return;
+        updateFolder(pageModal.folderId, {name, tags: tags.length > 0 ? tags : undefined});
+        setPageModal(null)
+    };
 
-  // ── Render a page item ────────────────────────────────────────────────
+    const handleDeletePage = (pageId: string) => {
+        if (pages.length <= 1) {
+            alert('Cannot delete the last page.');
+            return
+        }
+        if (confirm('Are you sure you want to delete this page?')) {
+            removePage(pageId)
+        }
+    };
 
-  const getDraggedPageId = (e: React.DragEvent | null): string | null => {
-    if (dragPageIdRef.current) return dragPageIdRef.current;
-    const dt = e?.dataTransfer?.getData('text/plain');
-    return dt ? String(dt) : null
-  };
+    const handleDeleteFolder = (folderId: string) => {
+        if (confirm('Delete this folder? Pages inside will be moved to the root level.')) {
+            removeFolder(folderId)
+        }
+    };
 
-  const handlePageDragStart = (e: React.DragEvent, pageId: string) => {
-    dragPageIdRef.current = pageId;
-    setDragPageId(pageId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', pageId)
-  };
+    // ── Folder move submenu ──────────────────────────────────────────────
 
-  const handlePageDragOver = (e: React.DragEvent, pageId: string) => {
-    const draggedId = getDraggedPageId(e);
-    if (!draggedId || draggedId === pageId) return;
-    // Required for onDrop to fire in HTML5 DnD.
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    setDropTargetId(pageId);
-    setDropPosition(e.clientY < midY ? 'above' : 'below')
-  };
+    const buildMoveToItems = (pageId: string) => {
+        const page = pages.find((p) => p.id === pageId);
+        if (!page) return [];
 
-  const handlePageDrop = (e: React.DragEvent, targetPageId: string) => {
-    e.preventDefault();
-    const draggedId = getDraggedPageId(e);
-    if (!draggedId || draggedId === targetPageId) return;
+        const items: Array<{ label: string; action: () => void; disabled?: boolean }> = [];
 
-    const draggedPage = pages.find((p) => p.id === draggedId);
-    const targetPage = pages.find((p) => p.id === targetPageId);
-    if (!draggedPage || !targetPage) return;
+        // Move to root
+        if (page.folderId) {
+            items.push({
+                label: '📁 (Root)',
+                action: () => updatePage(pageId, {folderId: undefined})
+            })
+        }
 
-    const fromIndex = pages.findIndex((p) => p.id === draggedId);
-    let toIndex = pages.findIndex((p) => p.id === targetPageId);
-    if (fromIndex === -1 || toIndex === -1) return;
+        // Move to specific folder
+        for (const folder of folders) {
+            items.push({
+                label: `📁 ${folder.name}`,
+                disabled: page.folderId === folder.id,
+                action: () => updatePage(pageId, {folderId: folder.id})
+            })
+        }
 
-    // Determine above/below using the drop position at the moment of drop.
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const midY = rect.top + rect.height / 2;
-    const isBelow = e.clientY >= midY;
+        return items
+    };
 
-    if (isBelow) toIndex += 1;
-    if (fromIndex < toIndex) toIndex -= 1;
-    if (fromIndex !== toIndex) reorderPages(fromIndex, toIndex);
+    // ── Derived data ─────────────────────────────────────────────────────
 
-    const targetFolderId = targetPage.folderId ?? undefined;
-    if ((draggedPage.folderId ?? undefined) !== targetFolderId) {
-      updatePage(draggedId, { folderId: targetFolderId });
-      if (targetFolderId) {
-        setExpandedFolders((prev) => new Set([...prev, targetFolderId]))
-      }
-    }
+    const ungroupedPages = pages.filter((p) => !p.folderId);
+    const pagesByFolder = (folderId: string) => pages.filter((p) => p.folderId === folderId);
 
-    dragPageIdRef.current = null;
-    setDragPageId(null);
-    setDropTargetId(null);
-    setDropPosition(null);
-    setDropTargetFolderId(null)
-  };
+    // ── Render a page item ────────────────────────────────────────────────
 
-  const handlePageDragEnd = () => {
-    dragPageIdRef.current = null;
-    setDragPageId(null);
-    setDropTargetId(null);
-    setDropPosition(null);
-    setDropTargetFolderId(null)
-  };
+    const getDraggedPageId = (e: React.DragEvent | null): string | null => {
+        if (dragPageIdRef.current) return dragPageIdRef.current;
+        const dt = e?.dataTransfer?.getData('text/plain');
+        return dt ? String(dt) : null
+    };
 
-  const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
-    const draggedId = dragPageIdRef.current;
-    if (!draggedId) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDropTargetFolderId(folderId);
-    setDropTargetId(null);
-    setDropPosition(null)
-  };
+    const handlePageDragStart = (e: React.DragEvent, pageId: string) => {
+        dragPageIdRef.current = pageId;
+        setDragPageId(pageId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', pageId)
+    };
 
-  const handleFolderDrop = (e: React.DragEvent, folderId: string) => {
-    e.preventDefault();
-    const draggedId = dragPageIdRef.current;
-    if (!draggedId) return;
-    const draggedPage = pages.find(p => p.id === draggedId);
-    if (!draggedPage || draggedPage.folderId === folderId) {
-      // No-op if page already in this folder
-      dragPageIdRef.current = null;
-      setDragPageId(null);
-      setDropTargetId(null);
-      setDropPosition(null);
-      setDropTargetFolderId(null);
-      return
-    }
-    updatePage(draggedId, { folderId });
-    // Auto-expand folder
-    setExpandedFolders(prev => new Set([...prev, folderId]));
-    // Reset drag state
-    dragPageIdRef.current = null;
-    setDragPageId(null);
-    setDropTargetId(null);
-    setDropPosition(null);
-    setDropTargetFolderId(null)
-  };
+    const handlePageDragOver = (e: React.DragEvent, pageId: string) => {
+        const draggedId = getDraggedPageId(e);
+        if (!draggedId || draggedId === pageId) return;
+        // Required for onDrop to fire in HTML5 DnD.
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        setDropTargetId(pageId);
+        setDropPosition(e.clientY < midY ? 'above' : 'below')
+    };
 
-  const handleFolderDragLeave = (e: React.DragEvent, folderId: string) => {
-    if (dropTargetFolderId === folderId) {
-      setDropTargetFolderId(null)
-    }
-  };
+    const handlePageDrop = (e: React.DragEvent, targetPageId: string) => {
+        e.preventDefault();
+        const draggedId = getDraggedPageId(e);
+        if (!draggedId || draggedId === targetPageId) return;
 
-  const isBackgroundDropTarget = (target: EventTarget | null): target is HTMLElement => {
-    if (!(target instanceof HTMLElement)) return false;
-    return !(
-      target.closest('.folder-header') ||
-      target.closest('.page-item') ||
-      target.closest('.ungrouped-drop-zone') ||
-      target.closest('.page-actions')
-    )
-  };
+        const draggedPage = pages.find((p) => p.id === draggedId);
+        const targetPage = pages.find((p) => p.id === targetPageId);
+        if (!draggedPage || !targetPage) return;
 
-  const handleBackgroundDragOver = (e: React.DragEvent) => {
-    if (!dragPageIdRef.current) return;
-    if (!isBackgroundDropTarget(e.target)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDropTargetFolderId('__root__');
-    setDropTargetId(null);
-    setDropPosition(null)
-  };
+        const fromIndex = pages.findIndex((p) => p.id === draggedId);
+        let toIndex = pages.findIndex((p) => p.id === targetPageId);
+        if (fromIndex === -1 || toIndex === -1) return;
 
-  const handleBackgroundDrop = (e: React.DragEvent) => {
-    if (!dragPageIdRef.current) return;
-    if (!isBackgroundDropTarget(e.target)) return;
-    e.preventDefault();
-    const draggedId = dragPageIdRef.current;
-    if (!draggedId) return;
-    updatePage(draggedId, { folderId: undefined });
-    dragPageIdRef.current = null;
-    setDragPageId(null);
-    setDropTargetId(null);
-    setDropPosition(null);
-    setDropTargetFolderId(null)
-  };
+        // Determine above/below using the drop position at the moment of drop.
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        const isBelow = e.clientY >= midY;
 
-  const handleBackgroundDragLeave = (e: React.DragEvent) => {
-    if (e.target === e.currentTarget) {
-      setDropTargetFolderId(null)
-    }
-  };
+        if (isBelow) toIndex += 1;
+        if (fromIndex < toIndex) toIndex -= 1;
+        if (fromIndex !== toIndex) reorderPages(fromIndex, toIndex);
 
-  const renderPageItem = (page: typeof pages[0], indented = false) => {
-    const effectiveTags = getEffectiveTags(page);
-    const ownTags = page.tags ?? [];
-    const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null;
-    const inheritedTags = folder?.tags?.filter((t) => !ownTags.includes(t)) ?? [];
+        const targetFolderId = targetPage.folderId ?? undefined;
+        if ((draggedPage.folderId ?? undefined) !== targetFolderId) {
+            updatePage(draggedId, {folderId: targetFolderId});
+            if (targetFolderId) {
+                setExpandedFolders((prev) => new Set([...prev, targetFolderId]))
+            }
+        }
 
-    const isDragOver = dropTargetId === page.id;
-    const dropClass = isDragOver ? (dropPosition === 'above' ? 'drop-above' : 'drop-below') : '';
-    const isDragging = dragPageId === page.id;
+        dragPageIdRef.current = null;
+        setDragPageId(null);
+        setDropTargetId(null);
+        setDropPosition(null);
+        setDropTargetFolderId(null)
+    };
+
+    const handlePageDragEnd = () => {
+        dragPageIdRef.current = null;
+        setDragPageId(null);
+        setDropTargetId(null);
+        setDropPosition(null);
+        setDropTargetFolderId(null)
+    };
+
+    const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
+        const draggedId = dragPageIdRef.current;
+        if (!draggedId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropTargetFolderId(folderId);
+        setDropTargetId(null);
+        setDropPosition(null)
+    };
+
+    const handleFolderDrop = (e: React.DragEvent, folderId: string) => {
+        e.preventDefault();
+        const draggedId = dragPageIdRef.current;
+        if (!draggedId) return;
+        const draggedPage = pages.find(p => p.id === draggedId);
+        if (!draggedPage || draggedPage.folderId === folderId) {
+            // No-op if page already in this folder
+            dragPageIdRef.current = null;
+            setDragPageId(null);
+            setDropTargetId(null);
+            setDropPosition(null);
+            setDropTargetFolderId(null);
+            return
+        }
+        updatePage(draggedId, {folderId});
+        // Auto-expand folder
+        setExpandedFolders(prev => new Set([...prev, folderId]));
+        // Reset drag state
+        dragPageIdRef.current = null;
+        setDragPageId(null);
+        setDropTargetId(null);
+        setDropPosition(null);
+        setDropTargetFolderId(null)
+    };
+
+    const handleFolderDragLeave = (e: React.DragEvent, folderId: string) => {
+        if (dropTargetFolderId === folderId) {
+            setDropTargetFolderId(null)
+        }
+    };
+
+    const isBackgroundDropTarget = (target: EventTarget | null): target is HTMLElement => {
+        if (!(target instanceof HTMLElement)) return false;
+        return !(
+            target.closest('.folder-header') ||
+            target.closest('.page-item') ||
+            target.closest('.ungrouped-drop-zone') ||
+            target.closest('.page-actions')
+        )
+    };
+
+    const handleBackgroundDragOver = (e: React.DragEvent) => {
+        if (!dragPageIdRef.current) return;
+        if (!isBackgroundDropTarget(e.target)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropTargetFolderId('__root__');
+        setDropTargetId(null);
+        setDropPosition(null)
+    };
+
+    const handleBackgroundDrop = (e: React.DragEvent) => {
+        if (!dragPageIdRef.current) return;
+        if (!isBackgroundDropTarget(e.target)) return;
+        e.preventDefault();
+        const draggedId = dragPageIdRef.current;
+        if (!draggedId) return;
+        updatePage(draggedId, {folderId: undefined});
+        dragPageIdRef.current = null;
+        setDragPageId(null);
+        setDropTargetId(null);
+        setDropPosition(null);
+        setDropTargetFolderId(null)
+    };
+
+    const handleBackgroundDragLeave = (e: React.DragEvent) => {
+        if (e.target === e.currentTarget) {
+            setDropTargetFolderId(null)
+        }
+    };
+
+    const renderPageItem = (page: typeof pages[0], indented = false) => {
+        const effectiveTags = getEffectiveTags(page);
+        const ownTags = page.tags ?? [];
+        const folder = page.folderId ? folders.find((f) => f.id === page.folderId) : null;
+        const inheritedTags = folder?.tags?.filter((t) => !ownTags.includes(t)) ?? [];
+
+        const isDragOver = dropTargetId === page.id;
+        const dropClass = isDragOver ? (dropPosition === 'above' ? 'drop-above' : 'drop-below') : '';
+        const isDragging = dragPageId === page.id;
+
+        return (
+            <div
+                key={page.id}
+                className={`page-item ${page.id === currentPageId ? 'active' : ''} ${indented ? 'indented' : ''} ${dropClass} ${isDragging ? 'dragging' : ''}`}
+                data-tutorial="page-list-item"
+                onClick={() => handleSwitchPage(page.id)}
+                onContextMenu={(e) => handlePageContextMenu(e, page.id)}
+                draggable
+                onDragStart={(e) => handlePageDragStart(e, page.id)}
+                onDragOver={(e) => handlePageDragOver(e, page.id)}
+                onDrop={(e) => handlePageDrop(e, page.id)}
+                onDragEnd={handlePageDragEnd}
+                onDragLeave={() => {
+                    if (dropTargetId === page.id) {
+                        setDropTargetId(null);
+                        setDropPosition(null)
+                    }
+                }}
+            >
+                <div className="page-info">
+                    <FileText size={14} className="page-icon"/>
+                    <span className="page-name">{page.title}</span>
+                    {page.slug !== 'index' && <span className="page-slug">/{page.slug}</span>}
+                </div>
+                {effectiveTags.length > 0 && (
+                    <div className="page-tags">
+                        {ownTags.map((tag) => (
+                            <span key={tag} className="page-tag">{tag}</span>
+                        ))}
+                        {inheritedTags.map((tag) => (
+                            <span key={`i-${tag}`} className="page-tag inherited">{tag}</span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        )
+    };
+
+    // ── Main render ──────────────────────────────────────────────────────
+
+    const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string) => {
+        if (!pageModal) return;
+        switch (pageModal.mode) {
+            case 'create':
+                handleCreatePage(name, tags, path, description, meta, pageTitle);
+                break;
+            case 'edit':
+                handleEditPage(name, tags, path, description, meta, pageTitle);
+                break;
+            case 'create-folder':
+                handleCreateFolder(name, tags);
+                break;
+            case 'edit-folder':
+                handleEditFolder(name, tags);
+                break
+        }
+    };
 
     return (
-      <div
-        key={page.id}
-        className={`page-item ${page.id === currentPageId ? 'active' : ''} ${indented ? 'indented' : ''} ${dropClass} ${isDragging ? 'dragging' : ''}`}
-        data-tutorial="page-list-item"
-        onClick={() => handleSwitchPage(page.id)}
-        onContextMenu={(e) => handlePageContextMenu(e, page.id)}
-        draggable
-        onDragStart={(e) => handlePageDragStart(e, page.id)}
-        onDragOver={(e) => handlePageDragOver(e, page.id)}
-        onDrop={(e) => handlePageDrop(e, page.id)}
-        onDragEnd={handlePageDragEnd}
-        onDragLeave={() => { if (dropTargetId === page.id) { setDropTargetId(null); setDropPosition(null) } }}
-      >
-        <div className="page-info">
-          <FileText size={14} className="page-icon" />
-          <span className="page-name">{page.title}</span>
-          {page.slug !== 'index' && <span className="page-slug">/{page.slug}</span>}
-        </div>
-        {effectiveTags.length > 0 && (
-          <div className="page-tags">
-            {ownTags.map((tag) => (
-              <span key={tag} className="page-tag">{tag}</span>
-            ))}
-            {inheritedTags.map((tag) => (
-              <span key={`i-${tag}`} className="page-tag inherited">{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  };
-
-  // ── Main render ──────────────────────────────────────────────────────
-
-  const handleModalSave = (name: string, tags: string[], path?: string, description?: string, meta?: Record<string, string>, pageTitle?: string) => {
-    if (!pageModal) return;
-    switch (pageModal.mode) {
-      case 'create': handleCreatePage(name, tags, path, description, meta, pageTitle); break;
-      case 'edit': handleEditPage(name, tags, path, description, meta, pageTitle); break;
-      case 'create-folder': handleCreateFolder(name, tags); break;
-      case 'edit-folder': handleEditFolder(name, tags); break
-    }
-  };
-
-  return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <h3>Design</h3>
-      </div>
-      <div className="sidebar-tabs">
-        <div
-          className={`sidebar-tab ${activeTab === 'pages' ? 'active' : ''}`}
-          onClick={() => setActiveTab('pages')}
-          data-tutorial="sidebar-tab-pages"
-        >
-          Pages
-        </div>
-        <div
-          className={`sidebar-tab ${activeTab === 'widgets' ? 'active' : ''}`}
-          onClick={() => setActiveTab('widgets')}
-          data-tutorial="sidebar-tab-widgets"
-        >
-          Widgets
-        </div>
-        <div
-          className={`sidebar-tab ${activeTab === 'layers' ? 'active' : ''}`}
-          onClick={() => setActiveTab('layers')}
-          data-tutorial="sidebar-tab-layers"
-        >
-          Layers
-        </div>
-        <div
-          className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-          data-tutorial="sidebar-tab-ai"
-        >
-          AI
-        </div>
-      </div>
-      <div className="sidebar-content" style={{ display: 'flex', flexDirection: 'column' }}>
-        {activeTab === 'pages' && (
-          <div
-            className={`pages-panel${dropTargetFolderId === '__root__' ? ' root-drop-active' : ''}`}
-            onDragOverCapture={handleBackgroundDragOver}
-            onDropCapture={handleBackgroundDrop}
-            onDragLeaveCapture={handleBackgroundDragLeave}
-          >
-            <div className="pages-list">
-              {/* Folders */}
-              {folders.map((folder) => {
-                const isExpanded = expandedFolders.has(folder.id);
-                const folderPages = pagesByFolder(folder.id);
-                return (
-                  <div key={folder.id} className="folder-group">
+        <div className="sidebar">
+            <div className="sidebar-header">
+                <h3>Design</h3>
+            </div>
+            <div className="sidebar-tabs">
+                <div
+                    className={`sidebar-tab ${activeTab === 'pages' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('pages')}
+                    data-tutorial="sidebar-tab-pages"
+                >
+                    Pages
+                </div>
+                <div
+                    className={`sidebar-tab ${activeTab === 'widgets' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('widgets')}
+                    data-tutorial="sidebar-tab-widgets"
+                >
+                    Widgets
+                </div>
+                <div
+                    className={`sidebar-tab ${activeTab === 'layers' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('layers')}
+                    data-tutorial="sidebar-tab-layers"
+                >
+                    Layers
+                </div>
+                <div
+                    className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('ai')}
+                    data-tutorial="sidebar-tab-ai"
+                >
+                    AI
+                </div>
+            </div>
+            <div className="sidebar-content" style={{display: 'flex', flexDirection: 'column'}}>
+                {activeTab === 'pages' && (
                     <div
-                      className={`folder-header${dropTargetFolderId === folder.id ? ' folder-drop-target' : ''}`}
-                      onClick={() => toggleFolder(folder.id)}
-                      onContextMenu={(e) => handleFolderContextMenu(e, folder.id)}
-                      onDragOver={(e) => handleFolderDragOver(e, folder.id)}
-                      onDrop={(e) => handleFolderDrop(e, folder.id)}
-                      onDragLeave={(e) => handleFolderDragLeave(e, folder.id)}
+                        className={`pages-panel${dropTargetFolderId === '__root__' ? ' root-drop-active' : ''}`}
+                        onDragOverCapture={handleBackgroundDragOver}
+                        onDropCapture={handleBackgroundDrop}
+                        onDragLeaveCapture={handleBackgroundDragLeave}
                     >
-                      <div className="folder-info">
-                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        {isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />}
-                        <span className="folder-name">{folder.name}</span>
-                        <span className="folder-count">{folderPages.length}</span>
-                      </div>
-                      {folder.tags && folder.tags.length > 0 && (
-                        <div className="page-tags">
-                          {folder.tags.map((tag) => (
-                            <span key={tag} className="page-tag folder-tag">{tag}</span>
-                          ))}
+                        <div className="pages-list">
+                            {/* Folders */}
+                            {folders.map((folder) => {
+                                const isExpanded = expandedFolders.has(folder.id);
+                                const folderPages = pagesByFolder(folder.id);
+                                return (
+                                    <div key={folder.id} className="folder-group">
+                                        <div
+                                            className={`folder-header${dropTargetFolderId === folder.id ? ' folder-drop-target' : ''}`}
+                                            onClick={() => toggleFolder(folder.id)}
+                                            onContextMenu={(e) => handleFolderContextMenu(e, folder.id)}
+                                            onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                                            onDrop={(e) => handleFolderDrop(e, folder.id)}
+                                            onDragLeave={(e) => handleFolderDragLeave(e, folder.id)}
+                                        >
+                                            <div className="folder-info">
+                                                {isExpanded ? <ChevronDown size={12}/> : <ChevronRight size={12}/>}
+                                                {isExpanded ? <FolderOpen size={14}/> : <Folder size={14}/>}
+                                                <span className="folder-name">{folder.name}</span>
+                                                <span className="folder-count">{folderPages.length}</span>
+                                            </div>
+                                            {folder.tags && folder.tags.length > 0 && (
+                                                <div className="page-tags">
+                                                    {folder.tags.map((tag) => (
+                                                        <span key={tag} className="page-tag folder-tag">{tag}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isExpanded && (
+                                            <div className="folder-children">
+                                                {folderPages.map((page) => renderPageItem(page, true))}
+                                                {folderPages.length === 0 && (
+                                                    <div className="folder-empty">No pages in this folder</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+
+                            {/* Ungrouped pages */}
+                            <div
+                                className={`ungrouped-drop-zone${dropTargetFolderId === '__ungrouped__' ? ' drop-active' : ''}`}
+                                onDragOver={(e) => {
+                                    const draggedId = dragPageIdRef.current;
+                                    if (draggedId) {
+                                        e.preventDefault();
+                                        e.dataTransfer.dropEffect = 'move';
+                                        setDropTargetFolderId('__ungrouped__');
+                                        setDropTargetId(null);
+                                        setDropPosition(null)
+                                    }
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    const draggedId = dragPageIdRef.current;
+                                    if (!draggedId) return;
+                                    const draggedPage = pages.find(p => p.id === draggedId);
+                                    if (!draggedPage || draggedPage.folderId === undefined) {
+                                        // No-op if page already ungrouped
+                                        dragPageIdRef.current = null;
+                                        setDragPageId(null);
+                                        setDropTargetId(null);
+                                        setDropPosition(null);
+                                        setDropTargetFolderId(null);
+                                        return
+                                    }
+                                    updatePage(draggedId, {folderId: undefined});
+                                    // Reset drag state
+                                    dragPageIdRef.current = null;
+                                    setDragPageId(null);
+                                    setDropTargetId(null);
+                                    setDropPosition(null);
+                                    setDropTargetFolderId(null)
+                                }}
+                                onDragLeave={() => {
+                                    if (dropTargetFolderId === '__ungrouped__') {
+                                        setDropTargetFolderId(null)
+                                    }
+                                }}
+                            >
+                                {ungroupedPages.map((page) => renderPageItem(page))}
+                            </div>
                         </div>
-                      )}
+
+                        <div className="page-actions">
+                            <button className="page-add-btn" onClick={() => setPageModal({mode: 'create-folder'})}>
+                                <FolderPlus size={14}/>
+                                <span>New Folder</span>
+                            </button>
+                            <button className="page-add-btn" onClick={() => setPageModal({mode: 'create'})}>
+                                <FilePlus size={14}/>
+                                <span>Add New Page</span>
+                            </button>
+                        </div>
                     </div>
-                    {isExpanded && (
-                      <div className="folder-children">
-                        {folderPages.map((page) => renderPageItem(page, true))}
-                        {folderPages.length === 0 && (
-                          <div className="folder-empty">No pages in this folder</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-
-              {/* Ungrouped pages */}
-              <div
-                className={`ungrouped-drop-zone${dropTargetFolderId === '__ungrouped__' ? ' drop-active' : ''}`}
-                onDragOver={(e) => {
-                  const draggedId = dragPageIdRef.current;
-                  if (draggedId) {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    setDropTargetFolderId('__ungrouped__');
-                    setDropTargetId(null);
-                    setDropPosition(null)
-                  }
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const draggedId = dragPageIdRef.current;
-                  if (!draggedId) return;
-                  const draggedPage = pages.find(p => p.id === draggedId);
-                  if (!draggedPage || draggedPage.folderId === undefined) {
-                    // No-op if page already ungrouped
-                    dragPageIdRef.current = null;
-                    setDragPageId(null);
-                    setDropTargetId(null);
-                    setDropPosition(null);
-                    setDropTargetFolderId(null);
-                    return
-                  }
-                  updatePage(draggedId, { folderId: undefined });
-                  // Reset drag state
-                  dragPageIdRef.current = null;
-                  setDragPageId(null);
-                  setDropTargetId(null);
-                  setDropPosition(null);
-                  setDropTargetFolderId(null)
-                }}
-                onDragLeave={() => {
-                  if (dropTargetFolderId === '__ungrouped__') {
-                    setDropTargetFolderId(null)
-                  }
-                }}
-              >
-                {ungroupedPages.map((page) => renderPageItem(page))}
-              </div>
+                )}
+                {activeTab === 'widgets' && (
+                    <>
+                        <div className="widget-search">
+                            <Search size={14} className="widget-search-icon"/>
+                            <input
+                                type="text"
+                                className="widget-search-input"
+                                placeholder="Search widgets..."
+                                value={widgetSearch}
+                                onChange={(e) => setWidgetSearch(e.target.value)}
+                            />
+                            {widgetSearch && (
+                                <button className="widget-search-clear" onClick={() => setWidgetSearch('')}>
+                                    <X size={12}/>
+                                </button>
+                            )}
+                        </div>
+                        <div data-tutorial="widget-grid">
+                            {allCategories.map((category) => (
+                                <WidgetCategory
+                                    key={category}
+                                    title={category}
+                                    widgets={filteredWidgetsByCategory[category] || []}
+                                    onWidgetContextMenu={handleWidgetContextMenu}
+                                />
+                            ))}
+                            {widgetSearch && allCategories.every((c) => (filteredWidgetsByCategory[c] || []).length === 0) && (
+                                <div className="widget-search-empty">No widgets match "{widgetSearch}"</div>
+                            )}
+                        </div>
+                    </>
+                )}
+                {activeTab === 'layers' && <BlockTree/>}
+                {activeTab === 'ai' && <AiAssistant/>}
             </div>
 
-            <div className="page-actions">
-              <button className="page-add-btn" onClick={() => setPageModal({ mode: 'create-folder' })}>
-                <FolderPlus size={14} />
-                <span>New Folder</span>
-              </button>
-              <button className="page-add-btn" onClick={() => setPageModal({ mode: 'create' })}>
-                <FilePlus size={14} />
-                <span>Add New Page</span>
-              </button>
-            </div>
-          </div>
-        )}
-        {activeTab === 'widgets' && (
-          <>
-            <div className="widget-search">
-              <Search size={14} className="widget-search-icon" />
-              <input
-                type="text"
-                className="widget-search-input"
-                placeholder="Search widgets..."
-                value={widgetSearch}
-                onChange={(e) => setWidgetSearch(e.target.value)}
-              />
-              {widgetSearch && (
-                <button className="widget-search-clear" onClick={() => setWidgetSearch('')}>
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            <div data-tutorial="widget-grid">
-              {allCategories.map((category) => (
-                <WidgetCategory
-                  key={category}
-                  title={category}
-                  widgets={filteredWidgetsByCategory[category] || []}
-                  onWidgetContextMenu={handleWidgetContextMenu}
-                />
-              ))}
-              {widgetSearch && allCategories.every((c) => (filteredWidgetsByCategory[c] || []).length === 0) && (
-                <div className="widget-search-empty">No widgets match "{widgetSearch}"</div>
-              )}
-            </div>
-          </>
-        )}
-        {activeTab === 'layers' && <BlockTree />}
-        {activeTab === 'ai' && <AiAssistant />}
-      </div>
-
-      {/* Widget context menu (custom blocks) */}
-      {contextMenu && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={closeContextMenu}
-          items={[
-            {
-              label: 'Remove custom block',
-              danger: true,
-              action: () => {
-                const id = contextMenu.widget.type.replace(/^user:/, '');
-                if (!id) return;
-                if (!confirm(`Remove "${contextMenu.widget.label}"?`)) return;
-                removeUserBlock(id);
-                showToast(`Removed custom block: ${contextMenu.widget.label}`, 'success')
-
-                  ; (async () => {
-                    try {
-                      const editorState = useEditorStore.getState();
-                      const projectState = useProjectStore.getState();
-                      const pageId = projectState.currentPageId;
-                      if (!projectState.filePath) return;
-
-                      const updatedPages = projectState.pages.map((p) =>
-                        pageId && p.id === pageId ? { ...p, blocks: editorState.getFullBlocks() } : p
-                      );
-
-                      if (pageId) {
-                        projectState.updatePage(pageId, { blocks: editorState.getFullBlocks() })
-                      }
-
-                      const content = JSON.stringify(
+            {/* Widget context menu (custom blocks) */}
+            {contextMenu && (
+                <ContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={closeContextMenu}
+                    items={[
                         {
-                          projectSettings: projectState.settings,
-                          pages: updatedPages,
-                          folders: projectState.folders,
-                          userBlocks: projectState.userBlocks,
-                          customCss: editorState.customCss
-                        },
-                        null,
-                        2
-                      );
+                            label: 'Remove custom block',
+                            danger: true,
+                            action: () => {
+                                const id = contextMenu.widget.type.replace(/^user:/, '');
+                                if (!id) return;
+                                if (!confirm(`Remove "${contextMenu.widget.label}"?`)) return;
+                                removeUserBlock(id);
+                                showToast(`Removed custom block: ${contextMenu.widget.label}`, 'success')
 
-                      const result = await api.project.save({
-                        filePath: projectState.filePath || undefined,
-                        content
-                      });
+                                ;(async () => {
+                                    try {
+                                        const editorState = useEditorStore.getState();
+                                        const projectState = useProjectStore.getState();
+                                        const pageId = projectState.currentPageId;
+                                        if (!projectState.filePath) return;
 
-                      if (result.success && result.filePath && result.filePath !== projectState.filePath) {
-                        projectState.setFilePath(result.filePath)
-                      }
-                    } catch {
-                      // ignore background persistence errors
+                                        const updatedPages = projectState.pages.map((p) =>
+                                            pageId && p.id === pageId ? {...p, blocks: editorState.getFullBlocks()} : p
+                                        );
+
+                                        if (pageId) {
+                                            projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
+                                        }
+
+                                        const content = JSON.stringify(
+                                            {
+                                                projectSettings: projectState.settings,
+                                                pages: updatedPages,
+                                                folders: projectState.folders,
+                                                userBlocks: projectState.userBlocks,
+                                                customCss: editorState.customCss
+                                            },
+                                            null,
+                                            2
+                                        );
+
+                                        const result = await api.project.save({
+                                            filePath: projectState.filePath || undefined,
+                                            content
+                                        });
+
+                                        if (result.success && result.filePath && result.filePath !== projectState.filePath) {
+                                            projectState.setFilePath(result.filePath)
+                                        }
+                                    } catch {
+                                        // ignore background persistence errors
+                                    }
+                                })()
+                            }
+                        }
+                    ]}
+                />
+            )}
+
+            {/* Page / Folder context menu */}
+            {pageContextMenu && (
+                <ContextMenu
+                    x={pageContextMenu.x}
+                    y={pageContextMenu.y}
+                    onClose={closePageContextMenu}
+                    items={
+                        pageContextMenu.folderId
+                            ? [
+                                {
+                                    label: 'Edit Folder',
+                                    action: () => {
+                                        const folder = folders.find((f) => f.id === pageContextMenu.folderId);
+                                        if (folder) {
+                                            setPageModal({
+                                                mode: 'edit-folder',
+                                                folderId: folder.id,
+                                                initialName: folder.name,
+                                                initialTags: folder.tags || []
+                                            })
+                                        }
+                                    }
+                                },
+                                {
+                                    label: 'Add Page Here',
+                                    action: () => {
+                                        setPageModal({mode: 'create', targetFolderId: pageContextMenu.folderId})
+                                    }
+                                },
+                                {label: '', divider: true},
+                                {
+                                    label: 'Delete Folder',
+                                    danger: true,
+                                    action: () => {
+                                        if (pageContextMenu.folderId) handleDeleteFolder(pageContextMenu.folderId)
+                                    }
+                                }
+                            ]
+                            : [
+                                {
+                                    label: 'Open',
+                                    action: () => {
+                                        if (pageContextMenu.pageId) handleSwitchPage(pageContextMenu.pageId)
+                                    }
+                                },
+                                {
+                                    label: 'Page Properties',
+                                    action: () => {
+                                        const page = pages.find((p) => p.id === pageContextMenu.pageId);
+                                        if (page) {
+                                            setPageModal({
+                                                mode: 'edit',
+                                                pageId: page.id,
+                                                initialName: page.title,
+                                                initialPageTitle: page.pageTitle,
+                                                initialTags: page.tags || [],
+                                                initialPath: page.slug,
+                                                initialDescription: page.meta?.description || '',
+                                                initialMeta: page.meta || {},
+                                                initialFullWidthFormControls: page.fullWidthFormControls
+                                            })
+                                        }
+                                    }
+                                },
+                                ...(folders.length > 0
+                                    ? [
+                                        {label: '', divider: true as const},
+                                        ...buildMoveToItems(pageContextMenu.pageId!)
+                                    ]
+                                    : []),
+                                {label: '', divider: true},
+                                {
+                                    label: 'Delete',
+                                    danger: true,
+                                    disabled: pages.length <= 1,
+                                    action: () => {
+                                        if (pageContextMenu.pageId) handleDeletePage(pageContextMenu.pageId)
+                                    }
+                                }
+                            ]
                     }
-                  })()
-              }
-            }
-          ]}
-        />
-      )}
+                />
+            )}
 
-      {/* Page / Folder context menu */}
-      {pageContextMenu && (
-        <ContextMenu
-          x={pageContextMenu.x}
-          y={pageContextMenu.y}
-          onClose={closePageContextMenu}
-          items={
-            pageContextMenu.folderId
-              ? [
-                {
-                  label: 'Edit Folder',
-                  action: () => {
-                    const folder = folders.find((f) => f.id === pageContextMenu.folderId);
-                    if (folder) {
-                      setPageModal({
-                        mode: 'edit-folder',
-                        folderId: folder.id,
-                        initialName: folder.name,
-                        initialTags: folder.tags || []
-                      })
-                    }
-                  }
-                },
-                {
-                  label: 'Add Page Here',
-                  action: () => {
-                    setPageModal({ mode: 'create', targetFolderId: pageContextMenu.folderId })
-                  }
-                },
-                { label: '', divider: true },
-                {
-                  label: 'Delete Folder',
-                  danger: true,
-                  action: () => {
-                    if (pageContextMenu.folderId) handleDeleteFolder(pageContextMenu.folderId)
-                  }
-                }
-              ]
-              : [
-                {
-                  label: 'Open',
-                  action: () => {
-                    if (pageContextMenu.pageId) handleSwitchPage(pageContextMenu.pageId)
-                  }
-                },
-                {
-                  label: 'Page Properties',
-                  action: () => {
-                    const page = pages.find((p) => p.id === pageContextMenu.pageId);
-                    if (page) {
-                      setPageModal({
-                        mode: 'edit',
-                        pageId: page.id,
-                        initialName: page.title,
-                        initialPageTitle: page.pageTitle,
-                        initialTags: page.tags || [],
-                        initialPath: page.slug,
-                        initialDescription: page.meta?.description || '',
-                        initialMeta: page.meta || {},
-                        initialFullWidthFormControls: page.fullWidthFormControls
-                      })
-                    }
-                  }
-                },
-                ...(folders.length > 0
-                  ? [
-                    { label: '', divider: true as const },
-                    ...buildMoveToItems(pageContextMenu.pageId!)
-                  ]
-                  : []),
-                { label: '', divider: true },
-                {
-                  label: 'Delete',
-                  danger: true,
-                  disabled: pages.length <= 1,
-                  action: () => {
-                    if (pageContextMenu.pageId) handleDeletePage(pageContextMenu.pageId)
-                  }
-                }
-              ]
-          }
-        />
-      )}
-
-      {/* Page/Folder create/edit modal */}
-      {pageModal && (
-        <PageModal
-          mode={pageModal.mode}
-          initialName={pageModal.initialName}
-          initialPageTitle={pageModal.initialPageTitle}
-          initialTags={pageModal.initialTags}
-          initialPath={pageModal.initialPath}
-          initialDescription={pageModal.initialDescription}
-          initialMeta={pageModal.initialMeta}
-          initialFullWidthFormControls={pageModal.initialFullWidthFormControls}
-          onSave={handleModalSave}
-          onCancel={() => setPageModal(null)}
-        />
-      )}
-    </div>
-  )
+            {/* Page/Folder create/edit modal */}
+            {pageModal && (
+                <PageModal
+                    mode={pageModal.mode}
+                    initialName={pageModal.initialName}
+                    initialPageTitle={pageModal.initialPageTitle}
+                    initialTags={pageModal.initialTags}
+                    initialPath={pageModal.initialPath}
+                    initialDescription={pageModal.initialDescription}
+                    initialMeta={pageModal.initialMeta}
+                    initialFullWidthFormControls={pageModal.initialFullWidthFormControls}
+                    onSave={handleModalSave}
+                    onCancel={() => setPageModal(null)}
+                />
+            )}
+        </div>
+    )
 }
 
 export default Sidebar

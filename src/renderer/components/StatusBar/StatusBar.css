@@ -1,91 +1,91 @@
 .status-bar {
-  height: 24px;
-  background-color: var(--color-bg-primary);
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  user-select: none;
-  justify-content: space-between;
+    height: 24px;
+    background-color: var(--color-bg-primary);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    user-select: none;
+    justify-content: space-between;
 }
 
 .status-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 
 .status-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .status-item span {
-  color: var(--color-text-primary);
+    color: var(--color-text-primary);
 }
 
 .status-icon {
-  opacity: 0.7;
+    opacity: 0.7;
 }
 
 .status-help-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 28px;
-  height: 20px;
-  margin-left: 8px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 28px;
+    height: 20px;
+    margin-left: 8px;
+    padding: 0 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
 .status-help-btn:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 /* ── Framework badge ─────────────────────────────────────────────────────── */
 
 .status-framework-badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  border: 1px solid transparent;
-  text-transform: uppercase;
-  line-height: 1.6;
-  white-space: nowrap;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    line-height: 1.6;
+    white-space: nowrap;
 }
 
 /* Bootstrap 5 — purple */
 .sb-fw-bootstrap {
-  background: rgba(121, 82, 179, 0.18);
-  color: #c4a0f5;
-  border-color: rgba(121, 82, 179, 0.3);
+    background: rgba(121, 82, 179, 0.18);
+    color: #c4a0f5;
+    border-color: rgba(121, 82, 179, 0.3);
 }
 
 /* Tailwind — cyan */
 .sb-fw-tailwind {
-  background: rgba(56, 189, 248, 0.14);
-  color: #67d7fb;
-  border-color: rgba(56, 189, 248, 0.28);
+    background: rgba(56, 189, 248, 0.14);
+    color: #67d7fb;
+    border-color: rgba(56, 189, 248, 0.28);
 }
 
 /* Vanilla HTML/CSS — slate */
 .sb-fw-vanilla {
-  background: rgba(108, 117, 125, 0.18);
-  color: #9ba5af;
-  border-color: rgba(108, 117, 125, 0.3);
+    background: rgba(108, 117, 125, 0.18);
+    color: #9ba5af;
+    border-color: rgba(108, 117, 125, 0.3);
 }

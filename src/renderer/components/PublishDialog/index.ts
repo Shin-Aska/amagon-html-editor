@@ -1,1 +1,1 @@
-export { default as PublishDialog } from './PublishDialog'
+export {default as PublishDialog} from './PublishDialog'

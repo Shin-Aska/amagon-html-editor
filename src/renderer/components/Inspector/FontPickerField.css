@@ -1,140 +1,173 @@
 /* FontPickerField — Inspector per-block font override */
 
 .font-picker {
-  position: static; /* dropdown is portaled, no need for relative */
+    position: static; /* dropdown is portaled, no need for relative */
 }
 
 /* ── Trigger button ─────────────────────────────────────────────────────────── */
 .fp-trigger {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-  min-height: 30px;
-  padding: 4px 8px;
-  background: var(--color-bg-primary, #13131f);
-  border: 1px solid var(--color-border, #2a2a40);
-  border-radius: var(--radius-sm, 5px);
-  color: var(--color-text-primary);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 30px;
+    padding: 4px 8px;
+    background: var(--color-bg-primary, #13131f);
+    border: 1px solid var(--color-border, #2a2a40);
+    border-radius: var(--radius-sm, 5px);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.12s;
 }
-.fp-trigger:hover  { border-color: var(--color-accent, #7c3aed); }
+
+.fp-trigger:hover {
+    border-color: var(--color-accent, #7c3aed);
+}
+
 .fp-trigger.is-open {
-  border-color: var(--color-accent, #7c3aed);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+    border-color: var(--color-accent, #7c3aed);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
 }
 
 .fp-trigger-sample {
-  flex-shrink: 0;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--color-accent, #7c3aed);
-  min-width: 20px;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-accent, #7c3aed);
+    min-width: 20px;
 }
+
 .fp-trigger-label {
-  flex: 1;
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    flex: 1;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 .fp-trigger-chevron {
-  flex-shrink: 0;
-  opacity: 0.4;
-  transition: transform 0.12s;
+    flex-shrink: 0;
+    opacity: 0.4;
+    transition: transform 0.12s;
 }
-.fp-trigger.is-open .fp-trigger-chevron { transform: rotate(180deg); }
+
+.fp-trigger.is-open .fp-trigger-chevron {
+    transform: rotate(180deg);
+}
 
 /* ── Portal dropdown (position:fixed inline) ────────────────────────────────── */
 .fp-dropdown {
-  background: var(--color-bg-secondary, #1a1a2e);
-  border: 1px solid var(--color-border, #2a2a40);
-  border-radius: 7px;
-  box-shadow: 0 10px 32px rgba(0,0,0,0.5);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    background: var(--color-bg-secondary, #1a1a2e);
+    border: 1px solid var(--color-border, #2a2a40);
+    border-radius: 7px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .fp-search-bar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 9px;
-  border-bottom: 1px solid var(--color-border, #2a2a40);
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    border-bottom: 1px solid var(--color-border, #2a2a40);
+    flex-shrink: 0;
 }
-.fp-search-icon { flex-shrink: 0; opacity: 0.4; }
+
+.fp-search-icon {
+    flex-shrink: 0;
+    opacity: 0.4;
+}
+
 .fp-search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--color-text-primary);
-  font-size: 12px;
-  padding: 0;
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--color-text-primary);
+    font-size: 12px;
+    padding: 0;
 }
-.fp-search-input::placeholder { opacity: 0.4; }
+
+.fp-search-input::placeholder {
+    opacity: 0.4;
+}
+
 .fp-search-clear {
-  background: none; border: none;
-  color: var(--color-text-muted); cursor: pointer;
-  font-size: 14px; line-height: 1; padding: 0; opacity: 0.5;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.5;
 }
-.fp-search-clear:hover { opacity: 1; }
+
+.fp-search-clear:hover {
+    opacity: 1;
+}
 
 .fp-list {
-  overflow-y: auto;
-  flex: 1;
-  scrollbar-width: thin;
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: thin;
 }
 
 .fp-group-header {
-  padding: 6px 10px 2px;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-text-muted, #6b6b8a);
-  user-select: none;
+    padding: 6px 10px 2px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--color-text-muted, #6b6b8a);
+    user-select: none;
 }
 
 .fp-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  font-size: 13px;
-  line-height: 1.2;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.08s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: 13px;
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.08s;
 }
-.fp-option:hover { background: rgba(255,255,255,0.05); }
+
+.fp-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .fp-option.is-active {
-  background: rgba(124,58,237,0.12);
-  color: var(--color-accent, #7c3aed);
+    background: rgba(124, 58, 237, 0.12);
+    color: var(--color-accent, #7c3aed);
 }
+
 .fp-option-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 .fp-option-check {
-  flex-shrink: 0;
-  margin-left: 6px;
-  color: var(--color-accent, #7c3aed);
+    flex-shrink: 0;
+    margin-left: 6px;
+    color: var(--color-accent, #7c3aed);
 }
+
 .fp-empty {
-  padding: 14px 12px;
-  font-size: 11px;
-  text-align: center;
-  opacity: 0.45;
+    padding: 14px 12px;
+    font-size: 11px;
+    text-align: center;
+    opacity: 0.45;
 }

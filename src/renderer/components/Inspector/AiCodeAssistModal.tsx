@@ -96,8 +96,8 @@ function parseAiProposal(text: string, currentCode: string, selection: AiCodeSel
         const fallbackMode: AiEditMode = selection?.text.trim()
             ? 'replace_selection'
             : looksLikeHandlerSkeleton(currentCode)
-              ? 'replace_all'
-              : 'insert';
+                ? 'replace_all'
+                : 'insert';
 
         return {
             mode:
@@ -138,28 +138,28 @@ function buildEventCodeSystemPrompt(args: {
 }): string {
     const blockSummary = args.block
         ? {
-              id: args.block.id,
-              type: args.block.type,
-              tag: args.block.tag,
-              classes: args.block.classes,
-              props: args.block.props,
-              childCount: Array.isArray(args.block.children) ? args.block.children.length : 0,
-              children: (args.block.children || []).slice(0, 12).map((c) => ({
-                  type: c.type,
-                  tag: c.tag,
-                  classes: c.classes
-              }))
-          }
+            id: args.block.id,
+            type: args.block.type,
+            tag: args.block.tag,
+            classes: args.block.classes,
+            props: args.block.props,
+            childCount: Array.isArray(args.block.children) ? args.block.children.length : 0,
+            children: (args.block.children || []).slice(0, 12).map((c) => ({
+                type: c.type,
+                tag: c.tag,
+                classes: c.classes
+            }))
+        }
         : null;
 
     const blockJson = blockSummary ? truncateJson(blockSummary, 4500) : '(unknown block)';
     const currentCode = args.currentCode ? args.currentCode.trim() : '';
     const selectionSummary = args.selection
         ? {
-              startLineNumber: args.selection.startLineNumber,
-              endLineNumber: args.selection.endLineNumber,
-              text: args.selection.text
-          }
+            startLineNumber: args.selection.startLineNumber,
+            endLineNumber: args.selection.endLineNumber,
+            text: args.selection.text
+        }
         : null;
 
     return `You are an AI assistant helping edit JavaScript event handler code in an HTML editor.
@@ -215,17 +215,17 @@ Return ONLY a JSON code block in this shape:
 }
 
 export default function AiCodeAssistModal({
-    isOpen,
-    eventName,
-    block,
-    currentCode,
-    selection,
-    requestText,
-    onRequestTextChange,
-    onProposalGenerated,
-    onClose
-}: AiCodeAssistModalProps): JSX.Element | null {
-    const { hasConfiguredAiProvider } = useAiAvailability();
+                                              isOpen,
+                                              eventName,
+                                              block,
+                                              currentCode,
+                                              selection,
+                                              requestText,
+                                              onRequestTextChange,
+                                              onProposalGenerated,
+                                              onClose
+                                          }: AiCodeAssistModalProps): JSX.Element | null {
+    const {hasConfiguredAiProvider} = useAiAvailability();
     const modelsLoaded = useAiStore((s) => s.modelsLoaded);
     const configLoaded = useAiStore((s) => s.configLoaded);
     const isReady = configLoaded && modelsLoaded;
@@ -234,7 +234,7 @@ export default function AiCodeAssistModal({
     const [error, setError] = useState<string | null>(null);
 
     const systemPrompt = useMemo(
-        () => buildEventCodeSystemPrompt({ eventName, block, currentCode, selection }),
+        () => buildEventCodeSystemPrompt({eventName, block, currentCode, selection}),
         [eventName, block, currentCode, selection]
     );
 
@@ -269,7 +269,7 @@ export default function AiCodeAssistModal({
             const api = getApi();
             const result = await (api as any).ai.chat({
                 messages: [
-                    { role: 'system', content: systemPrompt },
+                    {role: 'system', content: systemPrompt},
                     {
                         role: 'user',
                         content: `Event: ${eventName}\nRequest: ${prompt}`
@@ -306,7 +306,7 @@ export default function AiCodeAssistModal({
             <div className="ai-code-assist-header">
                 <h4>AI Assist: {eventName}</h4>
                 <div className="ai-code-assist-header-right">
-                    <AiProviderSelector />
+                    <AiProviderSelector/>
                     <button className="ai-code-assist-close" onClick={onClose} title="Close">
                         ×
                     </button>
@@ -333,7 +333,7 @@ export default function AiCodeAssistModal({
                         <button
                             type="button"
                             className="ai-code-assist-inline-link"
-                            onClick={() => openGlobalSettings({ tab: 'keys' })}
+                            onClick={() => openGlobalSettings({tab: 'keys'})}
                         >
                             Open Global Settings
                         </button>
@@ -342,7 +342,8 @@ export default function AiCodeAssistModal({
 
                 {selection?.text.trim() && (
                     <div className="ai-code-assist-selection-note">
-                        Selection detected on lines {selection.startLineNumber}-{selection.endLineNumber}. AI can target that block directly.
+                        Selection detected on lines {selection.startLineNumber}-{selection.endLineNumber}. AI can target
+                        that block directly.
                     </div>
                 )}
 

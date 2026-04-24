@@ -1,340 +1,340 @@
 .toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: var(--toolbar-height);
-  padding: 0 12px;
-  background: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border);
-  user-select: none;
-  -webkit-app-region: drag;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--toolbar-height);
+    padding: 0 12px;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    user-select: none;
+    -webkit-app-region: drag;
 }
 
 .toolbar-section {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  -webkit-app-region: no-drag;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    -webkit-app-region: no-drag;
 }
 
 .toolbar-left {
-  min-width: 200px;
+    min-width: 200px;
 }
 
 .toolbar-center {
-  display: flex;
-  justify-content: center;
+    display: flex;
+    justify-content: center;
 }
 
 .toolbar-right {
-  min-width: 200px;
-  justify-content: flex-end;
+    min-width: 200px;
+    justify-content: flex-end;
 }
 
 .toolbar-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-left: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-left: 4px;
 }
 
 .toolbar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 10px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-family: inherit;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 10px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
 .toolbar-btn:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .toolbar-btn.active {
-  background: var(--color-bg-surface);
-  color: var(--color-accent);
+    background: var(--color-bg-surface);
+    color: var(--color-accent);
 }
 
 .toolbar-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--color-border);
-  margin: 0 4px;
+    width: 1px;
+    height: 20px;
+    background: var(--color-border);
+    margin: 0 4px;
 }
 
 .toolbar-input-name {
-  background: transparent;
-  border: 1px solid var(--color-accent);
-  color: var(--color-text-primary);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  outline: none;
-  width: 150px;
+    background: transparent;
+    border: 1px solid var(--color-accent);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    width: 150px;
 }
 
 /* Page Selector */
 .toolbar-page-wrapper {
-  position: relative;
-  margin-left: 4px;
+    position: relative;
+    margin-left: 4px;
 }
 
 .toolbar-page-btn {
-  min-width: 100px;
-  justify-content: space-between;
+    min-width: 100px;
+    justify-content: space-between;
 }
 
 .toolbar-page-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  min-width: 200px;
-  z-index: 100;
-  overflow: hidden;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 200px;
+    z-index: 100;
+    overflow: hidden;
 }
 
 .page-menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background 0.1s;
 }
 
 .page-menu-item:hover {
-  background: var(--color-bg-hover);
+    background: var(--color-bg-hover);
 }
 
 .page-menu-item.add-page {
-  color: var(--color-accent);
-  gap: 8px;
-  justify-content: flex-start;
+    color: var(--color-accent);
+    gap: 8px;
+    justify-content: flex-start;
 }
 
 .page-menu-label {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .page-menu-check {
-  width: 12px;
-  display: inline-flex;
-  justify-content: center;
-  color: var(--color-accent);
+    width: 12px;
+    display: inline-flex;
+    justify-content: center;
+    color: var(--color-accent);
 }
 
 .page-menu-label.active {
-  font-weight: 600;
-  color: var(--color-accent);
+    font-weight: 600;
+    color: var(--color-accent);
 }
 
 .page-slug {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-weight: normal;
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-weight: normal;
 }
 
 .page-menu-delete {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: 16px;
-  padding: 0 4px;
-  line-height: 1;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
 }
 
 .page-menu-delete:hover {
-  color: var(--color-danger);
+    color: var(--color-danger);
 }
 
 .page-menu-divider {
-  height: 1px;
-  background: var(--color-border);
-  margin: 4px 0;
+    height: 1px;
+    background: var(--color-border);
+    margin: 4px 0;
 }
 
 .toolbar-group {
-  display: flex;
-  align-items: center;
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-sm);
-  padding: 2px;
+    display: flex;
+    align-items: center;
+    background: var(--color-bg-primary);
+    border-radius: var(--radius-sm);
+    padding: 2px;
 }
 
 .toolbar-page-theme-btn {
-  min-width: 34px;
-  padding: 4px 8px;
+    min-width: 34px;
+    padding: 4px 8px;
 }
 
 .toolbar-page-theme-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
 }
 
 .toolbar-text {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  min-width: 40px;
-  text-align: center;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    min-width: 40px;
+    text-align: center;
 }
 
 .toolbar-zoom-text {
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  padding: 2px 4px;
-  transition: background 0.15s ease;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    padding: 2px 4px;
+    transition: background 0.15s ease;
 }
 
 .toolbar-zoom-text:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .toolbar-zoom-input {
-  width: 44px;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-accent);
-  color: var(--color-text-primary);
-  font-size: 12px;
-  text-align: center;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
-  outline: none;
-  font-family: inherit;
+    width: 44px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-accent);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    text-align: center;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    font-family: inherit;
 }
 
 .toolbar-zoom-slider {
-  width: 60px;
-  height: 4px;
-  margin-left: 4px;
-  accent-color: var(--color-accent);
-  cursor: pointer;
+    width: 60px;
+    height: 4px;
+    margin-left: 4px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
 }
 
 /* Hamburger button - hidden on desktop */
 .toolbar-hamburger {
-  display: none;
+    display: none;
 }
 
 /* Collapsible wrapper - visible on desktop */
 .toolbar-collapsible {
-  display: contents;
+    display: contents;
 }
 
 /* Layout Switcher Menu */
 .toolbar-layout-switcher {
-  position: relative;
+    position: relative;
 }
 
 .toolbar-layout-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  padding: 6px;
-  min-width: 140px;
-  z-index: 100;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    padding: 6px;
+    min-width: 140px;
+    z-index: 100;
 }
 
 .toolbar-layout-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--color-text-primary);
-  transition: background 0.15s ease;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--color-text-primary);
+    transition: background 0.15s ease;
 }
 
 .toolbar-layout-item:hover {
-  background: var(--color-bg-hover);
+    background: var(--color-bg-hover);
 }
 
 .toolbar-layout-item.active {
-  background: var(--color-accent);
-  color: white;
-  font-weight: 500;
+    background: var(--color-accent);
+    color: white;
+    font-weight: 500;
 }
 
 /* ─── Mobile Responsive Toolbar ──────────────────────────────────── */
 @media (max-width: 840px) {
-  .toolbar {
-    flex-wrap: wrap;
-    height: auto;
-    min-height: var(--toolbar-height);
-  }
+    .toolbar {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: var(--toolbar-height);
+    }
 
-  .toolbar-left {
-    flex: 1;
-    min-width: 0;
-  }
+    .toolbar-left {
+        flex: 1;
+        min-width: 0;
+    }
 
-  .toolbar-hamburger {
-    display: flex;
-    margin-left: auto;
-  }
+    .toolbar-hamburger {
+        display: flex;
+        margin-left: auto;
+    }
 
-  .toolbar-collapsible {
-    display: none;
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-    padding: 4px 8px 8px;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-bg-secondary);
-  }
+    .toolbar-collapsible {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        padding: 4px 8px 8px;
+        border-top: 1px solid var(--color-border);
+        background: var(--color-bg-secondary);
+    }
 
-  .toolbar-collapsible.open {
-    display: flex;
-  }
+    .toolbar-collapsible.open {
+        display: flex;
+    }
 
-  .toolbar-collapsible .toolbar-section {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
+    .toolbar-collapsible .toolbar-section {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
 
-  .toolbar-collapsible .toolbar-center {
-    justify-content: flex-start;
-  }
+    .toolbar-collapsible .toolbar-center {
+        justify-content: flex-start;
+    }
 
-  .toolbar-collapsible .toolbar-right {
-    justify-content: flex-start;
-    min-width: 0;
-  }
+    .toolbar-collapsible .toolbar-right {
+        justify-content: flex-start;
+        min-width: 0;
+    }
 
-  .toolbar-zoom-slider {
-    width: 80px;
-  }
+    .toolbar-zoom-slider {
+        width: 80px;
+    }
 }

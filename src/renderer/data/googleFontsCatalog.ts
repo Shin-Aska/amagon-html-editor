@@ -1,12 +1,12 @@
 import catalog from './google-fonts-catalog.json';
 
 export interface GoogleFontMeta {
-  family: string;
-  category: string;
-  variants: { weight: string; style: string }[];
-  popularity: number;
-  subsets: string[];
-  lastModified: string;
+    family: string;
+    category: string;
+    variants: { weight: string; style: string }[];
+    popularity: number;
+    subsets: string[];
+    lastModified: string;
 }
 
 export const googleFontsCatalog: GoogleFontMeta[] = catalog;
@@ -19,14 +19,14 @@ export const googleFontsCatalog: GoogleFontMeta[] = catalog;
  * @returns A URL to the Google Fonts CSS2 API.
  */
 export function getGoogleFontPreviewUrl(family: string, weight: string = '400', style: string = 'normal'): string {
-  const encodedFamily = family.replace(/ /g, '+');
-  let variantString = '';
+    const encodedFamily = family.replace(/ /g, '+');
+    let variantString = '';
 
-  if (style === 'italic') {
-    variantString = `ital,wght@1,${weight}`;
-  } else {
-    variantString = `wght@${weight}`;
-  }
+    if (style === 'italic') {
+        variantString = `ital,wght@1,${weight}`;
+    } else {
+        variantString = `wght@${weight}`;
+    }
 
-  return `https://fonts.googleapis.com/css2?family=${encodedFamily}:${variantString}&display=swap`;
+    return `https://fonts.googleapis.com/css2?family=${encodedFamily}:${variantString}&display=swap`;
 }

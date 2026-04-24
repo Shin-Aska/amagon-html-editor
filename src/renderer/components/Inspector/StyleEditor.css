@@ -1,127 +1,127 @@
 .style-editor-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .style-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
+    display: flex;
+    gap: 8px;
+    width: 100%;
 }
 
 .style-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .style-label {
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
 }
 
 .button-group {
-  display: flex;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  overflow: hidden;
+    display: flex;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .btn-toggle {
-  flex: 1;
-  background: var(--color-bg-primary);
-  border: none;
-  border-right: 1px solid var(--color-border);
-  padding: 4px 0;
-  font-size: 12px;
-  color: var(--color-text-primary);
-  cursor: pointer;
-  transition: all 0.2s;
+    flex: 1;
+    background: var(--color-bg-primary);
+    border: none;
+    border-right: 1px solid var(--color-border);
+    padding: 4px 0;
+    font-size: 12px;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .btn-toggle:last-child {
-  border-right: none;
+    border-right: none;
 }
 
 .btn-toggle:hover {
-  background: var(--color-bg-secondary);
+    background: var(--color-bg-secondary);
 }
 
 .btn-toggle.active {
-  background: var(--color-accent);
-  color: white;
+    background: var(--color-accent);
+    color: white;
 }
 
 .style-measurement-group {
-  display: flex;
-  gap: 8px;
+    display: flex;
+    gap: 8px;
 }
 
 .style-measurement-group input {
-  flex: 2;
+    flex: 2;
 }
 
 .style-measurement-group select {
-  flex: 1;
+    flex: 1;
 }
 
 .style-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .style-mode-toggle {
-  display: flex;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  overflow: hidden;
+    display: flex;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
 }
 
 .style-mode-btn {
-  background: var(--color-bg-primary);
-  border: none;
-  border-right: 1px solid var(--color-border);
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
+    background: var(--color-bg-primary);
+    border: none;
+    border-right: 1px solid var(--color-border);
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .style-mode-btn:last-child {
-  border-right: none;
+    border-right: none;
 }
 
 .style-mode-btn:hover {
-  background: var(--color-bg-secondary);
+    background: var(--color-bg-secondary);
 }
 
 .style-mode-btn.active {
-  background: var(--color-accent);
-  color: white;
+    background: var(--color-accent);
+    color: white;
 }
 
 .style-info-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--color-bg-hover);
-  color: var(--color-text-secondary);
-  font-size: 10px;
-  font-weight: 600;
-  cursor: help;
-  transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    cursor: help;
+    transition: all 0.2s;
 }
 
 .style-info-btn:hover {
-  background: var(--color-accent);
-  color: white;
+    background: var(--color-accent);
+    color: white;
 }

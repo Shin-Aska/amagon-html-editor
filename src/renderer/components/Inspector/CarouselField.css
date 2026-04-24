@@ -1,118 +1,118 @@
 .carousel-field {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .carousel-field-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .carousel-add-btn {
-  padding: 6px 12px;
-  background-color: var(--color-accent);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+    padding: 6px 12px;
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .carousel-add-btn:hover {
-  background-color: #0b5ed7;
+    background-color: #0b5ed7;
 }
 
 .carousel-slides-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .carousel-slide-item {
-  display: flex;
-  gap: 10px;
-  background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  padding: 8px;
-  border-radius: 6px;
+    display: flex;
+    gap: 10px;
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    padding: 8px;
+    border-radius: 6px;
 }
 
 .carousel-slide-thumb {
-  width: 60px;
-  height: 60px;
-  border-radius: 4px;
-  overflow: hidden;
-  background-color: #111;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #111;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .carousel-slide-thumb img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
 }
 
 .carousel-slide-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
 }
 
 .carousel-slide-input {
-  width: 100%;
-  padding: 4px 8px;
-  font-size: 11px;
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  border-radius: 3px;
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 11px;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 3px;
 }
 
 .carousel-slide-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  justify-content: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
 }
 
 .carousel-action-btn {
-  background: none;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 2px 4px;
-  line-height: 1;
-  border-radius: 3px;
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+    border-radius: 3px;
 }
 
 .carousel-action-btn:hover {
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
 }
 
 .carousel-action-btn.delete:hover {
-  color: #ef4444;
+    color: #ef4444;
 }
 
 .carousel-action-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+    opacity: 0.3;
+    cursor: not-allowed;
 }
 
 .carousel-empty {
-  padding: 20px;
-  text-align: center;
-  color: var(--color-text-secondary);
-  background-color: var(--color-bg-surface);
-  border: 1px dashed var(--color-border);
-  border-radius: 6px;
-  font-size: 12px;
+    padding: 20px;
+    text-align: center;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-surface);
+    border: 1px dashed var(--color-border);
+    border-radius: 6px;
+    font-size: 12px;
 }

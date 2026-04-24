@@ -10,21 +10,21 @@ import AiCodeAssistModal, {type AiCodeProposal, type AiCodeSelection} from './Ai
 import AiProposalReviewPanel from '../AiAssistant/AiProposalReviewPanel'
 
 const AVAILABLE_EVENTS = [
-    { value: 'onclick', label: 'On Click' },
-    { value: 'ondblclick', label: 'On Double Click' },
-    { value: 'onchange', label: 'On Change' },
-    { value: 'oninput', label: 'On Input' },
-    { value: 'onsubmit', label: 'On Submit' },
-    { value: 'onfocus', label: 'On Focus' },
-    { value: 'onblur', label: 'On Blur' },
-    { value: 'onkeydown', label: 'On Key Down' },
-    { value: 'onkeyup', label: 'On Key Up' },
-    { value: 'onmouseover', label: 'On Mouse Over' },
-    { value: 'onmouseout', label: 'On Mouse Out' },
-    { value: 'onmouseenter', label: 'On Mouse Enter' },
-    { value: 'onmouseleave', label: 'On Mouse Leave' },
-    { value: 'onload', label: 'On Load' },
-    { value: 'onerror', label: 'On Error' }
+    {value: 'onclick', label: 'On Click'},
+    {value: 'ondblclick', label: 'On Double Click'},
+    {value: 'onchange', label: 'On Change'},
+    {value: 'oninput', label: 'On Input'},
+    {value: 'onsubmit', label: 'On Submit'},
+    {value: 'onfocus', label: 'On Focus'},
+    {value: 'onblur', label: 'On Blur'},
+    {value: 'onkeydown', label: 'On Key Down'},
+    {value: 'onkeyup', label: 'On Key Up'},
+    {value: 'onmouseover', label: 'On Mouse Over'},
+    {value: 'onmouseout', label: 'On Mouse Out'},
+    {value: 'onmouseenter', label: 'On Mouse Enter'},
+    {value: 'onmouseleave', label: 'On Mouse Leave'},
+    {value: 'onload', label: 'On Load'},
+    {value: 'onerror', label: 'On Error'}
 ];
 
 // Prepopulated code templates for each event type
@@ -176,11 +176,11 @@ function applyProposalToCode(
     return insertSnippetAtAnchor(currentCode, proposal)
 }
 
-export default function EventActionsEditor({ blockId, events }: EventActionsEditorProps): JSX.Element {
+export default function EventActionsEditor({blockId, events}: EventActionsEditorProps): JSX.Element {
     const updateBlock = useEditorStore((s) => s.updateBlock);
     const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode);
     const getBlockById = useEditorStore((s) => s.getBlockById);
-    const { hasConfiguredAiProvider } = useAiAvailability();
+    const {hasConfiguredAiProvider} = useAiAvailability();
     const [editingEvent, setEditingEvent] = useState<string | null>(null);
     const [editorCode, setEditorCode] = useState('');
     const [showAddDropdown, setShowAddDropdown] = useState(false);
@@ -222,9 +222,9 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
     }, []);
 
     const handleRemoveEvent = useCallback((eventName: string) => {
-        const newEvents = { ...currentEvents };
+        const newEvents = {...currentEvents};
         delete newEvents[eventName];
-        updateBlock(blockId, { events: newEvents })
+        updateBlock(blockId, {events: newEvents})
     }, [blockId, currentEvents, updateBlock]);
 
     const handleEditEvent = useCallback((eventName: string) => {
@@ -237,8 +237,8 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
 
     const handleSaveCode = useCallback(() => {
         if (!editingEvent) return;
-        const newEvents = { ...currentEvents, [editingEvent]: editorCode };
-        updateBlock(blockId, { events: newEvents });
+        const newEvents = {...currentEvents, [editingEvent]: editorCode};
+        updateBlock(blockId, {events: newEvents});
         setEditingEvent(null);
         setEditorCode('');
         setAiRequestText('');
@@ -307,16 +307,16 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                 endLineNumber: currentSelection.endLineNumber
             })
         };
-        
+
         // Focus the editor when it mounts
         editor.focus();
-        
+
         // Listen for blur/focus to update isTypingCode
         const disposableBlur = editor.onDidBlurEditorWidget(() => {
             // We keep isTypingCode true while the modal is open
             // even if the editor loses focus, to prevent accidental block operations
         });
-        
+
         const disposableFocus = editor.onDidFocusEditorWidget(() => {
             setIsTypingCode(true)
         });
@@ -324,7 +324,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
         const disposableSelection = editor.onDidChangeCursorSelection(() => {
             updateSelectionState()
         });
-        
+
         return () => {
             disposableBlur.dispose();
             disposableFocus.dispose();
@@ -334,7 +334,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
 
     const handleProposalGenerated = useCallback(
         (proposal: AiCodeProposal) => {
-            const selectionSnapshot = selection ? { ...selection } : null;
+            const selectionSnapshot = selection ? {...selection} : null;
             const sourceCode = editorCode;
             const previewCode = applyProposalToCode(sourceCode, proposal, selectionSnapshot);
             setPendingAiReview({
@@ -421,7 +421,8 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
             {editingEvent && (
                 <>
                     <div className="event-editor-overlay" onClick={handleCancelEdit}>
-                        <div className="event-editor-modal" data-tutorial="event-editor-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="event-editor-modal" data-tutorial="event-editor-modal"
+                             onClick={(e) => e.stopPropagation()}>
                             <div className="event-editor-header">
                                 <div className="event-editor-header-left">
                                     <h4>Edit: {getEventLabel(editingEvent)}</h4>
@@ -440,7 +441,8 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                     onProposalGenerated={handleProposalGenerated}
                                     onClose={() => setShowAiAssist(false)}
                                 />
-                                <div className={`event-editor-code-surface ${pendingAiReview ? 'has-review-panel' : ''}`}>
+                                <div
+                                    className={`event-editor-code-surface ${pendingAiReview ? 'has-review-panel' : ''}`}>
                                     {pendingAiReview ? (
                                         <AiProposalReviewPanel
                                             explanation={pendingAiReview.proposal.explanation}
@@ -463,14 +465,14 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                             theme="vs-dark"
                                             onMount={handleEditorMount}
                                             options={{
-                                                minimap: { enabled: false },
+                                                minimap: {enabled: false},
                                                 fontSize: 13,
                                                 lineNumbers: 'on',
                                                 scrollBeyondLastLine: false,
                                                 wordWrap: 'on',
                                                 tabSize: 2,
                                                 automaticLayout: true,
-                                                padding: { top: 8 }
+                                                padding: {top: 8}
                                             }}
                                         />
                                     )}
@@ -490,15 +492,15 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                         pendingAiReview
                                             ? 'Apply or discard the current proposal first'
                                             : !hasConfiguredAiProvider
-                                              ? AI_API_KEY_REQUIRED_MESSAGE
-                                              : undefined
+                                                ? AI_API_KEY_REQUIRED_MESSAGE
+                                                : undefined
                                     }
                                 >
                                     {showAiAssist ? (
                                         'Hide AI Assist'
                                     ) : (
                                         <>
-                                            <Sparkles size={14} strokeWidth={2.4} />
+                                            <Sparkles size={14} strokeWidth={2.4}/>
                                             <span>AI Code Assist</span>
                                         </>
                                     )}
@@ -507,7 +509,7 @@ export default function EventActionsEditor({ blockId, events }: EventActionsEdit
                                     <button
                                         className="event-editor-inline-link"
                                         type="button"
-                                        onClick={() => openGlobalSettings({ tab: 'keys' })}
+                                        onClick={() => openGlobalSettings({tab: 'keys'})}
                                     >
                                         {AI_API_KEY_REQUIRED_MESSAGE}
                                     </button>

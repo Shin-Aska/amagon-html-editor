@@ -11,8 +11,8 @@ registerPublisher(cloudflarePagesAdapter);
 registerPublisher(githubPagesAdapter);
 registerPublisher(awsS3Adapter);
 
-export { NeocitiesAdapter, neocitiesAdapter } from './neocities'
-export { CloudflarePagesAdapter, cloudflarePagesAdapter } from './cloudflare'
-export { GitHubPagesAdapter, githubPagesAdapter } from './github'
-export { AwsS3Adapter, awsS3Adapter } from './aws-s3'
+export {NeocitiesAdapter, neocitiesAdapter} from './neocities'
+export {CloudflarePagesAdapter, cloudflarePagesAdapter} from './cloudflare'
+export {GitHubPagesAdapter, githubPagesAdapter} from './github'
+export {AwsS3Adapter, awsS3Adapter} from './aws-s3'
 

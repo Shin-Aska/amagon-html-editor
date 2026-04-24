@@ -18,7 +18,7 @@ describe('form nesting prevention', () => {
     });
 
     it('allows adding a container with isForm at the top level', () => {
-        const container = createBlock('container', { props: { isForm: true } });
+        const container = createBlock('container', {props: {isForm: true}});
         useEditorStore.getState().addBlock(container);
 
         const blocks = useEditorStore.getState().blocks;
@@ -50,7 +50,7 @@ describe('form nesting prevention', () => {
     });
 
     it('prevents adding a form block inside a container with isForm', () => {
-        const formContainer = createBlock('container', { props: { isForm: true } });
+        const formContainer = createBlock('container', {props: {isForm: true}});
         useEditorStore.getState().addBlock(formContainer);
 
         const innerForm = createBlock('form');
@@ -64,7 +64,7 @@ describe('form nesting prevention', () => {
         const outerForm = createBlock('form');
         useEditorStore.getState().addBlock(outerForm);
 
-        const innerFormContainer = createBlock('container', { props: { isForm: true } });
+        const innerFormContainer = createBlock('container', {props: {isForm: true}});
         useEditorStore.getState().addBlock(innerFormContainer, outerForm.id);
 
         const blocks = useEditorStore.getState().blocks;
@@ -107,10 +107,10 @@ describe('form nesting prevention', () => {
         const form = createBlock('form');
         useEditorStore.getState().addBlock(form);
 
-        const input = createBlock('input', { props: { type: 'text', name: 'email' } });
+        const input = createBlock('input', {props: {type: 'text', name: 'email'}});
         useEditorStore.getState().addBlock(input, form.id);
 
-        const button = createBlock('button', { props: { text: 'Submit' } });
+        const button = createBlock('button', {props: {text: 'Submit'}});
         useEditorStore.getState().addBlock(button, form.id);
 
         const blocks = useEditorStore.getState().blocks;

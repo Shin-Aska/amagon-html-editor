@@ -18,7 +18,18 @@ export interface ChatMessage {
     content: string
 }
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
+export type AiProvider =
+    'openai'
+    | 'anthropic'
+    | 'google'
+    | 'ollama'
+    | 'mistral'
+    | 'claude-cli'
+    | 'codex-cli'
+    | 'gemini-cli'
+    | 'github-cli'
+    | 'junie-cli'
+    | 'opencode-cli'
 
 export interface AiConfig {
     provider: AiProvider
@@ -56,7 +67,7 @@ const DEFAULT_CONFIG: AiConfig = {
 };
 
 // Re-export crypto helpers so existing imports from aiService still work
-export { encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX } from './cryptoHelpers'
+export {encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
 
 // Fallback model lists — used when dynamic fetching is unavailable
 const FALLBACK_MODELS: Record<AiProvider, string[]> = {
@@ -82,7 +93,7 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
 };
 
 // Re-export for the IPC handler to use as a baseline
-export { FALLBACK_MODELS as PROVIDER_MODELS }
+export {FALLBACK_MODELS as PROVIDER_MODELS}
 
 function getDefaultModelForProvider(provider: AiProvider, preferredModel?: string): string {
     const providerModels = FALLBACK_MODELS[provider];
@@ -112,7 +123,7 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
         const parsed = JSON.parse(raw) as PersistedAiConfig;
         const provider = parsed.provider ?? DEFAULT_CONFIG.provider;
 
-        let encryptedApiKeys: Record<string, string> = { ...(parsed.encryptedApiKeys ?? {}) };
+        let encryptedApiKeys: Record<string, string> = {...(parsed.encryptedApiKeys ?? {})};
 
         // Migrate legacy single-key format → per-provider map
         if (Object.keys(encryptedApiKeys).length === 0) {
@@ -131,11 +142,11 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
                 };
                 await fs.writeFile(getConfigPath(), JSON.stringify(migrated, null, 2), 'utf-8');
                 console.log('[AI Service] Migrated legacy API key to per-provider encrypted storage.');
-                return { persisted: migrated, encryptedApiKeys }
+                return {persisted: migrated, encryptedApiKeys}
             }
         }
 
-        return { persisted: parsed, encryptedApiKeys }
+        return {persisted: parsed, encryptedApiKeys}
     } catch {
         const empty: PersistedAiConfig = {
             provider: DEFAULT_CONFIG.provider,
@@ -143,17 +154,20 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
             encryptedApiKeys: {},
             ollamaUrl: DEFAULT_CONFIG.ollamaUrl
         };
-        return { persisted: empty, encryptedApiKeys: {} }
+        return {persisted: empty, encryptedApiKeys: {}}
     }
 }
 
 export async function loadConfig(): Promise<AiConfig> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
     const provider = persisted.provider ?? DEFAULT_CONFIG.provider;
 
     let apiKey = '';
     if (encryptedApiKeys[provider]) {
-        try { apiKey = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted key */ }
+        try {
+            apiKey = decryptApiKey(encryptedApiKeys[provider])
+        } catch { /* corrupted key */
+        }
     }
 
     return {
@@ -166,29 +180,39 @@ export async function loadConfig(): Promise<AiConfig> {
 
 /** Returns the stored (decrypted) API key for a specific provider, regardless of the active provider. */
 export async function loadApiKeyForProvider(provider: AiProvider): Promise<string> {
-    const { encryptedApiKeys } = await loadPersistedRaw();
+    const {encryptedApiKeys} = await loadPersistedRaw();
     if (encryptedApiKeys[provider]) {
-        try { return decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted */ }
+        try {
+            return decryptApiKey(encryptedApiKeys[provider])
+        } catch { /* corrupted */
+        }
     }
     return ''
 }
 
 /** Returns masked credentials for key-based providers and credentialless CLI providers. */
-export async function loadAllProviderCredentials(): Promise<{ provider: AiProvider; hasKey: boolean; maskedKey: string }[]> {
-    const { encryptedApiKeys } = await loadPersistedRaw();
+export async function loadAllProviderCredentials(): Promise<{
+    provider: AiProvider;
+    hasKey: boolean;
+    maskedKey: string
+}[]> {
+    const {encryptedApiKeys} = await loadPersistedRaw();
     const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = [];
 
     for (const provider of providers) {
         if (isCliProvider(provider)) {
-            result.push({ provider, hasKey: true, maskedKey: '' });
+            result.push({provider, hasKey: true, maskedKey: ''});
             continue
         }
         if (!encryptedApiKeys[provider]) continue;
         let key = '';
-        try { key = decryptApiKey(encryptedApiKeys[provider]) } catch { /* corrupted — skip */ }
+        try {
+            key = decryptApiKey(encryptedApiKeys[provider])
+        } catch { /* corrupted — skip */
+        }
         if (!key) continue;
-        result.push({ provider, hasKey: true, maskedKey: maskApiKey(key) })
+        result.push({provider, hasKey: true, maskedKey: maskApiKey(key)})
     }
 
     return result
@@ -196,8 +220,8 @@ export async function loadAllProviderCredentials(): Promise<{ provider: AiProvid
 
 /** Removes the stored API key for a specific provider. */
 export async function clearApiKeyForProvider(provider: AiProvider): Promise<void> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
-    const updatedKeys = { ...encryptedApiKeys };
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
+    const updatedKeys = {...encryptedApiKeys};
     const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider;
     delete updatedKeys[provider];
     const nextProvider = currentProvider === provider
@@ -220,8 +244,8 @@ export async function clearApiKeyForProvider(provider: AiProvider): Promise<void
  * active provider has no key yet (or when editing the active provider itself).
  */
 export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string): Promise<void> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
-    const updatedKeys = { ...encryptedApiKeys };
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
+    const updatedKeys = {...encryptedApiKeys};
     const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider;
     const currentModel = persisted.model ?? DEFAULT_CONFIG.model;
     const shouldPromoteProvider = Boolean(apiKey) && (!updatedKeys[currentProvider] || currentProvider === provider);
@@ -245,7 +269,7 @@ export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string
 }
 
 export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
 
     const current: AiConfig = {
         provider: persisted.provider ?? DEFAULT_CONFIG.provider,
@@ -253,11 +277,11 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
         apiKey: '',
         ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
     };
-    const merged: AiConfig = { ...current, ...config };
+    const merged: AiConfig = {...current, ...config};
     const activeProvider = merged.provider;
 
     // Preserve existing per-provider keys; only update the active provider's key if explicitly set
-    const newEncryptedApiKeys = { ...encryptedApiKeys };
+    const newEncryptedApiKeys = {...encryptedApiKeys};
     if (config.apiKey !== undefined && config.apiKey !== '') {
         newEncryptedApiKeys[activeProvider] = encryptApiKey(config.apiKey)
     }
@@ -276,10 +300,13 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
     if (config.apiKey !== undefined && config.apiKey !== '') {
         activeApiKey = config.apiKey
     } else if (newEncryptedApiKeys[activeProvider]) {
-        try { activeApiKey = decryptApiKey(newEncryptedApiKeys[activeProvider]) } catch { /* ignore */ }
+        try {
+            activeApiKey = decryptApiKey(newEncryptedApiKeys[activeProvider])
+        } catch { /* ignore */
+        }
     }
 
-    return { ...merged, apiKey: activeApiKey }
+    return {...merged, apiKey: activeApiKey}
 }
 
 // ---------------------------------------------------------------------------
@@ -365,7 +392,7 @@ async function chatOpenAI(messages: ChatMessage[], config: AiConfig): Promise<Pr
     const url = 'https://api.openai.com/v1/chat/completions';
     const body = JSON.stringify({
         model: config.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: messages.map((m) => ({role: m.role, content: m.content})),
         temperature: 0.7,
         max_tokens: 4096
     });
@@ -381,11 +408,11 @@ async function chatOpenAI(messages: ChatMessage[], config: AiConfig): Promise<Pr
 
     if (!response.ok) {
         const errorText = await response.text();
-        return { content: '', error: `OpenAI API error (${response.status}): ${errorText}` }
+        return {content: '', error: `OpenAI API error (${response.status}): ${errorText}`}
     }
 
     const data = await response.json() as any;
-    return { content: data.choices?.[0]?.message?.content ?? '' }
+    return {content: data.choices?.[0]?.message?.content ?? ''}
 }
 
 async function chatAnthropic(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
@@ -395,7 +422,7 @@ async function chatAnthropic(messages: ChatMessage[], config: AiConfig): Promise
     const systemMsg = messages.find((m) => m.role === 'system')?.content ?? '';
     const chatMessages = messages
         .filter((m) => m.role !== 'system')
-        .map((m) => ({ role: m.role, content: m.content }));
+        .map((m) => ({role: m.role, content: m.content}));
 
     const body = JSON.stringify({
         model: config.model,
@@ -416,12 +443,12 @@ async function chatAnthropic(messages: ChatMessage[], config: AiConfig): Promise
 
     if (!response.ok) {
         const errorText = await response.text();
-        return { content: '', error: `Anthropic API error (${response.status}): ${errorText}` }
+        return {content: '', error: `Anthropic API error (${response.status}): ${errorText}`}
     }
 
     const data = await response.json() as any;
     const textBlock = data.content?.find((b: any) => b.type === 'text');
-    return { content: textBlock?.text ?? '' }
+    return {content: textBlock?.text ?? ''}
 }
 
 async function chatGoogle(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
@@ -434,11 +461,11 @@ async function chatGoogle(messages: ChatMessage[], config: AiConfig): Promise<Pr
         .filter((m) => m.role !== 'system')
         .map((m) => ({
             role: m.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: m.content }]
+            parts: [{text: m.content}]
         }));
 
     const body = JSON.stringify({
-        systemInstruction: systemMsg ? { parts: [{ text: systemMsg }] } : undefined,
+        systemInstruction: systemMsg ? {parts: [{text: systemMsg}]} : undefined,
         contents,
         generationConfig: {
             temperature: 0.7,
@@ -448,18 +475,18 @@ async function chatGoogle(messages: ChatMessage[], config: AiConfig): Promise<Pr
 
     const response = await net.fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body
     });
 
     if (!response.ok) {
         const errorText = await response.text();
-        return { content: '', error: `Google AI API error (${response.status}): ${errorText}` }
+        return {content: '', error: `Google AI API error (${response.status}): ${errorText}`}
     }
 
     const data = await response.json() as any;
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    return { content: text }
+    return {content: text}
 }
 
 async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
@@ -468,11 +495,11 @@ async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<Pr
 
     const body = JSON.stringify({
         model: config.model || 'llama3',
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: messages.map((m) => ({role: m.role, content: m.content})),
         stream: false
     });
 
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {'Content-Type': 'application/json'};
     if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`;
 
     try {
@@ -484,11 +511,11 @@ async function chatOllama(messages: ChatMessage[], config: AiConfig): Promise<Pr
 
         if (!response.ok) {
             const errorText = await response.text();
-            return { content: '', error: `Ollama error (${response.status}): ${errorText}` }
+            return {content: '', error: `Ollama error (${response.status}): ${errorText}`}
         }
 
         const data = await response.json() as any;
-        return { content: data.message?.content ?? '' }
+        return {content: data.message?.content ?? ''}
     } catch (err: any) {
         return {
             content: '',
@@ -501,7 +528,7 @@ async function chatMistral(messages: ChatMessage[], config: AiConfig): Promise<P
     const url = 'https://api.mistral.ai/v1/chat/completions';
     const body = JSON.stringify({
         model: config.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: messages.map((m) => ({role: m.role, content: m.content})),
         temperature: 0.7,
         max_tokens: 4096
     });
@@ -517,11 +544,11 @@ async function chatMistral(messages: ChatMessage[], config: AiConfig): Promise<P
 
     if (!response.ok) {
         const errorText = await response.text();
-        return { content: '', error: `Mistral API error (${response.status}): ${errorText}` }
+        return {content: '', error: `Mistral API error (${response.status}): ${errorText}`}
     }
 
     const data = await response.json() as any;
-    return { content: data.choices?.[0]?.message?.content ?? '' }
+    return {content: data.choices?.[0]?.message?.content ?? ''}
 }
 
 function formatPromptForCli(messages: ChatMessage[]): string {
@@ -688,7 +715,7 @@ async function runCliChat(
         const result = await spawnCliChat(CLI_BINARY_NAMES[provider], args, stdinOverride ?? prompt, timeoutMs);
         if (result.exitCode !== 0) {
             const error = result.stderr.trim() || result.stdout.trim() || getCliEmptyError(provider, result.exitCode);
-            return { content: '', error }
+            return {content: '', error}
         }
 
         const content = provider === 'github-cli'
@@ -700,14 +727,14 @@ async function runCliChat(
                     : result.stdout.trim();
         if (!content) {
             const error = result.stderr.trim() || 'CLI returned no output.';
-            return { content: '', error }
+            return {content: '', error}
         }
-        return { content }
+        return {content}
     } catch (err: any) {
         if (err?.code === 'ENOENT') {
-            return { content: '', error: getCliInstallInstruction(provider) }
+            return {content: '', error: getCliInstallInstruction(provider)}
         }
-        return { content: '', error: err?.message ?? 'CLI request failed.' }
+        return {content: '', error: err?.message ?? 'CLI request failed.'}
     }
 }
 
@@ -775,7 +802,7 @@ async function chatJunieCli(messages: ChatMessage[], config: AiConfig): Promise<
     try {
         return await runCliChat('junie-cli', args, messages, prompt, 300_000)
     } finally {
-        await fs.rm(tempProjectDir, { recursive: true, force: true }).catch(() => undefined)
+        await fs.rm(tempProjectDir, {recursive: true, force: true}).catch(() => undefined)
     }
 }
 
@@ -825,7 +852,7 @@ async function fetchGoogleModels(apiKey: string): Promise<string[]> {
     const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
 
     try {
-        const response = await net.fetch(url, { signal: controller.signal });
+        const response = await net.fetch(url, {signal: controller.signal});
         if (!response.ok) return [];
         const data = (await response.json()) as any;
         if (!Array.isArray(data.models)) return [];
@@ -849,7 +876,7 @@ async function fetchOpenAIModels(apiKey: string): Promise<string[]> {
 
     try {
         const response = await net.fetch(url, {
-            headers: { Authorization: `Bearer ${apiKey}` },
+            headers: {Authorization: `Bearer ${apiKey}`},
             signal: controller.signal
         });
         if (!response.ok) return [];
@@ -882,7 +909,7 @@ async function fetchOllamaModels(ollamaUrl: string, apiKey?: string): Promise<st
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
-        const response = await net.fetch(url, { signal: controller.signal, headers });
+        const response = await net.fetch(url, {signal: controller.signal, headers});
         if (!response.ok) return [];
         const data = (await response.json()) as any;
         if (!Array.isArray(data.models)) return [];
@@ -900,7 +927,7 @@ async function fetchMistralModels(apiKey: string): Promise<string[]> {
 
     try {
         const response = await net.fetch(url, {
-            headers: { Authorization: `Bearer ${apiKey}` },
+            headers: {Authorization: `Bearer ${apiKey}`},
             signal: controller.signal
         });
         if (!response.ok) return [];
@@ -938,12 +965,15 @@ export async function fetchModelsForProvider(
 }
 
 export async function fetchAvailableModels(): Promise<Record<AiProvider, string[]>> {
-    const { persisted, encryptedApiKeys } = await loadPersistedRaw();
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
 
     // Decrypt all stored per-provider keys
     const apiKeys: Record<string, string> = {};
     for (const [provider, encrypted] of Object.entries(encryptedApiKeys)) {
-        try { apiKeys[provider] = decryptApiKey(encrypted) } catch { /* skip corrupted */ }
+        try {
+            apiKeys[provider] = decryptApiKey(encrypted)
+        } catch { /* skip corrupted */
+        }
     }
 
     const result: Record<AiProvider, string[]> = {
@@ -970,40 +1000,56 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
     if (apiKeys['openai']) {
         fetchers.push(
             fetchOpenAIModels(apiKeys['openai'])
-                .then((models) => { result.openai = models })
-                .catch(() => { /* keep empty */ })
+                .then((models) => {
+                    result.openai = models
+                })
+                .catch(() => { /* keep empty */
+                })
         )
     }
 
     if (apiKeys['google']) {
         fetchers.push(
             fetchGoogleModels(apiKeys['google'])
-                .then((models) => { result.google = models })
-                .catch(() => { /* keep empty */ })
+                .then((models) => {
+                    result.google = models
+                })
+                .catch(() => { /* keep empty */
+                })
         )
     }
 
     if (apiKeys['mistral']) {
         fetchers.push(
             fetchMistralModels(apiKeys['mistral'])
-                .then((models) => { result.mistral = models.length > 0 ? models : FALLBACK_MODELS.mistral })
-                .catch(() => { result.mistral = FALLBACK_MODELS.mistral })
+                .then((models) => {
+                    result.mistral = models.length > 0 ? models : FALLBACK_MODELS.mistral
+                })
+                .catch(() => {
+                    result.mistral = FALLBACK_MODELS.mistral
+                })
         )
     }
 
     // Ollama: try the configured URL with the optional stored key
     fetchers.push(
         fetchOllamaModels(persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl, apiKeys['ollama'])
-            .then((models) => { if (models.length > 0) result.ollama = models })
-            .catch(() => { /* server unreachable — leave empty */ })
+            .then((models) => {
+                if (models.length > 0) result.ollama = models
+            })
+            .catch(() => { /* server unreachable — leave empty */
+            })
     );
 
     const cliProviders: CliProvider[] = ['claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     for (const provider of cliProviders) {
         fetchers.push(
             fetchCliModels(provider, FALLBACK_MODELS[provider])
-                .then((models) => { result[provider] = models })
-                .catch(() => { /* leave empty when lookup fails */ })
+                .then((models) => {
+                    result[provider] = models
+                })
+                .catch(() => { /* leave empty when lookup fails */
+                })
         )
     }
 
@@ -1016,22 +1062,25 @@ export async function chat(
     config?: Partial<AiConfig>
 ): Promise<{ content: string; error?: string }> {
     const cfg = config
-        ? { ...(await loadConfig()), ...config }
+        ? {...(await loadConfig()), ...config}
         : await loadConfig();
 
     // Validate config
     if (!isCliProvider(cfg.provider) && cfg.provider !== 'ollama' && !cfg.apiKey) {
-        return { content: '', error: `No API key configured for ${cfg.provider}. Please add your API key in the AI settings.` }
+        return {
+            content: '',
+            error: `No API key configured for ${cfg.provider}. Please add your API key in the AI settings.`
+        }
     }
 
     const adapter = ADAPTERS[cfg.provider];
     if (!adapter) {
-        return { content: '', error: `Unknown provider: ${cfg.provider}` }
+        return {content: '', error: `Unknown provider: ${cfg.provider}`}
     }
 
     try {
         return await adapter(messages, cfg)
     } catch (err: any) {
-        return { content: '', error: `AI request failed: ${err.message}` }
+        return {content: '', error: `AI request failed: ${err.message}`}
     }
 }

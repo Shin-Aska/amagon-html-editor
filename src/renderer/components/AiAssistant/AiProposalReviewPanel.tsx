@@ -16,19 +16,19 @@ interface AiProposalReviewPanelProps {
 }
 
 export default function AiProposalReviewPanel({
-    explanation,
-    original,
-    modified,
-    language,
-    height = '100%',
-    onDiscard,
-    onApply,
-    discardLabel = 'Discard Proposal',
-    applyLabel = 'Apply Proposal'
-}: AiProposalReviewPanelProps): JSX.Element {
+                                                  explanation,
+                                                  original,
+                                                  modified,
+                                                  language,
+                                                  height = '100%',
+                                                  onDiscard,
+                                                  onApply,
+                                                  discardLabel = 'Discard Proposal',
+                                                  applyLabel = 'Apply Proposal'
+                                              }: AiProposalReviewPanelProps): JSX.Element {
     const infoRef = useRef<HTMLButtonElement | null>(null);
     const [tooltipOpen, setTooltipOpen] = useState(false);
-    const [tooltipStyle, setTooltipStyle] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [tooltipStyle, setTooltipStyle] = useState<{ top: number; left: number }>({top: 0, left: 0});
     const tooltipId = useId();
 
     useEffect(() => {
@@ -44,7 +44,7 @@ export default function AiProposalReviewPanel({
                 Math.max(12, window.innerWidth - width - 12)
             );
             const top = rect.bottom + 8;
-            setTooltipStyle({ top, left })
+            setTooltipStyle({top, left})
         };
 
         updatePosition();
@@ -95,7 +95,7 @@ export default function AiProposalReviewPanel({
                     options={{
                         renderSideBySide: false,
                         readOnly: true,
-                        minimap: { enabled: false },
+                        minimap: {enabled: false},
                         fontSize: 13,
                         lineNumbers: 'on',
                         scrollBeyondLastLine: false,
@@ -108,16 +108,16 @@ export default function AiProposalReviewPanel({
             </div>
             {tooltipOpen && typeof document !== 'undefined'
                 ? createPortal(
-                      <div
-                          id={tooltipId}
-                          className="ai-proposal-review-tooltip is-portal"
-                          role="tooltip"
-                          style={{ top: tooltipStyle.top, left: tooltipStyle.left }}
-                      >
-                          {explanation}
-                      </div>,
-                      document.body
-                  )
+                    <div
+                        id={tooltipId}
+                        className="ai-proposal-review-tooltip is-portal"
+                        role="tooltip"
+                        style={{top: tooltipStyle.top, left: tooltipStyle.left}}
+                    >
+                        {explanation}
+                    </div>,
+                    document.body
+                )
                 : null}
         </div>
     )
