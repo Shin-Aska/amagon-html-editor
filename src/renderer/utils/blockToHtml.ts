@@ -4032,7 +4032,8 @@ ${pad}</footer>`
     const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : ''
     const classesArray = normalizeNavbarThemeClasses([...block.classes, ...getPropDrivenClasses(block)])
     const classes = classesArray.join(' ')
-    const styleStr = stylesToString(getEffectiveStyles(block))
+    const effectiveStyles = getEffectiveStyles(block)
+    const styleStr = stylesToString(effectiveStyles)
     const styleAttr = styleStr ? ` style="${styleStr}"` : ''
     const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'))
     const brandImage = String(block.props.brandImage || '').trim()
@@ -4070,6 +4071,10 @@ ${pad}</footer>`
 
     const hamburgerMenu = block.props.hamburgerMenu !== false
 
+    // Propagate font-size to child elements so it overrides Bootstrap/Tailwind defaults
+    const fontSizeVal = effectiveStyles.fontSize
+    const childFontSizeAttr = fontSizeVal ? ` style="font-size: ${fontSizeVal}"` : ''
+
     if (framework === 'tailwind') {
       const themeClass = classesArray.find((c) => c.startsWith('navbar-theme-')) || 'navbar-theme-light'
       const toneClasses = themeClass === 'navbar-theme-dark'
@@ -4081,13 +4086,13 @@ ${pad}</footer>`
       return `${pad}<nav class="${toneClasses} w-full"${styleAttr} ${dataAttr}>
 ${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
 ${hamburgerMenu ? `${pad}    <div class="flex items-center justify-between w-full lg:w-auto">
-${pad}      <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#">${brandHtml}</a>
+${pad}      <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#"${childFontSizeAttr}>${brandHtml}</a>
 ${pad}      <button class="lg:hidden text-current border p-1 rounded" onclick="document.getElementById('${navbarId}').classList.toggle('hidden')">
 ${pad}        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
 ${pad}      </button>
-${pad}    </div>` : `${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#">${brandHtml}</a>`}
+${pad}    </div>` : `${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#"${childFontSizeAttr}>${brandHtml}</a>`}
 ${pad}    <ul id="${navbarId}" class="list-none flex-col gap-3 p-0 lg:flex-row lg:items-center ${hamburgerMenu ? 'hidden lg:flex' : 'flex'}">
-${navLinks.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100')}
+${navLinks.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100').replace(/<a class="/g, `<a${childFontSizeAttr} class="`)}
 ${pad}    </ul>
 ${pad}  </div>
 ${pad}</nav>`
@@ -4095,17 +4100,17 @@ ${pad}</nav>`
 
     return `${pad}<nav class="${classes}"${styleAttr} ${dataAttr}>
 ${pad}  <div class="container">
-${pad}    <a class="navbar-brand" href="#">${brandHtml}</a>
+${pad}    <a class="navbar-brand" href="#"${childFontSizeAttr}>${brandHtml}</a>
 ${hamburgerMenu ? `${pad}    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#${navbarId}" aria-controls="${navbarId}" aria-expanded="false" aria-label="Toggle navigation">
 ${pad}      <span class="navbar-toggler-icon"></span>
 ${pad}    </button>
 ${pad}    <div class="collapse navbar-collapse" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-${navLinks}
+${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${childFontSizeAttr}`)}
 ${pad}      </ul>
 ${pad}    </div>` : `${pad}    <div class="w-100 mt-2 mt-lg-0" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 flex-row gap-3 flex-wrap">
-${navLinks}
+${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${childFontSizeAttr}`)}
 ${pad}      </ul>
 ${pad}    </div>`}
 ${pad}  </div>
