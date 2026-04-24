@@ -55,76 +55,76 @@ src/renderer/store/
 export type TutorialPlacement = 'top' | 'bottom' | 'left' | 'right'
 
 export type TutorialActionType =
-  | 'click'            // user must click the target element
-  | 'drag-to-canvas'   // user must drag a widget onto the canvas
-  | 'select-block'     // user must click a block in the canvas (editorStore.selectedBlockId changes)
-  | 'change-viewport'  // user must click a viewport mode button
-  | 'edit-property'    // user must change any inspector field
-  | 'none'             // no user action required; Next button advances
+    | 'click'            // user must click the target element
+    | 'drag-to-canvas'   // user must drag a widget onto the canvas
+    | 'select-block'     // user must click a block in the canvas (editorStore.selectedBlockId changes)
+    | 'change-viewport'  // user must click a viewport mode button
+    | 'edit-property'    // user must change any inspector field
+    | 'none'             // no user action required; Next button advances
 
 export interface TutorialAction {
-  type: TutorialActionType
-  /** Optional: the specific value to detect (e.g. viewport mode 'tablet') */
-  targetValue?: string
+    type: TutorialActionType
+    /** Optional: the specific value to detect (e.g. viewport mode 'tablet') */
+    targetValue?: string
 }
 
 export interface TutorialStep {
-  /** Unique identifier used for logging and action detection */
-  id: string
+    /** Unique identifier used for logging and action detection */
+    id: string
 
-  /**
-   * CSS selector for the element to spotlight.
-   * Prefer data-tutorial="<step-id>" attributes for stability.
-   * Fallback to class/role selectors if the element is dynamic.
-   * Use null for steps with no specific target (e.g. welcome/completion).
-   */
-  target: string | null
+    /**
+     * CSS selector for the element to spotlight.
+     * Prefer data-tutorial="<step-id>" attributes for stability.
+     * Fallback to class/role selectors if the element is dynamic.
+     * Use null for steps with no specific target (e.g. welcome/completion).
+     */
+    target: string | null
 
-  /** Short headline shown in the info box */
-  title: string
+    /** Short headline shown in the info box */
+    title: string
 
-  /** Body copy (supports simple HTML: <b>, <code>, <br>) */
-  body: string
+    /** Body copy (supports simple HTML: <b>, <code>, <br>) */
+    body: string
 
-  /**
-   * Where the info box appears relative to the target element.
-   * The overlay auto-flips if placement would overflow the viewport.
-   */
-  placement: TutorialPlacement
+    /**
+     * Where the info box appears relative to the target element.
+     * The overlay auto-flips if placement would overflow the viewport.
+     */
+    placement: TutorialPlacement
 
-  /**
-   * Extra space (px) between the target's bounding rect and the spotlight cutout.
-   * Default: 8
-   */
-  spotlightPadding?: number
+    /**
+     * Extra space (px) between the target's bounding rect and the spotlight cutout.
+     * Default: 8
+     */
+    spotlightPadding?: number
 
-  /**
-   * Direction the arrow points FROM the info box TOWARD the target.
-   * Usually the same as placement (e.g. placement='right' → arrow points left toward target).
-   */
-  arrowDirection: TutorialPlacement | 'none'
+    /**
+     * Direction the arrow points FROM the info box TOWARD the target.
+     * Usually the same as placement (e.g. placement='right' → arrow points left toward target).
+     */
+    arrowDirection: TutorialPlacement | 'none'
 
-  /** What the user must do to advance to the next step. */
-  action: TutorialAction
+    /** What the user must do to advance to the next step. */
+    action: TutorialAction
 
-  /**
-   * If true, the step advances automatically when the action is detected.
-   * If false (default), the detected action is confirmed by clicking Next.
-   */
-  autoAdvance: boolean
+    /**
+     * If true, the step advances automatically when the action is detected.
+     * If false (default), the detected action is confirmed by clicking Next.
+     */
+    autoAdvance: boolean
 
-  /**
-   * Called when this step becomes active.
-   * Use to set up required UI state (e.g. switch sidebar tab, open a panel).
-   * Receives the Zustand set function so it can dispatch store actions.
-   */
-  onEnter?: () => void
+    /**
+     * Called when this step becomes active.
+     * Use to set up required UI state (e.g. switch sidebar tab, open a panel).
+     * Receives the Zustand set function so it can dispatch store actions.
+     */
+    onEnter?: () => void
 
-  /**
-   * Called when this step is about to be left (Next/Back/Skip).
-   * Use to clean up any temporary UI state.
-   */
-  onExit?: () => void
+    /**
+     * Called when this step is about to be left (Next/Back/Skip).
+     * Use to clean up any temporary UI state.
+     */
+    onExit?: () => void
 }
 ```
 
@@ -132,8 +132,8 @@ export interface TutorialStep {
 
 ```typescript
 export interface TutorialOverlayProps {
-  /** Injected for testability; defaults to document.querySelector */
-  queryElement?: (selector: string) => Element | null
+    /** Injected for testability; defaults to document.querySelector */
+    queryElement?: (selector: string) => Element | null
 }
 ```
 
@@ -143,14 +143,14 @@ The component reads all state from `useTutorialStore` — no step data passed as
 
 ```typescript
 export interface SpotlightMaskProps {
-  /** Bounding rect of the spotlighted element, or null for full-screen dim (welcome/completion) */
-  targetRect: DOMRect | null
-  /** Extra padding around the target rect */
-  padding?: number
-  /** Border radius of the spotlight cutout (px). Default: 6 */
-  borderRadius?: number
-  /** Overlay fill opacity. Default: 0.65 */
-  overlayOpacity?: number
+    /** Bounding rect of the spotlighted element, or null for full-screen dim (welcome/completion) */
+    targetRect: DOMRect | null
+    /** Extra padding around the target rect */
+    padding?: number
+    /** Border radius of the spotlight cutout (px). Default: 6 */
+    borderRadius?: number
+    /** Overlay fill opacity. Default: 0.65 */
+    overlayOpacity?: number
 }
 ```
 
@@ -158,8 +158,8 @@ export interface SpotlightMaskProps {
 
 ```typescript
 export interface TutorialArrowProps {
-  /** Direction the arrow points (from info box toward the target) */
-  direction: TutorialPlacement | 'none'
+    /** Direction the arrow points (from info box toward the target) */
+    direction: TutorialPlacement | 'none'
 }
 ```
 
@@ -167,14 +167,14 @@ export interface TutorialArrowProps {
 
 ```typescript
 export interface TutorialInfoBoxProps {
-  step: TutorialStep
-  currentIndex: number
-  totalSteps: number
-  onNext: () => void
-  onBack: () => void
-  onSkip: () => void
-  /** Absolute position computed by TutorialOverlay */
-  style: React.CSSProperties
+    step: TutorialStep
+    currentIndex: number
+    totalSteps: number
+    onNext: () => void
+    onBack: () => void
+    onSkip: () => void
+    /** Absolute position computed by TutorialOverlay */
+    style: React.CSSProperties
 }
 ```
 
@@ -186,13 +186,13 @@ export interface TutorialInfoBoxProps {
 
 ```typescript
 interface TutorialState {
-  isActive: boolean
-  currentStepIndex: number
-  steps: TutorialStep[]
-  /** Mirror of appSettingsStore.tutorialCompleted */
-  hasCompletedTutorial: boolean
-  /** Mirror of appSettingsStore.tutorialEnabled */
-  isTutorialEnabled: boolean
+    isActive: boolean
+    currentStepIndex: number
+    steps: TutorialStep[]
+    /** Mirror of appSettingsStore.tutorialCompleted */
+    hasCompletedTutorial: boolean
+    /** Mirror of appSettingsStore.tutorialEnabled */
+    isTutorialEnabled: boolean
 }
 ```
 
@@ -200,30 +200,30 @@ interface TutorialState {
 
 ```typescript
 interface TutorialActions {
-  /** Load steps array and begin at step 0. Also calls steps[0].onEnter() */
-  startTutorial: (steps: TutorialStep[]) => void
+    /** Load steps array and begin at step 0. Also calls steps[0].onEnter() */
+    startTutorial: (steps: TutorialStep[]) => void
 
-  /** Advance to the next step (calls onExit on current, onEnter on next) */
-  nextStep: () => void
+    /** Advance to the next step (calls onExit on current, onEnter on next) */
+    nextStep: () => void
 
-  /** Go back one step (calls onExit on current, onEnter on previous) */
-  prevStep: () => void
+    /** Go back one step (calls onExit on current, onEnter on previous) */
+    prevStep: () => void
 
-  /** Immediately close the tutorial without completing (marks nothing in settings) */
-  skipTutorial: () => void
+    /** Immediately close the tutorial without completing (marks nothing in settings) */
+    skipTutorial: () => void
 
-  /**
-   * Called when the final step's action is confirmed.
-   * Sets isActive=false, hasCompletedTutorial=true,
-   * and persists via appSettingsStore.saveSettings({ tutorialCompleted: true }).
-   */
-  completeTutorial: () => void
+    /**
+     * Called when the final step's action is confirmed.
+     * Sets isActive=false, hasCompletedTutorial=true,
+     * and persists via appSettingsStore.saveSettings({ tutorialCompleted: true }).
+     */
+    completeTutorial: () => void
 
-  /** Sync isTutorialEnabled from appSettingsStore on load */
-  setTutorialEnabled: (enabled: boolean) => void
+    /** Sync isTutorialEnabled from appSettingsStore on load */
+    setTutorialEnabled: (enabled: boolean) => void
 
-  /** Sync hasCompletedTutorial from appSettingsStore on load */
-  setTutorialCompleted: (completed: boolean) => void
+    /** Sync hasCompletedTutorial from appSettingsStore on load */
+    setTutorialCompleted: (completed: boolean) => void
 }
 ```
 
@@ -251,14 +251,18 @@ Add to `DEFAULT_SETTINGS`:
 
 ```typescript
 tutorialEnabled: true,
-tutorialCompleted: false,
+    tutorialCompleted
+:
+false,
 ```
 
 Add dedicated actions (following the existing `setTheme` pattern):
 
 ```typescript
 setTutorialEnabled: (enabled: boolean) => void
-setTutorialCompleted: (completed: boolean) => void
+    setTutorialCompleted
+:
+(completed: boolean) => void
 ```
 
 Both actions call `saveSettings({ tutorialEnabled })` / `saveSettings({ tutorialCompleted })` internally and sync state
@@ -590,17 +594,21 @@ const tutorialCompleted = useAppSettingsStore((s) => s.tutorialCompleted)
 const [showWelcomeTour, setShowWelcomeTour] = useState(false)
 
 useEffect(() => {
-  if (isProjectLoaded && tutorialEnabled && !tutorialCompleted) {
-    setShowWelcomeTour(true)
-  }
+    if (isProjectLoaded && tutorialEnabled && !tutorialCompleted) {
+        setShowWelcomeTour(true)
+    }
 }, [isProjectLoaded])
 
 // 2. Overlay rendering
 const isTutorialActive = useTutorialStore((s) => s.isActive)
 
 // In JSX:
-{showWelcomeTour && <WelcomeTourDialog onClose={() => setShowWelcomeTour(false)} />}
-{isTutorialActive && <TutorialOverlay />}
+{
+    showWelcomeTour && <WelcomeTourDialog onClose={() => setShowWelcomeTour(false)}/>
+}
+{
+    isTutorialActive && <TutorialOverlay/>
+}
 ```
 
 `WelcomeTourDialog` closes itself by calling `onClose`. The dialog's "Yes" button also calls

@@ -1,14 +1,14 @@
 import {describe, expect, it} from 'vitest'
 import {htmlToBlocks} from '../htmlToBlocks'
 
-const PHOTO_SRC = 'photo.jpg'
-const SLIDE_ONE_SRC = 'slide-1.jpg'
-const SLIDE_TWO_SRC = 'slide-2.jpg'
-const HERO_SRC = 'hero.jpg'
-const VIDEO_SRC = 'clip.mp4'
-const POSTER_SRC = 'poster.jpg'
-const EDIT_ANCHOR = '#edit'
-const DELETE_ANCHOR = '#delete'
+const PHOTO_SRC = 'photo.jpg';
+const SLIDE_ONE_SRC = 'slide-1.jpg';
+const SLIDE_TWO_SRC = 'slide-2.jpg';
+const HERO_SRC = 'hero.jpg';
+const VIDEO_SRC = 'clip.mp4';
+const POSTER_SRC = 'poster.jpg';
+const EDIT_ANCHOR = '#edit';
+const DELETE_ANCHOR = '#delete';
 
 describe('htmlToBlocks', () => {
     it('parses empty HTML to empty blocks', () => {

@@ -2,8 +2,8 @@ import {createHash, createHmac} from 'crypto'
 import type {
     CredentialField,
     ExportedFile,
-    PublisherExtension,
     PublishCredentials,
+    PublisherExtension,
     PublishProgress,
     PublishResult,
     ValidationIssue,

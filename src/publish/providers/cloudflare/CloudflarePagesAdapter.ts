@@ -2,9 +2,9 @@ import {zipSync} from 'fflate'
 import type {
     CredentialField,
     ExportedFile,
-    PublisherExtension,
     ProviderMeta,
     PublishCredentials,
+    PublisherExtension,
     PublishProgress,
     PublishResult,
     ValidationIssue,

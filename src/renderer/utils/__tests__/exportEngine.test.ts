@@ -4,8 +4,8 @@ import {exportProject} from '../exportEngine'
 import type {ProjectData} from '../../store/types'
 import {createBlock, createDefaultTheme} from '../../store/types'
 
-const RAW_HTML_BG_URL = 'app-media://project/bg.png'
-const RAW_HTML_INNER_URL = 'app-media://project/inner.png'
+const RAW_HTML_BG_URL = 'app-media://project/bg.png';
+const RAW_HTML_INNER_URL = 'app-media://project/inner.png';
 
 describe('exportEngine', () => {
     it('consolidates app-media assets into assets/ and rewrites HTML refs to ./assets/...', async () => {

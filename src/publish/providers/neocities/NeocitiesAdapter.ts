@@ -1,15 +1,15 @@
 import {net} from 'electron'
 import type {
     ExportedFile,
-    PublisherExtension,
     PublishCredentials,
+    PublisherExtension,
     PublishProgress,
     PublishResult,
     ValidationIssue,
     ValidationResult
 } from '../../types'
 import {PUBLISHER_EXTENSION_API_VERSION} from '../../types'
-import {validateForNeocities} from '../../validators/neocitiesValidator'
+import {validateForNeocities} from '../../validators'
 import {makeError} from '../../validators/validationHelpers'
 
 const API_BASE_URL = 'https://neocities.org/api';

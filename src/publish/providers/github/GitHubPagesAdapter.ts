@@ -1,14 +1,14 @@
 import {
     type ExportedFile,
-    type PublisherExtension,
     type PublishCredentials,
     PUBLISHER_EXTENSION_API_VERSION,
+    type PublisherExtension,
     type PublishProgress,
     type PublishResult,
     type ValidationIssue,
     type ValidationResult
 } from '../../types'
-import {validateForGithubPages} from '../../validators/githubPagesValidator'
+import {validateForGithubPages} from '../../validators'
 import {makeError} from '../../validators/validationHelpers'
 
 const GITHUB_API_BASE_URL = 'https://api.github.com';

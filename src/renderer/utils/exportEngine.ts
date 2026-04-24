@@ -67,11 +67,11 @@ const GENERIC_FONTS = new Set([
     'trebuchet ms'
 ]);
 
-const EXPORT_STYLESHEET_HREF = './styles.css'
-const BOOTSTRAP_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
-const BOOTSTRAP_ICONS_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
-const BOOTSTRAP_EXPORT_JS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
-const TAILWIND_EXPORT_JS_URL = 'https://cdn.tailwindcss.com'
+const EXPORT_STYLESHEET_HREF = './styles.css';
+const BOOTSTRAP_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
+const BOOTSTRAP_ICONS_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css';
+const BOOTSTRAP_EXPORT_JS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
+const TAILWIND_EXPORT_JS_URL = 'https://cdn.tailwindcss.com';
 
 export async function exportProject(
     project: ProjectData,
