@@ -5,9 +5,9 @@
 
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import { app, net } from 'electron'
-import { encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX } from './cryptoHelpers'
-import { CLI_BINARY_NAMES, fetchCliModels, spawnCliChat } from './cliHelpers'
+import {app, net} from 'electron'
+import {decryptApiKey, encryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
+import {CLI_BINARY_NAMES, fetchCliModels, spawnCliChat} from './cliHelpers'
 
 // ---------------------------------------------------------------------------
 // Types

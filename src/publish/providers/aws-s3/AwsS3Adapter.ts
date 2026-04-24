@@ -1,17 +1,17 @@
-import { createHmac, createHash } from 'crypto'
-import { PUBLISHER_EXTENSION_API_VERSION } from '../../types/index'
+import {createHash, createHmac} from 'crypto'
 import type {
-  CredentialField,
-  ExportedFile,
-  PublishCredentials,
-  PublishProgress,
-  PublishResult,
-  ValidationIssue,
-  ValidationResult
+    CredentialField,
+    ExportedFile,
+    PublishCredentials,
+    PublishProgress,
+    PublishResult,
+    ValidationIssue,
+    ValidationResult
 } from '../../types/index'
-import type { PublisherExtension } from '../../types/PublisherExtension'
-import { validateForAwsS3 } from '../../validators/awsS3Validator'
-import { makeError } from '../../validators/validationHelpers'
+import {PUBLISHER_EXTENSION_API_VERSION} from '../../types/index'
+import type {PublisherExtension} from '../../types/PublisherExtension'
+import {validateForAwsS3} from '../../validators/awsS3Validator'
+import {makeError} from '../../validators/validationHelpers'
 
 const SERVICE = 's3'
 const ALGORITHM = 'AWS4-HMAC-SHA256'

@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
+import {createPortal} from 'react-dom'
 import SpotlightMask from './SpotlightMask'
 import TutorialArrow from './TutorialArrow'
 import TutorialInfoBox from './TutorialInfoBox'
-import { useEditorStore } from '../../store/editorStore'
-import { useTutorialStore, type TutorialPlacement } from '../../store/tutorialStore'
+import {useEditorStore} from '../../store/editorStore'
+import {type TutorialPlacement, useTutorialStore} from '../../store/tutorialStore'
 import './Tutorial.css'
 
 interface TutorialOverlayProps {

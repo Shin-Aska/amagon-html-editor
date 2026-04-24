@@ -1,12 +1,11 @@
-import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
-import { IMAGE_PLACEHOLDER } from './placeholders'
+import {createElement} from 'react'
+import {renderToStaticMarkup} from 'react-dom/server'
+import {IMAGE_PLACEHOLDER} from './placeholders'
 import hljs from 'highlight.js'
-import { getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon, renderLucideIconSvg } from './iconCatalog'
+import {getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon, renderLucideIconSvg} from './iconCatalog'
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
-
-import type { Block, Page, PageFolder, FrameworkChoice } from '../store/types'
+import type {Block, FrameworkChoice, Page, PageFolder} from '../store/types'
 
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
 

@@ -1,7 +1,6 @@
-import { useEffect, useCallback } from 'react'
-import { useEditorStore } from '../store/editorStore'
-import { useProjectStore } from '../store/projectStore'
-import { createBlock, type Block, generateBlockId } from '../store/types'
+import {useCallback, useEffect} from 'react'
+import {useEditorStore} from '../store/editorStore'
+import {type Block, createBlock} from '../store/types'
 
 interface UseKeyboardShortcutsOptions {
   onSave: () => void

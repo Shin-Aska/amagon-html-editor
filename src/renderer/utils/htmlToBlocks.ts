@@ -1,7 +1,7 @@
-import type { Block } from '../store/types'
-import { generateBlockId } from '../store/types'
-import { parse } from 'parse5'
-import { isRenderableGlyph } from './iconCatalog'
+import type {Block} from '../store/types'
+import {generateBlockId} from '../store/types'
+import {parse} from 'parse5'
+import {isRenderableGlyph} from './iconCatalog'
 
 // ─── Tag → Block Type Mapping ────────────────────────────────────────────────
 

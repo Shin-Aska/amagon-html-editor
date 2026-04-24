@@ -1,13 +1,13 @@
 /// <reference types="vite/client" />
 
 import type {
-  CredentialField,
-  ExportedFile,
-  PublishCredentials,
-  PublishProgress,
-  PublishResult,
-  ProviderMeta,
-  ValidationResult
+    CredentialField,
+    ExportedFile,
+    ProviderMeta,
+    PublishCredentials,
+    PublishProgress,
+    PublishResult,
+    ValidationResult
 } from '../publish'
 
 declare global {

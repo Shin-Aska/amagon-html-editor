@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, {useState} from 'react'
 import './BlockTree.css'
-import { useEditorStore } from '../../store/editorStore'
-import { type Block } from '../../store/types'
-import { componentRegistry } from '../../registry/ComponentRegistry'
+import {useEditorStore} from '../../store/editorStore'
+import {type Block} from '../../store/types'
+import {componentRegistry} from '../../registry/ComponentRegistry'
 import BlockIcon from '../BlockIcon/BlockIcon'
+import ContextMenu from '../ContextMenu/ContextMenu'
 
 interface TreeNodeProps {
   block: Block
@@ -67,8 +68,6 @@ function TreeNode({ block, depth, onContextMenu }: TreeNodeProps): JSX.Element {
     </>
   )
 }
-
-import ContextMenu from '../ContextMenu/ContextMenu'
 
 export default function BlockTree(): JSX.Element {
   const blocks = useEditorStore((s) => s.blocks)

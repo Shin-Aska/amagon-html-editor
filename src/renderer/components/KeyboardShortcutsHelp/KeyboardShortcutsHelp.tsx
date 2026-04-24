@@ -1,5 +1,23 @@
-import { useEffect } from 'react'
-import { X, Command, Save, FolderOpen, Undo, Redo, Copy, Scissors, Clipboard, Trash2, Monitor, Moon, Sun, Code, Menu, Settings, Search, HelpCircle, Layout } from 'lucide-react'
+import {useEffect} from 'react'
+import {
+    Clipboard,
+    Code,
+    Command,
+    Copy,
+    FolderOpen,
+    HelpCircle,
+    Layout,
+    Menu,
+    Moon,
+    Redo,
+    Save,
+    Scissors,
+    Search,
+    Settings,
+    Trash2,
+    Undo,
+    X
+} from 'lucide-react'
 import './KeyboardShortcutsHelp.css'
 
 interface KeyboardShortcutsHelpProps {

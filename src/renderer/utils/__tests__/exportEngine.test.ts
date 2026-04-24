@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { parse } from 'parse5'
-import { exportProject } from '../exportEngine'
-import { createBlock, createDefaultTheme } from '../../store/types'
-import type { ProjectData } from '../../store/types'
+import {describe, expect, it} from 'vitest'
+import {parse} from 'parse5'
+import {exportProject} from '../exportEngine'
+import type {ProjectData} from '../../store/types'
+import {createBlock, createDefaultTheme} from '../../store/types'
 
 describe('exportEngine', () => {
   it('consolidates app-media assets into assets/ and rewrites HTML refs to ./assets/...', async () => {

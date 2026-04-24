@@ -1,12 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Settings, Image as ImageIcon, Sparkles, KeyRound, Monitor, Moon, Sun, LayoutPanelLeft, Info } from 'lucide-react'
-import { getApi } from '../../utils/api'
-import { useAppSettingsStore } from '../../store/appSettingsStore'
-import { useAiStore } from '../../store/aiStore'
-import { useTutorialStore } from '../../store/tutorialStore'
-import type { EditorLayout } from '../../store/types'
-import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
-import { tutorialSteps } from '../Tutorial/tutorialSteps'
+import {useCallback, useEffect, useRef, useState} from 'react'
+import {
+    Image as ImageIcon,
+    Info,
+    KeyRound,
+    LayoutPanelLeft,
+    Monitor,
+    Moon,
+    Settings,
+    Sparkles,
+    Sun,
+    X
+} from 'lucide-react'
+import {getApi} from '../../utils/api'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
+import {useAiStore} from '../../store/aiStore'
+import {useTutorialStore} from '../../store/tutorialStore'
+import type {EditorLayout} from '../../store/types'
+import {dispatchAiAvailabilityChanged} from '../../hooks/useAiAvailability'
+import {tutorialSteps} from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import './SettingsDialog.css'
 

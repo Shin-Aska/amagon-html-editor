@@ -1,6 +1,6 @@
-import { create } from 'zustand'
-import { useAppSettingsStore } from './appSettingsStore'
-import type { Block, EditorState, EditorActions, HistoryEntry } from './types'
+import {create} from 'zustand'
+import {useAppSettingsStore} from './appSettingsStore'
+import type {Block, EditorActions, EditorState, HistoryEntry} from './types'
 
 // Callback registered by projectStore to sync blocks on tab exit (avoids circular import)
 let _onExitTabEditMode: ((blocks: Block[]) => void) | null = null

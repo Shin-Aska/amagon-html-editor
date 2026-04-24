@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { getApi } from '../utils/api'
+import {useCallback, useEffect, useState} from 'react'
+import {getApi} from '../utils/api'
 
 export const AI_AVAILABILITY_CHANGED_EVENT = 'hoarses:ai-availability-changed'
 export const AI_API_KEY_REQUIRED_MESSAGE = 'Please add an API key to a supported Provider in the Global settings.'

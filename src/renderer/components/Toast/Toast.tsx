@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { useToastStore } from '../../store/toastStore'
+import {useEffect} from 'react'
+import {useToastStore} from '../../store/toastStore'
 import './Toast.css'
 
 export default function Toast(): JSX.Element | null {

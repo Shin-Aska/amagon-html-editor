@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import type { AiCssProposal } from '../AiCssAssistModal'
-import { applyCssProposal } from '../CustomCssManager'
+import {describe, expect, it} from 'vitest'
+import type {AiCssProposal} from '../AiCssAssistModal'
+import {applyCssProposal} from '../CustomCssManager'
 
 describe('applyCssProposal', () => {
     it('replaces an existing selector block when using replace_match', () => {

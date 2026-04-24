@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import {useEffect, useRef, useState} from 'react'
 import './PageModal.css'
 
 type PageModalMode = 'create' | 'edit' | 'create-folder' | 'edit-folder'

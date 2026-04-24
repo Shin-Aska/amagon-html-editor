@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { getApi } from '../../utils/api'
-import type { Asset } from './AssetManager'
-import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
+import {getApi} from '../../utils/api'
+import type {Asset} from './AssetManager'
+import MediaSearchPanel, {type MediaSearchResult} from './MediaSearchPanel'
 import './AssetManager.css'
 import './AssetPicker.css'
-import { Play } from 'lucide-react'
+import {Play} from 'lucide-react'
 
 export type AssetPickerMode = 'single-image' | 'single-video' | 'multi-image'
 

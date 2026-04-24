@@ -1,9 +1,9 @@
-import type { TutorialStep } from '../../../store/tutorialStore'
-import { useEditorStore } from '../../../store/editorStore'
-import { useTutorialStore } from '../../../store/tutorialStore'
-import { useProjectStore } from '../../../store/projectStore'
-import { getApi } from '../../../utils/api'
-import { openGlobalSettings } from '../../../utils/settingsNavigation'
+import type {TutorialStep} from '../../../store/tutorialStore'
+import {useTutorialStore} from '../../../store/tutorialStore'
+import {useEditorStore} from '../../../store/editorStore'
+import {useProjectStore} from '../../../store/projectStore'
+import {getApi} from '../../../utils/api'
+import {openGlobalSettings} from '../../../utils/settingsNavigation'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')

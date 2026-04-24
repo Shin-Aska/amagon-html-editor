@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { getApi } from '../../utils/api'
-import MediaSearchPanel, { type MediaSearchResult } from './MediaSearchPanel'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
+import {createPortal} from 'react-dom'
+import {getApi} from '../../utils/api'
+import MediaSearchPanel, {type MediaSearchResult} from './MediaSearchPanel'
 import './AssetManager.css'
-import { Play } from 'lucide-react'
+import {Play} from 'lucide-react'
 
 export interface Asset {
   name: string

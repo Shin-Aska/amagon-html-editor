@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../types/index'
+import type {ValidationIssue} from '../types/index'
 
 export function getFileExtension(filePath: string): string {
   const normalizedPath = filePath.replace(/\\/g, '/')

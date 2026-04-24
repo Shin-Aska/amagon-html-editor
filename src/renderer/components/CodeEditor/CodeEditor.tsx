@@ -1,18 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Editor, { type OnChange, type OnMount } from '@monaco-editor/react'
+import {useEffect, useMemo, useRef, useState} from 'react'
+import Editor, {type OnChange, type OnMount} from '@monaco-editor/react'
 import './CodeEditor.css'
-import { useEditorStore } from '../../store/editorStore'
-import { useProjectStore } from '../../store/projectStore'
-import { pageToHtml } from '../../utils/blockToHtml'
-import { htmlToBlocks, type HtmlDiagnostic } from '../../utils/htmlToBlocks'
+import {useEditorStore} from '../../store/editorStore'
+import {useProjectStore} from '../../store/projectStore'
+import {pageToHtml} from '../../utils/blockToHtml'
+import {type HtmlDiagnostic, htmlToBlocks} from '../../utils/htmlToBlocks'
 import type * as MonacoType from 'monaco-editor'
 
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
-;(globalThis as unknown as { MonacoEnvironment?: unknown }).MonacoEnvironment = {
+(globalThis as unknown as { MonacoEnvironment?: unknown }).MonacoEnvironment = {
   getWorker(_moduleId: string, label: string) {
     if (label === 'html' || label === 'handlebars' || label === 'razor') return new htmlWorker()
     if (label === 'css' || label === 'scss' || label === 'less') return new cssWorker()

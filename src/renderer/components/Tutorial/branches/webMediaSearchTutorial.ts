@@ -1,7 +1,7 @@
-import type { TutorialStep } from '../../../store/tutorialStore'
-import { useTutorialStore } from '../../../store/tutorialStore'
-import { useEditorStore } from '../../../store/editorStore'
-import { getApi } from '../../../utils/api'
+import type {TutorialStep} from '../../../store/tutorialStore'
+import {useTutorialStore} from '../../../store/tutorialStore'
+import {useEditorStore} from '../../../store/editorStore'
+import {getApi} from '../../../utils/api'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')

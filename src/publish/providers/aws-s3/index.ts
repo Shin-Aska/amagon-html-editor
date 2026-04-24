@@ -1,4 +1,4 @@
-import { AwsS3Adapter } from './AwsS3Adapter'
+import {AwsS3Adapter} from './AwsS3Adapter'
 
 export { AwsS3Adapter }
 

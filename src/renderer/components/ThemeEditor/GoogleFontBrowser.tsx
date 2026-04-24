@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Check, Download, AlertCircle, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
-import { useProjectStore } from '../../store/projectStore';
-import { useToastStore } from '../../store/toastStore';
-import { googleFontsCatalog, getGoogleFontPreviewUrl, type GoogleFontMeta } from '../../data/googleFontsCatalog';
+import React, {useEffect, useMemo, useState} from 'react';
+import {AlertCircle, Check, ChevronLeft, ChevronRight, Download, Search} from 'lucide-react';
+import {useProjectStore} from '../../store/projectStore';
+import {useToastStore} from '../../store/toastStore';
+import {getGoogleFontPreviewUrl, type GoogleFontMeta, googleFontsCatalog} from '../../data/googleFontsCatalog';
 import './GoogleFontBrowser.css';
 
 const CATEGORIES = ['All', 'sans-serif', 'serif', 'display', 'handwriting', 'monospace'];

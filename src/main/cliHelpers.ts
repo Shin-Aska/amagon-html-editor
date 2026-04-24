@@ -1,4 +1,4 @@
-import { execFile } from 'child_process'
+import {execFile} from 'child_process'
 import * as syncFs from 'fs'
 import * as fs from 'fs/promises'
 import * as os from 'os'

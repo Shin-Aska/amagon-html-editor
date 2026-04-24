@@ -1,17 +1,17 @@
-import { zipSync } from 'fflate'
+import {zipSync} from 'fflate'
 import type {
-  CredentialField,
-  ExportedFile,
-  PublishCredentials,
-  PublishProgress,
-  PublishResult,
-  ValidationIssue,
-  ValidationResult,
-  ProviderMeta
+    CredentialField,
+    ExportedFile,
+    ProviderMeta,
+    PublishCredentials,
+    PublishProgress,
+    PublishResult,
+    ValidationIssue,
+    ValidationResult
 } from '../../types/index'
-import type { PublisherExtension } from '../../types/PublisherExtension'
-import { PUBLISHER_EXTENSION_API_VERSION } from '../../types/index'
-import { validateForCloudflarePages } from '../../validators/cloudflareValidator'
+import {PUBLISHER_EXTENSION_API_VERSION} from '../../types/index'
+import type {PublisherExtension} from '../../types/PublisherExtension'
+import {validateForCloudflarePages} from '../../validators/cloudflareValidator'
 
 const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4'
 const MAX_POLL_ATTEMPTS = 12

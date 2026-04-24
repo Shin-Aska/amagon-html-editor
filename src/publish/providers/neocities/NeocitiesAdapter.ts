@@ -1,16 +1,16 @@
-import { net } from 'electron'
-import { PUBLISHER_EXTENSION_API_VERSION } from '../../types/index'
+import {net} from 'electron'
 import type {
-  ExportedFile,
-  PublishCredentials,
-  PublishProgress,
-  PublishResult,
-  ValidationIssue,
-  ValidationResult
+    ExportedFile,
+    PublishCredentials,
+    PublishProgress,
+    PublishResult,
+    ValidationIssue,
+    ValidationResult
 } from '../../types/index'
-import type { PublisherExtension } from '../../types/PublisherExtension'
-import { validateForNeocities } from '../../validators/neocitiesValidator'
-import { makeError } from '../../validators/validationHelpers'
+import {PUBLISHER_EXTENSION_API_VERSION} from '../../types/index'
+import type {PublisherExtension} from '../../types/PublisherExtension'
+import {validateForNeocities} from '../../validators/neocitiesValidator'
+import {makeError} from '../../validators/validationHelpers'
 
 const API_BASE_URL = 'https://neocities.org/api'
 const INFO_ENDPOINT = `${API_BASE_URL}/info`

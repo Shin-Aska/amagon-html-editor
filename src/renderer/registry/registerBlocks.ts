@@ -1,6 +1,6 @@
-import { IMAGE_PLACEHOLDER, ICON_PLACEHOLDER } from '../utils/placeholders'
+import {IMAGE_PLACEHOLDER} from '../utils/placeholders'
 
-import { componentRegistry } from './ComponentRegistry'
+import {componentRegistry} from './ComponentRegistry'
 
 export function registerBlocks(): void {
   // ─── Layout ──────────────────────────────────────────────────────────────────

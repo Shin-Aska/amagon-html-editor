@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react'
+import React, {useCallback, useState} from 'react'
 import AssetPicker from '../AssetManager/AssetPicker'
-import { getApi } from '../../utils/api'
+import {getApi} from '../../utils/api'
 import './ImageField.css'
 
 interface ImageFieldProps {

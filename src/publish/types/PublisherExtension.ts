@@ -1,12 +1,12 @@
 import type {
-  PublisherExtensionVersion,
-  ProviderMeta,
-  CredentialField,
-  ExportedFile,
-  PublishCredentials,
-  PublishProgress,
-  PublishResult,
-  ValidationResult
+    CredentialField,
+    ExportedFile,
+    ProviderMeta,
+    PublishCredentials,
+    PublisherExtensionVersion,
+    PublishProgress,
+    PublishResult,
+    ValidationResult
 } from './index'
 
 /**

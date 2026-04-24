@@ -1,34 +1,32 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {
-  Search,
-  FilePlus,
-  FolderOpen,
-  Save,
-  Download,
-  Undo,
-  Redo,
-  Scissors,
-  Copy,
-  Clipboard,
-  Trash2,
-  Code,
-  Moon,
-  Sun,
-  LayoutGrid,
-  Type,
-  Image as ImageIcon,
-  Box,
-  MousePointerClick,
-  Grid3x3,
-  SeparatorHorizontal,
-  PanelLeft,
-  PanelRight,
-  Command
+    Box,
+    Code,
+    Command,
+    Copy,
+    Download,
+    FilePlus,
+    FolderOpen,
+    Grid3x3,
+    Image as ImageIcon,
+    LayoutGrid,
+    Moon,
+    MousePointerClick,
+    PanelLeft,
+    PanelRight,
+    Redo,
+    Save,
+    Scissors,
+    SeparatorHorizontal,
+    Sun,
+    Trash2,
+    Type,
+    Undo
 } from 'lucide-react'
-import { useEditorStore } from '../../store/editorStore'
-import { useProjectStore } from '../../store/projectStore'
-import { buildDefaultBlockProps, componentRegistry } from '../../registry/ComponentRegistry'
-import { createBlock } from '../../store/types'
+import {useEditorStore} from '../../store/editorStore'
+import {useProjectStore} from '../../store/projectStore'
+import {buildDefaultBlockProps, componentRegistry} from '../../registry/ComponentRegistry'
+import {createBlock} from '../../store/types'
 import './CommandPalette.css'
 
 interface CommandPaletteProps {

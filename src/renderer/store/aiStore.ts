@@ -2,12 +2,12 @@
 // AI Assistant Store — manages chat state and AI configuration
 // ---------------------------------------------------------------------------
 
-import { create } from 'zustand'
-import { getApi } from '../utils/api'
-import { dispatchAiAvailabilityChanged } from '../hooks/useAiAvailability'
-import { componentRegistry } from '../registry/ComponentRegistry'
-import { useEditorStore } from './editorStore'
-import { useProjectStore } from './projectStore'
+import {create} from 'zustand'
+import {getApi} from '../utils/api'
+import {dispatchAiAvailabilityChanged} from '../hooks/useAiAvailability'
+import {componentRegistry} from '../registry/ComponentRegistry'
+import {useEditorStore} from './editorStore'
+import {useProjectStore} from './projectStore'
 
 // ---------------------------------------------------------------------------
 // Types

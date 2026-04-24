@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { X, Info, ExternalLink, Heart, Star } from 'lucide-react'
+import {useEffect} from 'react'
+import {ExternalLink, Heart, Info, Star, X} from 'lucide-react'
 import appLogo from '../../../../assets/app.png'
 import './AboutAmagon.css'
 

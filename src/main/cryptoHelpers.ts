@@ -7,7 +7,7 @@
 import * as crypto from 'crypto'
 import * as os from 'os'
 import * as fs from 'fs'
-import { safeStorage } from 'electron'
+import {safeStorage} from 'electron'
 
 // ---------------------------------------------------------------------------
 // Machine-derived key (AES fallback for Linux without a keyring)

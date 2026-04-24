@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import {useId} from 'react'
 
 interface SpotlightRect {
   x: number

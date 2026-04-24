@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useEditorStore } from '../editorStore'
-import { createBlock } from '../types'
-import type { Block } from '../types'
+import {beforeEach, describe, expect, it} from 'vitest'
+import {useEditorStore} from '../editorStore'
+import {createBlock} from '../types'
 
 describe('form nesting prevention', () => {
     beforeEach(() => {

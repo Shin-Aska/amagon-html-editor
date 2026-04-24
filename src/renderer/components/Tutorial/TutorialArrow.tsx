@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react'
-import type { TutorialPlacement } from '../../store/tutorialStore'
+import type {CSSProperties} from 'react'
+import type {TutorialPlacement} from '../../store/tutorialStore'
 
 export interface TutorialArrowProps {
   direction: TutorialPlacement | 'none'

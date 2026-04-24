@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import {useEffect, useRef} from 'react'
 import './ContextMenu.css'
 
 export interface ContextMenuItem {

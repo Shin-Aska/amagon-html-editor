@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
-import { getApi } from '../../utils/api'
+import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {getApi} from '../../utils/api'
 import './MediaSearchPanel.css'
-import { AlertTriangle, Search, Settings, Image, Play } from 'lucide-react'
+import {AlertTriangle, Image, Play, Search, Settings} from 'lucide-react'
 
 export interface MediaSearchResult {
   id: string

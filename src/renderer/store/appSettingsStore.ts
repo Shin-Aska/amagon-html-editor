@@ -1,6 +1,6 @@
-import { create } from 'zustand'
-import { getApi } from '../utils/api'
-import type { EditorLayout } from './types'
+import {create} from 'zustand'
+import {getApi} from '../utils/api'
+import type {EditorLayout} from './types'
 
 export interface AppSettings {
   theme: 'light' | 'dark'

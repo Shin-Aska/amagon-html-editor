@@ -1,49 +1,50 @@
-import { useState, useEffect } from 'react'
+import {useEffect, useState} from 'react'
 import {
-  Menu,
-  FilePlus,
-  FolderOpen,
-  Save,
-  Download,
-  Upload,
-  Undo,
-  Redo,
-  Scissors,
-  Copy,
-  Clipboard,
-  Trash2,
-  Monitor,
-  Tablet,
-  Smartphone,
-  ZoomIn,
-  ZoomOut,
-  Moon,
-  Sun,
-  Code,
-  Settings,
-  Image as ImageIcon,
-  FileType,
-  Layout,
-  PanelLeft,
-  PanelRight,
-  Palette,
-  KeyRound,
-  HelpCircle,
-  Menu as MenuIcon,
-  ChevronDown
+    ChevronDown,
+    Clipboard,
+    Code,
+    Copy,
+    Download,
+    FilePlus,
+    FileType,
+    FolderOpen,
+    HelpCircle,
+    Image as ImageIcon,
+    KeyRound,
+    Layout,
+    Menu,
+    Monitor,
+    Moon,
+    Palette,
+    Redo,
+    Save,
+    Scissors,
+    Settings,
+    Smartphone,
+    Sun,
+    Tablet,
+    Trash2,
+    Undo,
+    Upload,
+    ZoomIn,
+    ZoomOut
 } from 'lucide-react'
-import { getApi } from '../../utils/api'
-import { useProjectStore } from '../../store/projectStore'
-import { useEditorStore } from '../../store/editorStore'
-import { useToastStore } from '../../store/toastStore'
-import { createBlock } from '../../store/types'
-import type { Block, EditorLayout } from '../../store/types'
+import {getApi} from '../../utils/api'
+import {useProjectStore} from '../../store/projectStore'
+import {useEditorStore} from '../../store/editorStore'
+import {useToastStore} from '../../store/toastStore'
+import type {Block, EditorLayout} from '../../store/types'
+import {createBlock} from '../../store/types'
 import AssetManager from '../AssetManager/AssetManager'
 import CredentialManager from '../CredentialManager/CredentialManager'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import ExportDialog from '../ExportDialog/ExportDialog'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
-import { OPEN_GLOBAL_SETTINGS_EVENT, type GlobalSettingsTab, type OpenGlobalSettingsDetail } from '../../utils/settingsNavigation'
+import {
+    type GlobalSettingsTab,
+    OPEN_GLOBAL_SETTINGS_EVENT,
+    type OpenGlobalSettingsDetail
+} from '../../utils/settingsNavigation'
 import './Toolbar.css'
 
 interface ToolbarProps {

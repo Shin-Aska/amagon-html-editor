@@ -1,20 +1,55 @@
+import type {BrowserWindow} from 'electron'
 import * as electron from 'electron'
-import type { BrowserWindow } from 'electron'
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import { existsSync, createReadStream } from 'fs'
-import { fileURLToPath } from 'url'
-import { getFonts } from 'font-list'
-import { chat as aiChat, loadConfig as aiLoadConfig, saveConfig as aiSaveConfig, loadApiKeyForProvider, PROVIDER_MODELS, fetchAvailableModels, fetchModelsForProvider, buildSystemPrompt, maskApiKey, MASKED_KEY_PREFIX, type ChatMessage } from './aiService'
-import { CLI_BINARY_NAMES, detectCliProvider } from './cliHelpers'
-import { loadConfig as mediaSearchLoadConfig, saveConfig as mediaSearchSaveConfig, maskApiKey as maskMediaApiKey, MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX, searchMedia, downloadAndImportMedia, type MediaSearchConfig } from './mediaSearchService'
-import { isEncryptionSecure } from './cryptoHelpers'
-import { buildAppMenu } from './menu'
-import { createWelcomeBlocks } from '../shared/welcomeBlocks'
+import {existsSync} from 'fs'
+import {fileURLToPath} from 'url'
+import {getFonts} from 'font-list'
+import {
+    buildSystemPrompt,
+    chat as aiChat,
+    type ChatMessage,
+    fetchAvailableModels,
+    fetchModelsForProvider,
+    loadApiKeyForProvider,
+    loadConfig as aiLoadConfig,
+    maskApiKey,
+    MASKED_KEY_PREFIX,
+    PROVIDER_MODELS,
+    saveConfig as aiSaveConfig
+} from './aiService'
+import {CLI_BINARY_NAMES, detectCliProvider} from './cliHelpers'
+import {
+    downloadAndImportMedia,
+    loadConfig as mediaSearchLoadConfig,
+    maskApiKey as maskMediaApiKey,
+    MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX,
+    type MediaSearchConfig,
+    saveConfig as mediaSearchSaveConfig,
+    searchMedia
+} from './mediaSearchService'
+import {isEncryptionSecure} from './cryptoHelpers'
+import {buildAppMenu} from './menu'
+import {createWelcomeBlocks} from '../shared/welcomeBlocks'
 import '../publish/providers/index'
-import { getAllPublishers, getPublisher, type ExportedFile, type PublishCredentials, type PublishProgress, type PublishResult, type ValidationResult } from '../publish'
-import { deletePublishCredentials, loadPublishCredentials, savePublishCredentials } from './publishCredentials'
-import { deleteCredentialRecord, getCredentialDefinitions, getCredentialValues, listCredentialRecords, resolveSensitiveValues, saveCredentialRecord } from './credentialCatalog'
+import {
+    type ExportedFile,
+    getAllPublishers,
+    getPublisher,
+    type PublishCredentials,
+    type PublishProgress,
+    type PublishResult,
+    type ValidationResult
+} from '../publish'
+import {deletePublishCredentials, loadPublishCredentials, savePublishCredentials} from './publishCredentials'
+import {
+    deleteCredentialRecord,
+    getCredentialDefinitions,
+    getCredentialValues,
+    listCredentialRecords,
+    resolveSensitiveValues,
+    saveCredentialRecord
+} from './credentialCatalog'
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron
 const BrowserWindowCtor = electron.BrowserWindow

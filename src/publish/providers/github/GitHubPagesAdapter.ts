@@ -1,7 +1,15 @@
-import { PUBLISHER_EXTENSION_API_VERSION, type ExportedFile, type PublishCredentials, type PublishProgress, type PublishResult, type ValidationIssue, type ValidationResult } from '../../types/index'
-import type { PublisherExtension } from '../../types/PublisherExtension'
-import { validateForGithubPages } from '../../validators/githubPagesValidator'
-import { makeError } from '../../validators/validationHelpers'
+import {
+    type ExportedFile,
+    type PublishCredentials,
+    PUBLISHER_EXTENSION_API_VERSION,
+    type PublishProgress,
+    type PublishResult,
+    type ValidationIssue,
+    type ValidationResult
+} from '../../types/index'
+import type {PublisherExtension} from '../../types/PublisherExtension'
+import {validateForGithubPages} from '../../validators/githubPagesValidator'
+import {makeError} from '../../validators/validationHelpers'
 
 const GITHUB_API_BASE_URL = 'https://api.github.com'
 const COMMIT_MESSAGE = 'Publish via Amagon'

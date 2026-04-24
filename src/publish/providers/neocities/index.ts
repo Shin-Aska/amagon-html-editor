@@ -1,4 +1,4 @@
-import { NeocitiesAdapter } from './NeocitiesAdapter'
+import {NeocitiesAdapter} from './NeocitiesAdapter'
 
 export { NeocitiesAdapter }
 

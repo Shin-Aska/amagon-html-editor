@@ -3,8 +3,8 @@
 // For now, uses browser APIs (localStorage, File API, download links).
 
 import packageJson from '../../../package.json'
-import { createDefaultTheme, type FontAsset } from '../store/types'
-import { createWelcomeBlocks } from '../../shared/welcomeBlocks'
+import {createDefaultTheme, type FontAsset} from '../store/types'
+import {createWelcomeBlocks} from '../../shared/welcomeBlocks'
 
 export interface IpcResult {
   success: boolean

@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import { Upload, Trash2, Type, PackageCheck, Globe, X } from 'lucide-react'
-import { useProjectStore } from '../../store/projectStore'
-import { useToastStore } from '../../store/toastStore'
-import type { FontAsset } from '../../store/types'
+import React, {useState} from 'react'
+import {Globe, PackageCheck, Trash2, Type, Upload, X} from 'lucide-react'
+import {useProjectStore} from '../../store/projectStore'
+import {useToastStore} from '../../store/toastStore'
+import type {FontAsset} from '../../store/types'
 import GoogleFontBrowser from './GoogleFontBrowser'
 import './FontManager.css'
 

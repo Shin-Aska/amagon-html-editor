@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
-import { getApi } from '../../utils/api'
-import { useProjectStore } from '../../store/projectStore'
-import { useEditorStore } from '../../store/editorStore'
-import { exportProject } from '../../utils/exportEngine'
-import type { ExportedFile, PublishProgress, PublishResult, ValidationResult } from '../../../publish/types'
+import {useEffect, useState} from 'react'
+import {getApi} from '../../utils/api'
+import {useProjectStore} from '../../store/projectStore'
+import {useEditorStore} from '../../store/editorStore'
+import {exportProject} from '../../utils/exportEngine'
+import type {ExportedFile, PublishProgress, PublishResult, ValidationResult} from '../../../publish/types'
 import './PublishDialog.css'
 
 interface PublishDialogProps {

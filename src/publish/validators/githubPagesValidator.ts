@@ -1,5 +1,5 @@
-import type { ExportedFile, ValidationIssue, ValidationResult } from '../types/index'
-import { extractExternalUrls, getFileExtension, makeWarning } from './validationHelpers'
+import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/index'
+import {extractExternalUrls, getFileExtension, makeWarning} from './validationHelpers'
 
 function isLikelyHtmlFile(filePath: string): boolean {
   const ext = getFileExtension(filePath)

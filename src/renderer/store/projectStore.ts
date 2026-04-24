@@ -1,27 +1,27 @@
-import { create } from 'zustand'
+import {create} from 'zustand'
 import type {
-  Page,
-  PageFolder,
-  ProjectSettings,
-  ProjectData,
-  FrameworkChoice,
-  UserBlock,
-  ProjectTheme,
-  CssFile,
-  PageThemeMode,
-  PageThemePreviewMode,
-  ProjectThemeVariants,
-  FontAsset
+    CssFile,
+    FontAsset,
+    FrameworkChoice,
+    Page,
+    PageFolder,
+    PageThemeMode,
+    PageThemePreviewMode,
+    ProjectData,
+    ProjectSettings,
+    ProjectTheme,
+    ProjectThemeVariants,
+    UserBlock
 } from './types'
 import {
-  generateBlockId,
-  createDefaultTheme,
-  createDefaultThemeVariants,
-  createDefaultDarkTheme,
-  cloneTheme
+    cloneTheme,
+    createDefaultDarkTheme,
+    createDefaultTheme,
+    createDefaultThemeVariants,
+    generateBlockId
 } from './types'
-import { createPageHeaderBlock } from '../../shared/welcomeBlocks'
-import { setOnExitTabEditModeCallback, useEditorStore } from './editorStore'
+import {createPageHeaderBlock} from '../../shared/welcomeBlocks'
+import {setOnExitTabEditModeCallback, useEditorStore} from './editorStore'
 
 // ─── Project State ───────────────────────────────────────────────────────────
 

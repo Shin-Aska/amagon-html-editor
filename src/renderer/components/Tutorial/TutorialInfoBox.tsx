@@ -1,8 +1,8 @@
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
-import { useEffect, useRef } from 'react'
-import type { CSSProperties, KeyboardEvent } from 'react'
-import type { TutorialStep, TutorialChoice } from '../../store/tutorialStore'
-import { useTutorialStore } from '../../store/tutorialStore'
+import {ChevronLeft, ChevronRight, X} from 'lucide-react'
+import type {CSSProperties, KeyboardEvent} from 'react'
+import {useEffect, useRef} from 'react'
+import type {TutorialChoice, TutorialStep} from '../../store/tutorialStore'
+import {useTutorialStore} from '../../store/tutorialStore'
 
 export interface TutorialInfoBoxProps {
   step: TutorialStep

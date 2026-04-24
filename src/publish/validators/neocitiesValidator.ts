@@ -1,10 +1,5 @@
-import type { ExportedFile, ValidationIssue, ValidationResult } from '../types/index'
-import {
-  extractExternalUrls,
-  getFileExtension,
-  makeError,
-  makeWarning
-} from './validationHelpers'
+import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/index'
+import {extractExternalUrls, getFileExtension, makeError, makeWarning} from './validationHelpers'
 
 export const NEOCITIES_ALLOWED_EXTENSIONS: readonly string[] = [
   '.html',

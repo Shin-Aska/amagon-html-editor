@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { buildDefaultBlockProps, componentRegistry } from '../ComponentRegistry'
-import { registerBlocks } from '../registerBlocks'
+import {describe, expect, it} from 'vitest'
+import {buildDefaultBlockProps, componentRegistry} from '../ComponentRegistry'
+import {registerBlocks} from '../registerBlocks'
 
 describe('buildDefaultBlockProps', () => {
   it('materializes schema defaults for checkbox blocks', () => {

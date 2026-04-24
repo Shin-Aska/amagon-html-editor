@@ -1,10 +1,5 @@
-import type { ExportedFile, ValidationIssue, ValidationResult } from '../types/index'
-import {
-  extractExternalUrls,
-  getFileExtension,
-  makeError,
-  makeWarning
-} from './validationHelpers'
+import type {ExportedFile, ValidationIssue, ValidationResult} from '../types/index'
+import {extractExternalUrls, getFileExtension, makeError, makeWarning} from './validationHelpers'
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024
 const MAX_FILE_COUNT = 500

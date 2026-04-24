@@ -1,4 +1,4 @@
-import type { ProjectTheme } from '../../store/types'
+import type {ProjectTheme} from '../../store/types'
 
 const defaultSpacing = {
   baseUnit: '8px',

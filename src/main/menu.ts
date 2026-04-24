@@ -1,4 +1,4 @@
-import { Menu, type BrowserWindow } from 'electron'
+import {type BrowserWindow, Menu} from 'electron'
 
 const isMac = process.platform === 'darwin'
 const mod = isMac ? 'Cmd' : 'Ctrl'

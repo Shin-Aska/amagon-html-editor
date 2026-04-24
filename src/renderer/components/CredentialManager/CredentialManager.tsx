@@ -1,9 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { KeyRound, X, Trash2, ShieldCheck, ShieldAlert, Sparkles, Image as ImageIcon, Info, CheckCircle, AlertTriangle } from 'lucide-react'
-import { getApi } from '../../utils/api'
-import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
-import { openGlobalSettings } from '../../utils/settingsNavigation'
-import { useAppSettingsStore } from '../../store/appSettingsStore'
+import {useCallback, useEffect, useRef, useState} from 'react'
+import {
+    AlertTriangle,
+    CheckCircle,
+    Image as ImageIcon,
+    Info,
+    KeyRound,
+    ShieldAlert,
+    ShieldCheck,
+    Sparkles,
+    Trash2,
+    X
+} from 'lucide-react'
+import {getApi} from '../../utils/api'
+import {dispatchAiAvailabilityChanged} from '../../hooks/useAiAvailability'
+import {openGlobalSettings} from '../../utils/settingsNavigation'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
 import './CredentialManager.css'
 
 interface Credential {

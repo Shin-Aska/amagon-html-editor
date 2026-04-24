@@ -1,40 +1,40 @@
-import { useCallback, useMemo, useState, useRef, useEffect, lazy, Suspense } from 'react'
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels'
+import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {Group as PanelGroup, Panel, Separator as PanelResizeHandle} from 'react-resizable-panels'
 import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragStartEvent,
-  type DragCancelEvent,
-  type DragEndEvent
+    DndContext,
+    type DragCancelEvent,
+    type DragEndEvent,
+    DragOverlay,
+    type DragStartEvent,
+    PointerSensor,
+    useSensor,
+    useSensors
 } from '@dnd-kit/core'
 import Sidebar from './components/Sidebar/Sidebar'
 import Canvas from './components/Canvas/Canvas'
 import Inspector from './components/Inspector/Inspector'
 import Toolbar from './components/Toolbar/Toolbar'
 import StatusBar from './components/StatusBar/StatusBar'
-import DragOverlayManager, { type DropTargetHint } from './components/DragOverlayManager/DragOverlayManager'
+import DragOverlayManager, {type DropTargetHint} from './components/DragOverlayManager/DragOverlayManager'
 import CommandPalette from './components/CommandPalette/CommandPalette'
 import Toast from './components/Toast/Toast'
 import BlockIcon from './components/BlockIcon/BlockIcon'
-import { useEditorStore } from './store/editorStore'
-import { useProjectStore } from './store/projectStore'
-import { useToastStore } from './store/toastStore'
-import { useAppSettingsStore } from './store/appSettingsStore'
-import { useTutorialStore } from './store/tutorialStore'
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import type { Block } from './store/types'
-import { createBlock } from './store/types'
-import { buildDefaultBlockProps, componentRegistry } from './registry/ComponentRegistry'
+import {useEditorStore} from './store/editorStore'
+import {useProjectStore} from './store/projectStore'
+import {useToastStore} from './store/toastStore'
+import {useAppSettingsStore} from './store/appSettingsStore'
+import {useTutorialStore} from './store/tutorialStore'
+import {useKeyboardShortcuts} from './hooks/useKeyboardShortcuts'
+import type {Block} from './store/types'
+import {createBlock} from './store/types'
+import {buildDefaultBlockProps, componentRegistry} from './registry/ComponentRegistry'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
-import { getApi } from './utils/api'
+import {getApi} from './utils/api'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
 import WelcomeTourDialog from './components/Tutorial/WelcomeTourDialog'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
-import { tutorialSteps } from './components/Tutorial/tutorialSteps'
-import { OPEN_KEYBOARD_SHORTCUTS_EVENT } from './constants/tutorialEvents'
+import {tutorialSteps} from './components/Tutorial/tutorialSteps'
+import {OPEN_KEYBOARD_SHORTCUTS_EVENT} from './constants/tutorialEvents'
 
 // Lazy load heavy components for performance
 const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'))

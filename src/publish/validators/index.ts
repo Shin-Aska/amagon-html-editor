@@ -1,8 +1,8 @@
-import type { ExportedFile, ValidationResult } from '../types/index'
-import { validateForCloudflarePages, CLOUDFLARE_PAGES_ALLOWED_EXTENSIONS } from './cloudflareValidator'
-import { validateForGithubPages } from './githubPagesValidator'
-import { validateForNeocities, NEOCITIES_ALLOWED_EXTENSIONS } from './neocitiesValidator'
-import { validateForAwsS3 } from './awsS3Validator'
+import type {ExportedFile, ValidationResult} from '../types/index'
+import {CLOUDFLARE_PAGES_ALLOWED_EXTENSIONS, validateForCloudflarePages} from './cloudflareValidator'
+import {validateForGithubPages} from './githubPagesValidator'
+import {NEOCITIES_ALLOWED_EXTENSIONS, validateForNeocities} from './neocitiesValidator'
+import {validateForAwsS3} from './awsS3Validator'
 
 export { getFileExtension, isExternalUrl, extractExternalUrls } from './validationHelpers'
 export { validateForNeocities, NEOCITIES_ALLOWED_EXTENSIONS } from './neocitiesValidator'

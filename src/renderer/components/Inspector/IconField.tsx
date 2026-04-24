@@ -1,14 +1,13 @@
-import React, { useState, useMemo, Suspense } from 'react'
+import React, {Suspense, useMemo, useState} from 'react'
 import BlockIcon from '../BlockIcon/BlockIcon'
-import { X, Plus } from 'lucide-react'
+import {Plus, X} from 'lucide-react'
 import {
-  getLucideIconComponent,
-  isRenderableGlyph,
-  isKnownLucideIcon,
-  lucidePickerIcons,
-  allLucideIconNames,
-  getLazyLucideIcon,
-  mapLegacyBootstrapIcon,
+    allLucideIconNames,
+    getLazyLucideIcon,
+    isKnownLucideIcon,
+    isRenderableGlyph,
+    lucidePickerIcons,
+    mapLegacyBootstrapIcon,
 } from '../../utils/iconCatalog'
 import './IconField.css'
 

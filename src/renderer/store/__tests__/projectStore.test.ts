@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useProjectStore } from '../../store/projectStore'
-import { createBlock, createDefaultTheme } from '../../store/types'
-import type { UserBlock } from '../../store/types'
+import {beforeEach, describe, expect, it} from 'vitest'
+import {useProjectStore} from '../../store/projectStore'
+import {createBlock, createDefaultTheme} from '../../store/types'
 
 // Initial state for resetting store between tests
 const initialProjectState = {

@@ -1,6 +1,6 @@
-import { DiffEditor } from '@monaco-editor/react'
-import { useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import {DiffEditor} from '@monaco-editor/react'
+import {useEffect, useId, useRef, useState} from 'react'
+import {createPortal} from 'react-dom'
 import './AiProposalReviewPanel.css'
 
 interface AiProposalReviewPanelProps {

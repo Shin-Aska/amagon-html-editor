@@ -1,4 +1,4 @@
-import type { TutorialStep } from '../../../store/tutorialStore'
+import type {TutorialStep} from '../../../store/tutorialStore'
 
 const ensureToolbarMenuOpen = () => {
   if (!window.matchMedia('(max-width: 840px)').matches) return

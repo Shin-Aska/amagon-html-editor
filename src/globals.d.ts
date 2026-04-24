@@ -1,8 +1,8 @@
 // React 19 removed the global JSX namespace from @types/react.
 // Re-declare it here so existing JSX.Element return-type annotations continue to compile.
-import type { JSX as ReactJSX } from 'react'
-import { type IpcResult } from './renderer/utils/api'
-import { type FontAsset } from './renderer/store/types'
+import type {JSX as ReactJSX} from 'react'
+import {type IpcResult} from './renderer/utils/api'
+import {type FontAsset} from './renderer/store/types'
 
 export {}
 

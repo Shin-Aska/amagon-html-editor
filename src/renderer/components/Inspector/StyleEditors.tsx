@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useState} from 'react'
 import './StyleEditor.css'
 import FontPickerField from './FontPickerField'
 

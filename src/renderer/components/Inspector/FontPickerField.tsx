@@ -2,9 +2,9 @@
  * FontPickerField — per-block font override in the Inspector
  * Button trigger (not textbox) → portal dropdown with search + visual font list
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 import ReactDOM from 'react-dom'
-import { useProjectStore } from '../../store/projectStore'
+import {useProjectStore} from '../../store/projectStore'
 import './FontPickerField.css'
 
 interface FontPickerFieldProps {

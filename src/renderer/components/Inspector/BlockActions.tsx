@@ -1,13 +1,13 @@
-import { useEditorStore } from '../../store/editorStore'
-import { useProjectStore } from '../../store/projectStore'
-import { createBlock } from '../../store/types'
-import { componentRegistry } from '../../registry/ComponentRegistry'
-import { useToastStore } from '../../store/toastStore'
-import { getApi } from '../../utils/api'
+import {useEditorStore} from '../../store/editorStore'
+import {useProjectStore} from '../../store/projectStore'
+import {createBlock} from '../../store/types'
+import {componentRegistry} from '../../registry/ComponentRegistry'
+import {useToastStore} from '../../store/toastStore'
+import {getApi} from '../../utils/api'
 import './BlockActions.css'
-import { useMemo, useState } from 'react'
+import {useMemo, useState} from 'react'
 import SaveCustomBlockDialog from './SaveCustomBlockDialog'
-import { ArrowUp, ArrowDown, Copy, Lock, LockOpen, Star, Trash2 } from 'lucide-react'
+import {ArrowDown, ArrowUp, Copy, Lock, LockOpen, Star, Trash2} from 'lucide-react'
 
 interface BlockActionsProps {
   blockId: string

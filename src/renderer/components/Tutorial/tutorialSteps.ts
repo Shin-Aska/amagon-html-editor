@@ -1,11 +1,11 @@
-import { createElement } from 'react'
-import { Bot, Image, Rocket } from 'lucide-react'
-import type { TutorialStep } from '../../store/tutorialStore'
-import { useEditorStore } from '../../store/editorStore'
-import { OPEN_KEYBOARD_SHORTCUTS_EVENT } from '../../constants/tutorialEvents'
-import { aiAssistanceSteps } from './branches/aiAssistanceTutorial'
-import { publishSteps } from './branches/publishTutorial'
-import { webMediaSearchSteps } from './branches/webMediaSearchTutorial'
+import {createElement} from 'react'
+import {Bot, Image, Rocket} from 'lucide-react'
+import type {TutorialStep} from '../../store/tutorialStore'
+import {useEditorStore} from '../../store/editorStore'
+import {OPEN_KEYBOARD_SHORTCUTS_EVENT} from '../../constants/tutorialEvents'
+import {aiAssistanceSteps} from './branches/aiAssistanceTutorial'
+import {publishSteps} from './branches/publishTutorial'
+import {webMediaSearchSteps} from './branches/webMediaSearchTutorial'
 
 const ensureStandardLayout = () => {
   useEditorStore.getState().setEditorLayout('standard')

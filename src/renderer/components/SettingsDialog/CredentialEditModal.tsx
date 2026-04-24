@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { X } from 'lucide-react'
-import { getApi } from '../../utils/api'
-import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
+import {useEffect, useMemo, useRef, useState} from 'react'
+import {X} from 'lucide-react'
+import {getApi} from '../../utils/api'
+import {dispatchAiAvailabilityChanged} from '../../hooks/useAiAvailability'
 import './CredentialEditModal.css'
 
 interface Props {

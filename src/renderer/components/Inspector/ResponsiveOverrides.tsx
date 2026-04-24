@@ -1,6 +1,6 @@
 import './ResponsiveOverrides.css'
-import { Monitor, Tablet, Smartphone, Eye, EyeOff } from 'lucide-react'
-import type { ReactNode } from 'react'
+import {Eye, EyeOff, Monitor, Smartphone, Tablet} from 'lucide-react'
+import type {ReactNode} from 'react'
 
 interface ResponsiveOverridesProps {
   classes: string[]

@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Compass, X } from 'lucide-react'
+import {useEffect} from 'react'
+import {Compass, X} from 'lucide-react'
 import './WelcomeTourDialog.css'
 
 interface WelcomeTourDialogProps {

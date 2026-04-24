@@ -1,10 +1,10 @@
-import { create } from 'zustand'
-import type { ReactNode } from 'react'
-import { useAppSettingsStore } from './appSettingsStore'
-import { useEditorStore } from './editorStore'
-import { useAiStore } from './aiStore'
-import { useProjectStore } from './projectStore'
-import { getApi } from '../utils/api'
+import {create} from 'zustand'
+import type {ReactNode} from 'react'
+import {useAppSettingsStore} from './appSettingsStore'
+import {useEditorStore} from './editorStore'
+import {useAiStore} from './aiStore'
+import {useProjectStore} from './projectStore'
+import {getApi} from '../utils/api'
 
 export type TutorialPlacement = 'top' | 'bottom' | 'left' | 'right'
 

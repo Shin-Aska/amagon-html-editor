@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
-import { useAiStore, type AiProvider } from '../../store/aiStore'
-import { useAppSettingsStore } from '../../store/appSettingsStore'
+import {useEffect} from 'react'
+import {type AiProvider, useAiStore} from '../../store/aiStore'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
 import './AiProviderSelector.css'
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {

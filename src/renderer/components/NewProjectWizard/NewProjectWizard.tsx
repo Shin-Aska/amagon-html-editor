@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { getApi } from '../../utils/api'
-import { useProjectStore } from '../../store/projectStore'
-import { useEditorStore } from '../../store/editorStore'
-import { useAppSettingsStore } from '../../store/appSettingsStore'
-import type { FrameworkChoice } from '../../store/types'
+import {useState} from 'react'
+import {getApi} from '../../utils/api'
+import {useProjectStore} from '../../store/projectStore'
+import {useEditorStore} from '../../store/editorStore'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
+import type {FrameworkChoice} from '../../store/types'
 import './NewProjectWizard.css'
 
 interface NewProjectWizardProps {

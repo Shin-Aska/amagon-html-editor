@@ -1,7 +1,7 @@
-import { APIv2 } from 'google-font-metadata';
+import {APIv2} from 'google-font-metadata';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {fileURLToPath} from 'node:url';
 
 interface GoogleFontMeta {
   family: string;

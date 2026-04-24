@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { blockToHtml, pageToHtml } from '../blockToHtml'
-import type { Block } from '../../store/types'
-import { createBlock } from '../../store/types'
+import {describe, expect, it} from 'vitest'
+import {blockToHtml, pageToHtml} from '../blockToHtml'
+import type {Block} from '../../store/types'
+import {createBlock} from '../../store/types'
 
 describe('blockToHtml', () => {
   it('renders an empty block array as empty string', () => {

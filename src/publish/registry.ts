@@ -1,5 +1,5 @@
-import type { PublisherExtension } from './types/PublisherExtension'
-import { PUBLISHER_EXTENSION_API_VERSION } from './types/index'
+import type {PublisherExtension} from './types/PublisherExtension'
+import {PUBLISHER_EXTENSION_API_VERSION} from './types/index'
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
 

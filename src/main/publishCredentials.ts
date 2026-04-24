@@ -1,8 +1,8 @@
-import { app } from 'electron'
+import {app} from 'electron'
 import * as fs from 'fs/promises'
 import * as path from 'path'
-import { decryptApiKey, encryptApiKey } from './cryptoHelpers'
-import type { PublishCredentials } from '../publish'
+import {decryptApiKey, encryptApiKey} from './cryptoHelpers'
+import type {PublishCredentials} from '../publish'
 
 type StoredProviderCredentials = Record<string, string>
 

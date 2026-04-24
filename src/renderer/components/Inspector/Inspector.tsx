@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { useEditorStore } from '../../store/editorStore'
-import { componentRegistry, type PropSchema } from '../../registry/ComponentRegistry'
+import {useState} from 'react'
+import {useEditorStore} from '../../store/editorStore'
+import {componentRegistry, type PropSchema} from '../../registry/ComponentRegistry'
 import SpacingEditor from './SpacingEditor'
-import { TypographyEditor, BackgroundEditor, BorderEditor, LayoutEditor } from './StyleEditors'
+import {BackgroundEditor, BorderEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
 import CssClassesEditor from './CssClassesEditor'
 import BlockActions from './BlockActions'
 import EventActionsEditor from './EventActionsEditor'
@@ -17,11 +17,11 @@ import VideoField from './VideoField'
 import CarouselField from './CarouselField'
 import IconField from './IconField'
 
-import { useProjectStore } from '../../store/projectStore'
-import ArrayField, { type ArrayRecordField } from './ArrayField'
+import {useProjectStore} from '../../store/projectStore'
+import ArrayField, {type ArrayRecordField} from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
-import { Check, Clipboard } from 'lucide-react'
+import {Check, Clipboard} from 'lucide-react'
 
 interface ArrayEditorConfig {
   itemFields: ArrayRecordField[]

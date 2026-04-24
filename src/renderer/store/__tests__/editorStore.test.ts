@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useEditorStore } from '../../store/editorStore'
-import type { Block } from '../../store/types'
-import { createBlock } from '../../store/types'
+import {beforeEach, describe, expect, it} from 'vitest'
+import {useEditorStore} from '../../store/editorStore'
+import {createBlock} from '../../store/types'
 
 const get = () => useEditorStore.getState()
 

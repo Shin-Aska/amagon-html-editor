@@ -1,7 +1,7 @@
-import type { Block, Page, PageFolder, FrameworkChoice, ProjectData, FontAsset } from '../store/types'
-import { themeToCSS } from '../store/types'
-import { blockToHtml } from './blockToHtml'
-import { getApi } from './api'
+import type {Block, FontAsset, FrameworkChoice, Page, PageFolder, ProjectData} from '../store/types'
+import {themeToCSS} from '../store/types'
+import {blockToHtml} from './blockToHtml'
+import {getApi} from './api'
 
 export interface ExportFile {
   path: string

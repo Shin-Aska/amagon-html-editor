@@ -1,5 +1,5 @@
-import { Suspense } from 'react'
-import { getLucideIconComponent, getLazyLucideIcon } from '../../utils/iconCatalog'
+import {Suspense} from 'react'
+import {getLazyLucideIcon, getLucideIconComponent} from '../../utils/iconCatalog'
 
 interface BlockIconProps {
   name: string

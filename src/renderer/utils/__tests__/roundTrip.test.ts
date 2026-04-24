@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { blockToHtml, pageToHtml } from '../blockToHtml'
-import { htmlToBlocks } from '../htmlToBlocks'
-import type { Block } from '../../store/types'
-import { createBlock } from '../../store/types'
+import {describe, expect, it} from 'vitest'
+import {blockToHtml, pageToHtml} from '../blockToHtml'
+import {htmlToBlocks} from '../htmlToBlocks'
+import type {Block} from '../../store/types'
+import {createBlock} from '../../store/types'
 
 /**
  * Round-trip tests: blocks → HTML → blocks

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { htmlToBlocks } from '../htmlToBlocks'
+import {describe, expect, it} from 'vitest'
+import {htmlToBlocks} from '../htmlToBlocks'
 
 describe('htmlToBlocks', () => {
   it('parses empty HTML to empty blocks', () => {

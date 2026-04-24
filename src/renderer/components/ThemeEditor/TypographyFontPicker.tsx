@@ -7,9 +7,9 @@
  * - Each option renders its name in its own typeface
  * - No clearing required — trigger is never an input
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 import ReactDOM from 'react-dom'
-import { useProjectStore } from '../../store/projectStore'
+import {useProjectStore} from '../../store/projectStore'
 import './TypographyFontPicker.css'
 
 interface FontOption {

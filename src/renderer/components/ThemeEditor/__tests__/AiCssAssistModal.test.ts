@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { parseCssProposal } from '../AiCssAssistModal'
+import {describe, expect, it} from 'vitest'
+import {parseCssProposal} from '../AiCssAssistModal'
 
 describe('parseCssProposal', () => {
     it('prefers metadata json plus a dedicated css fence', () => {
