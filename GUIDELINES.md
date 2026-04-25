@@ -18,14 +18,14 @@
 
 | Layer | Technology |
 |-------|------------|
-| Desktop shell | Electron 40 |
-| Frontend | React 18, TypeScript 5.7 |
+| Desktop shell | Electron 41 |
+| Frontend | React 19, TypeScript 6.0 |
 | Build | Vite 7 via electron-vite 5 |
 | State | Zustand 5 |
-| Code editor | Monaco Editor 0.47 |
+| Code editor | Monaco Editor 0.53 |
 | Drag-and-drop | @dnd-kit/core + sortable |
-| HTML parsing | parse5 7 |
-| Formatting | Prettier 3.5 |
+| HTML parsing | parse5 8 |
+| Formatting | Prettier 3.8 |
 | Icons | lucide-react |
 | Testing | Vitest 4 + jsdom |
 | Packaging | electron-builder 26 |
@@ -39,6 +39,7 @@ src/
 ├── main/                   # Electron main process (Node.js)
 │   ├── index.ts            # Entry point, IPC handlers, file I/O
 │   ├── aiService.ts        # Multi-provider AI adapter
+│   ├── cliHelpers.ts       # CLI provider discovery and model probing
 │   ├── cryptoHelpers.ts    # API key encryption (safeStorage / AES-256-GCM)
 │   ├── credentialCatalog.ts # Credential definition registry for all providers
 │   ├── publishCredentials.ts # Publish credential storage helpers
@@ -58,7 +59,8 @@ src/
 │   ├── providers/
 │   │   ├── github/         # GitHub Pages adapter
 │   │   ├── cloudflare/     # Cloudflare Pages adapter
-│   │   └── neocities/      # Neocities adapter
+│   │   ├── neocities/      # Neocities adapter
+│   │   └── aws-s3/         # AWS S3 static-site adapter
 │   └── validators/         # Per-provider credential + file validators
 │
 ├── renderer/               # React app (Vite-bundled)
@@ -228,7 +230,7 @@ FontAssets are stored in `state.fonts` (top-level in projectStore, not nested un
 
 ```typescript
 interface PublisherConfig {
-  providerId: string          // e.g. 'github-pages', 'cloudflare-pages', 'neocities'
+  providerId: string          // e.g. 'github-pages', 'cloudflare-pages', 'neocities', 'aws-s3'
   encryptedCredentials?: string
   lastPublishedUrl?: string
   lastPublishedAt?: string
@@ -471,7 +473,7 @@ The publish system is a self-contained package at `src/publish/` with a versione
 **Architecture:**
 - **`PublisherExtension`** interface (`src/publish/types/PublisherExtension.ts`) — contracts each provider must satisfy: `meta`, `credentialFields`, `validate()`, `publish()`.
 - **Registry** (`src/publish/registry.ts`) — `registerPublisher()` / `getPublisher()` / `getAllPublishers()`. Throws on version mismatch or duplicate ID.
-- **Built-in providers:** `github-pages`, `cloudflare-pages`, `neocities` — each in its own `src/publish/providers/<name>/` folder.
+- **Built-in providers:** `github-pages`, `cloudflare-pages`, `neocities`, `aws-s3` — each in its own `src/publish/providers/<name>/` folder.
 - **Validators** (`src/publish/validators/`) — per-provider credential and file validation returning `ValidationResult` with typed `ValidationIssue[]`.
 
 **IPC flow:** The renderer calls `window.api.publish.*` → main process (`src/main/index.ts`) → resolves the provider via the registry → streams `publish:progress` events back to the renderer → returns `PublishResult`.

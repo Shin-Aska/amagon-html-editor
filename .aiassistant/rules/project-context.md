@@ -18,6 +18,7 @@ For deeper context on architecture, data models, IPC channels, and conventions, 
 src/
 ├── main/                 # Electron main process
 │   ├── aiService.ts      # AI provider adapters + secure key storage
+│   ├── cliHelpers.ts     # CLI provider discovery and model probing
 │   ├── credentialCatalog.ts  # Credential definition registry for all providers
 │   └── publishCredentials.ts # Publish credential storage helpers
 ├── preload/              # Electron preload scripts
@@ -25,7 +26,7 @@ src/
 ├── publish/              # Publish-to-web extension system
 │   ├── registry.ts       # Publisher registration and lookup
 │   ├── types/            # PublisherExtension API types (versioned)
-│   ├── providers/        # GitHub Pages, Cloudflare Pages, Neocities adapters
+│   ├── providers/        # GitHub Pages, Cloudflare Pages, Neocities, AWS S3 adapters
 │   └── validators/       # Per-provider credential + file validators
 ├── renderer/             # React app
 │   ├── components/       # AiAssistant, Canvas, CodeEditor, Inspector, ThemeEditor,
@@ -43,7 +44,7 @@ src/
 
 ## Key New Systems (v1.7.0)
 
-- **Publish-to-web** (`src/publish/`): Versioned `PublisherExtension` API with built-in GitHub Pages, Cloudflare Pages, and Neocities providers. IPC namespace: `publish`. Credentials stored encrypted via `src/main/publishCredentials.ts`.
+- **Publish-to-web** (`src/publish/`): Versioned `PublisherExtension` API with built-in GitHub Pages, Cloudflare Pages, Neocities, and AWS S3 providers. IPC namespace: `publish`. Credentials stored encrypted via `src/main/publishCredentials.ts`.
 - **Tutorial system** (`src/renderer/components/Tutorial/` + `src/renderer/store/tutorialStore.ts`): Spotlight-driven onboarding with branching paths (AI Assistance, Publish Workflow, Web Media Search). Steps auto-advance via `dispatchTutorialAction()`. UI elements are marked with `data-tutorial="<marker>"` attributes.
 - **Credential catalog** (`src/main/credentialCatalog.ts`): Central registry of credential field definitions for all providers; drives the new credential edit modal in Settings.
 - **Font management system** (v1.9.0): `FontAsset` model stored in `projectStore.fonts` with `source` field (`'system'`, `'imported'`, or `'google-fonts'`). `FontManager.tsx` handles file import AND Google Fonts browsing via `GoogleFontBrowser.tsx` (search, filter, download). `TypographyFontPicker.tsx` (theme-wide) and `FontPickerField.tsx` (per-block) provide visual button-trigger dropdowns with portal rendering. `themeToCSS()` generates `@font-face` rules; `exportEngine.ts` bundles font files automatically. **Export behavior**: Downloaded Google Fonts are self-hosted (no CDN); typed-only fonts use CDN links. IPC namespace: `fonts` (`listSystem`, `importFile`, `copySystemFont`, `deleteFont`, `listProject`, `downloadGoogleFont`). Static catalog at `src/renderer/data/google-fonts-catalog.json`. See section 13a of GUIDELINES.md for full details.
