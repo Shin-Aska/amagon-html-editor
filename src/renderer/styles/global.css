@@ -77,6 +77,19 @@ body.dark {
     --color-danger: #f38ba8;
     --color-success: #a6e3a1;
     --color-warning: #fab387;
+
+    --bg-primary: var(--color-bg-primary);
+    --bg-secondary: var(--color-bg-secondary);
+    --bg-tertiary: var(--color-bg-surface);
+    --border-color: var(--color-border);
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --text-muted: var(--color-text-muted);
+    --accent-color: var(--color-accent);
+    --bg: var(--color-bg-surface);
+    --border: var(--color-border);
+    --text: var(--color-text-primary);
+    --primary: var(--color-accent);
 }
 
 * {
