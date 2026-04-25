@@ -13,7 +13,7 @@
 }
 
 .asset-manager-modal {
-    background-color: var(--bg-primary, #1e1e1e);
+    background-color: var(--color-bg-primary, #1e1e1e);
     border-radius: 8px;
     width: 80%;
     max-width: 800px;
@@ -22,7 +22,7 @@
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border-color, #3c3c3c);
+    border: 1px solid var(--color-border, #3c3c3c);
     overflow: hidden;
 }
 
@@ -31,30 +31,30 @@
     justify-content: space-between;
     align-items: center;
     padding: 14px 20px;
-    border-bottom: 1px solid var(--border-color, #3c3c3c);
-    background-color: var(--bg-tertiary, #2d2d2d);
+    border-bottom: 1px solid var(--color-border, #3c3c3c);
+    background-color: var(--color-bg-surface, #2d2d2d);
 }
 
 .asset-manager-header h2 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
 }
 
 .am-tabs {
     display: flex;
     gap: 4px;
     padding: 8px 20px 0;
-    background-color: var(--bg-tertiary, #2d2d2d);
-    border-bottom: 1px solid var(--border-color, #3c3c3c);
+    background-color: var(--color-bg-surface, #2d2d2d);
+    border-bottom: 1px solid var(--color-border, #3c3c3c);
 }
 
 .am-tab {
     padding: 8px 16px;
     background: none;
     border: none;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
     font-size: 13px;
     cursor: pointer;
     border-bottom: 2px solid transparent;
@@ -62,26 +62,26 @@
 }
 
 .am-tab:hover {
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
 }
 
 .am-tab.active {
-    color: var(--accent-color, #0d6efd);
-    border-bottom-color: var(--accent-color, #0d6efd);
+    color: var(--color-accent, #0d6efd);
+    border-bottom-color: var(--color-accent, #0d6efd);
 }
 
 .am-close-btn {
     background: none;
     border: none;
     font-size: 22px;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
     cursor: pointer;
     line-height: 1;
     padding: 0 4px;
 }
 
 .am-close-btn:hover {
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
 }
 
 .asset-manager-toolbar {
@@ -89,12 +89,12 @@
     align-items: center;
     gap: 10px;
     padding: 10px 20px;
-    border-bottom: 1px solid var(--border-color, #3c3c3c);
-    background-color: var(--bg-secondary, #252525);
+    border-bottom: 1px solid var(--color-border, #3c3c3c);
+    background-color: var(--color-bg-secondary, #252525);
 }
 
 .am-btn-primary {
-    background-color: var(--accent-color, #0d6efd);
+    background-color: var(--color-accent, #0d6efd);
     color: white;
     border: none;
     padding: 7px 14px;
@@ -117,7 +117,7 @@
 .am-asset-count {
     margin-left: auto;
     font-size: 12px;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
 }
 
 .asset-manager-content {
@@ -151,13 +151,13 @@
     justify-content: space-between;
     gap: 12px;
     padding: 12px 16px;
-    border-top: 1px solid var(--border-color, #3c3c3c);
-    background-color: var(--bg-secondary, #252525);
+    border-top: 1px solid var(--color-border, #3c3c3c);
+    background-color: var(--color-bg-secondary, #252525);
 }
 
 .am-pagination-summary {
     font-size: 12px;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
 }
 
 .am-pagination-controls {
@@ -168,14 +168,14 @@
 
 .am-page-status {
     font-size: 12px;
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
 }
 
 .am-page-btn {
     padding: 6px 12px;
-    background-color: var(--bg-primary, #1e1e1e);
-    border: 1px solid var(--border-color, #3c3c3c);
-    color: var(--text-primary, #ccc);
+    background-color: var(--color-bg-primary, #1e1e1e);
+    border: 1px solid var(--color-border, #3c3c3c);
+    color: var(--color-text-primary, #ccc);
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
@@ -183,7 +183,7 @@
 }
 
 .am-page-btn:hover:not(:disabled) {
-    background-color: var(--bg-tertiary, #2d2d2d);
+    background-color: var(--color-bg-surface, #2d2d2d);
 }
 
 .am-page-btn:disabled {
@@ -209,7 +209,7 @@
     align-items: center;
     justify-content: center;
     padding: 40px 20px;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
     text-align: center;
 }
 
@@ -231,18 +231,18 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background-color: var(--bg-secondary, #252525);
+    background-color: var(--color-bg-secondary, #252525);
     cursor: pointer;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .am-asset-item:hover {
-    border-color: var(--border-color, #555);
+    border-color: var(--color-border, #555);
 }
 
 .am-asset-item.selected {
-    border-color: var(--accent-color, #0d6efd);
-    box-shadow: 0 0 0 1px var(--accent-color, #0d6efd);
+    border-color: var(--color-accent, #0d6efd);
+    box-shadow: 0 0 0 1px var(--color-accent, #0d6efd);
 }
 
 .am-asset-thumbnail {
@@ -265,13 +265,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 6px 8px;
-    border-top: 1px solid var(--border-color, #3c3c3c);
+    border-top: 1px solid var(--color-border, #3c3c3c);
     min-height: 30px;
 }
 
 .am-asset-name {
     font-size: 11px;
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -281,7 +281,7 @@
 .am-asset-delete-btn {
     background: none;
     border: none;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
     cursor: pointer;
     font-size: 16px;
     line-height: 1;
@@ -301,11 +301,11 @@
 .am-dropdown-content {
     display: none;
     position: absolute;
-    background-color: var(--bg-primary, #1e1e1e);
+    background-color: var(--color-bg-primary, #1e1e1e);
     min-width: 120px;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
     z-index: 1;
-    border: 1px solid var(--border-color, #3c3c3c);
+    border: 1px solid var(--color-border, #3c3c3c);
     border-radius: 4px;
     margin-top: 4px;
 }
@@ -316,7 +316,7 @@
 }
 
 .am-dropdown-content button {
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
     padding: 8px 12px;
     text-decoration: none;
     display: block;
@@ -329,22 +329,22 @@
 }
 
 .am-dropdown-content button:hover {
-    background-color: var(--bg-secondary, #2d2d2d);
+    background-color: var(--color-bg-secondary, #2d2d2d);
 }
 
 .am-filters {
     display: flex;
     gap: 4px;
-    background-color: var(--bg-primary, #1e1e1e);
+    background-color: var(--color-bg-primary, #1e1e1e);
     padding: 2px;
     border-radius: 6px;
-    border: 1px solid var(--border-color, #3c3c3c);
+    border: 1px solid var(--color-border, #3c3c3c);
 }
 
 .am-filter-btn {
     background: none;
     border: none;
-    color: var(--text-secondary, #999);
+    color: var(--color-text-secondary, #999);
     padding: 4px 12px;
     font-size: 12px;
     border-radius: 4px;
@@ -353,11 +353,11 @@
 }
 
 .am-filter-btn:hover {
-    color: var(--text-primary, #ccc);
+    color: var(--color-text-primary, #ccc);
 }
 
 .am-filter-btn.active {
-    background-color: var(--bg-tertiary, #3c3c3c);
+    background-color: var(--color-bg-surface, #3c3c3c);
     color: white;
 }
 
