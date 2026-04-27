@@ -529,7 +529,8 @@ function buildStylesCss(
     const theme = project.projectSettings.theme;
     const themes = project.projectSettings.themes;
     if (theme && typeof theme === 'object' && theme.colors) {
-        const themeCss = themeToCSS(theme, themes, exportFonts, {fontUrlPrefix: './'});
+        const componentTokens = project.projectSettings.componentTokens;
+        const themeCss = themeToCSS(theme, themes, exportFonts, {fontUrlPrefix: './', componentTokens});
         if (themeCss.trim()) lines.push(themeCss.trim())
     }
 
