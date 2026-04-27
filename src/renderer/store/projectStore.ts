@@ -4,6 +4,7 @@ import type {
   FontAsset,
   FrameworkChoice,
   Page,
+  PageTemplate,
   PageFolder,
   PageThemeMode,
   PageThemePreviewMode,
@@ -11,6 +12,8 @@ import type {
   ProjectSettings,
   ProjectTheme,
   ProjectThemeVariants,
+  SectionTemplate,
+  ThemePack,
   UserBlock
 } from './types'
 import {
@@ -31,6 +34,10 @@ interface ProjectState {
     folders: PageFolder[]
     userBlocks: UserBlock[]
     customPresets: ProjectTheme[]  // user-created custom theme presets
+    themePacks: ThemePack[]
+    sectionTemplates: SectionTemplate[]
+    pageTemplates: PageTemplate[]
+    appliedThemePackId: string | null
     fonts: FontAsset[]
     metaKeyCounts: Record<string, number>
     uniqueMetaKeys: string[]
@@ -67,6 +74,15 @@ interface ProjectActions {
     addCustomPreset: (preset: ProjectTheme) => void
     updateCustomPreset: (name: string, patch: Partial<ProjectTheme>) => void
     deleteCustomPreset: (name: string) => void
+
+    // Theme pack and template management
+    addThemePack: (pack: ThemePack) => void
+    removeThemePack: (id: string) => void
+    applyThemePack: (packId: string) => void
+    addSectionTemplate: (template: SectionTemplate) => void
+    removeSectionTemplate: (id: string) => void
+    addPageTemplate: (template: PageTemplate) => void
+    removePageTemplate: (id: string) => void
 
     // Font management
     addFonts: (assets: FontAsset[]) => void
@@ -207,6 +223,47 @@ function markProjectDirty(): void {
     useEditorStore.getState().markDirty()
 }
 
+function isThemeColors(value: unknown): value is ProjectTheme['colors'] {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as Record<string, unknown>;
+    return typeof candidate.primary === 'string'
+        && typeof candidate.secondary === 'string'
+        && typeof candidate.accent === 'string'
+        && typeof candidate.background === 'string'
+        && typeof candidate.surface === 'string'
+        && typeof candidate.text === 'string'
+        && typeof candidate.textMuted === 'string'
+        && typeof candidate.border === 'string'
+        && typeof candidate.success === 'string'
+        && typeof candidate.warning === 'string'
+        && typeof candidate.danger === 'string'
+}
+
+function isProjectTheme(value: unknown): value is ProjectTheme {
+    if (!value || typeof value !== 'object') return false;
+    const candidate = value as Record<string, unknown>;
+    return typeof candidate.name === 'string'
+        && isThemeColors(candidate.colors)
+}
+
+function getThemePackTheme(pack: ThemePack, mode: PageThemeMode): ProjectTheme | null {
+    const candidate = pack[mode];
+    if (isProjectTheme(candidate)) return candidate;
+
+    const explicitVariantKey = mode === 'light' ? 'lightTheme' : 'darkTheme';
+    const explicitVariant = pack[explicitVariantKey];
+    if (isProjectTheme(explicitVariant)) return explicitVariant;
+
+    const themes = pack.themes;
+    if (themes && typeof themes === 'object') {
+        const themedCandidate = (themes as Record<string, unknown>)[mode];
+        if (isProjectTheme(themedCandidate)) return themedCandidate;
+    }
+
+    if (mode === 'light' && isProjectTheme(pack.theme)) return pack.theme;
+    return null
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useProjectStore = create<ProjectStore>((set, get) => {
@@ -219,6 +276,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         folders: [],
         userBlocks: [],
         customPresets: [],
+        themePacks: [],
+        sectionTemplates: [],
+        pageTemplates: [],
+        appliedThemePackId: null,
         fonts: [],
         metaKeyCounts: initialMetaCounts,
         uniqueMetaKeys: sortedMetaKeysFromCounts(initialMetaCounts),
@@ -287,7 +348,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                 isProjectLoaded: true,
                 boundPublisherId: data.publisherConfig?.providerId,
                 lastPublishedUrl: data.publisherConfig?.lastPublishedUrl,
-                lastPublishedAt: data.publisherConfig?.lastPublishedAt
+                lastPublishedAt: data.publisherConfig?.lastPublishedAt,
+                themePacks: data.themePacks || [],
+                sectionTemplates: data.sectionTemplates || [],
+                pageTemplates: data.pageTemplates || [],
+                appliedThemePackId: data.appliedThemePackId ?? null
             })
         },
 
@@ -300,6 +365,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                 folders: [],
                 userBlocks: [],
                 customPresets: [],
+                themePacks: [],
+                sectionTemplates: [],
+                pageTemplates: [],
+                appliedThemePackId: null,
                 fonts: [],
                 metaKeyCounts: counts,
                 uniqueMetaKeys: sortedMetaKeysFromCounts(counts),
@@ -356,6 +425,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
                 folders: state.folders,
                 userBlocks: state.userBlocks,
                 customPresets: state.customPresets,
+                themePacks: state.themePacks,
+                sectionTemplates: state.sectionTemplates,
+                pageTemplates: state.pageTemplates,
+                appliedThemePackId: state.appliedThemePackId,
                 publisherConfig:
                     state.boundPublisherId || state.lastPublishedUrl || state.lastPublishedAt
                         ? {
@@ -562,6 +635,69 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
         deleteCustomPreset: (name) => {
             set((state) => ({
                 customPresets: state.customPresets.filter((p) => p.name !== name)
+            }));
+            markProjectDirty()
+        },
+
+        addThemePack: (pack) => {
+            set((state) => ({
+                themePacks: [...state.themePacks, pack]
+            }));
+            markProjectDirty()
+        },
+
+        removeThemePack: (id) => {
+            set((state) => ({
+                themePacks: state.themePacks.filter((pack) => pack.id !== id),
+                appliedThemePackId: state.appliedThemePackId === id ? null : state.appliedThemePackId
+            }));
+            markProjectDirty()
+        },
+
+        applyThemePack: (packId) => {
+            const pack = get().themePacks.find((entry) => entry.id === packId);
+            if (!pack) return;
+
+            const lightTheme = getThemePackTheme(pack, 'light');
+            const darkTheme = getThemePackTheme(pack, 'dark');
+
+            set({appliedThemePackId: packId});
+
+            if (lightTheme) {
+                get().setProjectTheme(lightTheme, 'light')
+            }
+            if (darkTheme) {
+                get().setProjectTheme(darkTheme, 'dark')
+            }
+            if (!lightTheme && !darkTheme) {
+                markProjectDirty()
+            }
+        },
+
+        addSectionTemplate: (template) => {
+            set((state) => ({
+                sectionTemplates: [...state.sectionTemplates, template]
+            }));
+            markProjectDirty()
+        },
+
+        removeSectionTemplate: (id) => {
+            set((state) => ({
+                sectionTemplates: state.sectionTemplates.filter((template) => template.id !== id)
+            }));
+            markProjectDirty()
+        },
+
+        addPageTemplate: (template) => {
+            set((state) => ({
+                pageTemplates: [...state.pageTemplates, template]
+            }));
+            markProjectDirty()
+        },
+
+        removePageTemplate: (id) => {
+            set((state) => ({
+                pageTemplates: state.pageTemplates.filter((template) => template.id !== id)
             }));
             markProjectDirty()
         },
