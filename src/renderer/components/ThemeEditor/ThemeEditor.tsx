@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 import {Check, Download, Palette, Pencil, Plus, RotateCcw, Trash2, Upload, X, XIcon} from 'lucide-react'
 import {useProjectStore} from '../../store/projectStore'
 import {useToastStore} from '../../store/toastStore'
@@ -11,15 +11,25 @@ import type {
     ThemeTypography
 } from '../../store/types'
 import {createDefaultDarkTheme, createDefaultTheme, getThemeVariant} from '../../store/types'
+import {builtInGalleryThemes} from '../../themes/themeGalleryRegistry'
 import {themePresets} from './themePresets'
 import CustomCssManager from './CustomCssManager'
 import ColorField from './ColorField'
 import CreatePresetModal from './CreatePresetModal'
 import FontManager from './FontManager'
+import ThemeMiniPreview from '../ThemeGallery/ThemeMiniPreview'
 import TypographyFontPicker from './TypographyFontPicker'
 import './ThemeEditor.css'
 
 type ThemeTab = 'colors' | 'typography' | 'spacing' | 'borders' | 'customCss' | 'presets' | 'fonts'
+
+type BuiltInPresetTheme = {
+    name: string
+    theme: ProjectTheme
+    category: string
+    tags: string[]
+    mode: 'light' | 'dark'
+}
 
 interface ThemeEditorProps {
     isOpen: boolean
@@ -230,16 +240,20 @@ function BordersTab({
 
 function PresetsTab({
                         currentTheme,
+                        builtInThemes,
                         customPresets,
                         editingMode,
+                        onDismiss,
                         onApplyPreset,
                         onCreatePreset,
                         onUpdatePreset,
                         onDeletePreset
                     }: {
     currentTheme: ProjectTheme
+    builtInThemes?: BuiltInPresetTheme[]
     customPresets: ProjectTheme[]
     editingMode: PageThemeMode
+    onDismiss: () => void
     onApplyPreset: (preset: ProjectTheme) => void
     onCreatePreset: (name: string, colors: ThemeColors) => void
     onUpdatePreset: (name: string, preset: ProjectTheme) => void
@@ -248,6 +262,27 @@ function PresetsTab({
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingPreset, setEditingPreset] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
+    const [selectedPresetCategory, setSelectedPresetCategory] = useState('all');
+
+    const presetCategories = useMemo(() => {
+        const categories = new Set<string>()
+        builtInThemes?.forEach((preset) => categories.add(preset.category))
+        return ['all', ...Array.from(categories).sort((a, b) => a.localeCompare(b))]
+    }, [builtInThemes])
+
+    useEffect(() => {
+        if (!presetCategories.includes(selectedPresetCategory)) {
+            setSelectedPresetCategory('all')
+        }
+    }, [presetCategories, selectedPresetCategory])
+
+    const filteredBuiltInThemes = useMemo(() => {
+        if (!builtInThemes || selectedPresetCategory === 'all') {
+            return builtInThemes ?? []
+        }
+
+        return builtInThemes.filter((preset) => preset.category === selectedPresetCategory)
+    }, [builtInThemes, selectedPresetCategory])
 
     const handleEditStart = (preset: ProjectTheme) => {
         setEditingPreset(preset.name);
@@ -270,8 +305,6 @@ function PresetsTab({
         setEditName('')
     };
 
-    const allPresets = [...themePresets, ...customPresets];
-
     return (
         <div className="theme-section">
             <div className="theme-section-header">
@@ -287,18 +320,87 @@ function PresetsTab({
                 </button>
             </div>
 
+            {builtInThemes && builtInThemes.length > 0 && (
+                <div className="theme-preset-category-filters">
+                    {presetCategories.map((category) => (
+                        <button
+                            key={category}
+                            type="button"
+                            className={`theme-preset-category-chip ${selectedPresetCategory === category ? 'active' : ''}`}
+                            onClick={() => setSelectedPresetCategory(category)}
+                        >
+                            {category === 'all' ? 'All Categories' : category}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {filteredBuiltInThemes.length > 0 && (
+                <>
+                    <div className="theme-section-title">Built-in Themes</div>
+                    <div className="theme-preset-grid">
+                        {filteredBuiltInThemes.map((preset) => {
+                            const isActive = currentTheme.name === preset.theme.name;
+
+                            return (
+                                <div
+                                    key={`built-in-${preset.mode}-${preset.theme.name}`}
+                                    className={`theme-preset-card theme-preset-card-built-in ${isActive ? 'active' : ''}`}
+                                    onClick={() => onApplyPreset(preset.theme)}
+                                >
+                                    <div className="theme-preset-preview-mini">
+                                        <ThemeMiniPreview theme={preset.theme} title={preset.name}/>
+                                    </div>
+                                    <div className="theme-preset-header">
+                                        <div className="theme-preset-heading-group">
+                                            <div className="theme-preset-name">{preset.name}</div>
+                                            <div className="theme-preset-meta-row">
+                                                <span className="theme-preset-category-pill">{preset.category}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="theme-preset-tags">
+                                        {preset.tags.map((tag) => (
+                                            <span key={`${preset.theme.name}-${tag}`} className="theme-preset-tag">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="theme-preset-swatches">
+                                        <div className="theme-preset-swatch" style={{backgroundColor: preset.theme.colors.primary}}/>
+                                        <div className="theme-preset-swatch" style={{backgroundColor: preset.theme.colors.secondary}}/>
+                                        <div className="theme-preset-swatch" style={{backgroundColor: preset.theme.colors.accent}}/>
+                                        <div className="theme-preset-swatch" style={{backgroundColor: preset.theme.colors.background}}/>
+                                        <div className="theme-preset-swatch" style={{backgroundColor: preset.theme.colors.text}}/>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </>
+            )}
+
+            {customPresets.length > 0 && (
+                <div className="theme-section-title" style={{marginTop: filteredBuiltInThemes.length > 0 ? 20 : 0}}>
+                    Custom Presets
+                </div>
+            )}
+
             <div className="theme-preset-grid">
-                {allPresets.map((preset) => {
+                {customPresets.map((preset) => {
                     const isCustom = preset.isCustom ?? false;
                     const isActive = currentTheme.name === preset.name;
                     const isEditing = editingPreset === preset.name;
 
                     return (
                         <div
-                            key={`${isCustom ? 'custom' : 'built-in'}-${preset.name}`}
-                            className={`theme-preset-card ${isActive ? 'active' : ''} ${isCustom ? 'custom' : ''}`}
+                            key={`custom-${preset.name}`}
+                            className={`theme-preset-card theme-preset-card-built-in ${isActive ? 'active' : ''} ${isCustom ? 'custom' : ''}`}
                             onClick={() => !isEditing && onApplyPreset(preset)}
                         >
+                            <div className="theme-preset-preview-mini">
+                                <ThemeMiniPreview theme={preset} title={preset.name}/>
+                            </div>
                             <div className="theme-preset-header">
                                 {isEditing ? (
                                     <div className="theme-preset-edit-form" onClick={(e) => e.stopPropagation()}>
@@ -324,9 +426,11 @@ function PresetsTab({
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="theme-preset-name">
-                                            {preset.name}
-                                            {isCustom && <span className="theme-preset-badge">Custom</span>}
+                                        <div className="theme-preset-heading-group">
+                                            <div className="theme-preset-name">
+                                                {preset.name}
+                                                {isCustom && <span className="theme-preset-badge">Custom</span>}
+                                            </div>
                                         </div>
                                         {isCustom && (
                                             <div className="theme-preset-actions" onClick={(e) => e.stopPropagation()}>
@@ -510,6 +614,8 @@ export default function ThemeEditor({isOpen, onClose}: ThemeEditorProps): JSX.El
 
     if (!isOpen) return null;
 
+    const galleryThemesForMode = builtInGalleryThemes.filter((themeItem) => themeItem.mode === editingMode)
+
     const tabs: { id: ThemeTab; label: string }[] = [
         {id: 'presets', label: 'Presets'},
         {id: 'colors', label: 'Colors'},
@@ -586,14 +692,16 @@ export default function ThemeEditor({isOpen, onClose}: ThemeEditorProps): JSX.El
 
                 <div className="theme-editor-content">
                     {activeTab === 'presets' && (
-                        <PresetsTab
-                            currentTheme={selectedTheme}
-                            customPresets={customPresets}
-                            editingMode={editingMode}
-                            onApplyPreset={handleApplyPreset}
-                            onCreatePreset={handleCreatePreset}
-                            onUpdatePreset={handleUpdatePreset}
-                            onDeletePreset={handleDeletePreset}
+                    <PresetsTab
+                        currentTheme={selectedTheme}
+                        builtInThemes={galleryThemesForMode}
+                        customPresets={customPresets}
+                        editingMode={editingMode}
+                        onDismiss={onClose}
+                        onApplyPreset={handleApplyPreset}
+                        onCreatePreset={handleCreatePreset}
+                        onUpdatePreset={handleUpdatePreset}
+                        onDeletePreset={handleDeletePreset}
                         />
                     )}
                     {activeTab === 'colors' && (
