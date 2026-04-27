@@ -10,6 +10,7 @@ import {
     Grid3x3,
     Image as ImageIcon,
     LayoutGrid,
+    LayoutTemplate,
     Moon,
     MousePointerClick,
     PanelLeft,
@@ -53,12 +54,12 @@ interface PaletteItem {
 
 export default function CommandPalette({
                                            isOpen,
-                                           onClose,
-                                           onNewProject,
-                                           onOpen,
-                                           onSave,
-                                           onExport,
-                                           onToggleCodeEditor,
+    onClose,
+    onNewProject,
+    onOpen,
+    onSave,
+    onExport,
+    onToggleCodeEditor,
                                            onToggleLeftPanel,
                                            onToggleRightPanel
                                        }: CommandPaletteProps): JSX.Element | null {

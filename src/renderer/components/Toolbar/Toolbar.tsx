@@ -12,6 +12,7 @@ import {
     Image as ImageIcon,
     KeyRound,
     Layout,
+    LayoutTemplate,
     Menu,
     Monitor,
     Moon,
@@ -68,7 +69,7 @@ export default function Toolbar({
                                     onToggleLeftPanel,
                                     onToggleCodeEditor,
                                     onSetEditorLayout,
-                                    onOpenThemeEditor,
+    onOpenThemeEditor,
                                     onOpenPublish,
                                     onOpenKeyboardShortcuts
                                 }: ToolbarProps): JSX.Element {
@@ -626,6 +627,8 @@ export default function Toolbar({
                         >
                             <Palette size={16} aria-hidden="true"/>
                         </button>
+
+                        <div className="toolbar-divider"/>
 
                         {/* Layout Switcher */}
                         <div className="toolbar-layout-switcher" data-tutorial="toolbar-layout"

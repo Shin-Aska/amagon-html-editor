@@ -35,6 +35,7 @@ import WelcomeTourDialog from './components/Tutorial/WelcomeTourDialog'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 import {tutorialSteps} from './components/Tutorial/tutorialSteps'
 import {OPEN_KEYBOARD_SHORTCUTS_EVENT} from './constants/tutorialEvents'
+import {getTemplateByWidgetType, isTemplateWidgetType} from './templates/templateWidgets'
 
 // Lazy load heavy components for performance
 const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'));
@@ -505,8 +506,10 @@ function App(): JSX.Element {
             props: {...block.props},
             classes: [...block.classes],
             styles: {...block.styles},
+            events: block.events ? {...block.events} : undefined,
             content: block.content,
-            tag: block.tag
+            tag: block.tag,
+            locked: block.locked
         });
 
         if (block.children) {
@@ -516,7 +519,44 @@ function App(): JSX.Element {
         return newBlock
     }, []);
 
+    const cloneBlocksWithFreshIds = useCallback((templateBlocks: Block[]): Block[] => {
+        const cloneNode = (block: Block): Block => {
+            const cloned = createBlock(block.type, {
+                props: {...block.props},
+                classes: [...block.classes],
+                styles: {...block.styles},
+                events: block.events ? {...block.events} : undefined,
+                content: block.content,
+                tag: block.tag,
+                locked: block.locked
+            });
+
+            cloned.children = block.children.map(cloneNode);
+            return cloned
+        };
+
+        return templateBlocks.map(cloneNode)
+    }, []);
+
     const createBlockFromWidget = useCallback((widgetType: string): Block | null => {
+        if (isTemplateWidgetType(widgetType)) {
+            const template = getTemplateByWidgetType(widgetType);
+            if (!template || template.type !== 'section') return null;
+
+            const clonedBlocks = cloneBlocksWithFreshIds(template.blocks);
+            if (clonedBlocks.length === 1) {
+                return clonedBlocks[0]
+            }
+
+            const wrapper = createBlock('container', {
+                props: {},
+                classes: [],
+                styles: {}
+            });
+            wrapper.children = clonedBlocks;
+            return wrapper
+        }
+
         // Check for User Block
         if (widgetType.startsWith('user:')) {
             const userBlockId = widgetType.replace('user:', '');
@@ -539,7 +579,7 @@ function App(): JSX.Element {
         }
 
         return block
-    }, [createBlockFromDef, cloneBlockWithNewIds, userBlocks]);
+    }, [cloneBlocksWithFreshIds, createBlockFromDef, cloneBlockWithNewIds, userBlocks]);
 
     const onDragStart = useCallback((event: DragStartEvent) => {
         if (isTypingCode) return;
@@ -608,6 +648,8 @@ function App(): JSX.Element {
             ? <BlockIcon name={iconString.replace(/^lucide:/, '')}/>
             : activeWidget.widgetType.startsWith('user:')
                 ? (iconString || <BlockIcon name="user-block"/>)
+                : isTemplateWidgetType(activeWidget.widgetType)
+                    ? <BlockIcon name="layout-template"/>
                 : <BlockIcon name={activeWidget.widgetType}/>;
 
         return (
@@ -631,14 +673,14 @@ function App(): JSX.Element {
                         rightPanelOpen={showInspector}
                         codeEditorOpen={codeEditorOpen}
                         editorLayout={editorLayout}
-                        onToggleLeftPanel={handleToggleSidebar}
-                        onToggleRightPanel={handleToggleInspector}
-                        onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
-                        onSetEditorLayout={setEditorLayout}
-                        onOpenThemeEditor={() => setShowThemeEditor(true)}
-                        onOpenPublish={() => setShowPublish(true)}
-                        onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
-                    />
+                    onToggleLeftPanel={handleToggleSidebar}
+                    onToggleRightPanel={handleToggleInspector}
+                    onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
+                    onSetEditorLayout={setEditorLayout}
+                    onOpenThemeEditor={() => setShowThemeEditor(true)}
+                    onOpenPublish={() => setShowPublish(true)}
+                    onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
+                />
                     <PanelGroup
                         id="html-editor-layout"
                         orientation="horizontal"
