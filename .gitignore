@@ -43,3 +43,6 @@ Thumbs.db
 
 # Misc
 *.local
+.sisyphus/*
+plans.md
+plan.md
