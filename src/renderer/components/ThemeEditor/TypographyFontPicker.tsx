@@ -154,7 +154,6 @@ const FONT_OPTIONS: FontOption[] = [
 
 const GROUPS = [
   "Imported",
-  "System",
   "Sans-Serif",
   "Serif",
   "Display",
@@ -173,7 +172,6 @@ export default function TypographyFontPicker({
   onChange,
 }: Props): JSX.Element {
   const managedFonts = useProjectStore((s) => s.fonts);
-  const systemFonts = useProjectStore((s) => s.systemFonts);
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -187,15 +185,8 @@ export default function TypographyFontPicker({
     const managed: FontOption[] = managedFonts
       .filter((f) => f.name.trim())
       .map((f) => ({ label: f.name, value: f.name, group: "Imported" }));
-    const system: FontOption[] = systemFonts
-      .filter((name) => name.trim())
-      .map((name) => ({
-        label: name,
-        value: `"${name}", sans-serif`,
-        group: "System",
-      }));
-    return [...managed, ...FONT_OPTIONS, ...system];
-  }, [managedFonts, systemFonts]);
+    return [...managed, ...FONT_OPTIONS];
+  }, [managedFonts]);
 
   // Current option (for trigger display)
   const currentOption = useMemo(() => {

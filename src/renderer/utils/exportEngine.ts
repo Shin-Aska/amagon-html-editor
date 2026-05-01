@@ -557,6 +557,11 @@ function normalizeFontsForExport(fonts: FontAsset[] | undefined): FontAsset[] {
             .replace(/^[/\\]+/, '')
             .replace(/\\/g, '/');
 
+        // Preserve empty path for system-font stubs without a physical file
+        if (!rawRel && !font.fileName) {
+            return {...font, relativePath: ''};
+        }
+
         const normalizedRel =
             rawRel.startsWith('assets/fonts/')
                 ? rawRel

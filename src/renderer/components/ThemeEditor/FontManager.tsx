@@ -7,6 +7,7 @@ import {
   PackageCheck,
   Search,
   Trash2,
+  Unlink,
   Upload,
 } from "lucide-react";
 import { useProjectStore } from "../../store/projectStore";
@@ -284,6 +285,11 @@ export default function FontManager({
     }
   };
 
+  const handleUnlinkFont = (font: FontAsset) => {
+    removeFontStore(font.id);
+    showToast(`Unlinked "${font.name}" from project`, "success");
+  };
+
   const handleImportSystemFont = async (name: string) => {
     try {
       const res = await window.api.fonts.copySystemFont({
@@ -291,8 +297,16 @@ export default function FontManager({
         filePaths: [],
       });
       if (res.success && res.fonts && res.fonts.length > 0) {
+        const hasPhysicalFile = res.fonts.some((f) => f.relativePath);
         addFonts(res.fonts);
-        showToast(`Imported system font "${name}"`, "success");
+        if (hasPhysicalFile) {
+          showToast(`Imported system font "${name}"`, "success");
+        } else {
+          showToast(
+            `Added "${name}" as a system font reference (file not found on disk)`,
+            "info",
+          );
+        }
       } else {
         showToast(res.error || `Failed to import "${name}"`, "error");
       }
@@ -538,13 +552,24 @@ export default function FontManager({
                     <td className="col-status">{statusBadge(item.status)}</td>
                     <td className="col-action">
                       {item.status === "imported" && item.fontAsset ? (
-                        <button
-                          className="theme-font-action-btn theme-font-action-btn-danger"
-                          onClick={() => handleDeleteFont(item.fontAsset!)}
-                          title={`Remove "${item.name}"`}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="theme-font-inline-action">
+                          <button
+                            className="theme-font-action-btn"
+                            onClick={() => handleUnlinkFont(item.fontAsset!)}
+                            title={`Unlink "${item.name}" from project`}
+                          >
+                            <Unlink size={14} />
+                          </button>
+                          {item.fontAsset.source !== "system" && (
+                            <button
+                              className="theme-font-action-btn theme-font-action-btn-danger"
+                              onClick={() => handleDeleteFont(item.fontAsset!)}
+                              title={`Delete "${item.name}"`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
                       ) : item.source === "system" ? (
                         <button
                           className="theme-font-action-btn"

@@ -139,7 +139,6 @@ const PRESET_FONTS: FontOption[] = [
 
 const GROUPS = [
   "Imported",
-  "System",
   "Sans-Serif",
   "Serif",
   "Display",
@@ -151,7 +150,6 @@ export default function FontPickerField({
   onChange,
 }: FontPickerFieldProps): JSX.Element {
   const managedFonts = useProjectStore((s) => s.fonts);
-  const systemFonts = useProjectStore((s) => s.systemFonts);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [portalStyle, setPortalStyle] = useState<{
@@ -166,15 +164,8 @@ export default function FontPickerField({
     const managed: FontOption[] = managedFonts
       .filter((f) => f.name.trim())
       .map((f) => ({ label: f.name, value: f.name, group: "Imported" }));
-    const system: FontOption[] = systemFonts
-      .filter((name) => name.trim())
-      .map((name) => ({
-        label: name,
-        value: `"${name}", sans-serif`,
-        group: "System",
-      }));
-    return [...managed, ...PRESET_FONTS, ...system];
-  }, [managedFonts, systemFonts]);
+    return [...managed, ...PRESET_FONTS];
+  }, [managedFonts]);
 
   const currentOption = useMemo(() => {
     return (

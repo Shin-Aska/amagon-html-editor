@@ -424,7 +424,7 @@ function registerIpcHandlers(): void {
         if (!existsSync(dir)) continue;
         try {
           const stdout = await execPromise(
-            `find "${dir}" -maxdepth 2 -type f ${exts.map((e) => `-iname "*.${e}"`).join(" ")} 2>/dev/null`,
+            `find "${dir}" -maxdepth 2 -type f \\( ${exts.map((e) => `-iname "*.${e}"`).join(" -o ")} \\) 2>/dev/null`,
           );
           const candidates = stdout
             .split("\n")
@@ -435,6 +435,7 @@ function registerIpcHandlers(): void {
             if (
               base
                 .toLowerCase()
+                .replace(/\s+/g, "")
                 .includes(familyName.toLowerCase().replace(/\s+/g, ""))
             ) {
               return candidate;
@@ -445,11 +446,39 @@ function registerIpcHandlers(): void {
     }
 
     if (platform === "win32") {
+      const windir = process.env.WINDIR || "C:\\Windows";
+      const fontDir = path.join(windir, "Fonts");
+
+      try {
+        const regQuery = `reg query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" /s 2>nul`;
+        const stdout = await execPromise(regQuery);
+        const regLines = stdout.split("\r\n").map((l) => l.trim()).filter(Boolean);
+
+        for (const line of regLines) {
+          const regMatch = line.match(/^\s+(.+?)\s+REG_SZ\s+(.+)$/i);
+          if (!regMatch) continue;
+
+          const regName = regMatch[1].trim();
+          const regFile = regMatch[2].trim();
+
+          const cleanRegName = regName
+            .replace(/\s*\([^)]+\)\s*$/i, "")
+            .trim();
+
+          const targetClean = familyName.toLowerCase().replace(/\s+/g, "");
+          const regClean = cleanRegName.toLowerCase().replace(/\s+/g, "");
+
+          if (regClean === targetClean || regClean.includes(targetClean)) {
+            const candidate = path.join(fontDir, regFile);
+            if (existsSync(candidate)) return candidate;
+          }
+        }
+      } catch {}
+
       const dirs = [
-        path.join(process.env.WINDIR || "C:\\Windows", "Fonts"),
+        fontDir,
         path.join(
-          process.env.LOCALAPPDATA ||
-            path.join(os.homedir(), "AppData", "Local"),
+          process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"),
           "Microsoft",
           "Windows",
           "Fonts",
@@ -468,6 +497,7 @@ function registerIpcHandlers(): void {
             if (
               base
                 .toLowerCase()
+                .replace(/\s+/g, "")
                 .includes(familyName.toLowerCase().replace(/\s+/g, ""))
             ) {
               return path.join(dir, entry.name);
