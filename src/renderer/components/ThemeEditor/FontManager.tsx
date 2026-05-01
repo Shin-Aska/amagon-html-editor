@@ -64,11 +64,13 @@ export default function FontManager({
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [loadingSystemFonts, setLoadingSystemFonts] = useState(false);
 
   const selectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
 
   useEffect(() => {
     if (systemFonts.length > 0) return;
+    setLoadingSystemFonts(true);
     window.api.fonts
       .listSystem()
       .then((res) => {
@@ -76,7 +78,8 @@ export default function FontManager({
           setSystemFonts(res.fonts);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoadingSystemFonts(false));
   }, [systemFonts.length, setSystemFonts]);
 
   const importedNames = useMemo(
@@ -431,6 +434,17 @@ export default function FontManager({
             Imported font files are copied into your exported site.
           </span>
         </div>
+
+        {loadingSystemFonts && (
+          <div className="theme-font-loading-bar">
+            <div className="theme-font-loading-track">
+              <div className="theme-font-loading-fill" />
+            </div>
+            <span className="theme-font-loading-label">
+              Loading system fonts...
+            </span>
+          </div>
+        )}
 
         <div className="theme-font-controls">
           <div className="theme-font-filter-tabs">
