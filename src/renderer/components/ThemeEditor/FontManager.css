@@ -1,95 +1,7 @@
-/* FontManager.css */
 .theme-font-manager {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.theme-font-actions {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
-}
-
-.theme-font-system-select {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.theme-font-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.theme-font-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  background: var(--color-bg-surface);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: relative;
-}
-
-.theme-font-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.theme-font-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.theme-font-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.theme-font-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--color-bg-hover);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-}
-
-.theme-font-preview {
-  font-size: 18px;
-  padding: 12px;
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.theme-font-delete {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  transition: all 0.15s;
-}
-
-.theme-font-delete:hover {
-  background: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
 }
 
 .theme-font-library-header {
@@ -119,11 +31,45 @@
   line-height: 1.5;
 }
 
+.theme-font-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.theme-font-filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.theme-font-filter-tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.theme-font-filter-tab:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.theme-font-filter-tab.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: white;
+}
+
 .theme-font-search {
   position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
 }
 
 .theme-font-search-icon {
@@ -148,50 +94,186 @@
   border-color: var(--color-accent);
 }
 
-.theme-font-empty-state {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--color-text-muted);
-  background: var(--color-bg-surface);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--color-border);
-}
-
-.theme-font-system-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 4px;
-}
-
-.theme-font-system-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--color-bg-surface);
+.theme-font-table-wrapper {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-surface);
 }
 
-.theme-font-system-name {
+.theme-font-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.theme-font-table thead {
+  background: var(--color-bg-primary);
+}
+
+.theme-font-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.theme-font-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.theme-font-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.theme-font-table tbody tr:hover {
+  background: var(--color-bg-hover);
+}
+
+.col-preview {
+  width: 140px;
+  min-width: 140px;
+}
+
+.col-name {
+  min-width: 160px;
+}
+
+.col-source {
+  width: 90px;
+  min-width: 90px;
+}
+
+.col-status {
+  width: 100px;
+  min-width: 100px;
+}
+
+.col-action {
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+}
+
+.theme-font-preview-text {
+  font-size: 16px;
+  color: var(--color-text-primary);
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+  max-width: 140px;
 }
 
-.theme-font-system-badge {
-  font-size: 9px;
-  padding: 2px 6px;
+.theme-font-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
   border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.tag-system {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.tag-internet {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.tag-local {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--color-accent);
+}
+
+.tag-imported {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.tag-available {
   background: var(--color-bg-hover);
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  flex-shrink: 0;
+}
+
+.theme-font-action-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.theme-font-action-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.theme-font-action-btn-danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.theme-font-table-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.theme-font-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.theme-font-page-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.theme-font-page-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
+
+.theme-font-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.theme-font-page-info {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
