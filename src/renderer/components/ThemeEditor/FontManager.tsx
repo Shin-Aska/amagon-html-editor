@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -38,6 +37,15 @@ function getScopedPreviewFontId(family: string): string {
   return `__gfont_preview_${family.replace(/\s+/g, "_")}`;
 }
 
+function variantLabel(v: { weight: string; style: string }): string {
+  const styleLabel = v.style === "italic" ? "Italic" : "Regular";
+  return `${styleLabel} ${v.weight}`;
+}
+
+function variantKey(v: { weight: string; style: string }): string {
+  return `${v.weight}-${v.style}`;
+}
+
 export default function FontManager({
   typography,
   onTypographyChange,
@@ -55,13 +63,9 @@ export default function FontManager({
   const [filter, setFilter] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
 
-  const [selectedInternetFont, setSelectedInternetFont] =
-    useState<GoogleFontMeta | null>(null);
-  const [selectedVariants, setSelectedVariants] = useState<Set<string>>(
-    new Set(),
-  );
-  const [downloading, setDownloading] = useState(false);
+  const selectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
 
   useEffect(() => {
     if (systemFonts.length > 0) return;
@@ -148,6 +152,73 @@ export default function FontManager({
     setPage(1);
   }, [filter, searchQuery]);
 
+  useEffect(() => {
+    const injectedIds = new Set<string>();
+    const abortControllers: AbortController[] = [];
+
+    const internetItems = pageItems.filter(
+      (i) => i.source === "internet" && i.internetMeta,
+    );
+    internetItems.forEach((item) => {
+      const meta = item.internetMeta!;
+      const regularVariant =
+        meta.variants.find((v) => v.weight === "400" && v.style === "normal") ||
+        meta.variants[0];
+      const url = getGoogleFontPreviewUrl(
+        meta.family,
+        regularVariant.weight,
+        regularVariant.style,
+      );
+      const previewId = getScopedPreviewFontId(meta.family);
+
+      if (document.getElementById(previewId)) {
+        injectedIds.add(previewId);
+        return;
+      }
+
+      const controller = new AbortController();
+      abortControllers.push(controller);
+
+      fetch(url, { signal: controller.signal })
+        .then((res) => res.text())
+        .then((css) => {
+          const escapedFamily = meta.family.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&",
+          );
+          const scopedCss = css.replace(
+            new RegExp(`font-family:\\s*['"]?${escapedFamily}['"]?`, "g"),
+            `font-family: "${previewId}"`,
+          );
+          const style = document.createElement("style");
+          style.id = previewId;
+          style.setAttribute("data-gfont-preview", "true");
+          style.textContent = scopedCss;
+          document.head.appendChild(style);
+          injectedIds.add(previewId);
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.warn(
+              `Failed to load font preview for ${meta.family}:`,
+              err,
+            );
+          }
+        });
+    });
+
+    return () => {
+      abortControllers.forEach((ctrl) => ctrl.abort());
+      document
+        .querySelectorAll('style[data-gfont-preview="true"]')
+        .forEach((el) => {
+          if (!injectedIds.has(el.id)) {
+            el.parentNode?.removeChild(el);
+          }
+        });
+    };
+  }, [pageItems]);
+
   const handleImportFile = async () => {
     try {
       const res = await window.api.fonts.importFile();
@@ -198,48 +269,41 @@ export default function FontManager({
     }
   };
 
-  const handleDownloadInternet = (meta: GoogleFontMeta) => {
-    setSelectedInternetFont(meta);
-    const has400 = meta.variants.some(
-      (v) => v.weight === "400" && v.style === "normal",
-    );
-    const defaultVariant = has400
-      ? "400-normal"
-      : `${meta.variants[0].weight}-${meta.variants[0].style}`;
-    setSelectedVariants(new Set([defaultVariant]));
-  };
+  const handleDownloadInternet = async (item: UnifiedFont) => {
+    if (!item.internetMeta) return;
+    const meta = item.internetMeta;
+    const selectEl = selectRefs.current[item.id];
+    const selectedKey = selectEl?.value;
 
-  const toggleVariant = (key: string) => {
-    setSelectedVariants((prev) => {
+    if (!selectedKey) return;
+    const variant = meta.variants.find((v) => variantKey(v) === selectedKey);
+    if (!variant) return;
+
+    setDownloadingIds((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      next.add(item.id);
       return next;
     });
-  };
 
-  const confirmDownload = async () => {
-    if (!selectedInternetFont || selectedVariants.size === 0) return;
-    setDownloading(true);
     try {
-      const variants = selectedInternetFont.variants.filter((v) =>
-        selectedVariants.has(`${v.weight}-${v.style}`),
-      );
       const res = await window.api.fonts.downloadGoogleFont({
-        family: selectedInternetFont.family,
-        variants,
+        family: meta.family,
+        variants: [variant],
       });
       if (res.success && res.fonts) {
         addFonts(res.fonts);
-        showToast(`Downloaded "${selectedInternetFont.family}"`, "success");
-        setSelectedInternetFont(null);
+        showToast(`Downloaded "${meta.family}"`, "success");
       } else {
         showToast(res.errors?.[0] || "Download failed", "error");
       }
     } catch {
       showToast("Error downloading font", "error");
     } finally {
-      setDownloading(false);
+      setDownloadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
     }
   };
 
@@ -276,6 +340,13 @@ export default function FontManager({
       {status === "imported" ? "Imported" : "Available"}
     </span>
   );
+
+  const previewFamily = (item: UnifiedFont): string => {
+    if (item.source === "internet" && item.internetMeta) {
+      return `"${getScopedPreviewFontId(item.name)}", sans-serif`;
+    }
+    return `"${item.name}", sans-serif`;
+  };
 
   return (
     <div className="theme-font-manager">
@@ -414,12 +485,7 @@ export default function FontManager({
                     <td className="col-preview">
                       <span
                         className="theme-font-preview-text"
-                        style={{
-                          fontFamily:
-                            item.source === "internet"
-                              ? "inherit"
-                              : `"${item.name}", sans-serif`,
-                        }}
+                        style={{ fontFamily: previewFamily(item) }}
                       >
                         {item.name}
                       </span>
@@ -445,15 +511,40 @@ export default function FontManager({
                           <Download size={14} />
                         </button>
                       ) : item.source === "internet" && item.internetMeta ? (
-                        <button
-                          className="theme-font-action-btn"
-                          onClick={() =>
-                            handleDownloadInternet(item.internetMeta!)
-                          }
-                          title={`Download "${item.name}"`}
-                        >
-                          <Globe size={14} />
-                        </button>
+                        <div className="theme-font-inline-action">
+                          <select
+                            className="theme-font-variant-select"
+                            ref={(el) => {
+                              selectRefs.current[item.id] = el;
+                            }}
+                            defaultValue={variantKey(
+                              item.internetMeta.variants.find(
+                                (v) =>
+                                  v.weight === "400" && v.style === "normal",
+                              ) ?? item.internetMeta.variants[0],
+                            )}
+                          >
+                            {item.internetMeta.variants.map((v) => (
+                              <option key={variantKey(v)} value={variantKey(v)}>
+                                {variantLabel(v)}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            className="theme-btn theme-btn-small theme-btn-primary"
+                            onClick={() => handleDownloadInternet(item)}
+                            disabled={downloadingIds.has(item.id)}
+                            title={`Download "${item.name}"`}
+                          >
+                            {downloadingIds.has(item.id) ? (
+                              "..."
+                            ) : (
+                              <>
+                                <Globe size={12} /> Apply
+                              </>
+                            )}
+                          </button>
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -485,56 +576,6 @@ export default function FontManager({
           </div>
         )}
       </div>
-
-      {selectedInternetFont && (
-        <div
-          className="gfont-modal-overlay"
-          onClick={() => setSelectedInternetFont(null)}
-        >
-          <div className="gfont-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="gfont-modal-header">
-              <h3>Download {selectedInternetFont.family}</h3>
-              <p>Select variants to download.</p>
-            </div>
-            <div className="gfont-variant-list">
-              {selectedInternetFont.variants.map((v) => {
-                const key = `${v.weight}-${v.style}`;
-                return (
-                  <label key={key} className="gfont-variant-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedVariants.has(key)}
-                      onChange={() => toggleVariant(key)}
-                    />
-                    <span>
-                      {v.style === "italic" ? "Italic " : "Regular "}
-                      {v.weight}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            <div className="gfont-modal-actions">
-              <button
-                className="theme-btn"
-                onClick={() => setSelectedInternetFont(null)}
-                disabled={downloading}
-              >
-                Cancel
-              </button>
-              <button
-                className="theme-btn theme-btn-primary"
-                onClick={confirmDownload}
-                disabled={selectedVariants.size === 0 || downloading}
-              >
-                {downloading
-                  ? "Downloading..."
-                  : `Download ${selectedVariants.size} styles`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
