@@ -67,19 +67,48 @@ export default function FontManager({
   const [loadingSystemFonts, setLoadingSystemFonts] = useState(false);
 
   const selectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
+  const systemFontsAcc = useRef<string[]>([]);
 
   useEffect(() => {
     if (systemFonts.length > 0) return;
     setLoadingSystemFonts(true);
+    systemFontsAcc.current = [];
     window.api.fonts
       .listSystem()
       .then((res) => {
-        if (res.success && Array.isArray(res.fonts)) {
-          setSystemFonts(res.fonts);
+        if (res.success && Array.isArray(res.fonts) && res.fonts.length > 0) {
+          const batchSize = 40;
+          let index = 0;
+
+          const flush = () => {
+            const batch = res.fonts.slice(index, index + batchSize);
+            if (batch.length === 0) {
+              setLoadingSystemFonts(false);
+              return;
+            }
+            const existing = new Set(
+              systemFontsAcc.current.map((f) => f.toLowerCase()),
+            );
+            for (const name of batch) {
+              if (
+                typeof name === "string" &&
+                !existing.has(name.toLowerCase())
+              ) {
+                systemFontsAcc.current.push(name);
+                existing.add(name.toLowerCase());
+              }
+            }
+            setSystemFonts([...systemFontsAcc.current]);
+            index += batchSize;
+            requestAnimationFrame(flush);
+          };
+
+          flush();
+        } else {
+          setLoadingSystemFonts(false);
         }
       })
-      .catch(() => {})
-      .finally(() => setLoadingSystemFonts(false));
+      .catch(() => setLoadingSystemFonts(false));
   }, [systemFonts.length, setSystemFonts]);
 
   const importedNames = useMemo(
