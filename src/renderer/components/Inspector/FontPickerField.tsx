@@ -139,6 +139,7 @@ const PRESET_FONTS: FontOption[] = [
 
 const GROUPS = [
   "Imported",
+  "System",
   "Sans-Serif",
   "Serif",
   "Display",
@@ -164,7 +165,7 @@ export default function FontPickerField({
     const managed: FontOption[] = managedFonts
       .filter((f) => f.name.trim())
       .map((f) => ({ label: f.name, value: f.name, group: "Imported" }));
-    return [...managed, ...PRESET_FONTS];
+    return [...managed, ...PRESET_FONTS.filter((f) => f.group === "System")];
   }, [managedFonts]);
 
   const currentOption = useMemo(() => {

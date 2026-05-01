@@ -154,6 +154,7 @@ const FONT_OPTIONS: FontOption[] = [
 
 const GROUPS = [
   "Imported",
+  "System",
   "Sans-Serif",
   "Serif",
   "Display",
@@ -185,7 +186,7 @@ export default function TypographyFontPicker({
     const managed: FontOption[] = managedFonts
       .filter((f) => f.name.trim())
       .map((f) => ({ label: f.name, value: f.name, group: "Imported" }));
-    return [...managed, ...FONT_OPTIONS];
+    return [...managed, ...FONT_OPTIONS.filter((f) => f.group === "System")];
   }, [managedFonts]);
 
   // Current option (for trigger display)
