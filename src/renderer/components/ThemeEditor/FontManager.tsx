@@ -620,7 +620,7 @@ export default function FontManager({
                             ))}
                           </select>
                           <button
-                            className="theme-btn theme-btn-small theme-btn-primary"
+                            className="theme-font-action-btn"
                             onClick={() => handleDownloadInternet(item)}
                             disabled={downloadingIds.has(item.id)}
                             title={`Download "${item.name}"`}
@@ -628,9 +628,7 @@ export default function FontManager({
                             {downloadingIds.has(item.id) ? (
                               "..."
                             ) : (
-                              <>
-                                <Globe size={12} /> Apply
-                              </>
+                              <Download size={14} />
                             )}
                           </button>
                         </div>
