@@ -66,9 +66,29 @@ export default function FontManager({
   const [page, setPage] = useState(1);
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [loadingSystemFonts, setLoadingSystemFonts] = useState(false);
+  const [existingFiles, setExistingFiles] = useState<Set<string>>(new Set());
 
   const selectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
   const systemFontsAcc = useRef<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      const next = new Set<string>();
+      for (const font of fonts) {
+        if (!font.relativePath) continue;
+        try {
+          const res = await window.api.fonts.checkFileExists({
+            relativePath: font.relativePath,
+          });
+          if (res.exists) next.add(font.relativePath);
+        } catch {}
+      }
+      if (!cancelled) setExistingFiles(next);
+    }
+    check();
+    return () => { cancelled = true; };
+  }, [fonts]);
 
   useEffect(() => {
     if (systemFonts.length > 0) return;
@@ -271,17 +291,17 @@ export default function FontManager({
 
   const handleDeleteFont = async (font: FontAsset) => {
     try {
+      removeFontStore(font.id);
       const res = await window.api.fonts.deleteFont({
         relativePath: font.relativePath,
       });
       if (res.success) {
-        removeFontStore(font.id);
-        showToast(`Removed "${font.name}"`, "success");
+        showToast(`Deleted "${font.name}"`, "success");
       } else {
-        showToast("Failed to remove font file", "error");
+        showToast("Failed to delete font file", "error");
       }
     } catch {
-      showToast("Error removing font", "error");
+      showToast("Error deleting font", "error");
     }
   };
 
@@ -560,7 +580,8 @@ export default function FontManager({
                           >
                             <Unlink size={14} />
                           </button>
-                          {item.fontAsset.source !== "system" && (
+                          {item.fontAsset.relativePath &&
+                            existingFiles.has(item.fontAsset.relativePath) && (
                             <button
                               className="theme-font-action-btn theme-font-action-btn-danger"
                               onClick={() => handleDeleteFont(item.fontAsset!)}

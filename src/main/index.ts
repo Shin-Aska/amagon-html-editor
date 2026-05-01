@@ -849,6 +849,23 @@ function registerIpcHandlers(): void {
     },
   );
 
+  ipcMain.handle(
+    "fonts:checkFileExists",
+    async (_, args: { relativePath: string }) => {
+      if (!currentProjectDir) return { exists: false };
+      if (!args?.relativePath) return { exists: false };
+
+      const rel = String(args.relativePath)
+        .replace(/^[/\\]+/, "")
+        .replace(/\\/g, "/");
+      const targetPath = path.join(currentProjectDir, rel);
+
+      if (!isPathSafe(targetPath, currentProjectDir)) return { exists: false };
+
+      return { exists: existsSync(targetPath) };
+    },
+  );
+
   ipcMain.handle("fonts:listProject", async () => {
     if (!currentProjectDir) return { success: true, fonts: [] };
 

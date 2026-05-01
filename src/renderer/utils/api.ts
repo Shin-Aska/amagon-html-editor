@@ -487,6 +487,9 @@ const mockApi: ElectronApi = {
             console.log('[Mock API] deleteFont (mocked)');
             return {success: true}
         },
+        checkFileExists: async (_args: { relativePath: string }): Promise<{ exists: boolean }> => {
+            return {exists: false}
+        },
         listProject: async (): Promise<IpcResult & { fonts: FontAsset[] }> => {
             console.log('[Mock API] listProject fonts (mocked)');
             return {success: true, fonts: []}

@@ -196,6 +196,9 @@ const api = {
         deleteFont: (args: { relativePath: string }) =>
             ipcRenderer.invoke('fonts:deleteFont', args),
 
+        checkFileExists: (args: { relativePath: string }) =>
+            ipcRenderer.invoke('fonts:checkFileExists', args),
+
         listProject: () => ipcRenderer.invoke('fonts:listProject')
     },
 
