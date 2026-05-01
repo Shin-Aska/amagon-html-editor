@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PackageCheck, Search, Trash2, Type, Upload } from "lucide-react";
 import { useProjectStore } from "../../store/projectStore";
 import { useToastStore } from "../../store/toastStore";
@@ -17,10 +17,24 @@ export default function FontManager({
   onTypographyChange,
 }: FontManagerProps): JSX.Element {
   const fonts = useProjectStore((s) => s.fonts);
+  const systemFonts = useProjectStore((s) => s.systemFonts);
   const addFonts = useProjectStore((s) => s.addFonts);
   const removeFontStore = useProjectStore((s) => s.removeFont);
+  const setSystemFonts = useProjectStore((s) => s.setSystemFonts);
   const showToast = useToastStore((s) => s.showToast);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (systemFonts.length > 0) return;
+    window.api.fonts
+      .listSystem()
+      .then((res) => {
+        if (res.success && Array.isArray(res.fonts)) {
+          setSystemFonts(res.fonts);
+        }
+      })
+      .catch(() => {});
+  }, [systemFonts.length, setSystemFonts]);
 
   const handleImportFile = async () => {
     try {
@@ -244,6 +258,35 @@ export default function FontManager({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        <div className="theme-section-title" style={{ marginTop: 24 }}>
+          System Fonts ({systemFonts.length})
+        </div>
+        {systemFonts.length === 0 ? (
+          <div className="theme-font-empty-state">
+            <div style={{ fontSize: 13 }}>Loading system fonts…</div>
+          </div>
+        ) : (
+          <div className="theme-font-system-list">
+            {systemFonts
+              .filter((name) =>
+                searchQuery
+                  ? name.toLowerCase().includes(searchQuery.toLowerCase())
+                  : true,
+              )
+              .map((name) => (
+                <div key={name} className="theme-font-system-item">
+                  <span
+                    className="theme-font-system-name"
+                    style={{ fontFamily: `"${name}", sans-serif` }}
+                  >
+                    {name}
+                  </span>
+                  <span className="theme-font-system-badge">System</span>
+                </div>
+              ))}
           </div>
         )}
 

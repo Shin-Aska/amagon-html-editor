@@ -1,18 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Check,
-  Download,
-  Palette,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Trash2,
-  Upload,
-  X,
-  XIcon,
-} from "lucide-react";
-import { useProjectStore } from "../../store/projectStore";
-import { useToastStore } from "../../store/toastStore";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {Check, Download, Palette, Pencil, Plus, RotateCcw, Trash2, Upload, X, XIcon,} from "lucide-react";
+import {useProjectStore} from "../../store/projectStore";
+import {useToastStore} from "../../store/toastStore";
 import type {
   PageThemeMode,
   ProjectTheme,
@@ -21,13 +10,9 @@ import type {
   ThemeSpacing,
   ThemeTypography,
 } from "../../store/types";
-import {
-  createDefaultDarkTheme,
-  createDefaultTheme,
-  getThemeVariant,
-} from "../../store/types";
-import { builtInGalleryThemes } from "../../themes/themeGalleryRegistry";
-import { themePresets } from "./themePresets";
+import {createDefaultDarkTheme, createDefaultTheme, getThemeVariant,} from "../../store/types";
+import {builtInGalleryThemes} from "../../themes/themeGalleryRegistry";
+import {themePresets} from "./themePresets";
 import CustomCssManager from "./CustomCssManager";
 import ColorField from "./ColorField";
 import CreatePresetModal from "./CreatePresetModal";
