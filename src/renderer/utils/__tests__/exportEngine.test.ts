@@ -498,6 +498,56 @@ describe('exportEngine', () => {
         expect(files.some((f) => f.path === 'assets/nav-logo.png')).toBe(true)
     });
 
+    it('preserves navbar font-size for child anchors in tailwind export', async () => {
+        const project: ProjectData = {
+            projectSettings: {
+                name: 'Test',
+                framework: 'tailwind',
+                theme: createDefaultTheme(),
+                globalStyles: {}
+            },
+            pages: [
+                {
+                    id: 'p1',
+                    title: 'Index',
+                    slug: 'index',
+                    meta: {},
+                    blocks: [
+                        createBlock('navbar', {
+                            props: {
+                                usePages: true,
+                                brandText: 'Brand'
+                            },
+                            styles: {fontSize: '35px'},
+                            classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-light']
+                        })
+                    ]
+                },
+                {
+                    id: 'p2',
+                    title: 'About',
+                    slug: 'about',
+                    meta: {},
+                    blocks: []
+                }
+            ],
+            userBlocks: []
+        };
+
+        const files = await exportProject(project, {
+            resolveAsset: async () => null
+        });
+
+        const html = files.find((f) => f.path === 'index.html');
+        const htmlText = html && typeof html.content === 'string' ? html.content : '';
+        const styleCss = files.find((f) => f.path === 'styles.css');
+        const cssText = styleCss && typeof styleCss.content === 'string' ? styleCss.content : '';
+
+        expect(cssText).toContain('font-size: 35px');
+        expect(htmlText).toContain('font-size: 35px');
+        expect(htmlText).toContain('href="about.html"')
+    });
+
     it('minifies HTML when minify=true', async () => {
         const project: ProjectData = {
             projectSettings: {

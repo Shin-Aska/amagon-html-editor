@@ -218,6 +218,12 @@ function sanitizeAndTransformBlock(block: Block, ctx: BuildContext): Block {
     }
     next.styles = extracted.remainingStyles;
 
+    // For navbar blocks, preserve fontSize in styles so blockToHtml can
+    // propagate it to child anchors (overriding Tailwind defaults like text-lg).
+    if (block.type === 'navbar' && block.styles.fontSize) {
+        next.styles = {...next.styles, fontSize: block.styles.fontSize}
+    }
+
     return next
 }
 
@@ -275,7 +281,7 @@ function extractStylesAsClass(
     }
 
     const decl = rewrittenEntries
-        .map(([k, v]) => `${camelToKebab(k)}: ${v}`)
+        .map(([k, v]) => `${camelToKebab(k)}: ${v} !important`)
         .join('; ');
 
     const hash = stableHash(decl);
