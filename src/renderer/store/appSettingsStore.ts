@@ -9,6 +9,7 @@ export interface AppSettings {
     tutorialEnabled: boolean
     tutorialCompleted: boolean
     enableDangerousFeatures: boolean
+    showRestartTutorialButton: boolean
 }
 
 interface AppSettingsState extends AppSettings {
@@ -24,6 +25,7 @@ interface AppSettingsActions {
     setTutorialEnabled: (enabled: boolean) => void
     setTutorialCompleted: (completed: boolean) => void
     setEnableDangerousFeatures: (enabled: boolean) => void
+    setShowRestartTutorialButton: (show: boolean) => void
 }
 
 type AppSettingsStore = AppSettingsState & AppSettingsActions
@@ -34,7 +36,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     showTabChildSelectionWarning: true,
     tutorialEnabled: true,
     tutorialCompleted: false,
-    enableDangerousFeatures: false
+    enableDangerousFeatures: false,
+    showRestartTutorialButton: true
 };
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
@@ -69,10 +72,11 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
             theme: patch.theme ?? current.theme,
             defaultLayout: patch.defaultLayout ?? current.defaultLayout,
             showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
-            tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
-            tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
-            enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures
-        };
+        tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
+        tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
+        enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures,
+        showRestartTutorialButton: patch.showRestartTutorialButton ?? current.showRestartTutorialButton
+    };
         set({...nextSettings});
 
         try {
@@ -116,5 +120,10 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
     setEnableDangerousFeatures: (enabled: boolean) => {
         set({enableDangerousFeatures: enabled});
         get().saveSettings({enableDangerousFeatures: enabled})
+    },
+
+    setShowRestartTutorialButton: (show: boolean) => {
+        set({showRestartTutorialButton: show});
+        get().saveSettings({showRestartTutorialButton: show})
     }
 }));

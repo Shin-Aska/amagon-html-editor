@@ -48,6 +48,8 @@ export default function SettingsDialog({
     const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted);
     const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures);
     const setEnableDangerousFeatures = useAppSettingsStore((s) => s.setEnableDangerousFeatures);
+    const showRestartTutorialButton = useAppSettingsStore((s) => s.showRestartTutorialButton);
+    const setShowRestartTutorialButton = useAppSettingsStore((s) => s.setShowRestartTutorialButton);
     const startTutorial = useTutorialStore((s) => s.startTutorial);
 
     const aiConfig = useAiStore((s) => s.config);
@@ -359,19 +361,38 @@ export default function SettingsDialog({
 
                                     <div className="settings-row">
                                         <div className="settings-label">
-                                            <span className="settings-label-title">Tutorial Progress</span>
-                                            <span className="settings-label-desc">Reset progress so the tutorial prompt appears again on next project load</span>
+                                            <span className="settings-label-title">Show Restart Tutorial Button</span>
+                                            <span className="settings-label-desc">Display the restart-tutorial button in the status bar</span>
                                         </div>
                                         <div className="settings-control">
-                                            <button
-                                                type="button"
-                                                className="settings-btn-secondary"
-                                                onClick={handleRestartTutorial}
-                                            >
-                                                Restart Tutorial
-                                            </button>
+                                            <label className="settings-toggle">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={showRestartTutorialButton}
+                                                    onChange={(e) => setShowRestartTutorialButton(e.target.checked)}
+                                                />
+                                                <span>{showRestartTutorialButton ? 'On' : 'Off'}</span>
+                                            </label>
                                         </div>
                                     </div>
+
+                                    {showRestartTutorialButton && (
+                                        <div className="settings-row">
+                                            <div className="settings-label">
+                                                <span className="settings-label-title">Tutorial Progress</span>
+                                                <span className="settings-label-desc">Reset progress so the tutorial prompt appears again on next project load</span>
+                                            </div>
+                                            <div className="settings-control">
+                                                <button
+                                                    type="button"
+                                                    className="settings-btn-secondary"
+                                                    onClick={handleRestartTutorial}
+                                                >
+                                                    Restart Tutorial
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
