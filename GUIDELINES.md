@@ -153,22 +153,14 @@ src/
 
 ## 4. Architecture Overview
 
-```
-┌───────────────── MAIN PROCESS (Node.js) ─────────────────┐
-│  File I/O, IPC handlers, AI service, encryption,         │
-│  media search, native menu, auto-save                    │
-└────────────────────────┬─────────────────────────────────┘
-                         │ ipcRenderer.invoke / on
-                         │ exposed via window.api (preload)
-┌────────────────────────┴─────────────────────────────────┐
-│              RENDERER PROCESS (React + Vite)              │
-│  Zustand stores → Components → Monaco / Canvas iframe    │
-└────────────────────────┬─────────────────────────────────┘
-                         │ postMessage protocol
-┌────────────────────────┴─────────────────────────────────┐
-│              CANVAS IFRAME (preview/runtime.ts)           │
-│  Isolated DOM, block rendering, click/hover/drag relay   │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+  main["MAIN PROCESS (Node.js)<br/>File I/O, IPC handlers, AI service,<br/>encryption, media search, native menu, auto-save"]
+  renderer["RENDERER PROCESS (React + Vite)<br/>Zustand stores -> Components -> Monaco / Canvas iframe"]
+  canvas["CANVAS IFRAME (preview/runtime.ts)<br/>Isolated DOM, block rendering, click/hover/drag relay"]
+
+  main -->|ipcRenderer.invoke / on<br/>via window.api preload bridge| renderer
+  renderer -->|postMessage protocol| canvas
 ```
 
 **Key patterns:**
