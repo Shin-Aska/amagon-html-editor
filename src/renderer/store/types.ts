@@ -73,18 +73,18 @@ export interface ThemeColors {
 export interface ThemeTypography {
     fontFamily: string
     headingFontFamily: string
-    baseFontSize: string        // e.g. '16px'
+    baseFontSize: string        // e.g. '1rem'
     lineHeight: string          // e.g. '1.6'
     headingLineHeight: string   // e.g. '1.2'
 }
 
 export interface ThemeSpacing {
-    baseUnit: string            // e.g. '8px'
+    baseUnit: string            // e.g. '0.5rem'
     scale: number[]             // multipliers, e.g. [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
 }
 
 export interface ThemeBorders {
-    radius: string              // e.g. '6px'
+    radius: string              // e.g. '0.375rem'
     width: string               // e.g. '1px'
     color: string               // e.g. '#dee2e6'
 }
@@ -174,16 +174,16 @@ export function createDefaultTheme(): ProjectTheme {
         typography: {
             fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
             headingFontFamily: 'inherit',
-            baseFontSize: '16px',
+            baseFontSize: '1rem',
             lineHeight: '1.6',
             headingLineHeight: '1.2'
         },
         spacing: {
-            baseUnit: '8px',
+            baseUnit: '0.5rem',
             scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
         },
         borders: {
-            radius: '6px',
+            radius: '0.375rem',
             width: '1px',
             color: '#dee2e6'
         },
@@ -211,16 +211,16 @@ export function createDefaultDarkTheme(): ProjectTheme {
         typography: {
             fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
             headingFontFamily: 'inherit',
-            baseFontSize: '16px',
+            baseFontSize: '1rem',
             lineHeight: '1.6',
             headingLineHeight: '1.2'
         },
         spacing: {
-            baseUnit: '8px',
+            baseUnit: '0.5rem',
             scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
         },
         borders: {
-            radius: '6px',
+            radius: '0.375rem',
             width: '1px',
             color: '#334155'
         },

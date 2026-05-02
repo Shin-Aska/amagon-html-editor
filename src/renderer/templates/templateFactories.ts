@@ -325,7 +325,7 @@ export function carouselBlock(slides: Array<Record<string, unknown>>, classes: s
             slides,
             transition: 'slide',
             imageHeightMode: 'fixed',
-            imageHeight: '320px',
+            imageHeight: '20rem',
             fade: false,
             thumbnails: true,
             interval: 5500
