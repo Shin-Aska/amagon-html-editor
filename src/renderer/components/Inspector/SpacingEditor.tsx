@@ -22,7 +22,7 @@ export default function SpacingEditor({styles, onChange}: SpacingEditorProps): J
         type: 'margin' | 'padding',
         side: typeof SIDES[number]
     } | null>(null);
-    const [unit, setUnit] = useState('px');
+    const [unit, setUnit] = useState('rem');
     const [inputValue, setInputValue] = useState('');
 
     useEffect(() => {
@@ -35,12 +35,14 @@ export default function SpacingEditor({styles, onChange}: SpacingEditorProps): J
             if (val) {
                 setInputValue(parseValue(val));
                 const match = val.match(/(px|pt|rem|em|%)$/);
-                if (match) setUnit(match[0])
+                setUnit(match ? match[0] : 'rem')
             } else {
                 setInputValue('')
+                setUnit('rem')
             }
         } else {
             setInputValue('')
+            setUnit('rem')
         }
     }, [activeSide, styles]);
 

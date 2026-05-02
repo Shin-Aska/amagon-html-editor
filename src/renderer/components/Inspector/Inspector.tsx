@@ -16,6 +16,7 @@ import SortableListField from './SortableListField'
 import VideoField from './VideoField'
 import CarouselField from './CarouselField'
 import IconField from './IconField'
+import FontPickerField from './FontPickerField'
 
 import {useProjectStore} from '../../store/projectStore'
 import ArrayField, {type ArrayRecordField} from './ArrayField'
@@ -48,6 +49,22 @@ const socialPlatformOptions = [
     {label: 'YouTube', value: 'youtube'},
     {label: 'Website', value: 'website'}
 ];
+
+const MEASUREMENT_UNITS = ['px', 'pt', 'rem', 'em'] as const;
+
+type MeasurementUnit = typeof MEASUREMENT_UNITS[number];
+
+function parseMeasurementValue(val?: string): {num: string; unit: MeasurementUnit} {
+    if (!val) return {num: '', unit: 'rem'};
+    const match = val.trim().match(/^([\d.]+)\s*(px|pt|rem|em)?$/i);
+    if (match) {
+        return {
+            num: match[1],
+            unit: (match[2]?.toLowerCase() as MeasurementUnit) || 'rem'
+        };
+    }
+    return {num: val.replace(/[^\d.]/g, '') || '', unit: 'rem'}
+}
 
 const arrayEditorConfigs: Record<string, Record<string, ArrayEditorConfig>> = {
     breadcrumb: {
@@ -339,16 +356,51 @@ function Inspector(): JSX.Element {
                 return <CarouselField value={val || []} onChange={(v) => handlePropChange(key, v)}/>;
             case 'icon':
                 return <IconField value={val || ''} onChange={(v) => handlePropChange(key, v)}/>;
-            case 'measurement':
+            case 'font-picker':
+                return <FontPickerField value={val || ''} onChange={(v) => handlePropChange(key, v)}/>;
+            case 'measurement': {
+                const measurementValue = parseMeasurementValue(val);
+
+                const handleMeasurementNumChange = (nextNum: string) => {
+                    if (!nextNum) {
+                        handlePropChange(key, undefined);
+                        return;
+                    }
+                    handlePropChange(key, `${nextNum}${measurementValue.unit}`)
+                };
+
+                const handleMeasurementUnitChange = (nextUnit: MeasurementUnit) => {
+                    if (!measurementValue.num) {
+                        handlePropChange(key, undefined);
+                        return;
+                    }
+                    handlePropChange(key, `${measurementValue.num}${nextUnit}`)
+                };
+
                 return (
-                    <input
-                        type="text"
-                        className="inspector-input"
-                        value={val || ''}
-                        onChange={(e) => handlePropChange(key, e.target.value)}
-                        placeholder="e.g. 16px, 2rem"
-                    />
+                    <div className="style-measurement-group">
+                        <input
+                            type="number"
+                            step="0.1"
+                            className="inspector-input"
+                            value={measurementValue.num}
+                            onChange={(e) => handleMeasurementNumChange(e.target.value)}
+                            placeholder="1"
+                        />
+                        <select
+                            className="inspector-select"
+                            value={measurementValue.unit}
+                            onChange={(e) => handleMeasurementUnitChange(e.target.value as MeasurementUnit)}
+                        >
+                            {MEASUREMENT_UNITS.map((unit) => (
+                                <option key={unit} value={unit}>
+                                    {unit}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 );
+            }
             case 'combobox': {
                 let comboOptions: string[] = [];
                 if (schema.dataSource === 'tags') {
@@ -517,7 +569,6 @@ function Inspector(): JSX.Element {
     const groupedProps: Record<string, { key: string; schema: PropSchema }[]> = {};
 
     Object.entries(definition.propsSchema).forEach(([key, schema]) => {
-        if (schema.type === 'font-picker') return;
         const groupName = schema.group || 'General';
         if (!groupedProps[groupName]) {
             groupedProps[groupName] = []
