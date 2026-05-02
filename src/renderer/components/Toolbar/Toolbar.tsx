@@ -607,15 +607,17 @@ export default function Toolbar({
 
                         <div className="toolbar-divider"/>
 
-                        <button
-                            className={`toolbar-btn ${codeEditorOpen ? 'active' : ''}`}
-                            onClick={onToggleCodeEditor}
-                            title="Toggle Code Editor"
-                            aria-label="Toggle code editor panel"
-                            aria-pressed={codeEditorOpen}
-                        >
-                            <Code size={16} aria-hidden="true"/>
-                        </button>
+                        {editorLayout !== 'code-focus' && (
+                            <button
+                                className={`toolbar-btn ${codeEditorOpen ? 'active' : ''}`}
+                                onClick={onToggleCodeEditor}
+                                title="Toggle Code Editor"
+                                aria-label="Toggle code editor panel"
+                                aria-pressed={codeEditorOpen}
+                            >
+                                <Code size={16} aria-hidden="true"/>
+                            </button>
+                        )}
 
                         {/* Theme Editor */}
                         <button
