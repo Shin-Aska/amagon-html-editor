@@ -1,6 +1,14 @@
 # Amagon HTML Editor — Codebase Guidelines
 
 > **Purpose:** This file gives AI assistants (Claude, Gemini, ChatGPT, etc.) enough context to work on this codebase without reading every file. Keep it up-to-date as the project evolves.
+>
+> **Documentation Maintenance Rule:** When you add, remove, or significantly change a feature, update the following docs in the same PR or commit:
+> - **`GUIDELINES.md`** (this file) — architecture, data models, IPC channels, conventions
+> - **`README.md`** — user-facing feature list, project structure, getting started
+> - **`docs/getting-started-contributing.md`** — contributor-facing "where to look" guide and architecture overview
+> - **`.aiassistant/rules/project-context.md`** — concise system cheat-sheet for AI assistants
+>
+> These four files should always stay in sync. If a feature is documented in one, it should be discoverable in the others.
 
 ---
 
