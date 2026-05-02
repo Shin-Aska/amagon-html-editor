@@ -1969,7 +1969,7 @@ function getBlockContent(
             const slides = (props.slides as Array<{ src: string; alt: string; caption?: string }>) ?? [];
             const transition = normalizeCarouselTransition(props.transition, props.fade);
             const imageHeightMode = normalizeCarouselImageHeightMode(props.imageHeightMode);
-            const imageHeight = normalizeCarouselImageHeight(props.imageHeight) || '400px';
+            const imageHeight = normalizeCarouselImageHeight(props.imageHeight) || '25rem';
             const thumbnails = toBoolean(props.thumbnails, false);
             const interval = Number(props.interval) || 5000;
 
@@ -2039,7 +2039,7 @@ function getBlockContent(
             const thumbsHtml = thumbnails && slides.length > 0
                 ? `
         <div class="d-flex gap-2 mt-2 overflow-auto justify-content-center">
-          ${slides.map((slide, i) => `<button type="button" class="p-0 border-0 bg-transparent${i === 0 ? ' opacity-100' : ' opacity-50'}" data-bs-target="#${id}" data-bs-slide-to="${i}" aria-label="Slide ${i + 1}" style="width:60px;height:40px;overflow:hidden;cursor:pointer;"><img src="${escapeAttrValue(slide.src)}" alt="${escapeAttrValue(slide.alt)}" style="width:100%;height:100%;object-fit:cover;"></button>`).join('\n          ')}
+          ${slides.map((slide, i) => `<button type="button" class="p-0 border-0 bg-transparent${i === 0 ? ' opacity-100' : ' opacity-50'}" data-bs-target="#${id}" data-bs-slide-to="${i}" aria-label="Slide ${i + 1}" style="width:3.75rem;height:2.5rem;overflow:hidden;cursor:pointer;"><img src="${escapeAttrValue(slide.src)}" alt="${escapeAttrValue(slide.alt)}" style="width:100%;height:100%;object-fit:cover;"></button>`).join('\n          ')}
         </div>`
                 : '';
 
@@ -3094,7 +3094,7 @@ ${pad}</section>`
         const membersHtml = normalizedMembers.map((member) => `${pad}      <div class="col">
 ${pad}        <article class="team-member-card h-100 ${cardStyle === 'simple' ? '' : 'card border-0 shadow-sm'}" data-team-member="true" data-member-name="${escapeAttrValue(member.name)}" data-member-role="${escapeAttrValue(member.role)}" data-member-image-url="${escapeAttrValue(member.imageUrl)}" data-member-bio="${escapeAttrValue(member.bio)}" data-member-social="${escapeAttrValue(JSON.stringify(member.socialLinks || {}))}">
 ${pad}          <div class="position-relative">
-${pad}            <img src="${escapeAttrValue(member.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(member.name || 'Team member')}" class="w-100 rounded-3${cardStyle !== 'simple' ? ' card-img-top' : ''}" style="height: 240px; object-fit: cover;">
+${pad}            <img src="${escapeAttrValue(member.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(member.name || 'Team member')}" class="w-100 rounded-3${cardStyle !== 'simple' ? ' card-img-top' : ''}" style="height: 15rem; object-fit: cover;">
 ${pad}            ${cardStyle === 'overlay' ? `<div class="position-absolute bottom-0 start-0 end-0 p-3 text-white" style="background: linear-gradient(0deg, rgba(0,0,0,0.65), transparent);"><h3 class="h5 mb-1">${escapeAttrValue(member.name)}</h3><p class="mb-0">${escapeAttrValue(member.role)}</p></div>` : ''}
 ${pad}          </div>
 ${pad}          ${cardStyle === 'overlay' ? '' : `<div class="${cardStyle === 'simple' ? 'pt-3' : 'card-body'}"><h3 class="h5 mb-1">${escapeAttrValue(member.name)}</h3><p class="text-muted mb-2">${escapeAttrValue(member.role)}</p>${member.bio ? `<p class="mb-0">${escapeAttrValue(member.bio)}</p>` : ''}</div>`}
@@ -3156,7 +3156,7 @@ ${pad}</section>`
         const imagesHtml = normalizedImages.map((image) => `${pad}      <div class="col ${layout === 'masonry' ? 'mb-3' : ''}">
 ${pad}        <figure class="gallery-item overflow-hidden rounded-3 border" data-gallery-image="true" data-image-url="${escapeAttrValue(image.url)}" data-image-caption="${escapeAttrValue(image.caption)}" data-image-category="${escapeAttrValue(image.category)}">
 ${pad}          ${lightbox ? `<a href="${escapeAttrValue(image.url)}" data-gallery-lightbox-item="true">` : ''}
-${pad}          <img src="${escapeAttrValue(image.url || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(image.caption || 'Gallery image')}" class="img-fluid w-100" style="height: 220px; object-fit: cover;">
+${pad}          <img src="${escapeAttrValue(image.url || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(image.caption || 'Gallery image')}" class="img-fluid w-100" style="height: 13.75rem; object-fit: cover;">
 ${pad}          ${lightbox ? '</a>' : ''}
 ${pad}          ${image.caption ? `<figcaption class="small text-muted px-3 py-2">${escapeAttrValue(image.caption)}</figcaption>` : ''}
 ${pad}        </figure>
@@ -3268,7 +3268,7 @@ ${pad}</section>`
         const logosHtml = normalizedLogos.map((logo) => `${pad}      <div class="col">
 ${pad}        <div class="logo-item text-center ${variant === 'cards' ? 'card border-0 shadow-sm p-3' : variant === 'bordered' ? 'border rounded-3 p-3' : 'p-2'}" data-logo-item="true" data-logo-image-url="${escapeAttrValue(logo.imageUrl)}" data-logo-alt-text="${escapeAttrValue(logo.altText)}" data-logo-href="${escapeAttrValue(logo.href)}">
 ${pad}          ${logo.href ? `<a href="${escapeAttrValue(logo.href)}">` : ''}
-${pad}          <img src="${escapeAttrValue(logo.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(logo.altText || 'Logo')}" class="img-fluid mx-auto${grayscale ? ' opacity-75' : ''}" style="max-height: 48px; width: auto;">
+${pad}          <img src="${escapeAttrValue(logo.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(logo.altText || 'Logo')}" class="img-fluid mx-auto${grayscale ? ' opacity-75' : ''}" style="max-height: 3rem; width: auto;">
 ${pad}          ${logo.href ? '</a>' : ''}
 ${pad}        </div>
 ${pad}      </div>`).join('\n');
@@ -3574,7 +3574,7 @@ ${pad}</button>`
 
         const radiusClass = style === 'circle' ? 'rounded-circle' : style === 'rounded' ? 'rounded' : 'rounded-0';
         const posStyle = pos === 'bottom-left' ? 'bottom: 1.5rem; left: 1.5rem;' : 'bottom: 1.5rem; right: 1.5rem;';
-        return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} btn btn-primary ${radiusClass} shadow position-fixed z-3 d-flex align-items-center justify-content-center" style="${posStyle} width: 48px; height: 48px;" aria-label="Back to top">
+        return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} btn btn-primary ${radiusClass} shadow position-fixed z-3 d-flex align-items-center justify-content-center" style="${posStyle} width: 3rem; height: 3rem;" aria-label="Back to top">
 ${pad}  ↑
 ${pad}</button>`
     }
@@ -3659,7 +3659,7 @@ ${pad}  <img src="${escapeAttrValue(aImg)}" alt="After" class="position-absolute
 ${pad}  <div class="position-absolute top-0 start-0 h-100 border-end border-white border-2 shadow-sm" style="width: 50%;">
 ${pad}    <img src="${escapeAttrValue(bImg)}" alt="Before" class="position-absolute top-0 start-0 h-100 object-fit-cover" style="width: 200%; max-width: none;">
 ${pad}  </div>
-${pad}  <div class="position-absolute top-50 start-50 translate-middle bg-white rounded-circle shadow d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; cursor: ew-resize;">
+${pad}  <div class="position-absolute top-50 start-50 translate-middle bg-white rounded-circle shadow d-flex align-items-center justify-content-center" style="width: 2rem; height: 2rem; cursor: ew-resize;">
 ${pad}    <small class="text-secondary" style="letter-spacing: -2px;">↔</small>
 ${pad}  </div>
 ${pad}</div>`
@@ -3668,7 +3668,7 @@ ${pad}</div>`
     if (block.type === 'map-embed') {
         const dataAttrs = `data-block-type="map-embed"${includeDataAttributes ? ` data-block-id="${block.id}"` : ''}`;
         const embedUrl = String(block.props.embedUrl || 'https://maps.google.com/maps?q=New+York&t=&z=13&ie=UTF8&iwloc=&output=embed');
-        const height = String(block.props.height || '400px');
+        const height = String(block.props.height || '25rem');
         const grayscale = toBoolean(block.props.grayscale, false);
         const title = String(block.props.title || 'Location Map');
 
@@ -4470,17 +4470,17 @@ ${pad}</nav>`
 
             const sortControl = showSort
                 ? sortLayout === 'new-row'
-                    ? `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 1 1 260px; min-width: 200px" data-page-list-sort>
+                    ? `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 1 1 16.25rem; min-width: 12.5rem" data-page-list-sort>
 ${sortOptionsHtml}
 ${pad}    </select>
-${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 0 0 160px; max-width: 160px" data-page-list-dir>
+${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 0 0 10rem; max-width: 10rem" data-page-list-dir>
 ${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
 ${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
 ${pad}    </select>`
-                    : `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 220px; max-width: 220px" data-page-list-sort>
+                    : `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 13.75rem; max-width: 13.75rem" data-page-list-sort>
 ${sortOptionsHtml}
 ${pad}    </select>
-${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 160px; max-width: 160px" data-page-list-dir>
+${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 10rem; max-width: 10rem" data-page-list-dir>
 ${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
 ${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
 ${pad}    </select>`
@@ -4492,7 +4492,7 @@ ${showSearch ? `${pad}    <div class="mb-2">${searchControl}</div>` : ''}
 ${showSort ? `${pad}    <div class="d-flex gap-2 align-items-center" style="width: 100%; flex-wrap: wrap">${sortControl}</div>` : ''}
 ${pad}  </div>`
                 : `${pad}  <div class="mb-3 d-flex gap-2 align-items-center" style="flex-wrap: wrap">
-${showSearch ? `${pad}    <div style="flex: 1 1 260px; min-width: 200px">${searchControl}</div>` : ''}
+${showSearch ? `${pad}    <div style="flex: 1 1 16.25rem; min-width: 12.5rem">${searchControl}</div>` : ''}
 ${showSort ? `${pad}    <div style="flex: 0 0 auto; margin-left: auto">
 ${pad}      <div class="d-flex gap-2 align-items-center" style="flex-wrap: nowrap">${sortControl}</div>
 ${pad}    </div>` : ''}

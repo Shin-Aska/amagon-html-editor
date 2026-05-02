@@ -2670,8 +2670,8 @@ function parseMapEmbedBlock(el: Element): Block {
         type: 'map-embed',
         props: {
             embedUrl: iframe?.getAttribute('src') || 'https://maps.google.com/maps?q=New+York&t=&z=13&ie=UTF8&iwloc=&output=embed',
-            height: iframe?.getAttribute('height') || '400px',
-            borderRadius: '8px',
+            height: iframe?.getAttribute('height') || '25rem',
+            borderRadius: '0.5rem',
             grayscale: false,
             title: iframe?.getAttribute('title') || 'Location Map'
         },
