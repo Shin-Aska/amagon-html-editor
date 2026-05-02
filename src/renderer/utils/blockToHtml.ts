@@ -218,6 +218,8 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
         'stickyOffset',
         'stickyTop',
         'stickyZIndex',
+        'backgroundMode',
+        'backdropEffect',
         'transparent',
         'socialLinks',
         'showSocialLinks',
@@ -1251,6 +1253,18 @@ function mapBootstrapClassToTailwind(cls: string): string[] {
             return ['z-30'];
         case 'navbar-transparent':
             return ['bg-transparent'];
+        case 'navbar-backdrop-blur-sm':
+            return ['backdrop-blur-sm', 'bg-white/10'];
+        case 'navbar-backdrop-blur-md':
+            return ['backdrop-blur-md', 'bg-white/10'];
+        case 'navbar-backdrop-blur-lg':
+            return ['backdrop-blur-lg', 'bg-white/10'];
+        case 'navbar-backdrop-frosted':
+            return ['backdrop-blur-md', 'backdrop-saturate-150', 'bg-white/20'];
+        case 'navbar-backdrop-darken':
+            return ['backdrop-blur-md', 'bg-black/30'];
+        case 'navbar-backdrop-lighten':
+            return ['backdrop-blur-md', 'bg-white/30'];
         case 'was-validated':
             return ['[&:invalid]:border-red-500', '[&:valid]:border-green-500'];
         case 'needs-validation':
@@ -1394,8 +1408,15 @@ function getPropDrivenClasses(block: Block): string[] {
         classes.push('position-sticky', 'top-0', 'z-3')
     }
 
-    if (block.type === 'navbar' && block.props.transparent) {
-        classes.push('navbar-transparent')
+    if (block.type === 'navbar') {
+        const bgMode = String(block.props.backgroundMode || '').trim();
+        const legacyTransparent = block.props.transparent === true;
+        if (bgMode === 'transparent' || legacyTransparent) {
+            classes.push('navbar-transparent')
+        } else if (bgMode === 'backdrop') {
+            const effect = String(block.props.backdropEffect || 'blur-md').trim();
+            classes.push(`navbar-backdrop-${effect}`)
+        }
     }
 
     if (block.type === 'paragraph' && block.props.dropCap) {
@@ -4227,16 +4248,20 @@ ${pad}</footer>`
 
         if (framework === 'tailwind') {
             const themeClass = classesArray.find((c) => c.startsWith('navbar-theme-')) || 'navbar-theme-light';
-            const toneClasses = themeClass === 'navbar-theme-dark'
-                ? 'bg-slate-900 text-white'
-                : themeClass === 'navbar-theme-primary'
-                    ? 'bg-[var(--theme-primary)] text-white'
-                    : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]';
+            const hasTransparent = classesArray.includes('navbar-transparent');
+            const hasBackdrop = classesArray.some((c) => c.startsWith('navbar-backdrop-'));
+            const toneClasses = hasTransparent || hasBackdrop
+                ? ''
+                : themeClass === 'navbar-theme-dark'
+                    ? 'bg-slate-900 text-white'
+                    : themeClass === 'navbar-theme-primary'
+                        ? 'bg-[var(--theme-primary)] text-white'
+                        : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]';
 
             const extraClasses = classesArray
                 .filter((c) => !c.startsWith('navbar-theme-') && c !== 'navbar' && c !== 'navbar-expand-lg')
                 .flatMap((c) => mapBootstrapClassToTailwind(c));
-            const navClasses = dedupeClasses([...toneClasses.split(' '), 'w-full', ...extraClasses]);
+            const navClasses = dedupeClasses([...(toneClasses ? toneClasses.split(' ') : []), 'w-full', ...extraClasses]);
 
             return `${pad}<nav class="${navClasses.join(' ')}"${styleAttr} ${dataAttr}>
 ${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">

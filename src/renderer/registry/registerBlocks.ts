@@ -645,7 +645,9 @@ export function registerBlocks(): void {
             usePages: true,
             filterTag: '',
             hamburgerMenu: true,
-            stickyOffset: '0'
+            stickyOffset: '0',
+            backgroundMode: 'solid',
+            backdropEffect: 'blur-md'
         },
         defaultChildren: [
             {
@@ -674,7 +676,29 @@ export function registerBlocks(): void {
                 ],
                 default: '0'
             },
-            transparent: {type: 'boolean', label: 'Transparent Background', default: false},
+            backgroundMode: {
+                type: 'select',
+                label: 'Background Mode',
+                options: [
+                    {label: 'Solid', value: 'solid'},
+                    {label: 'Transparent', value: 'transparent'},
+                    {label: 'Backdrop', value: 'backdrop'}
+                ],
+                default: 'solid'
+            },
+            backdropEffect: {
+                type: 'select',
+                label: 'Backdrop Effect',
+                options: [
+                    {label: 'Blur Small', value: 'blur-sm'},
+                    {label: 'Blur Medium', value: 'blur-md'},
+                    {label: 'Blur Large', value: 'blur-lg'},
+                    {label: 'Frosted Glass', value: 'frosted'},
+                    {label: 'Darken', value: 'darken'},
+                    {label: 'Lighten', value: 'lighten'}
+                ],
+                default: 'blur-md'
+            },
             theme: {
                 type: 'select',
                 label: 'Theme',

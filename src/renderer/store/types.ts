@@ -580,6 +580,37 @@ export function themeToCSS(
     lines.push('  background-color: transparent !important;');
     lines.push('}');
 
+    lines.push('.navbar-backdrop-blur-sm {');
+    lines.push('  backdrop-filter: blur(4px);');
+    lines.push('  -webkit-backdrop-filter: blur(4px);');
+    lines.push('  background-color: rgba(255,255,255,0.10) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-blur-md {');
+    lines.push('  backdrop-filter: blur(12px);');
+    lines.push('  -webkit-backdrop-filter: blur(12px);');
+    lines.push('  background-color: rgba(255,255,255,0.10) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-blur-lg {');
+    lines.push('  backdrop-filter: blur(24px);');
+    lines.push('  -webkit-backdrop-filter: blur(24px);');
+    lines.push('  background-color: rgba(255,255,255,0.10) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-frosted {');
+    lines.push('  backdrop-filter: blur(12px) saturate(150%);');
+    lines.push('  -webkit-backdrop-filter: blur(12px) saturate(150%);');
+    lines.push('  background-color: rgba(255,255,255,0.20) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-darken {');
+    lines.push('  backdrop-filter: blur(12px);');
+    lines.push('  -webkit-backdrop-filter: blur(12px);');
+    lines.push('  background-color: rgba(0,0,0,0.30) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-lighten {');
+    lines.push('  backdrop-filter: blur(12px);');
+    lines.push('  -webkit-backdrop-filter: blur(12px);');
+    lines.push('  background-color: rgba(255,255,255,0.30) !important;');
+    lines.push('}');
+
     const componentTokens = options?.componentTokens ?? lightTheme.componentTokens;
     if (componentTokens) {
         lines.push('');

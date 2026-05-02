@@ -569,8 +569,14 @@ function elementToBlock(el: Element): Block | null {
             const zIndex = Number(styles.zIndex);
             props.stickyZIndex = Number.isFinite(zIndex) ? zIndex : styles.zIndex
         }
-        if (classes.includes('navbar-transparent')) {
-            props.transparent = true
+        const backdropClass = classes.find((c) => /^navbar-backdrop-/.test(c));
+        if (backdropClass) {
+            props.backgroundMode = 'backdrop';
+            props.backdropEffect = backdropClass.replace('navbar-backdrop-', '')
+        } else if (classes.includes('navbar-transparent')) {
+            props.backgroundMode = 'transparent'
+        } else {
+            props.backgroundMode = 'solid'
         }
 
         const classBrandAnchor = el.querySelector('a.navbar-brand');

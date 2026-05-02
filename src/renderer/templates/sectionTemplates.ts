@@ -300,7 +300,8 @@ function createNavbarBrandedSectionBlocks(): Block[] {
             hamburgerMenu: true,
             sticky: false,
             stickyOffset: '0',
-            transparent: false,
+            backgroundMode: 'solid',
+            backdropEffect: 'blur-md',
             theme: 'navbar-theme-light'
         })
     ]
