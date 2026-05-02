@@ -60,6 +60,7 @@ declare global {
                 fonts: FontAsset[]
             }>
             deleteFont: (args: { relativePath: string }) => Promise<IpcResult>
+            checkFileExists: (args: { relativePath: string }) => Promise<{ exists: boolean }>
             listProject: () => Promise<IpcResult & { fonts: FontAsset[] }>
         }
         menu: {

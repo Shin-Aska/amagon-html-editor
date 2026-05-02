@@ -12,6 +12,7 @@ import {
     Image as ImageIcon,
     KeyRound,
     Layout,
+    LayoutTemplate,
     Menu,
     Monitor,
     Moon,
@@ -68,7 +69,7 @@ export default function Toolbar({
                                     onToggleLeftPanel,
                                     onToggleCodeEditor,
                                     onSetEditorLayout,
-                                    onOpenThemeEditor,
+    onOpenThemeEditor,
                                     onOpenPublish,
                                     onOpenKeyboardShortcuts
                                 }: ToolbarProps): JSX.Element {
@@ -606,15 +607,17 @@ export default function Toolbar({
 
                         <div className="toolbar-divider"/>
 
-                        <button
-                            className={`toolbar-btn ${codeEditorOpen ? 'active' : ''}`}
-                            onClick={onToggleCodeEditor}
-                            title="Toggle Code Editor"
-                            aria-label="Toggle code editor panel"
-                            aria-pressed={codeEditorOpen}
-                        >
-                            <Code size={16} aria-hidden="true"/>
-                        </button>
+                        {editorLayout !== 'code-focus' && (
+                            <button
+                                className={`toolbar-btn ${codeEditorOpen ? 'active' : ''}`}
+                                onClick={onToggleCodeEditor}
+                                title="Toggle Code Editor"
+                                aria-label="Toggle code editor panel"
+                                aria-pressed={codeEditorOpen}
+                            >
+                                <Code size={16} aria-hidden="true"/>
+                            </button>
+                        )}
 
                         {/* Theme Editor */}
                         <button
@@ -626,6 +629,8 @@ export default function Toolbar({
                         >
                             <Palette size={16} aria-hidden="true"/>
                         </button>
+
+                        <div className="toolbar-divider"/>
 
                         {/* Layout Switcher */}
                         <div className="toolbar-layout-switcher" data-tutorial="toolbar-layout"

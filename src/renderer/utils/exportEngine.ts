@@ -218,6 +218,12 @@ function sanitizeAndTransformBlock(block: Block, ctx: BuildContext): Block {
     }
     next.styles = extracted.remainingStyles;
 
+    // For navbar blocks, preserve fontSize in styles so blockToHtml can
+    // propagate it to child anchors (overriding Tailwind defaults like text-lg).
+    if (block.type === 'navbar' && block.styles.fontSize) {
+        next.styles = {...next.styles, fontSize: block.styles.fontSize}
+    }
+
     return next
 }
 
@@ -275,7 +281,7 @@ function extractStylesAsClass(
     }
 
     const decl = rewrittenEntries
-        .map(([k, v]) => `${camelToKebab(k)}: ${v}`)
+        .map(([k, v]) => `${camelToKebab(k)}: ${v} !important`)
         .join('; ');
 
     const hash = stableHash(decl);
@@ -529,7 +535,8 @@ function buildStylesCss(
     const theme = project.projectSettings.theme;
     const themes = project.projectSettings.themes;
     if (theme && typeof theme === 'object' && theme.colors) {
-        const themeCss = themeToCSS(theme, themes, exportFonts, {fontUrlPrefix: './'});
+        const componentTokens = project.projectSettings.componentTokens;
+        const themeCss = themeToCSS(theme, themes, exportFonts, {fontUrlPrefix: './', componentTokens});
         if (themeCss.trim()) lines.push(themeCss.trim())
     }
 
@@ -555,6 +562,11 @@ function normalizeFontsForExport(fonts: FontAsset[] | undefined): FontAsset[] {
         const rawRel = String(font.relativePath || '')
             .replace(/^[/\\]+/, '')
             .replace(/\\/g, '/');
+
+        // Preserve empty path for system-font stubs without a physical file
+        if (!rawRel && !font.fileName) {
+            return {...font, relativePath: ''};
+        }
 
         const normalizedRel =
             rawRel.startsWith('assets/fonts/')

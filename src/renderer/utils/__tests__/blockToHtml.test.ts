@@ -910,10 +910,16 @@ describe('Phase 4 — layout and component block enhancements', () => {
         expect(html).toContain('z-index: 1030')
     });
 
-    it('renders navbar with transparent class', () => {
-        const block = createBlock('navbar', {props: {transparent: true}, classes: ['navbar', 'navbar-expand-lg']});
+    it('renders navbar with transparent backgroundMode', () => {
+        const block = createBlock('navbar', {props: {backgroundMode: 'transparent'}, classes: ['navbar', 'navbar-expand-lg']});
         const html = blockToHtml([block]);
         expect(html).toContain('navbar-transparent')
+    });
+
+    it('renders navbar with backdrop backgroundMode and effect', () => {
+        const block = createBlock('navbar', {props: {backgroundMode: 'backdrop', backdropEffect: 'frosted'}, classes: ['navbar', 'navbar-expand-lg']});
+        const html = blockToHtml([block]);
+        expect(html).toContain('navbar-backdrop-frosted')
     });
 
     it('renders non-pages navbar brand image and sticky classes', () => {
@@ -970,6 +976,159 @@ describe('Phase 4 — layout and component block enhancements', () => {
         expect(html).toContain('position: sticky');
         expect(html).toContain('z-index: 1030');
         expect(html).toContain('href="about.html"')
+    });
+
+    it('renders tailwind pages-based navbar with backdrop effect + extracted styles', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                backgroundMode: 'backdrop',
+                backdropEffect: 'blur-md',
+                sticky: true,
+                theme: 'navbar-theme-dark'
+            },
+            classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-dark', 'x-extracted']
+        });
+
+        const html = blockToHtml([block], {
+            framework: 'tailwind',
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}},
+                {id: 'p2', title: 'About', slug: 'about', blocks: [], meta: {}}
+            ]
+        });
+
+        // backdrop effect classes present, no solid background tone classes
+        expect(html).toContain('backdrop-blur-md');
+        expect(html).toContain('bg-white/10');
+        expect(html).not.toContain('bg-slate-900');
+        // extracted style class preserved
+        expect(html).toContain('x-extracted');
+        // sticky classes mapped through Tailwind
+        expect(html).toContain('sticky');
+        expect(html).toContain('top-0');
+    });
+
+    it('renders tailwind pages-based navbar with solid background + theme', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                backgroundMode: 'solid',
+                sticky: true,
+                theme: 'navbar-theme-dark'
+            },
+            classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-dark']
+        });
+
+        const html = blockToHtml([block], {
+            framework: 'tailwind',
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}},
+                {id: 'p2', title: 'About', slug: 'about', blocks: [], meta: {}}
+            ]
+        });
+
+        // toneClasses for dark theme
+        expect(html).toContain('bg-slate-900');
+        expect(html).toContain('text-white');
+        // sticky classes mapped through Tailwind
+        expect(html).toContain('sticky');
+        expect(html).toContain('top-0');
+    });
+
+    it('does not leak brandText or brandImage as HTML attributes', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: false,
+                brandText: 'Acme',
+                brandImage: 'https://cdn.example.com/logo.png'
+            },
+            classes: ['navbar', 'navbar-expand-lg'],
+            children: [
+                createBlock('container', {
+                    classes: ['container'],
+                    children: [
+                        createBlock('link', {props: {text: 'Acme', href: '#'}, classes: ['navbar-brand']})
+                    ]
+                })
+            ]
+        });
+
+        const html = blockToHtml([block]);
+        expect(html).not.toContain('brandtext=');
+        expect(html).not.toContain('brandimage=');
+        expect(html).not.toContain('brandText=');
+        expect(html).not.toContain('brandImage=')
+    });
+
+    it('renders pages-based navbar with menuFontFamily and menuFontSize', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                menuFontFamily: 'Inter',
+                menuFontSize: '14px'
+            },
+            classes: ['navbar', 'navbar-expand-lg']
+        });
+
+        const html = blockToHtml([block], {
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}}
+            ]
+        });
+
+        expect(html).toContain('font-family: Inter');
+        expect(html).toContain('font-size: 14px')
+    });
+
+    it('renders tailwind pages-based navbar with menuFontFamily and menuFontSize', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                menuFontFamily: 'Inter',
+                menuFontSize: '14px',
+                backgroundMode: 'solid',
+                theme: 'navbar-theme-light'
+            },
+            classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-light']
+        });
+
+        const html = blockToHtml([block], {
+            framework: 'tailwind',
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}}
+            ]
+        });
+
+        expect(html).toContain('font-family: Inter');
+        expect(html).toContain('font-size: 14px')
+    });
+
+    it('does not leak menuFontFamily or menuFontSize as HTML attributes', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                menuFontFamily: 'Inter',
+                menuFontSize: '14px'
+            },
+            classes: ['navbar', 'navbar-expand-lg']
+        });
+
+        const html = blockToHtml([block], {
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}}
+            ]
+        });
+
+        expect(html).not.toContain('menufontfamily=');
+        expect(html).not.toContain('menufontsize=');
+        expect(html).not.toContain('menuFontFamily=');
+        expect(html).not.toContain('menuFontSize=')
     });
 
     it('renders footer with copyright and back-to-top', () => {

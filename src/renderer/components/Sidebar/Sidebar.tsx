@@ -1,5 +1,5 @@
 import {useDraggable} from '@dnd-kit/core'
-import {ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderOpen, FolderPlus, Search, X} from 'lucide-react'
+import {ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderOpen, FolderPlus, LayoutTemplate, Search, X} from 'lucide-react'
 import './Sidebar.css'
 import {useEditorStore} from '../../store/editorStore'
 import {useProjectStore} from '../../store/projectStore'
@@ -12,6 +12,11 @@ import ContextMenu from '../ContextMenu/ContextMenu'
 import {useToastStore} from '../../store/toastStore'
 import {getApi} from '../../utils/api'
 import PageModal from '../PageModal/PageModal'
+import {getTemplateByWidgetType, getTemplateWidgetDefinitions} from '../../templates/templateWidgets'
+import {builtInPageTemplates} from '../../templates/pageTemplates'
+import type {PageTemplate} from '../../templates/templateTypes'
+import {createBlock} from '../../store/types'
+import type {Block} from '../../store/types'
 
 function WidgetItem({widget, onContextMenu}: {
     widget: BlockDefinition;
@@ -40,6 +45,9 @@ function WidgetItem({widget, onContextMenu}: {
         )
     };
 
+    const isTemplateWidget = widget.type.startsWith('template:');
+    const shouldUseExplicitIcon = widget.type.startsWith('user:') || isTemplateWidget;
+
     const style = transform ? {} : undefined;
 
     return (
@@ -52,13 +60,13 @@ function WidgetItem({widget, onContextMenu}: {
             onContextMenu={(e) => onContextMenu?.(e, widget)}
         >
             <div className="widget-icon">
-                {widget.type.startsWith('user:') ? (
+                {shouldUseExplicitIcon ? (
                     iconString && iconString.startsWith('lucide:') ? (
                         <BlockIcon name={iconString.replace(/^lucide:/, '')}/>
                     ) : iconString && !isBadIconGlyph(iconString) ? (
                         iconString
                     ) : (
-                        <BlockIcon name="user-block"/>
+                        <BlockIcon name={isTemplateWidget ? 'layout-template' : 'user-block'}/>
                     )
                 ) : (
                     <BlockIcon name={widget.type}/>
@@ -102,6 +110,7 @@ function Sidebar(): JSX.Element {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; widget: BlockDefinition } | null>(null);
     const [widgetSearch, setWidgetSearch] = useState('');
 
+
     // Page management
     const pages = useProjectStore((s) => s.pages);
     const currentPageId = useProjectStore((s) => s.currentPageId);
@@ -141,6 +150,7 @@ function Sidebar(): JSX.Element {
     } | null>(null);
 
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [showPageTemplatePicker, setShowPageTemplatePicker] = useState(false);
 
     // Page drag-reorder state
     const [dragPageId, setDragPageId] = useState<string | null>(null);
@@ -166,10 +176,21 @@ function Sidebar(): JSX.Element {
         propsSchema: {}
     }));
 
+    const templateWidgetDefinitions = useMemo(
+        () => getTemplateWidgetDefinitions().filter((widget) => getTemplateByWidgetType(widget.type)?.type === 'section'),
+        []
+    );
+
     const allRegistryCategories = Array.from(new Set([...orderedCategories, ...categories]));
     const userCategories = Array.from(new Set(userBlockDefinitions.map((d) => d.category).filter(Boolean)));
     const customOnlyCategories = userCategories.filter((c) => !allRegistryCategories.includes(c));
-    const allCategories = [...allRegistryCategories, ...customOnlyCategories];
+    const allCategories = Array.from(
+        new Set([
+            ...allRegistryCategories,
+            ...(templateWidgetDefinitions.length > 0 ? ['Templates'] : []),
+            ...customOnlyCategories
+        ])
+    );
 
     // Filter widgets by search query
     const filteredWidgetsByCategory = useMemo(() => {
@@ -178,6 +199,7 @@ function Sidebar(): JSX.Element {
         for (const category of allCategories) {
             const widgets = [
                 ...componentRegistry.getByCategory(category),
+                ...templateWidgetDefinitions.filter((w) => w.category === category),
                 ...userBlockDefinitions.filter((w) => w.category === category)
             ];
             if (!q) {
@@ -192,7 +214,7 @@ function Sidebar(): JSX.Element {
             }
         }
         return result
-    }, [widgetSearch, allCategories, userBlockDefinitions]);
+    }, [widgetSearch, allCategories, templateWidgetDefinitions, userBlockDefinitions]);
 
     const handleWidgetContextMenu = (e: MouseEvent, widget: BlockDefinition) => {
         if (!widget.type.startsWith('user:')) return;
@@ -485,8 +507,8 @@ function Sidebar(): JSX.Element {
         setDropTargetFolderId(null)
     };
 
-    const handleBackgroundDragLeave = (e: React.DragEvent) => {
-        if (e.target === e.currentTarget) {
+    const handleBackgroundDragLeave = (_e: React.DragEvent) => {
+        if (_e.target === _e.currentTarget) {
             setDropTargetFolderId(null)
         }
     };
@@ -537,6 +559,31 @@ function Sidebar(): JSX.Element {
                 )}
             </div>
         )
+    };
+
+    const cloneBlocksWithFreshIds = (blocks: Block[]): Block[] => {
+        return blocks.map((b) => {
+            const cloned = createBlock(b.type, {
+                props: {...b.props},
+                styles: {...b.styles},
+                classes: [...b.classes],
+                content: b.content,
+                tag: b.tag
+            });
+            cloned.children = cloneBlocksWithFreshIds(b.children);
+            return cloned;
+        });
+    };
+
+    const handleCreatePageFromTemplate = (template: PageTemplate) => {
+        const page = addPage(template.page.title, template.page.slug);
+        const clonedBlocks = cloneBlocksWithFreshIds(template.page.blocks);
+        updatePage(page.id, {
+            blocks: clonedBlocks,
+            meta: template.page.meta
+        });
+        setShowPageTemplatePicker(false);
+        showToast(`Created page from template: ${template.name}`, 'success');
     };
 
     // ── Main render ──────────────────────────────────────────────────────
@@ -696,6 +743,10 @@ function Sidebar(): JSX.Element {
                             <button className="page-add-btn" onClick={() => setPageModal({mode: 'create'})}>
                                 <FilePlus size={14}/>
                                 <span>Add New Page</span>
+                            </button>
+                            <button className="page-add-btn" onClick={() => setShowPageTemplatePicker(true)}>
+                                <LayoutTemplate size={14}/>
+                                <span>New Page from Template</span>
                             </button>
                         </div>
                     </div>
@@ -896,6 +947,118 @@ function Sidebar(): JSX.Element {
                     onSave={handleModalSave}
                     onCancel={() => setPageModal(null)}
                 />
+            )}
+
+            {showPageTemplatePicker && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        zIndex: 200,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                    onClick={() => setShowPageTemplatePicker(false)}
+                >
+                    <div
+                        style={{
+                            background: 'var(--color-bg-secondary)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 12,
+                            width: 'min(720px, 92vw)',
+                            maxHeight: '80vh',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '14px 18px',
+                            borderBottom: '1px solid var(--color-border)'
+                        }}>
+                            <h3 style={{margin: 0, fontSize: 15}}>New Page from Template</h3>
+                            <button
+                                className="toolbar-btn"
+                                onClick={() => setShowPageTemplatePicker(false)}
+                                aria-label="Close"
+                            >
+                                <X size={16}/>
+                            </button>
+                        </div>
+                        <div style={{
+                            padding: 16,
+                            overflowY: 'auto',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                            gap: 12
+                        }}>
+                            {builtInPageTemplates.map((template) => (
+                                <div
+                                    key={template.id}
+                                    onClick={() => handleCreatePageFromTemplate(template)}
+                                    style={{
+                                        cursor: 'pointer',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 8,
+                                        padding: 12,
+                                        background: 'var(--color-bg-primary)',
+                                        transition: 'border-color 0.15s ease, transform 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-accent)';
+                                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border)';
+                                        (e.currentTarget as HTMLElement).style.transform = 'none';
+                                    }}
+                                >
+                                    <div style={{
+                                        fontSize: 13,
+                                        fontWeight: 600,
+                                        marginBottom: 6,
+                                        color: 'var(--color-text-primary)'
+                                    }}>
+                                        {template.name}
+                                    </div>
+                                    <div style={{
+                                        fontSize: 11,
+                                        color: 'var(--color-text-secondary)',
+                                        lineHeight: 1.4
+                                    }}>
+                                        {template.description}
+                                    </div>
+                                    <div style={{
+                                        marginTop: 8,
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 4
+                                    }}>
+                                        {template.tags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                style={{
+                                                    fontSize: 10,
+                                                    padding: '2px 8px',
+                                                    borderRadius: 999,
+                                                    border: '1px solid var(--color-border)',
+                                                    color: 'var(--color-text-muted)'
+                                                }}
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

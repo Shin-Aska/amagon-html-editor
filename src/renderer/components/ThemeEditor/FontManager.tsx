@@ -1,174 +1,668 @@
-import React, {useState} from 'react'
-import {Globe, PackageCheck, Trash2, Type, Upload, X} from 'lucide-react'
-import {useProjectStore} from '../../store/projectStore'
-import {useToastStore} from '../../store/toastStore'
-import type {FontAsset} from '../../store/types'
-import GoogleFontBrowser from './GoogleFontBrowser'
-import './FontManager.css'
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Globe,
+  PackageCheck,
+  Search,
+  Trash2,
+  Unlink,
+  Upload,
+} from "lucide-react";
+import { useProjectStore } from "../../store/projectStore";
+import { useToastStore } from "../../store/toastStore";
+import type { FontAsset, ThemeTypography } from "../../store/types";
+import {
+  getGoogleFontPreviewUrl,
+  type GoogleFontMeta,
+  googleFontsCatalog,
+} from "../../data/googleFontsCatalog";
+import TypographyFontPicker from "./TypographyFontPicker";
+import "./FontManager.css";
 
-export default function FontManager(): JSX.Element {
-    const fonts = useProjectStore((s) => s.fonts);
-    const addFonts = useProjectStore((s) => s.addFonts);
-    const removeFontStore = useProjectStore((s) => s.removeFont);
-    const showToast = useToastStore((s) => s.showToast);
-    const [showGoogleFonts, setShowGoogleFonts] = useState(false);
+type FilterTab = "all" | "imported" | "system" | "internet";
 
-    const handleImportFile = async () => {
+interface UnifiedFont {
+  id: string;
+  name: string;
+  source: "system" | "internet" | "local";
+  status: "imported" | "available";
+  fontAsset?: FontAsset;
+  internetMeta?: GoogleFontMeta;
+}
+
+const PAGE_SIZE = 50;
+
+function getScopedPreviewFontId(family: string): string {
+  return `__gfont_preview_${family.replace(/\s+/g, "_")}`;
+}
+
+function variantLabel(v: { weight: string; style: string }): string {
+  const styleLabel = v.style === "italic" ? "Italic" : "Regular";
+  return `${styleLabel} ${v.weight}`;
+}
+
+function variantKey(v: { weight: string; style: string }): string {
+  return `${v.weight}-${v.style}`;
+}
+
+export default function FontManager({
+  typography,
+  onTypographyChange,
+}: {
+  typography: ThemeTypography;
+  onTypographyChange: (patch: Partial<ThemeTypography>) => void;
+}): JSX.Element {
+  const fonts = useProjectStore((s) => s.fonts);
+  const systemFonts = useProjectStore((s) => s.systemFonts);
+  const addFonts = useProjectStore((s) => s.addFonts);
+  const removeFontStore = useProjectStore((s) => s.removeFont);
+  const setSystemFonts = useProjectStore((s) => s.setSystemFonts);
+  const showToast = useToastStore((s) => s.showToast);
+
+  const [filter, setFilter] = useState<FilterTab>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  const [loadingSystemFonts, setLoadingSystemFonts] = useState(false);
+  const [existingFiles, setExistingFiles] = useState<Set<string>>(new Set());
+
+  const selectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
+  const systemFontsAcc = useRef<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      const next = new Set<string>();
+      for (const font of fonts) {
+        if (!font.relativePath) continue;
         try {
-            const res = await window.api.fonts.importFile();
-            if (res.success && res.fonts && res.fonts.length > 0) {
-                addFonts(res.fonts);
-                showToast(`Imported ${res.fonts.length} font file${res.fonts.length > 1 ? 's' : ''}`, 'success')
-            } else if (!res.canceled) {
-                showToast('No fonts were imported', 'info')
-            }
-        } catch {
-            showToast('Failed to import font', 'error')
-        }
-    };
+          const res = await window.api.fonts.checkFileExists({
+            relativePath: font.relativePath,
+          });
+          if (res.exists) next.add(font.relativePath);
+        } catch {}
+      }
+      if (!cancelled) setExistingFiles(next);
+    }
+    check();
+    return () => { cancelled = true; };
+  }, [fonts]);
 
-    const handleDeleteFont = async (font: FontAsset) => {
-        try {
-            const res = await window.api.fonts.deleteFont({relativePath: font.relativePath});
-            if (res.success) {
-                removeFontStore(font.id);
-                showToast(`Removed "${font.name}"`, 'success')
-            } else {
-                showToast('Failed to remove font file', 'error')
-            }
-        } catch {
-            showToast('Error removing font', 'error')
-        }
-    };
+  useEffect(() => {
+    if (systemFonts.length > 0) return;
+    setLoadingSystemFonts(true);
+    systemFontsAcc.current = [];
+    window.api.fonts
+      .listSystem()
+      .then((res) => {
+        if (res.success && Array.isArray(res.fonts) && res.fonts.length > 0) {
+          const batchSize = 40;
+          let index = 0;
 
-    // Inject @font-face rules so previews render correctly in the editor UI
-    const fontFacesCSS = fonts
+          const flush = () => {
+            const batch = res.fonts.slice(index, index + batchSize);
+            if (batch.length === 0) {
+              setLoadingSystemFonts(false);
+              return;
+            }
+            const existing = new Set(
+              systemFontsAcc.current.map((f) => f.toLowerCase()),
+            );
+            for (const name of batch) {
+              if (
+                typeof name === "string" &&
+                !existing.has(name.toLowerCase())
+              ) {
+                systemFontsAcc.current.push(name);
+                existing.add(name.toLowerCase());
+              }
+            }
+            setSystemFonts([...systemFontsAcc.current]);
+            index += batchSize;
+            requestAnimationFrame(flush);
+          };
+
+          flush();
+        } else {
+          setLoadingSystemFonts(false);
+        }
+      })
+      .catch(() => setLoadingSystemFonts(false));
+  }, [systemFonts.length, setSystemFonts]);
+
+  const importedNames = useMemo(
+    () => new Set(fonts.map((f) => f.name.toLowerCase())),
+    [fonts],
+  );
+
+  const unifiedList = useMemo<UnifiedFont[]>(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const list: UnifiedFont[] = [];
+
+    const includeImported = filter === "all" || filter === "imported";
+    const includeSystem = filter === "all" || filter === "system";
+    const includeInternet = filter === "all" || filter === "internet";
+
+    if (includeImported) {
+      for (const font of fonts) {
+        if (q && !font.name.toLowerCase().includes(q)) continue;
+        const source: UnifiedFont["source"] =
+          font.source === "google-fonts"
+            ? "internet"
+            : font.source === "system"
+              ? "system"
+              : "local";
+        list.push({
+          id: font.id,
+          name: font.name,
+          source,
+          status: "imported",
+          fontAsset: font,
+        });
+      }
+    }
+
+    if (includeSystem) {
+      for (const name of systemFonts) {
+        if (importedNames.has(name.toLowerCase())) continue;
+        if (q && !name.toLowerCase().includes(q)) continue;
+        list.push({
+          id: `sys_${name}`,
+          name,
+          source: "system",
+          status: "available",
+        });
+      }
+    }
+
+    if (includeInternet) {
+      for (const meta of googleFontsCatalog) {
+        if (importedNames.has(meta.family.toLowerCase())) continue;
+        if (q && !meta.family.toLowerCase().includes(q)) continue;
+        list.push({
+          id: `web_${meta.family}`,
+          name: meta.family,
+          source: "internet",
+          status: "available",
+          internetMeta: meta,
+        });
+      }
+    }
+
+    return list;
+  }, [fonts, systemFonts, importedNames, filter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(unifiedList.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = unifiedList.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, searchQuery]);
+
+  useEffect(() => {
+    const injectedIds = new Set<string>();
+    const abortControllers: AbortController[] = [];
+
+    const internetItems = pageItems.filter(
+      (i) => i.source === "internet" && i.internetMeta,
+    );
+    internetItems.forEach((item) => {
+      const meta = item.internetMeta!;
+      const regularVariant =
+        meta.variants.find((v) => v.weight === "400" && v.style === "normal") ||
+        meta.variants[0];
+      const url = getGoogleFontPreviewUrl(
+        meta.family,
+        regularVariant.weight,
+        regularVariant.style,
+      );
+      const previewId = getScopedPreviewFontId(meta.family);
+
+      if (document.getElementById(previewId)) {
+        injectedIds.add(previewId);
+        return;
+      }
+
+      const controller = new AbortController();
+      abortControllers.push(controller);
+
+      fetch(url, { signal: controller.signal })
+        .then((res) => res.text())
+        .then((css) => {
+          const escapedFamily = meta.family.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&",
+          );
+          const scopedCss = css.replace(
+            new RegExp(`font-family:\\s*['"]?${escapedFamily}['"]?`, "g"),
+            `font-family: "${previewId}"`,
+          );
+          const style = document.createElement("style");
+          style.id = previewId;
+          style.setAttribute("data-gfont-preview", "true");
+          style.textContent = scopedCss;
+          document.head.appendChild(style);
+          injectedIds.add(previewId);
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            console.warn(
+              `Failed to load font preview for ${meta.family}:`,
+              err,
+            );
+          }
+        });
+    });
+
+    return () => {
+      abortControllers.forEach((ctrl) => ctrl.abort());
+      document
+        .querySelectorAll('style[data-gfont-preview="true"]')
+        .forEach((el) => {
+          if (!injectedIds.has(el.id)) {
+            el.parentNode?.removeChild(el);
+          }
+        });
+    };
+  }, [pageItems]);
+
+  const handleImportFile = async () => {
+    try {
+      const res = await window.api.fonts.importFile();
+      if (res.success && res.fonts && res.fonts.length > 0) {
+        addFonts(res.fonts);
+        showToast(
+          `Imported ${res.fonts.length} font file${res.fonts.length > 1 ? "s" : ""}`,
+          "success",
+        );
+      } else if (!res.canceled) {
+        showToast("No fonts were imported", "info");
+      }
+    } catch {
+      showToast("Failed to import font", "error");
+    }
+  };
+
+  const handleDeleteFont = async (font: FontAsset) => {
+    try {
+      removeFontStore(font.id);
+      const res = await window.api.fonts.deleteFont({
+        relativePath: font.relativePath,
+      });
+      if (res.success) {
+        showToast(`Deleted "${font.name}"`, "success");
+      } else {
+        showToast("Failed to delete font file", "error");
+      }
+    } catch {
+      showToast("Error deleting font", "error");
+    }
+  };
+
+  const handleUnlinkFont = (font: FontAsset) => {
+    removeFontStore(font.id);
+    showToast(`Unlinked "${font.name}" from project`, "success");
+  };
+
+  const handleImportSystemFont = async (name: string) => {
+    try {
+      const res = await window.api.fonts.copySystemFont({
+        familyName: name,
+        filePaths: [],
+      });
+      if (res.success && res.fonts && res.fonts.length > 0) {
+        const hasPhysicalFile = res.fonts.some((f) => f.relativePath);
+        addFonts(res.fonts);
+        if (hasPhysicalFile) {
+          showToast(`Imported system font "${name}"`, "success");
+        } else {
+          showToast(
+            `Added "${name}" as a system font reference (file not found on disk)`,
+            "info",
+          );
+        }
+      } else {
+        showToast(res.error || `Failed to import "${name}"`, "error");
+      }
+    } catch {
+      showToast(`Error importing "${name}"`, "error");
+    }
+  };
+
+  const handleDownloadInternet = async (item: UnifiedFont) => {
+    if (!item.internetMeta) return;
+    const meta = item.internetMeta;
+    const selectEl = selectRefs.current[item.id];
+    const selectedKey = selectEl?.value;
+
+    if (!selectedKey) return;
+    const variant = meta.variants.find((v) => variantKey(v) === selectedKey);
+    if (!variant) return;
+
+    setDownloadingIds((prev) => {
+      const next = new Set(prev);
+      next.add(item.id);
+      return next;
+    });
+
+    try {
+      const res = await window.api.fonts.downloadGoogleFont({
+        family: meta.family,
+        variants: [variant],
+      });
+      if (res.success && res.fonts) {
+        addFonts(res.fonts);
+        showToast(`Downloaded "${meta.family}"`, "success");
+      } else {
+        showToast(res.errors?.[0] || "Download failed", "error");
+      }
+    } catch {
+      showToast("Error downloading font", "error");
+    } finally {
+      setDownloadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  };
+
+  const fontFacesCSS = useMemo(
+    () =>
+      fonts
         .filter((f) => f.relativePath)
         .map(
-            (font) => `@font-face {
+          (font) => `@font-face {
   font-family: "${font.name}";
   src: url("app-media://project-asset/${font.relativePath}");
-  ${font.weight ? `font-weight: ${font.weight};` : ''}
-  ${font.style ? `font-style: ${font.style};` : ''}
-}`
+  ${font.weight ? `font-weight: ${font.weight};` : ""}
+  ${font.style ? `font-style: ${font.style};` : ""}
+}`,
         )
-        .join('\n');
+        .join("\n"),
+    [fonts],
+  );
 
-    return (
-        <div className="theme-font-manager">
-            {fontFacesCSS && <style dangerouslySetInnerHTML={{__html: fontFacesCSS}}/>}
+  const sourceBadge = (source: UnifiedFont["source"]) => {
+    const map: Record<string, { label: string; cls: string }> = {
+      system: { label: "System", cls: "tag-system" },
+      internet: { label: "Internet", cls: "tag-internet" },
+      local: { label: "Local", cls: "tag-local" },
+    };
+    const cfg = map[source] ?? map.local;
+    return <span className={`theme-font-tag ${cfg.cls}`}>{cfg.label}</span>;
+  };
 
-            <div className="theme-section">
-                <div className="theme-section-title">Import Custom Fonts</div>
-                {/* Auto-export info banner */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                    padding: '10px 12px',
-                    marginBottom: 12,
-                    background: 'rgba(124, 58, 237, 0.08)',
-                    border: '1px solid rgba(124, 58, 237, 0.25)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 12,
-                    color: 'var(--color-text-secondary)',
-                    lineHeight: 1.5
-                }}>
-                    <PackageCheck size={15} style={{flexShrink: 0, color: 'var(--color-accent)', marginTop: 1}}/>
-                    <span>
-            <strong style={{color: 'var(--color-accent)'}}>Fonts are bundled automatically.</strong>
-                        {' '}Imported font files are copied into your exported site — nothing extra to do.
-            For web / Google fonts, just type the name in the Typography tab.
-          </span>
-                </div>
-                <div style={{display: 'flex', gap: '12px'}}>
-                    <button className="theme-btn theme-btn-primary" onClick={handleImportFile}>
-                        <Upload size={14}/> Import Font File(s)
-                    </button>
-                    <button className="theme-btn" onClick={() => setShowGoogleFonts(!showGoogleFonts)}>
-                        {showGoogleFonts ? (
-                            <>
-                                <X size={14}/> Hide Font Browser
-                            </>
-                        ) : (
-                            <>
-                                <Globe size={14}/> Browse Google Fonts
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
+  const statusBadge = (status: UnifiedFont["status"]) => (
+    <span
+      className={`theme-font-tag ${status === "imported" ? "tag-imported" : "tag-available"}`}
+    >
+      {status === "imported" ? "Imported" : "Available"}
+    </span>
+  );
 
-            {showGoogleFonts && (
-                <GoogleFontBrowser/>
-            )}
+  const previewFamily = (item: UnifiedFont): string => {
+    if (item.source === "internet" && item.internetMeta) {
+      return `"${getScopedPreviewFontId(item.name)}", sans-serif`;
+    }
+    return `"${item.name}", sans-serif`;
+  };
 
-            <div className="theme-section">
-                <div className="theme-section-title">Imported Fonts</div>
-                {fonts.length === 0 ? (
-                    <div style={{
-                        padding: '32px 16px',
-                        textAlign: 'center',
-                        color: 'var(--color-text-muted)',
-                        background: 'var(--color-bg-surface)',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px dashed var(--color-border)'
-                    }}>
-                        <Type size={28} style={{opacity: 0.3, marginBottom: 8}}/>
-                        <div style={{fontSize: 13}}>No custom font files imported yet.</div>
-                        <div style={{fontSize: 12, marginTop: 4, opacity: 0.7}}>
-                            Click "Import Font File(s)" to get started.
-                        </div>
-                    </div>
-                ) : (
-                    <div className="theme-font-grid">
-                        {fonts.map((font) => (
-                            <div key={font.id} className="theme-font-card">
-                                <div className="theme-font-header">
-                                    <div>
-                                        <div className="theme-font-name">{font.name}</div>
-                                        <div className="theme-font-badges">
-                                            <span className="theme-font-badge">{font.format.toUpperCase()}</span>
-                                            {font.weight && font.weight !== '400' && font.weight !== 'normal' && (
-                                                <span className="theme-font-badge">w{font.weight}</span>
-                                            )}
-                                            {font.style && font.style !== 'normal' && (
-                                                <span className="theme-font-badge">{font.style}</span>
-                                            )}
-                                            {font.relativePath && (
-                                                <span className="theme-font-badge" style={{
-                                                    color: 'var(--color-success, #22c55e)',
-                                                    borderColor: 'rgba(34,197,94,0.35)',
-                                                    background: 'rgba(34,197,94,0.08)'
-                                                }}>
-                          ✓ Included in export
-                        </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <button
-                                        className="theme-font-delete"
-                                        onClick={() => handleDeleteFont(font)}
-                                        title={`Remove "${font.name}"`}
-                                    >
-                                        <Trash2 size={15}/>
-                                    </button>
-                                </div>
-                                <div
-                                    className="theme-font-preview"
-                                    style={{
-                                        fontFamily: `"${font.name}", sans-serif`,
-                                        fontWeight: font.weight || 'normal',
-                                        fontStyle: font.style || 'normal'
-                                    }}
-                                >
-                                    The quick brown fox jumps over the lazy dog
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+  return (
+    <div className="theme-font-manager">
+      {fontFacesCSS && (
+        <style dangerouslySetInnerHTML={{ __html: fontFacesCSS }} />
+      )}
+
+      <div className="theme-section">
+        <div className="theme-section-title">Typography</div>
+        <div className="theme-field-group">
+          <TypographyFontPicker
+            label="Body Font"
+            value={typography.fontFamily}
+            onChange={(v) => onTypographyChange({ fontFamily: v })}
+          />
+          <TypographyFontPicker
+            label="Heading Font"
+            value={typography.headingFontFamily}
+            onChange={(v) => onTypographyChange({ headingFontFamily: v })}
+          />
+          <div className="theme-field">
+            <label className="theme-field-label">Base Font Size</label>
+            <input
+              className="theme-field-input"
+              value={typography.baseFontSize}
+              onChange={(e) =>
+                onTypographyChange({ baseFontSize: e.target.value })
+              }
+            />
+          </div>
+          <div className="theme-field">
+            <label className="theme-field-label">Line Height</label>
+            <input
+              className="theme-field-input"
+              value={typography.lineHeight}
+              onChange={(e) =>
+                onTypographyChange({ lineHeight: e.target.value })
+              }
+            />
+          </div>
+          <div className="theme-field">
+            <label className="theme-field-label">Heading Line Height</label>
+            <input
+              className="theme-field-input"
+              value={typography.headingLineHeight}
+              onChange={(e) =>
+                onTypographyChange({ headingLineHeight: e.target.value })
+              }
+            />
+          </div>
         </div>
-    )
+      </div>
+
+      <div className="theme-font-divider" />
+
+      <div className="theme-section">
+        <div className="theme-font-library-header">
+          <div className="theme-section-title" style={{ marginBottom: 0 }}>
+            Font Library
+          </div>
+          <button
+            className="theme-btn theme-btn-primary"
+            onClick={handleImportFile}
+          >
+            <Upload size={14} /> Import Font File(s)
+          </button>
+        </div>
+
+        <div className="theme-font-info-banner">
+          <PackageCheck
+            size={15}
+            style={{
+              flexShrink: 0,
+              color: "var(--color-accent)",
+              marginTop: 1,
+            }}
+          />
+          <span>
+            <strong style={{ color: "var(--color-accent)" }}>
+              Fonts are bundled automatically.
+            </strong>{" "}
+            Imported font files are copied into your exported site.
+          </span>
+        </div>
+
+        {loadingSystemFonts && (
+          <div className="theme-font-loading-bar">
+            <div className="theme-font-loading-track">
+              <div className="theme-font-loading-fill" />
+            </div>
+            <span className="theme-font-loading-label">
+              Loading system fonts...
+            </span>
+          </div>
+        )}
+
+        <div className="theme-font-controls">
+          <div className="theme-font-filter-tabs">
+            {[
+              { id: "all" as FilterTab, label: "All" },
+              { id: "imported" as FilterTab, label: "Imported" },
+              { id: "system" as FilterTab, label: "System" },
+              { id: "internet" as FilterTab, label: "Internet" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                className={`theme-font-filter-tab ${filter === tab.id ? "active" : ""}`}
+                onClick={() => setFilter(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="theme-font-search">
+            <Search size={16} className="theme-font-search-icon" />
+            <input
+              type="text"
+              placeholder="Search fonts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="theme-font-table-wrapper">
+          <table className="theme-font-table">
+            <thead>
+              <tr>
+                <th className="col-preview">Preview</th>
+                <th className="col-name">Name</th>
+                <th className="col-source">Source</th>
+                <th className="col-status">Status</th>
+                <th className="col-action">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageItems.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="theme-font-table-empty">
+                    No fonts match your search.
+                  </td>
+                </tr>
+              ) : (
+                pageItems.map((item) => (
+                  <tr key={item.id}>
+                    <td className="col-preview">
+                      <span
+                        className="theme-font-preview-text"
+                        style={{ fontFamily: previewFamily(item) }}
+                      >
+                        {item.name}
+                      </span>
+                    </td>
+                    <td className="col-name">{item.name}</td>
+                    <td className="col-source">{sourceBadge(item.source)}</td>
+                    <td className="col-status">{statusBadge(item.status)}</td>
+                    <td className="col-action">
+                      {item.status === "imported" && item.fontAsset ? (
+                        <div className="theme-font-inline-action">
+                          <button
+                            className="theme-font-action-btn"
+                            onClick={() => handleUnlinkFont(item.fontAsset!)}
+                            title={`Unlink "${item.name}" from project`}
+                          >
+                            <Unlink size={14} />
+                          </button>
+                          {item.fontAsset.relativePath &&
+                            existingFiles.has(item.fontAsset.relativePath) && (
+                            <button
+                              className="theme-font-action-btn theme-font-action-btn-danger"
+                              onClick={() => handleDeleteFont(item.fontAsset!)}
+                              title={`Delete "${item.name}"`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ) : item.source === "system" ? (
+                        <button
+                          className="theme-font-action-btn"
+                          onClick={() => handleImportSystemFont(item.name)}
+                          title={`Import "${item.name}"`}
+                        >
+                          <Download size={14} />
+                        </button>
+                      ) : item.source === "internet" && item.internetMeta ? (
+                        <div className="theme-font-inline-action">
+                          <select
+                            className="theme-font-variant-select"
+                            ref={(el) => {
+                              selectRefs.current[item.id] = el;
+                            }}
+                            defaultValue={variantKey(
+                              item.internetMeta.variants.find(
+                                (v) =>
+                                  v.weight === "400" && v.style === "normal",
+                              ) ?? item.internetMeta.variants[0],
+                            )}
+                          >
+                            {item.internetMeta.variants.map((v) => (
+                              <option key={variantKey(v)} value={variantKey(v)}>
+                                {variantLabel(v)}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            className="theme-font-action-btn"
+                            onClick={() => handleDownloadInternet(item)}
+                            disabled={downloadingIds.has(item.id)}
+                            title={`Download "${item.name}"`}
+                          >
+                            {downloadingIds.has(item.id) ? (
+                              "..."
+                            ) : (
+                              <Download size={14} />
+                            )}
+                          </button>
+                        </div>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div className="theme-font-pagination">
+            <button
+              className="theme-font-page-btn"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft size={16} /> Previous
+            </button>
+            <span className="theme-font-page-info">
+              Page {currentPage} of {totalPages} ({unifiedList.length} fonts)
+            </span>
+            <button
+              className="theme-font-page-btn"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

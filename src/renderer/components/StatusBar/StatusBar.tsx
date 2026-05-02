@@ -29,6 +29,7 @@ export default function StatusBar(): JSX.Element {
     const startTutorial = useTutorialStore((s) => s.startTutorial);
     const setTutorialEnabled = useAppSettingsStore((s) => s.setTutorialEnabled);
     const setTutorialCompleted = useAppSettingsStore((s) => s.setTutorialCompleted);
+    const showRestartTutorialButton = useAppSettingsStore((s) => s.showRestartTutorialButton);
 
     const currentPageId = useProjectStore((s) => s.currentPageId);
     const pages = useProjectStore((s) => s.pages);
@@ -85,16 +86,18 @@ export default function StatusBar(): JSX.Element {
                     <span>{zoom}%</span>
                 </div>
 
-                <button
-                    type="button"
-                    className="status-help-btn"
-                    onClick={handleRestartTutorial}
-                    title="Restart tutorial"
-                    aria-label="Restart tutorial"
-                >
-                    <HelpCircle size={12} aria-hidden="true"/>
-                    <span>?</span>
-                </button>
+                {showRestartTutorialButton && (
+                    <button
+                        type="button"
+                        className="status-help-btn"
+                        onClick={handleRestartTutorial}
+                        title="Restart tutorial"
+                        aria-label="Restart tutorial"
+                    >
+                        <HelpCircle size={12} aria-hidden="true"/>
+                        <span>?</span>
+                    </button>
+                )}
             </div>
         </div>
     )

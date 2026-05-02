@@ -15,10 +15,10 @@ function isSimpleMeasurement(val?: string): boolean {
 }
 
 function parseMeasurement(val?: string): { num: string; unit: string } {
-    if (!val) return {num: '', unit: 'px'};
+    if (!val) return {num: '', unit: 'rem'};
     const match = val.match(/^([\d.]+)\s*(px|pt|rem|em|%|vw|vh)$/);
     if (match) return {num: match[1], unit: match[2]};
-    return {num: val.replace(/\D/g, '') || '', unit: 'px'}
+    return {num: val.replace(/\D/g, '') || '', unit: 'rem'}
 }
 
 export function TypographyEditor({styles, onChange}: StyleEditorProps): JSX.Element {
@@ -103,7 +103,7 @@ export function TypographyEditor({styles, onChange}: StyleEditorProps): JSX.Elem
                                 step="0.1"
                                 value={fontSizeParsed.num}
                                 onChange={handleFontSizeNumChange}
-                                placeholder="16"
+                                placeholder="1"
                             />
                             <select className="inspector-select" value={fontSizeParsed.unit}
                                     onChange={handleFontSizeUnitChange}>
@@ -113,13 +113,13 @@ export function TypographyEditor({styles, onChange}: StyleEditorProps): JSX.Elem
                             </select>
                         </div>
                     ) : (
-                        <input
-                            className="inspector-input"
-                            type="text"
-                            value={styles.fontSize || ''}
-                            onChange={(e) => onChange('fontSize', e.target.value || undefined)}
-                            placeholder="e.g. clamp(2.5rem, 5vw, 4rem)"
-                        />
+                            <input
+                                className="inspector-input"
+                                type="text"
+                                value={styles.fontSize || ''}
+                                onChange={(e) => onChange('fontSize', e.target.value || undefined)}
+                                placeholder="e.g. 1rem, 16px, clamp(2.5rem, 5vw, 4rem)"
+                            />
                     )}
                 </div>
             </div>
@@ -151,11 +151,11 @@ export function TypographyEditor({styles, onChange}: StyleEditorProps): JSX.Elem
                         <label className="style-label">Line Height</label>
                         <span
                             className="style-info-btn"
-                            title="Space between lines. Use unitless (1.5) or absolute (24px) values."
+                            title="Space between lines. Use unitless (1.5) or any supported CSS unit."
                         >?</span>
                     </div>
                     <input className="inspector-input" type="text" name="lineHeight" value={styles.lineHeight || ''}
-                           onChange={handleChange} placeholder="e.g. 1.5, 24px"/>
+                           onChange={handleChange} placeholder="e.g. 1.5, 1.5rem, 24px"/>
                 </div>
             </div>
             <div className="style-row">
@@ -168,7 +168,7 @@ export function TypographyEditor({styles, onChange}: StyleEditorProps): JSX.Elem
                         >?</span>
                     </div>
                     <input className="inspector-input" type="text" name="letterSpacing"
-                           value={styles.letterSpacing || ''} onChange={handleChange} placeholder="e.g. 1px, 0.1em"/>
+                           value={styles.letterSpacing || ''} onChange={handleChange} placeholder="e.g. 0.1em, 1px"/>
                 </div>
                 <div className="style-col">
                     <div className="style-label-row">

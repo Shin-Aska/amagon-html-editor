@@ -569,8 +569,14 @@ function elementToBlock(el: Element): Block | null {
             const zIndex = Number(styles.zIndex);
             props.stickyZIndex = Number.isFinite(zIndex) ? zIndex : styles.zIndex
         }
-        if (classes.includes('navbar-transparent')) {
-            props.transparent = true
+        const backdropClass = classes.find((c) => /^navbar-backdrop-/.test(c));
+        if (backdropClass) {
+            props.backgroundMode = 'backdrop';
+            props.backdropEffect = backdropClass.replace('navbar-backdrop-', '')
+        } else if (classes.includes('navbar-transparent')) {
+            props.backgroundMode = 'transparent'
+        } else {
+            props.backgroundMode = 'solid'
         }
 
         const classBrandAnchor = el.querySelector('a.navbar-brand');
@@ -588,6 +594,19 @@ function elementToBlock(el: Element): Block | null {
             const brandText = inferredBrandAnchor.textContent?.trim() || '';
             if (brandText) {
                 props.brandText = brandText
+            }
+        }
+
+        const navLinkAnchor = el.querySelector('a.nav-link') || el.querySelector('ul a');
+        if (navLinkAnchor) {
+            const linkStyle = navLinkAnchor.getAttribute('style') || '';
+            const linkFontFamilyMatch = linkStyle.match(/font-family:\s*([^;]+)/);
+            const linkFontSizeMatch = linkStyle.match(/font-size:\s*([^;]+)/);
+            if (linkFontFamilyMatch) {
+                props.menuFontFamily = linkFontFamilyMatch[1].trim()
+            }
+            if (linkFontSizeMatch) {
+                props.menuFontSize = linkFontSizeMatch[1].trim()
             }
         }
     }
@@ -2651,8 +2670,8 @@ function parseMapEmbedBlock(el: Element): Block {
         type: 'map-embed',
         props: {
             embedUrl: iframe?.getAttribute('src') || 'https://maps.google.com/maps?q=New+York&t=&z=13&ie=UTF8&iwloc=&output=embed',
-            height: iframe?.getAttribute('height') || '400px',
-            borderRadius: '8px',
+            height: iframe?.getAttribute('height') || '25rem',
+            borderRadius: '0.5rem',
             grayscale: false,
             title: iframe?.getAttribute('title') || 'Location Map'
         },

@@ -73,20 +73,58 @@ export interface ThemeColors {
 export interface ThemeTypography {
     fontFamily: string
     headingFontFamily: string
-    baseFontSize: string        // e.g. '16px'
+    baseFontSize: string        // e.g. '1rem'
     lineHeight: string          // e.g. '1.6'
     headingLineHeight: string   // e.g. '1.2'
 }
 
 export interface ThemeSpacing {
-    baseUnit: string            // e.g. '8px'
+    baseUnit: string            // e.g. '0.5rem'
     scale: number[]             // multipliers, e.g. [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
 }
 
 export interface ThemeBorders {
-    radius: string              // e.g. '6px'
+    radius: string              // e.g. '0.375rem'
     width: string               // e.g. '1px'
     color: string               // e.g. '#dee2e6'
+}
+
+export interface ComponentTokens {
+    button?: {
+        borderRadius?: string
+        padding?: string
+        fontWeight?: string
+        textTransform?: string
+        shadow?: string
+    }
+    card?: {
+        borderRadius?: string
+        shadow?: string
+        borderWidth?: string
+        padding?: string
+    }
+    headings?: {
+        h1Size?: string
+        h2Size?: string
+        h3Size?: string
+        h4Size?: string
+        h5Size?: string
+        h6Size?: string
+        fontWeight?: string
+        letterSpacing?: string
+    }
+    form?: {
+        inputBorderRadius?: string
+        inputPadding?: string
+        focusRingColor?: string
+        focusRingWidth?: string
+    }
+    shadows?: {
+        sm?: string
+        md?: string
+        lg?: string
+        xl?: string
+    }
 }
 
 export interface CssFile {
@@ -103,6 +141,7 @@ export interface ProjectTheme {
     typography: ThemeTypography
     spacing: ThemeSpacing
     borders: ThemeBorders
+    componentTokens?: ComponentTokens
     customCss: string              // legacy: raw CSS appended after variables
     customCssFiles?: CssFile[]     // multi-file custom CSS (takes precedence over customCss)
 }
@@ -135,16 +174,16 @@ export function createDefaultTheme(): ProjectTheme {
         typography: {
             fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
             headingFontFamily: 'inherit',
-            baseFontSize: '16px',
+            baseFontSize: '1rem',
             lineHeight: '1.6',
             headingLineHeight: '1.2'
         },
         spacing: {
-            baseUnit: '8px',
+            baseUnit: '0.5rem',
             scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
         },
         borders: {
-            radius: '6px',
+            radius: '0.375rem',
             width: '1px',
             color: '#dee2e6'
         },
@@ -172,16 +211,16 @@ export function createDefaultDarkTheme(): ProjectTheme {
         typography: {
             fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
             headingFontFamily: 'inherit',
-            baseFontSize: '16px',
+            baseFontSize: '1rem',
             lineHeight: '1.6',
             headingLineHeight: '1.2'
         },
         spacing: {
-            baseUnit: '8px',
+            baseUnit: '0.5rem',
             scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8]
         },
         borders: {
-            radius: '6px',
+            radius: '0.375rem',
             width: '1px',
             color: '#334155'
         },
@@ -267,7 +306,7 @@ export function themeToCSS(
     theme: ProjectTheme,
     variants?: ProjectThemeVariants,
     fonts?: FontAsset[],
-    options?: { fontUrlPrefix?: string }
+    options?: { fontUrlPrefix?: string; componentTokens?: ComponentTokens }
 ): string {
     const lines: string[] = [];
 
@@ -537,6 +576,153 @@ export function themeToCSS(
     lines.push("  -webkit-mask-size: 100%;");
     lines.push('}');
 
+    lines.push('.navbar-transparent {');
+    lines.push('  background-color: transparent !important;');
+    lines.push('}');
+
+    lines.push('.navbar-backdrop-blur-sm {');
+    lines.push('  backdrop-filter: blur(4px);');
+    lines.push('  -webkit-backdrop-filter: blur(4px);');
+    lines.push('  background-color: rgba(255,255,255,0.10) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-blur-md {');
+    lines.push('  backdrop-filter: blur(12px);');
+    lines.push('  -webkit-backdrop-filter: blur(12px);');
+    lines.push('  background-color: rgba(255,255,255,0.10) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-blur-lg {');
+    lines.push('  backdrop-filter: blur(24px);');
+    lines.push('  -webkit-backdrop-filter: blur(24px);');
+    lines.push('  background-color: rgba(255,255,255,0.10) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-frosted {');
+    lines.push('  backdrop-filter: blur(12px) saturate(150%);');
+    lines.push('  -webkit-backdrop-filter: blur(12px) saturate(150%);');
+    lines.push('  background-color: rgba(255,255,255,0.20) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-darken {');
+    lines.push('  backdrop-filter: blur(12px);');
+    lines.push('  -webkit-backdrop-filter: blur(12px);');
+    lines.push('  background-color: rgba(0,0,0,0.30) !important;');
+    lines.push('}');
+    lines.push('.navbar-backdrop-lighten {');
+    lines.push('  backdrop-filter: blur(12px);');
+    lines.push('  -webkit-backdrop-filter: blur(12px);');
+    lines.push('  background-color: rgba(255,255,255,0.30) !important;');
+    lines.push('}');
+
+    const componentTokens = options?.componentTokens ?? lightTheme.componentTokens;
+    if (componentTokens) {
+        lines.push('');
+        lines.push('/* Component Token Overrides */');
+
+        const variableLines: string[] = [];
+        const pushTokenVariable = (name: string, value: string | undefined) => {
+            if (!value) return;
+            variableLines.push(`  ${name}: ${value};`)
+        };
+
+        pushTokenVariable('--theme-button-border-radius', componentTokens.button?.borderRadius);
+        pushTokenVariable('--theme-button-padding', componentTokens.button?.padding);
+        pushTokenVariable('--theme-button-font-weight', componentTokens.button?.fontWeight);
+        pushTokenVariable('--theme-button-text-transform', componentTokens.button?.textTransform);
+        pushTokenVariable('--theme-button-shadow', componentTokens.button?.shadow);
+
+        pushTokenVariable('--theme-card-border-radius', componentTokens.card?.borderRadius);
+        pushTokenVariable('--theme-card-shadow', componentTokens.card?.shadow);
+        pushTokenVariable('--theme-card-border-width', componentTokens.card?.borderWidth);
+        pushTokenVariable('--theme-card-padding', componentTokens.card?.padding);
+
+        pushTokenVariable('--theme-heading-h1-size', componentTokens.headings?.h1Size);
+        pushTokenVariable('--theme-heading-h2-size', componentTokens.headings?.h2Size);
+        pushTokenVariable('--theme-heading-h3-size', componentTokens.headings?.h3Size);
+        pushTokenVariable('--theme-heading-h4-size', componentTokens.headings?.h4Size);
+        pushTokenVariable('--theme-heading-h5-size', componentTokens.headings?.h5Size);
+        pushTokenVariable('--theme-heading-h6-size', componentTokens.headings?.h6Size);
+        pushTokenVariable('--theme-heading-font-weight', componentTokens.headings?.fontWeight);
+        pushTokenVariable('--theme-heading-letter-spacing', componentTokens.headings?.letterSpacing);
+
+        pushTokenVariable('--theme-input-border-radius', componentTokens.form?.inputBorderRadius);
+        pushTokenVariable('--theme-input-padding', componentTokens.form?.inputPadding);
+        pushTokenVariable('--theme-focus-ring-color', componentTokens.form?.focusRingColor);
+        pushTokenVariable('--theme-focus-ring-width', componentTokens.form?.focusRingWidth);
+
+        pushTokenVariable('--theme-shadow-sm', componentTokens.shadows?.sm);
+        pushTokenVariable('--theme-shadow-md', componentTokens.shadows?.md);
+        pushTokenVariable('--theme-shadow-lg', componentTokens.shadows?.lg);
+        pushTokenVariable('--theme-shadow-xl', componentTokens.shadows?.xl);
+
+        if (variableLines.length > 0) {
+            lines.push(':root {');
+            lines.push(...variableLines);
+            lines.push('}');
+        }
+
+        if (componentTokens.button) {
+            lines.push('.btn {');
+            if (componentTokens.button.borderRadius) lines.push('  border-radius: var(--theme-button-border-radius);');
+            if (componentTokens.button.padding) lines.push('  padding: var(--theme-button-padding);');
+            if (componentTokens.button.fontWeight) lines.push('  font-weight: var(--theme-button-font-weight);');
+            if (componentTokens.button.textTransform) lines.push('  text-transform: var(--theme-button-text-transform);');
+            if (componentTokens.button.shadow) lines.push('  box-shadow: var(--theme-button-shadow);');
+            lines.push('}');
+        }
+
+        if (componentTokens.card) {
+            lines.push('.card {');
+            if (componentTokens.card.borderRadius) lines.push('  border-radius: var(--theme-card-border-radius);');
+            if (componentTokens.card.shadow) lines.push('  box-shadow: var(--theme-card-shadow);');
+            if (componentTokens.card.borderWidth) lines.push('  border-width: var(--theme-card-border-width);');
+            lines.push('}');
+            if (componentTokens.card.padding) {
+                lines.push('.card-body, .card-header, .card-footer {');
+                lines.push('  padding: var(--theme-card-padding);');
+                lines.push('}');
+            }
+        }
+
+        if (componentTokens.headings) {
+            lines.push('h1, h2, h3, h4, h5, h6 {');
+            if (componentTokens.headings.fontWeight) lines.push('  font-weight: var(--theme-heading-font-weight);');
+            if (componentTokens.headings.letterSpacing) lines.push('  letter-spacing: var(--theme-heading-letter-spacing);');
+            lines.push('}');
+            if (componentTokens.headings.h1Size) lines.push('h1 { font-size: var(--theme-heading-h1-size); }');
+            if (componentTokens.headings.h2Size) lines.push('h2 { font-size: var(--theme-heading-h2-size); }');
+            if (componentTokens.headings.h3Size) lines.push('h3 { font-size: var(--theme-heading-h3-size); }');
+            if (componentTokens.headings.h4Size) lines.push('h4 { font-size: var(--theme-heading-h4-size); }');
+            if (componentTokens.headings.h5Size) lines.push('h5 { font-size: var(--theme-heading-h5-size); }');
+            if (componentTokens.headings.h6Size) lines.push('h6 { font-size: var(--theme-heading-h6-size); }');
+        }
+
+        if (componentTokens.form) {
+            lines.push('.form-control, .form-select, .form-check-input {');
+            if (componentTokens.form.inputBorderRadius) lines.push('  border-radius: var(--theme-input-border-radius);');
+            if (componentTokens.form.inputPadding) lines.push('  padding: var(--theme-input-padding);');
+            lines.push('}');
+            if (componentTokens.form.focusRingColor || componentTokens.form.focusRingWidth) {
+                lines.push('.form-control:focus, .form-select:focus, .form-check-input:focus {');
+                if (componentTokens.form.focusRingColor) lines.push('  border-color: var(--theme-focus-ring-color);');
+                if (componentTokens.form.focusRingColor || componentTokens.form.focusRingWidth) {
+                    const width = componentTokens.form.focusRingWidth
+                        ? 'var(--theme-focus-ring-width)'
+                        : '0.25rem';
+                    const color = componentTokens.form.focusRingColor
+                        ? 'var(--theme-focus-ring-color)'
+                        : 'rgba(13, 110, 253, 0.15)';
+                    lines.push(`  box-shadow: 0 0 0 ${width} ${color};`);
+                }
+                lines.push('}');
+            }
+        }
+
+        if (componentTokens.shadows) {
+            if (componentTokens.shadows.sm) lines.push('.shadow-sm { box-shadow: var(--theme-shadow-sm) !important; }');
+            if (componentTokens.shadows.md) lines.push('.shadow, .shadow-md { box-shadow: var(--theme-shadow-md) !important; }');
+            if (componentTokens.shadows.lg) lines.push('.shadow-lg { box-shadow: var(--theme-shadow-lg) !important; }');
+            if (componentTokens.shadows.xl) lines.push('.shadow-xl { box-shadow: var(--theme-shadow-xl) !important; }');
+        }
+    }
+
     // Append custom CSS (multi-file takes precedence over legacy single string)
     const cssFiles = lightTheme.customCssFiles && lightTheme.customCssFiles.length > 0
         ? lightTheme.customCssFiles
@@ -567,6 +753,7 @@ export interface ProjectSettings {
     theme: ProjectTheme
     themes?: ProjectThemeVariants
     fonts?: FontAsset[]
+    componentTokens?: ComponentTokens
     globalStyles: Record<string, string>
 }
 
@@ -583,6 +770,10 @@ export interface ProjectData {
     folders?: PageFolder[]
     userBlocks: UserBlock[]
     customPresets?: ProjectTheme[]
+    themePacks?: ThemePack[]
+    sectionTemplates?: SectionTemplate[]
+    pageTemplates?: PageTemplate[]
+    appliedThemePackId?: string | null
     isProjectLoaded?: boolean
     publisherConfig?: PublisherConfig
 }
@@ -706,4 +897,22 @@ export function createBlock(
         children: [],
         ...overrides
     }
+}
+
+export interface ThemePack {
+    id: string
+    name: string
+    [key: string]: any
+}
+
+export interface SectionTemplate {
+    id: string
+    name: string
+    [key: string]: any
+}
+
+export interface PageTemplate {
+    id: string
+    name: string
+    [key: string]: any
 }

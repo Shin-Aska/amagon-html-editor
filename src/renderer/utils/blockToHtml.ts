@@ -105,6 +105,8 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
         'sortDefaultDir',
         'filterTag',
         'hamburgerMenu',
+        'brandText',
+        'brandImage',
         'isForm',
         'fluid',
         'gutters',
@@ -216,6 +218,10 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
         'stickyOffset',
         'stickyTop',
         'stickyZIndex',
+        'backgroundMode',
+        'backdropEffect',
+        'menuFontFamily',
+        'menuFontSize',
         'transparent',
         'socialLinks',
         'showSocialLinks',
@@ -490,13 +496,17 @@ function stylesToString(styles: Record<string, string>): string {
         .join('; ')
 }
 
-function getEffectiveStyles(block: Block): Record<string, string> {
+function getEffectiveStyles(block: Block, framework?: FrameworkChoice): Record<string, string> {
     const styles = {...block.styles};
 
     if (block.type === 'navbar' && block.props.sticky) {
-        styles.position = styles.position || 'sticky';
-        styles.top = styles.top || String(block.props.stickyOffset ?? block.props.stickyTop ?? '0').trim() || '0';
-        styles.zIndex = styles.zIndex || String(block.props.stickyZIndex ?? '1030').trim() || '1030'
+        // In Tailwind mode, sticky positioning is handled by classes (sticky, top-0, z-30)
+        // Adding inline styles here would override those classes with different z-index values
+        if (framework !== 'tailwind') {
+            styles.position = styles.position || 'sticky';
+            styles.top = styles.top || String(block.props.stickyOffset ?? block.props.stickyTop ?? '0').trim() || '0';
+            styles.zIndex = styles.zIndex || String(block.props.stickyZIndex ?? '1030').trim() || '1030'
+        }
     }
 
     return styles
@@ -1245,6 +1255,18 @@ function mapBootstrapClassToTailwind(cls: string): string[] {
             return ['z-30'];
         case 'navbar-transparent':
             return ['bg-transparent'];
+        case 'navbar-backdrop-blur-sm':
+            return ['backdrop-blur-sm', 'bg-white/10'];
+        case 'navbar-backdrop-blur-md':
+            return ['backdrop-blur-md', 'bg-white/10'];
+        case 'navbar-backdrop-blur-lg':
+            return ['backdrop-blur-lg', 'bg-white/10'];
+        case 'navbar-backdrop-frosted':
+            return ['backdrop-blur-md', 'backdrop-saturate-150', 'bg-white/20'];
+        case 'navbar-backdrop-darken':
+            return ['backdrop-blur-md', 'bg-black/30'];
+        case 'navbar-backdrop-lighten':
+            return ['backdrop-blur-md', 'bg-white/30'];
         case 'was-validated':
             return ['[&:invalid]:border-red-500', '[&:valid]:border-green-500'];
         case 'needs-validation':
@@ -1388,8 +1410,15 @@ function getPropDrivenClasses(block: Block): string[] {
         classes.push('position-sticky', 'top-0', 'z-3')
     }
 
-    if (block.type === 'navbar' && block.props.transparent) {
-        classes.push('navbar-transparent')
+    if (block.type === 'navbar') {
+        const bgMode = String(block.props.backgroundMode || '').trim();
+        const legacyTransparent = block.props.transparent === true;
+        if (bgMode === 'transparent' || legacyTransparent) {
+            classes.push('navbar-transparent')
+        } else if (bgMode === 'backdrop') {
+            const effect = String(block.props.backdropEffect || 'blur-md').trim();
+            classes.push(`navbar-backdrop-${effect}`)
+        }
     }
 
     if (block.type === 'paragraph' && block.props.dropCap) {
@@ -1940,7 +1969,7 @@ function getBlockContent(
             const slides = (props.slides as Array<{ src: string; alt: string; caption?: string }>) ?? [];
             const transition = normalizeCarouselTransition(props.transition, props.fade);
             const imageHeightMode = normalizeCarouselImageHeightMode(props.imageHeightMode);
-            const imageHeight = normalizeCarouselImageHeight(props.imageHeight) || '400px';
+            const imageHeight = normalizeCarouselImageHeight(props.imageHeight) || '25rem';
             const thumbnails = toBoolean(props.thumbnails, false);
             const interval = Number(props.interval) || 5000;
 
@@ -2010,7 +2039,7 @@ function getBlockContent(
             const thumbsHtml = thumbnails && slides.length > 0
                 ? `
         <div class="d-flex gap-2 mt-2 overflow-auto justify-content-center">
-          ${slides.map((slide, i) => `<button type="button" class="p-0 border-0 bg-transparent${i === 0 ? ' opacity-100' : ' opacity-50'}" data-bs-target="#${id}" data-bs-slide-to="${i}" aria-label="Slide ${i + 1}" style="width:60px;height:40px;overflow:hidden;cursor:pointer;"><img src="${escapeAttrValue(slide.src)}" alt="${escapeAttrValue(slide.alt)}" style="width:100%;height:100%;object-fit:cover;"></button>`).join('\n          ')}
+          ${slides.map((slide, i) => `<button type="button" class="p-0 border-0 bg-transparent${i === 0 ? ' opacity-100' : ' opacity-50'}" data-bs-target="#${id}" data-bs-slide-to="${i}" aria-label="Slide ${i + 1}" style="width:3.75rem;height:2.5rem;overflow:hidden;cursor:pointer;"><img src="${escapeAttrValue(slide.src)}" alt="${escapeAttrValue(slide.alt)}" style="width:100%;height:100%;object-fit:cover;"></button>`).join('\n          ')}
         </div>`
                 : '';
 
@@ -2395,7 +2424,7 @@ ${pad}</a>`
         const videoClasses = framework === 'tailwind'
             ? dedupeClasses(['h-full', 'w-full', 'object-cover', ...resolveFrameworkClasses(block, framework, {fullWidthFormControls})]).join(' ')
             : dedupeClasses(['w-100', 'h-100', ...block.classes]).join(' ');
-        const styleStr = stylesToString(getEffectiveStyles(block));
+        const styleStr = stylesToString(getEffectiveStyles(block, framework));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="video"` : '';
         const attrs = [
@@ -2439,7 +2468,7 @@ ${pad}</div>`
         const classes = framework === 'tailwind'
             ? dedupeClasses(bootstrapClasses.flatMap((cls) => mapBootstrapClassToTailwind(cls)).concat(disabled ? ['opacity-60', 'pointer-events-none'] : [])).join(' ')
             : bootstrapClasses.join(' ');
-        const styleStr = stylesToString(getEffectiveStyles(block));
+        const styleStr = stylesToString(getEffectiveStyles(block, framework));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="button"` : '';
         const stateAttrs = ` data-amagon-button-variant="${escapeAttrValue(variantToken)}" data-amagon-button-size="${escapeAttrValue(sizeClass)}" data-amagon-button-outline="${outline}" data-amagon-button-block="${blockWidth}" data-amagon-button-loading="${loading}" data-amagon-button-loading-text="${escapeAttrValue(loadingText)}"`;
@@ -3065,7 +3094,7 @@ ${pad}</section>`
         const membersHtml = normalizedMembers.map((member) => `${pad}      <div class="col">
 ${pad}        <article class="team-member-card h-100 ${cardStyle === 'simple' ? '' : 'card border-0 shadow-sm'}" data-team-member="true" data-member-name="${escapeAttrValue(member.name)}" data-member-role="${escapeAttrValue(member.role)}" data-member-image-url="${escapeAttrValue(member.imageUrl)}" data-member-bio="${escapeAttrValue(member.bio)}" data-member-social="${escapeAttrValue(JSON.stringify(member.socialLinks || {}))}">
 ${pad}          <div class="position-relative">
-${pad}            <img src="${escapeAttrValue(member.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(member.name || 'Team member')}" class="w-100 rounded-3${cardStyle !== 'simple' ? ' card-img-top' : ''}" style="height: 240px; object-fit: cover;">
+${pad}            <img src="${escapeAttrValue(member.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(member.name || 'Team member')}" class="w-100 rounded-3${cardStyle !== 'simple' ? ' card-img-top' : ''}" style="height: 15rem; object-fit: cover;">
 ${pad}            ${cardStyle === 'overlay' ? `<div class="position-absolute bottom-0 start-0 end-0 p-3 text-white" style="background: linear-gradient(0deg, rgba(0,0,0,0.65), transparent);"><h3 class="h5 mb-1">${escapeAttrValue(member.name)}</h3><p class="mb-0">${escapeAttrValue(member.role)}</p></div>` : ''}
 ${pad}          </div>
 ${pad}          ${cardStyle === 'overlay' ? '' : `<div class="${cardStyle === 'simple' ? 'pt-3' : 'card-body'}"><h3 class="h5 mb-1">${escapeAttrValue(member.name)}</h3><p class="text-muted mb-2">${escapeAttrValue(member.role)}</p>${member.bio ? `<p class="mb-0">${escapeAttrValue(member.bio)}</p>` : ''}</div>`}
@@ -3127,7 +3156,7 @@ ${pad}</section>`
         const imagesHtml = normalizedImages.map((image) => `${pad}      <div class="col ${layout === 'masonry' ? 'mb-3' : ''}">
 ${pad}        <figure class="gallery-item overflow-hidden rounded-3 border" data-gallery-image="true" data-image-url="${escapeAttrValue(image.url)}" data-image-caption="${escapeAttrValue(image.caption)}" data-image-category="${escapeAttrValue(image.category)}">
 ${pad}          ${lightbox ? `<a href="${escapeAttrValue(image.url)}" data-gallery-lightbox-item="true">` : ''}
-${pad}          <img src="${escapeAttrValue(image.url || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(image.caption || 'Gallery image')}" class="img-fluid w-100" style="height: 220px; object-fit: cover;">
+${pad}          <img src="${escapeAttrValue(image.url || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(image.caption || 'Gallery image')}" class="img-fluid w-100" style="height: 13.75rem; object-fit: cover;">
 ${pad}          ${lightbox ? '</a>' : ''}
 ${pad}          ${image.caption ? `<figcaption class="small text-muted px-3 py-2">${escapeAttrValue(image.caption)}</figcaption>` : ''}
 ${pad}        </figure>
@@ -3239,7 +3268,7 @@ ${pad}</section>`
         const logosHtml = normalizedLogos.map((logo) => `${pad}      <div class="col">
 ${pad}        <div class="logo-item text-center ${variant === 'cards' ? 'card border-0 shadow-sm p-3' : variant === 'bordered' ? 'border rounded-3 p-3' : 'p-2'}" data-logo-item="true" data-logo-image-url="${escapeAttrValue(logo.imageUrl)}" data-logo-alt-text="${escapeAttrValue(logo.altText)}" data-logo-href="${escapeAttrValue(logo.href)}">
 ${pad}          ${logo.href ? `<a href="${escapeAttrValue(logo.href)}">` : ''}
-${pad}          <img src="${escapeAttrValue(logo.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(logo.altText || 'Logo')}" class="img-fluid mx-auto${grayscale ? ' opacity-75' : ''}" style="max-height: 48px; width: auto;">
+${pad}          <img src="${escapeAttrValue(logo.imageUrl || IMAGE_PLACEHOLDER)}" alt="${escapeAttrValue(logo.altText || 'Logo')}" class="img-fluid mx-auto${grayscale ? ' opacity-75' : ''}" style="max-height: 3rem; width: auto;">
 ${pad}          ${logo.href ? '</a>' : ''}
 ${pad}        </div>
 ${pad}      </div>`).join('\n');
@@ -3545,7 +3574,7 @@ ${pad}</button>`
 
         const radiusClass = style === 'circle' ? 'rounded-circle' : style === 'rounded' ? 'rounded' : 'rounded-0';
         const posStyle = pos === 'bottom-left' ? 'bottom: 1.5rem; left: 1.5rem;' : 'bottom: 1.5rem; right: 1.5rem;';
-        return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} btn btn-primary ${radiusClass} shadow position-fixed z-3 d-flex align-items-center justify-content-center" style="${posStyle} width: 48px; height: 48px;" aria-label="Back to top">
+        return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} btn btn-primary ${radiusClass} shadow position-fixed z-3 d-flex align-items-center justify-content-center" style="${posStyle} width: 3rem; height: 3rem;" aria-label="Back to top">
 ${pad}  ↑
 ${pad}</button>`
     }
@@ -3630,7 +3659,7 @@ ${pad}  <img src="${escapeAttrValue(aImg)}" alt="After" class="position-absolute
 ${pad}  <div class="position-absolute top-0 start-0 h-100 border-end border-white border-2 shadow-sm" style="width: 50%;">
 ${pad}    <img src="${escapeAttrValue(bImg)}" alt="Before" class="position-absolute top-0 start-0 h-100 object-fit-cover" style="width: 200%; max-width: none;">
 ${pad}  </div>
-${pad}  <div class="position-absolute top-50 start-50 translate-middle bg-white rounded-circle shadow d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; cursor: ew-resize;">
+${pad}  <div class="position-absolute top-50 start-50 translate-middle bg-white rounded-circle shadow d-flex align-items-center justify-content-center" style="width: 2rem; height: 2rem; cursor: ew-resize;">
 ${pad}    <small class="text-secondary" style="letter-spacing: -2px;">↔</small>
 ${pad}  </div>
 ${pad}</div>`
@@ -3639,7 +3668,7 @@ ${pad}</div>`
     if (block.type === 'map-embed') {
         const dataAttrs = `data-block-type="map-embed"${includeDataAttributes ? ` data-block-id="${block.id}"` : ''}`;
         const embedUrl = String(block.props.embedUrl || 'https://maps.google.com/maps?q=New+York&t=&z=13&ie=UTF8&iwloc=&output=embed');
-        const height = String(block.props.height || '400px');
+        const height = String(block.props.height || '25rem');
         const grayscale = toBoolean(block.props.grayscale, false);
         const title = String(block.props.title || 'Location Map');
 
@@ -4169,12 +4198,32 @@ ${pad}</footer>`
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : '';
         const classesArray = normalizeNavbarThemeClasses([...block.classes, ...getPropDrivenClasses(block)]);
         const classes = classesArray.join(' ');
-        const effectiveStyles = getEffectiveStyles(block);
-        const styleStr = stylesToString(effectiveStyles);
-        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+        let effectiveStyles = getEffectiveStyles(block, framework);
         const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'));
         const brandImage = String(block.props.brandImage || '').trim();
         const filterTag = String(block.props.filterTag || '').trim();
+
+        // Propagate font-size to child elements so it overrides Bootstrap/Tailwind defaults
+        const fontSizeVal = effectiveStyles.fontSize;
+        const childFontSizeAttr = fontSizeVal ? ` style="font-size: ${fontSizeVal}"` : '';
+
+        const menuFontFamily = String(block.props.menuFontFamily || '').trim();
+        const menuFontSize = String(block.props.menuFontSize || '').trim();
+
+        const navLinkStyleParts: string[] = [];
+        if (menuFontFamily) navLinkStyleParts.push(`font-family: ${menuFontFamily}`);
+        if (menuFontSize) navLinkStyleParts.push(`font-size: ${menuFontSize}`);
+        if (fontSizeVal && !menuFontSize) navLinkStyleParts.push(`font-size: ${fontSizeVal}`);
+        const navLinkStyleAttr = navLinkStyleParts.length > 0 ? ` style="${navLinkStyleParts.join('; ')}"` : '';
+
+        // In export, font-size is extracted to a CSS class (e.g. x-abc123); remove from inline styles to avoid duplication
+        if (block.classes.some((c) => c.startsWith('x-')) && effectiveStyles.fontSize) {
+            const {fontSize, ...rest} = effectiveStyles;
+            effectiveStyles = rest
+        }
+
+        const styleStr = stylesToString(effectiveStyles);
+        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
 
         // Helper to get effective tags for a page (own + folder inherited)
         const getEffective = (p: Page): string[] => {
@@ -4208,19 +4257,25 @@ ${pad}</footer>`
 
         const hamburgerMenu = block.props.hamburgerMenu !== false;
 
-        // Propagate font-size to child elements so it overrides Bootstrap/Tailwind defaults
-        const fontSizeVal = effectiveStyles.fontSize;
-        const childFontSizeAttr = fontSizeVal ? ` style="font-size: ${fontSizeVal}"` : '';
-
         if (framework === 'tailwind') {
             const themeClass = classesArray.find((c) => c.startsWith('navbar-theme-')) || 'navbar-theme-light';
-            const toneClasses = themeClass === 'navbar-theme-dark'
-                ? 'bg-slate-900 text-white'
-                : themeClass === 'navbar-theme-primary'
-                    ? 'bg-[var(--theme-primary)] text-white'
-                    : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]';
+            const hasTransparent = classesArray.includes('navbar-transparent');
+            const hasBackdrop = classesArray.some((c) => c.startsWith('navbar-backdrop-'));
+            const toneClasses = hasTransparent || hasBackdrop
+                ? ''
+                : themeClass === 'navbar-theme-dark'
+                    ? 'bg-slate-900 text-white'
+                    : themeClass === 'navbar-theme-primary'
+                        ? 'bg-[var(--theme-primary)] text-white'
+                        : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]';
 
-            return `${pad}<nav class="${toneClasses} w-full"${styleAttr} ${dataAttr}>
+            const extraClasses = classesArray
+                .filter((c) => !c.startsWith('navbar-theme-') && c !== 'navbar' && c !== 'navbar-expand-lg')
+                .flatMap((c) => mapBootstrapClassToTailwind(c));
+            const navClasses = dedupeClasses([...(toneClasses ? toneClasses.split(' ') : []), 'w-full', ...extraClasses]);
+            const navLinksTw = navLinks.replace(/<a class="nav-link"/g, `<a${navLinkStyleAttr} class="nav-link"`);
+
+            return `${pad}<nav class="${navClasses.join(' ')}"${styleAttr} ${dataAttr}>
 ${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
 ${hamburgerMenu ? `${pad}    <div class="flex items-center justify-between w-full lg:w-auto">
 ${pad}      <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#"${childFontSizeAttr}>${brandHtml}</a>
@@ -4229,7 +4284,7 @@ ${pad}        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 
 ${pad}      </button>
 ${pad}    </div>` : `${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#"${childFontSizeAttr}>${brandHtml}</a>`}
 ${pad}    <ul id="${navbarId}" class="list-none flex-col gap-3 p-0 lg:flex-row lg:items-center ${hamburgerMenu ? 'hidden lg:flex' : 'flex'}">
-${navLinks.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100').replace(/<a class="/g, `<a${childFontSizeAttr} class="`)}
+${navLinksTw.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100')}
 ${pad}    </ul>
 ${pad}  </div>
 ${pad}</nav>`
@@ -4243,11 +4298,11 @@ ${pad}      <span class="navbar-toggler-icon"></span>
 ${pad}    </button>
 ${pad}    <div class="collapse navbar-collapse" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${childFontSizeAttr}`)}
+${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${navLinkStyleAttr}`)}
 ${pad}      </ul>
 ${pad}    </div>` : `${pad}    <div class="w-100 mt-2 mt-lg-0" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 flex-row gap-3 flex-wrap">
-${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${childFontSizeAttr}`)}
+${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${navLinkStyleAttr}`)}
 ${pad}      </ul>
 ${pad}    </div>`}
 ${pad}  </div>
@@ -4415,17 +4470,17 @@ ${pad}</nav>`
 
             const sortControl = showSort
                 ? sortLayout === 'new-row'
-                    ? `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 1 1 260px; min-width: 200px" data-page-list-sort>
+                    ? `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 1 1 16.25rem; min-width: 12.5rem" data-page-list-sort>
 ${sortOptionsHtml}
 ${pad}    </select>
-${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 0 0 160px; max-width: 160px" data-page-list-dir>
+${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="flex: 0 0 10rem; max-width: 10rem" data-page-list-dir>
 ${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
 ${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
 ${pad}    </select>`
-                    : `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 220px; max-width: 220px" data-page-list-sort>
+                    : `<select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 13.75rem; max-width: 13.75rem" data-page-list-sort>
 ${sortOptionsHtml}
 ${pad}    </select>
-${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 160px; max-width: 160px" data-page-list-dir>
+${pad}    <select class="${framework === 'tailwind' ? 'w-full rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 py-2 text-[var(--theme-text)]' : 'form-select'}" style="width: 10rem; max-width: 10rem" data-page-list-dir>
 ${pad}      <option value="asc"${sortDefaultDir === 'asc' ? ' selected' : ''}>Ascending</option>
 ${pad}      <option value="desc"${sortDefaultDir === 'desc' ? ' selected' : ''}>Descending</option>
 ${pad}    </select>`
@@ -4437,7 +4492,7 @@ ${showSearch ? `${pad}    <div class="mb-2">${searchControl}</div>` : ''}
 ${showSort ? `${pad}    <div class="d-flex gap-2 align-items-center" style="width: 100%; flex-wrap: wrap">${sortControl}</div>` : ''}
 ${pad}  </div>`
                 : `${pad}  <div class="mb-3 d-flex gap-2 align-items-center" style="flex-wrap: wrap">
-${showSearch ? `${pad}    <div style="flex: 1 1 260px; min-width: 200px">${searchControl}</div>` : ''}
+${showSearch ? `${pad}    <div style="flex: 1 1 16.25rem; min-width: 12.5rem">${searchControl}</div>` : ''}
 ${showSort ? `${pad}    <div style="flex: 0 0 auto; margin-left: auto">
 ${pad}      <div class="d-flex gap-2 align-items-center" style="flex-wrap: nowrap">${sortControl}</div>
 ${pad}    </div>` : ''}
@@ -4877,7 +4932,12 @@ ${pad}</${tag}>`
     const parts: string[] = [];
 
     // Inline styles
-    const styleStr = stylesToString(getEffectiveStyles(block));
+    let effectiveStyles = getEffectiveStyles(block, framework);
+    if (block.type === 'navbar' && block.classes.some((c) => c.startsWith('x-')) && effectiveStyles.fontSize) {
+        const {fontSize, ...rest} = effectiveStyles;
+        effectiveStyles = rest
+    }
+    const styleStr = stylesToString(effectiveStyles);
 
     // Props → attributes
     const attrStr = propsToAttributes(tag, block.type, block.props);

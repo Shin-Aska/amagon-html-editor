@@ -370,7 +370,7 @@ export function registerBlocks(): void {
             ],
             transition: 'slide',
             imageHeightMode: 'auto',
-            imageHeight: '400px',
+            imageHeight: '25rem',
             fade: false,
             thumbnails: false,
             interval: 5000
@@ -400,7 +400,7 @@ export function registerBlocks(): void {
                 ],
                 default: 'auto'
             },
-            imageHeight: {type: 'measurement', label: 'Fixed Height', default: '400px'},
+            imageHeight: {type: 'measurement', label: 'Fixed Height', default: '25rem'},
             thumbnails: {type: 'boolean', label: 'Show Thumbnails', default: false},
             interval: {type: 'number', label: 'Interval (ms)', default: 5000, min: 1000, max: 30000}
         }
@@ -645,7 +645,9 @@ export function registerBlocks(): void {
             usePages: true,
             filterTag: '',
             hamburgerMenu: true,
-            stickyOffset: '0'
+            stickyOffset: '0',
+            backgroundMode: 'solid',
+            backdropEffect: 'blur-md'
         },
         defaultChildren: [
             {
@@ -674,7 +676,31 @@ export function registerBlocks(): void {
                 ],
                 default: '0'
             },
-            transparent: {type: 'boolean', label: 'Transparent Background', default: false},
+            backgroundMode: {
+                type: 'select',
+                label: 'Background Mode',
+                options: [
+                    {label: 'Solid', value: 'solid'},
+                    {label: 'Transparent', value: 'transparent'},
+                    {label: 'Backdrop', value: 'backdrop'}
+                ],
+                default: 'solid'
+            },
+            backdropEffect: {
+                type: 'select',
+                label: 'Backdrop Effect',
+                options: [
+                    {label: 'Blur Small', value: 'blur-sm'},
+                    {label: 'Blur Medium', value: 'blur-md'},
+                    {label: 'Blur Large', value: 'blur-lg'},
+                    {label: 'Frosted Glass', value: 'frosted'},
+                    {label: 'Darken', value: 'darken'},
+                    {label: 'Lighten', value: 'lighten'}
+                ],
+                default: 'blur-md'
+            },
+            menuFontFamily: {type: 'font-picker', label: 'Menu Font Family', default: ''},
+            menuFontSize: {type: 'measurement', label: 'Menu Font Size', default: ''},
             theme: {
                 type: 'select',
                 label: 'Theme',
@@ -1177,7 +1203,7 @@ export function registerBlocks(): void {
         icon: '🌐',
         defaultProps: {aspectRatio: '16:9', allowFullscreen: true, lazy: false},
         defaultClasses: ['w-100', 'border'],
-        defaultStyles: {height: '300px'},
+        defaultStyles: {height: '18.75rem'},
         propsSchema: {
             src: {type: 'text', label: 'Source URL', default: 'https://example.com'},
             title: {type: 'text', label: 'Title', default: 'Embedded Content'},
@@ -2423,8 +2449,8 @@ export function registerBlocks(): void {
         icon: '🗺',
         defaultProps: {
             embedUrl: 'https://maps.google.com/maps?q=New+York&t=&z=13&ie=UTF8&iwloc=&output=embed',
-            height: '400px',
-            borderRadius: '8px',
+            height: '25rem',
+            borderRadius: '0.5rem',
             grayscale: false,
             title: 'Location Map'
         },
@@ -2434,8 +2460,8 @@ export function registerBlocks(): void {
                 label: 'Embed URL',
                 default: 'https://maps.google.com/maps?q=New+York&t=&z=13&ie=UTF8&iwloc=&output=embed'
             },
-            height: {type: 'measurement', label: 'Height', default: '400px'},
-            borderRadius: {type: 'measurement', label: 'Border Radius', default: '8px'},
+            height: {type: 'measurement', label: 'Height', default: '25rem'},
+            borderRadius: {type: 'measurement', label: 'Border Radius', default: '0.5rem'},
             grayscale: {type: 'boolean', label: 'Grayscale Map', default: false},
             title: {type: 'text', label: 'Title', default: 'Location Map'}
         }
