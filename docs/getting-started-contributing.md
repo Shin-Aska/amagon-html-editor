@@ -2,15 +2,9 @@
 
 Welcome to **Amagon** (internal codename: *Hoarses*). This guide will get you from zero to productive in the codebase.
 
-> If you are an AI assistant, read `.aiassistant/rules/project-context.md` first, then come back here for the human-friendly tour.
+Amagon is a desktop HTML editor built with Electron, React, and TypeScript. You drag-and-drop blocks onto a canvas, edit properties in an inspector panel, switch to a Monaco code editor for raw HTML when you need it, and export standalone sites. It is an alternative to tools like Pingendo or Bootstrap Studio, with a built-in AI assistant that understands your project's block structure and theme.
 
----
-
-## What Is This?
-
-Amagon is an offline, AI-powered visual HTML editor built with Electron, React, and TypeScript. Users drag-and-drop blocks onto a canvas, edit properties in an inspector panel, toggle to a Monaco code editor for raw HTML, and export standalone sites.
-
-Think of it as a desktop alternative to Pingendo, Mobirise, or Bootstrap Studio — but with a built-in AI assistant that understands your project's block structure and theme.
+> **For AI assistants:** read `.aiassistant/rules/project-context.md` first, then come back here for the human-friendly tour.
 
 ---
 
@@ -55,29 +49,29 @@ All main ↔ renderer communication goes through the typed `window.api` bridge d
 
 ### I want to work on...
 
-| Feature area | Start with these files |
-|---|---|
-| **Visual canvas / blocks** | `src/renderer/components/Canvas/Canvas.tsx`, `src/preview/runtime.ts`, `src/renderer/registry/registerBlocks.ts` |
-| **Block definitions / adding a new block type** | `src/renderer/registry/registerBlocks.ts`, `src/renderer/registry/ComponentRegistry.ts` |
-| **Inspector panel (property editor)** | `src/renderer/components/Inspector/Inspector.tsx` and its sub-components |
-| **Theme editor / colors / typography** | `src/renderer/components/ThemeEditor/ThemeEditor.tsx`, `src/renderer/themes/themePacks.ts`, `src/renderer/themes/componentTokens.ts` |
-| **Theme gallery / presets** | `src/renderer/themes/themeGalleryRegistry.ts`, `src/renderer/themes/themePacks.ts`, `src/renderer/components/ThemeGallery/ThemeMiniPreview.tsx` |
-| **Page / section templates** | `src/renderer/templates/pageTemplates.ts`, `src/renderer/templates/sectionTemplates.ts`, `src/renderer/templates/templateTypes.ts` |
-| **AI chat assistant** | `src/renderer/components/AiAssistant/AiAssistant.tsx`, `src/main/aiService.ts` |
-| **AI provider adapters (OpenAI, Anthropic, Ollama, CLI)** | `src/main/aiService.ts`, `src/main/cliHelpers.ts` |
-| **Settings dialog** | `src/renderer/components/SettingsDialog/SettingsDialog.tsx`, `src/renderer/store/appSettingsStore.ts` |
-| **Credentials / API key management** | `src/main/credentialCatalog.ts`, `src/renderer/components/SettingsDialog/CredentialEditModal.tsx` |
-| **Publish to web** | `src/publish/registry.ts`, `src/publish/providers/`, `src/renderer/components/PublishDialog/PublishDialog.tsx` |
-| **Tutorial / onboarding** | `src/renderer/components/Tutorial/tutorialSteps.ts`, `src/renderer/store/tutorialStore.ts` |
-| **Code editor (Monaco)** | `src/renderer/components/CodeEditor/CodeEditor.tsx` |
-| **Fonts / Google Fonts browser** | `src/renderer/components/ThemeEditor/FontManager.tsx`, `src/renderer/components/ThemeEditor/GoogleFontBrowser.tsx` |
-| **Export engine** | `src/renderer/utils/exportEngine.ts`, `src/renderer/utils/blockToHtml.ts` |
-| **Keyboard shortcuts / command palette** | `src/renderer/hooks/useKeyboardShortcuts.ts`, `src/renderer/components/CommandPalette/CommandPalette.tsx` |
-| **Toolbar / status bar / sidebar** | `src/renderer/components/Toolbar/Toolbar.tsx`, `src/renderer/components/StatusBar/StatusBar.tsx`, `src/renderer/components/Sidebar/Sidebar.tsx` |
-| **Data models / TypeScript types** | `src/renderer/store/types.ts` |
-| **State management** | `src/renderer/store/editorStore.ts`, `src/renderer/store/projectStore.ts`, `src/renderer/store/aiStore.ts`, `src/renderer/store/appSettingsStore.ts` |
-| **Main process IPC handlers** | `src/main/index.ts` |
-| **Preload / bridge** | `src/preload/index.ts` |
+| Feature area                                              | Start with these files                                                                                                                               |
+|-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Visual canvas / blocks**                                | `src/renderer/components/Canvas/Canvas.tsx`, `src/preview/runtime.ts`, `src/renderer/registry/registerBlocks.ts`                                     |
+| **Block definitions / adding a new block type**           | `src/renderer/registry/registerBlocks.ts`, `src/renderer/registry/ComponentRegistry.ts`                                                              |
+| **Inspector panel (property editor)**                     | `src/renderer/components/Inspector/Inspector.tsx` and its sub-components                                                                             |
+| **Theme editor / colors / typography**                    | `src/renderer/components/ThemeEditor/ThemeEditor.tsx`, `src/renderer/themes/themePacks.ts`, `src/renderer/themes/componentTokens.ts`                 |
+| **Theme gallery / presets**                               | `src/renderer/themes/themeGalleryRegistry.ts`, `src/renderer/themes/themePacks.ts`, `src/renderer/components/ThemeGallery/ThemeMiniPreview.tsx`      |
+| **Page / section templates**                              | `src/renderer/templates/pageTemplates.ts`, `src/renderer/templates/sectionTemplates.ts`, `src/renderer/templates/templateTypes.ts`                   |
+| **AI chat assistant**                                     | `src/renderer/components/AiAssistant/AiAssistant.tsx`, `src/main/aiService.ts`                                                                       |
+| **AI provider adapters (OpenAI, Anthropic, Ollama, CLI)** | `src/main/aiService.ts`, `src/main/cliHelpers.ts`                                                                                                    |
+| **Settings dialog**                                       | `src/renderer/components/SettingsDialog/SettingsDialog.tsx`, `src/renderer/store/appSettingsStore.ts`                                                |
+| **Credentials / API key management**                      | `src/main/credentialCatalog.ts`, `src/renderer/components/SettingsDialog/CredentialEditModal.tsx`                                                    |
+| **Publish to web**                                        | `src/publish/registry.ts`, `src/publish/providers/`, `src/renderer/components/PublishDialog/PublishDialog.tsx`                                       |
+| **Tutorial / onboarding**                                 | `src/renderer/components/Tutorial/tutorialSteps.ts`, `src/renderer/store/tutorialStore.ts`                                                           |
+| **Code editor (Monaco)**                                  | `src/renderer/components/CodeEditor/CodeEditor.tsx`                                                                                                  |
+| **Fonts / Google Fonts browser**                          | `src/renderer/components/ThemeEditor/FontManager.tsx`, `src/renderer/components/ThemeEditor/GoogleFontBrowser.tsx`                                   |
+| **Export engine**                                         | `src/renderer/utils/exportEngine.ts`, `src/renderer/utils/blockToHtml.ts`                                                                            |
+| **Keyboard shortcuts / command palette**                  | `src/renderer/hooks/useKeyboardShortcuts.ts`, `src/renderer/components/CommandPalette/CommandPalette.tsx`                                            |
+| **Toolbar / status bar / sidebar**                        | `src/renderer/components/Toolbar/Toolbar.tsx`, `src/renderer/components/StatusBar/StatusBar.tsx`, `src/renderer/components/Sidebar/Sidebar.tsx`      |
+| **Data models / TypeScript types**                        | `src/renderer/store/types.ts`                                                                                                                        |
+| **State management**                                      | `src/renderer/store/editorStore.ts`, `src/renderer/store/projectStore.ts`, `src/renderer/store/aiStore.ts`, `src/renderer/store/appSettingsStore.ts` |
+| **Main process IPC handlers**                             | `src/main/index.ts`                                                                                                                                  |
+| **Preload / bridge**                                      | `src/preload/index.ts`                                                                                                                               |
 
 ---
 
@@ -122,4 +116,4 @@ Tests live next to their source files (e.g. `Foo.tsx` → `Foo.test.tsx` or `__t
 - **Development / build / Linux sandbox** → [`docs/development.md`](development.md)
 - **Known compatibility issues** → [`docs/post-install.md`](post-install.md)
 
-Happy hacking. Remember: *Amagon is what the world sees, but Hoarses is the engine that screams.*
+Happy hacking.
