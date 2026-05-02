@@ -972,6 +972,63 @@ describe('Phase 4 — layout and component block enhancements', () => {
         expect(html).toContain('href="about.html"')
     });
 
+    it('renders tailwind pages-based navbar with extra classes (transparent + extracted styles)', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                transparent: true,
+                sticky: true,
+                theme: 'navbar-theme-dark'
+            },
+            classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-dark', 'x-extracted']
+        });
+
+        const html = blockToHtml([block], {
+            framework: 'tailwind',
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}},
+                {id: 'p2', title: 'About', slug: 'about', blocks: [], meta: {}}
+            ]
+        });
+
+        // toneClasses for dark theme
+        expect(html).toContain('bg-slate-900');
+        expect(html).toContain('text-white');
+        // transparent mapped to bg-transparent
+        expect(html).toContain('bg-transparent');
+        // extracted style class preserved
+        expect(html).toContain('x-extracted');
+        // sticky classes mapped through Tailwind
+        expect(html).toContain('sticky');
+        expect(html).toContain('top-0');
+    });
+
+    it('does not leak brandText or brandImage as HTML attributes', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: false,
+                brandText: 'Acme',
+                brandImage: 'https://cdn.example.com/logo.png'
+            },
+            classes: ['navbar', 'navbar-expand-lg'],
+            children: [
+                createBlock('container', {
+                    classes: ['container'],
+                    children: [
+                        createBlock('link', {props: {text: 'Acme', href: '#'}, classes: ['navbar-brand']})
+                    ]
+                })
+            ]
+        });
+
+        const html = blockToHtml([block]);
+        expect(html).not.toContain('brandtext=');
+        expect(html).not.toContain('brandimage=');
+        expect(html).not.toContain('brandText=');
+        expect(html).not.toContain('brandImage=')
+    });
+
     it('renders footer with copyright and back-to-top', () => {
         const block = createBlock('footer', {
             props: {

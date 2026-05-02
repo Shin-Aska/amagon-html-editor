@@ -105,6 +105,8 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
         'sortDefaultDir',
         'filterTag',
         'hamburgerMenu',
+        'brandText',
+        'brandImage',
         'isForm',
         'fluid',
         'gutters',
@@ -4220,7 +4222,12 @@ ${pad}</footer>`
                     ? 'bg-[var(--theme-primary)] text-white'
                     : 'bg-[var(--theme-surface)] text-[var(--theme-text)] border border-[var(--theme-border)]';
 
-            return `${pad}<nav class="${toneClasses} w-full"${styleAttr} ${dataAttr}>
+            const extraClasses = classesArray
+                .filter((c) => !c.startsWith('navbar-theme-') && c !== 'navbar' && c !== 'navbar-expand-lg')
+                .flatMap((c) => mapBootstrapClassToTailwind(c));
+            const navClasses = dedupeClasses([...toneClasses.split(' '), 'w-full', ...extraClasses]);
+
+            return `${pad}<nav class="${navClasses.join(' ')}"${styleAttr} ${dataAttr}>
 ${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
 ${hamburgerMenu ? `${pad}    <div class="flex items-center justify-between w-full lg:w-auto">
 ${pad}      <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#"${childFontSizeAttr}>${brandHtml}</a>

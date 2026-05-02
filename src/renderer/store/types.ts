@@ -576,6 +576,10 @@ export function themeToCSS(
     lines.push("  -webkit-mask-size: 100%;");
     lines.push('}');
 
+    lines.push('.navbar-transparent {');
+    lines.push('  background-color: transparent !important;');
+    lines.push('}');
+
     const componentTokens = options?.componentTokens ?? lightTheme.componentTokens;
     if (componentTokens) {
         lines.push('');
