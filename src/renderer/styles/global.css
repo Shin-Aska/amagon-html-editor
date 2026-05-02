@@ -17,7 +17,6 @@
     --sidebar-width: 260px;
     --inspector-width: 300px;
     --toolbar-height: 44px;
-    --code-editor-height: 250px;
 
     --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -202,11 +201,12 @@ body {
 
 /* Code editor smooth appearance */
 .code-editor-area {
-    height: var(--code-editor-height);
     min-height: 100px;
     border-top: 1px solid var(--color-border);
     background: var(--color-bg-secondary);
-    transition: height 0.2s ease, min-height 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* ─── Scrollbar Styling ───────────────────────────────────────────────────── */
