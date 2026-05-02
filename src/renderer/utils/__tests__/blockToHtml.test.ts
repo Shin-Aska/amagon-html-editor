@@ -1063,6 +1063,74 @@ describe('Phase 4 — layout and component block enhancements', () => {
         expect(html).not.toContain('brandImage=')
     });
 
+    it('renders pages-based navbar with menuFontFamily and menuFontSize', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                menuFontFamily: 'Inter',
+                menuFontSize: '14px'
+            },
+            classes: ['navbar', 'navbar-expand-lg']
+        });
+
+        const html = blockToHtml([block], {
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}}
+            ]
+        });
+
+        expect(html).toContain('font-family: Inter');
+        expect(html).toContain('font-size: 14px')
+    });
+
+    it('renders tailwind pages-based navbar with menuFontFamily and menuFontSize', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                menuFontFamily: 'Inter',
+                menuFontSize: '14px',
+                backgroundMode: 'solid',
+                theme: 'navbar-theme-light'
+            },
+            classes: ['navbar', 'navbar-expand-lg', 'navbar-theme-light']
+        });
+
+        const html = blockToHtml([block], {
+            framework: 'tailwind',
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}}
+            ]
+        });
+
+        expect(html).toContain('font-family: Inter');
+        expect(html).toContain('font-size: 14px')
+    });
+
+    it('does not leak menuFontFamily or menuFontSize as HTML attributes', () => {
+        const block = createBlock('navbar', {
+            props: {
+                usePages: true,
+                brandText: 'Acme',
+                menuFontFamily: 'Inter',
+                menuFontSize: '14px'
+            },
+            classes: ['navbar', 'navbar-expand-lg']
+        });
+
+        const html = blockToHtml([block], {
+            pages: [
+                {id: 'p1', title: 'Home', slug: 'index', blocks: [], meta: {}}
+            ]
+        });
+
+        expect(html).not.toContain('menufontfamily=');
+        expect(html).not.toContain('menufontsize=');
+        expect(html).not.toContain('menuFontFamily=');
+        expect(html).not.toContain('menuFontSize=')
+    });
+
     it('renders footer with copyright and back-to-top', () => {
         const block = createBlock('footer', {
             props: {

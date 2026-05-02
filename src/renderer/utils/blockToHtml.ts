@@ -220,6 +220,8 @@ function propsToAttributes(tag: string, type: string, props: Record<string, unkn
         'stickyZIndex',
         'backgroundMode',
         'backdropEffect',
+        'menuFontFamily',
+        'menuFontSize',
         'transparent',
         'socialLinks',
         'showSocialLinks',
@@ -4205,6 +4207,15 @@ ${pad}</footer>`
         const fontSizeVal = effectiveStyles.fontSize;
         const childFontSizeAttr = fontSizeVal ? ` style="font-size: ${fontSizeVal}"` : '';
 
+        const menuFontFamily = String(block.props.menuFontFamily || '').trim();
+        const menuFontSize = String(block.props.menuFontSize || '').trim();
+
+        const navLinkStyleParts: string[] = [];
+        if (menuFontFamily) navLinkStyleParts.push(`font-family: ${menuFontFamily}`);
+        if (menuFontSize) navLinkStyleParts.push(`font-size: ${menuFontSize}`);
+        if (fontSizeVal && !menuFontSize) navLinkStyleParts.push(`font-size: ${fontSizeVal}`);
+        const navLinkStyleAttr = navLinkStyleParts.length > 0 ? ` style="${navLinkStyleParts.join('; ')}"` : '';
+
         // In export, font-size is extracted to a CSS class (e.g. x-abc123); remove from inline styles to avoid duplication
         if (block.classes.some((c) => c.startsWith('x-')) && effectiveStyles.fontSize) {
             const {fontSize, ...rest} = effectiveStyles;
@@ -4262,6 +4273,7 @@ ${pad}</footer>`
                 .filter((c) => !c.startsWith('navbar-theme-') && c !== 'navbar' && c !== 'navbar-expand-lg')
                 .flatMap((c) => mapBootstrapClassToTailwind(c));
             const navClasses = dedupeClasses([...(toneClasses ? toneClasses.split(' ') : []), 'w-full', ...extraClasses]);
+            const navLinksTw = navLinks.replace(/<a class="nav-link"/g, `<a${navLinkStyleAttr} class="nav-link"`);
 
             return `${pad}<nav class="${navClasses.join(' ')}"${styleAttr} ${dataAttr}>
 ${pad}  <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
@@ -4272,7 +4284,7 @@ ${pad}        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 
 ${pad}      </button>
 ${pad}    </div>` : `${pad}    <a class="inline-flex items-center gap-2 text-lg font-semibold no-underline" href="#"${childFontSizeAttr}>${brandHtml}</a>`}
 ${pad}    <ul id="${navbarId}" class="list-none flex-col gap-3 p-0 lg:flex-row lg:items-center ${hamburgerMenu ? 'hidden lg:flex' : 'flex'}">
-${navLinks.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100').replace(/<a class="/g, `<a${childFontSizeAttr} class="`)}
+${navLinksTw.replace(/nav-item/g, 'list-none').replace(/nav-link/g, themeClass === 'navbar-theme-light' ? 'no-underline hover:text-[var(--theme-primary)]' : 'no-underline text-inherit opacity-90 hover:opacity-100')}
 ${pad}    </ul>
 ${pad}  </div>
 ${pad}</nav>`
@@ -4286,11 +4298,11 @@ ${pad}      <span class="navbar-toggler-icon"></span>
 ${pad}    </button>
 ${pad}    <div class="collapse navbar-collapse" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${childFontSizeAttr}`)}
+${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${navLinkStyleAttr}`)}
 ${pad}      </ul>
 ${pad}    </div>` : `${pad}    <div class="w-100 mt-2 mt-lg-0" id="${navbarId}">
 ${pad}      <ul class="navbar-nav ms-auto mb-2 mb-lg-0 flex-row gap-3 flex-wrap">
-${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${childFontSizeAttr}`)}
+${navLinks.replace(/<a class="nav-link"/g, `<a class="nav-link"${navLinkStyleAttr}`)}
 ${pad}      </ul>
 ${pad}    </div>`}
 ${pad}  </div>

@@ -699,6 +699,8 @@ export function registerBlocks(): void {
                 ],
                 default: 'blur-md'
             },
+            menuFontFamily: {type: 'font-picker', label: 'Menu Font Family', default: ''},
+            menuFontSize: {type: 'text', label: 'Menu Font Size', default: ''},
             theme: {
                 type: 'select',
                 label: 'Theme',

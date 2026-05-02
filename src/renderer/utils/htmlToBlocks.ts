@@ -596,6 +596,19 @@ function elementToBlock(el: Element): Block | null {
                 props.brandText = brandText
             }
         }
+
+        const navLinkAnchor = el.querySelector('a.nav-link') || el.querySelector('ul a');
+        if (navLinkAnchor) {
+            const linkStyle = navLinkAnchor.getAttribute('style') || '';
+            const linkFontFamilyMatch = linkStyle.match(/font-family:\s*([^;]+)/);
+            const linkFontSizeMatch = linkStyle.match(/font-size:\s*([^;]+)/);
+            if (linkFontFamilyMatch) {
+                props.menuFontFamily = linkFontFamilyMatch[1].trim()
+            }
+            if (linkFontSizeMatch) {
+                props.menuFontSize = linkFontSizeMatch[1].trim()
+            }
+        }
     }
 
     return {

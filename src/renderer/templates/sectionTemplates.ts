@@ -302,6 +302,8 @@ function createNavbarBrandedSectionBlocks(): Block[] {
             stickyOffset: '0',
             backgroundMode: 'solid',
             backdropEffect: 'blur-md',
+            menuFontFamily: '',
+            menuFontSize: '',
             theme: 'navbar-theme-light'
         })
     ]
