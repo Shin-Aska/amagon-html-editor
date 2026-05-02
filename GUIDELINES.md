@@ -253,6 +253,20 @@ interface ProjectTheme {
 
 Themes compile to `--theme-*` CSS custom properties. Light/dark variants are supported via `html[data-page-theme]` and `prefers-color-scheme`.
 
+### ComponentTokens
+
+```typescript
+interface ComponentTokens {
+  shadows: { sm, md, lg, xl }
+  button: { borderRadius, padding, fontWeight, textTransform, shadow }
+  card: { borderRadius, shadow, borderWidth, padding }
+  headings: { fontWeight, letterSpacing }
+  form: { inputBorderRadius, inputPadding, labelFontWeight }
+}
+```
+
+Component tokens are per-theme design parameters that control shadows, button styling, card styling, heading typography, and form element defaults. They are stored in `theme.componentTokens` and referenced by UI components to maintain consistent styling across blocks. See `src/renderer/themes/componentTokens.ts` for the default token factory.
+
 ---
 
 ## 6. Zustand Stores
@@ -262,7 +276,7 @@ Themes compile to `--theme-*` CSS custom properties. Light/dark variants are sup
 | `editorStore` | `store/editorStore.ts` | Current page blocks, selection, 50-step undo/redo, clipboard, drag state, layout |
 | `projectStore` | `store/projectStore.ts` | Project settings, pages, folders, theme variants, user blocks, custom presets, publisher config |
 | `aiStore` | `store/aiStore.ts` | AI chat messages, loading state, provider config, model lists |
-| `appSettingsStore` | `store/appSettingsStore.ts` | App-level UI preferences (light/dark theme, default layout, tutorial enabled flag) |
+| `appSettingsStore` | `store/appSettingsStore.ts` | App-level UI preferences (light/dark theme, default layout, tutorial enabled/completed flags, show restart-tutorial button, dangerous features toggle) |
 | `tutorialStore` | `store/tutorialStore.ts` | Interactive tutorial step state, branching paths, reactive action listener |
 | `toastStore` | `store/toastStore.ts` | Notification display |
 
@@ -281,6 +295,8 @@ The AI service lives in `src/main/aiService.ts`. It:
 **IPC channels:** `ai:chat`, `ai:getConfig`, `ai:setConfig`, `ai:getModels`, `ai:fetchModelsForProvider`, `ai:checkCliAvailability`.
 
 **CLI providers** run local CLI binaries instead of API calls. Claude CLI, Gemini CLI, and Junie CLI are gated behind the "Enable Dangerous Features" toggle; Codex CLI, GitHub Copilot CLI, and Opencode CLI are available without that toggle. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; do not integrate it through `gh models`. Its model dropdown is populated from `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json`, because `/model` is an interactive slash command.
+
+**CLI model discovery:** Available models for CLI providers depend on the installed CLI version. The AI settings tab shows a hint reminding users to update their CLI tool to access newer models.
 
 API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an AES-256-GCM fallback. Keys are stored per-provider in `ai-config.json` and never leave the main process.
 
@@ -351,17 +367,17 @@ Each block's props are typed using one of these PropTypes (defined in `src/rende
 - **carousel** — Carousel item (used for nested carousel content)
 - **array** — Array of items (for collections like carousel items, nav links, etc.)
 - **combobox** — Editable dropdown with auto-complete suggestions (commonly used for tag filtering)
-- **multi-combobox** — Multi-select dropdown with checkboxes (new in v1.8.0)
-- **measurement** — CSS measurement input (e.g., "10px", "1rem") (new in v1.8.0)
-- **sortable-list** — Array with drag-and-drop reordering capability (new in v1.8.0)
-- **object** — Structured key-value pairs (new in v1.8.0)
+- **multi-combobox** — Multi-select dropdown with checkboxes
+- **measurement** — CSS measurement input (e.g., "10px", "1rem")
+- **sortable-list** — Array with drag-and-drop reordering capability
+- **object** — Structured key-value pairs
 - **font-picker** — Per-block font family override; renders as `FontPickerField` (button trigger + portal dropdown showing all fonts in their own typeface)
 
 ---
 
 ## 13a. Font Management System
 
-Added in v1.9.0. Provides project-level and per-block font control with automatic bundling on export.
+Provides project-level and per-block font control with automatic bundling on export.
 
 ### Data Model
 
@@ -496,14 +512,46 @@ The tutorial system provides a branching, spotlight-driven onboarding experience
 - **Branches** (`src/renderer/components/Tutorial/branches/`) — Three optional deep-dive paths: AI Assistance, Publish Workflow, Web Media Search.
 - **`data-tutorial` markers** — Added to key UI elements (`data-tutorial="toolbar-publish"`, `data-tutorial="theme-editor-colors"`, etc.) so tutorial steps can target them without fragile CSS selectors.
 - **Action dispatch** — Components call `dispatchTutorialAction({ type, targetValue })` after meaningful interactions; the store checks if it matches the current step's expected action and auto-advances.
+- **Restart tutorial button** — A `?` button in the status bar restarts the tutorial. Its visibility is controlled by the `showRestartTutorialButton` setting in `appSettingsStore` (toggle in Settings → General).
 
 ---
 
-## 14. Key Files to Read First
+## 14. Theme Gallery & Theme Packs
+
+The theme gallery provides a browsable, categorized collection of pre-built themes that users can apply to their projects. Each theme is wrapped in a `ThemePack` that includes light/dark variants, component tokens, and suggested sections/pages.
+
+**Architecture:**
+- **`themeGalleryTypes.ts`** (`src/renderer/themes/themeGalleryTypes.ts`) — Type definitions for `ThemeGalleryItem`, `ThemePack`, and `ThemeGalleryFilters`. Categories include: business, creative, dark, editorial, ecommerce, landing-page, minimal, portfolio, saas, startup, wellness.
+- **`themePacks.ts`** (`src/renderer/themes/themePacks.ts`) — Built-in `ThemePack` definitions (~10 packs) with complete color, typography, spacing, border, and component token configurations.
+- **`themeGalleryRegistry.ts`** (`src/renderer/themes/themeGalleryRegistry.ts`) — Registry that converts `ThemePack`s into `ThemeGalleryItem`s with preview blocks and searchable metadata.
+- **`ThemeMiniPreview.tsx`** (`src/renderer/components/ThemeGallery/ThemeMiniPreview.tsx`) — Renders a live mini preview of a theme using sample blocks (heading, paragraph, button, card) so users can visualize the theme before applying it.
+- **Dark variant support** — Each pack can define a `darkTheme`; the gallery UI allows toggling between light and dark previews.
+
+Themes are applied through the `ThemeEditor` component, which imports from the gallery registry and presents them as selectable cards with live previews.
+
+---
+
+## 15. Page & Section Templates
+
+The template system provides reusable, theme-aware page and section layouts that users can insert into their projects from the sidebar.
+
+**Architecture:**
+- **`templateTypes.ts`** (`src/renderer/templates/templateTypes.ts`) — Type definitions for `PageTemplate` and `SectionTemplate`, with categories:
+  - **Section categories:** hero, navigation, features, pricing, testimonials, cta, footer, stats, team, gallery, timeline, contact, newsletter, logos, process, comparison
+  - **Page categories:** landing, portfolio, agency, restaurant, blog, event, product, documentation
+- **`pageTemplates.ts`** (`src/renderer/templates/pageTemplates.ts`) — Built-in full-page templates composed of section blocks (e.g. landing page with hero, features, testimonials, cta, footer).
+- **`sectionTemplates.ts`** (`src/renderer/templates/sectionTemplates.ts`) — Built-in section templates (single reusable sections) that can be inserted into any page.
+- **`templateWidgets.ts`** (`src/renderer/templates/templateWidgets.ts`) — Helper widgets for template rendering and metadata.
+
+Templates are **theme-aware** — they reference theme variables (colors, spacing, typography) so they adapt visually to the active project theme. The `Sidebar` component provides a template gallery UI for browsing and inserting templates.
+
+---
+
+## 16. Key Files to Read First
 
 If you need deeper context, start with these:
 
-1. **`src/renderer/store/types.ts`** — All TypeScript interfaces (Block, Page, ProjectSettings, Theme, PublisherConfig, etc.)
+1. **`src/renderer/store/types.ts`** — All TypeScript interfaces (Block, Page, ProjectSettings, Theme, PublisherConfig, ComponentTokens, etc.)
 2. **`src/renderer/registry/registerBlocks.ts`** — Every block type definition
 3. **`src/renderer/store/editorStore.ts`** — Core editing logic
 4. **`src/renderer/store/projectStore.ts`** — Project and theme management
@@ -514,12 +562,15 @@ If you need deeper context, start with these:
 9. **`src/publish/types/index.ts`** — Publisher extension API types
 10. **`src/publish/registry.ts`** — Publisher registration/lookup
 11. **`src/renderer/store/tutorialStore.ts`** — Tutorial step state and action listener system
+12. **`src/renderer/themes/themeGalleryRegistry.ts`** — Built-in theme packs and gallery items
+13. **`src/renderer/themes/componentTokens.ts`** — Default component token definitions
+14. **`src/renderer/templates/pageTemplates.ts`** + **`sectionTemplates.ts`** — Reusable page and section templates
 
 ---
 
-*Last updated: 2026-04-21*
+*Last updated: 2026-05-02*
 
-## Appendix: Google Fonts Browser Implementation (v1.9.0+)
+## Appendix: Google Fonts Browser Implementation
 
 The Google Fonts browser feature adds a no-API-key way to discover and download fonts. Here's a quick reference:
 
