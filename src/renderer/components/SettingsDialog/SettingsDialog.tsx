@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
     Image as ImageIcon,
     Info,
@@ -11,13 +11,13 @@ import {
     Sun,
     X
 } from 'lucide-react'
-import {getApi} from '../../utils/api'
-import {useAppSettingsStore} from '../../store/appSettingsStore'
-import {useAiStore} from '../../store/aiStore'
-import {useTutorialStore} from '../../store/tutorialStore'
-import type {EditorLayout} from '../../store/types'
-import {dispatchAiAvailabilityChanged} from '../../hooks/useAiAvailability'
-import {tutorialSteps} from '../Tutorial/tutorialSteps'
+import { getApi } from '../../utils/api'
+import { useAppSettingsStore } from '../../store/appSettingsStore'
+import { useAiStore } from '../../store/aiStore'
+import { useTutorialStore } from '../../store/tutorialStore'
+import type { EditorLayout } from '../../store/types'
+import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
+import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import './SettingsDialog.css'
 
@@ -30,10 +30,10 @@ interface SettingsDialogProps {
 type TabType = 'general' | 'keys' | 'ai' | 'media'
 
 export default function SettingsDialog({
-                                           open,
-                                           onClose,
-                                           initialTab = 'general'
-                                       }: SettingsDialogProps): JSX.Element | null {
+    open,
+    onClose,
+    initialTab = 'general'
+}: SettingsDialogProps): JSX.Element | null {
     const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -155,7 +155,7 @@ export default function SettingsDialog({
 
             const nextModel = models[0];
             setAiModel(nextModel);
-            void saveAiConfig({provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl})
+            void saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
         });
 
         return () => {
@@ -171,13 +171,13 @@ export default function SettingsDialog({
 
     const handleSaveAi = async () => {
         const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '');
-        await saveAiConfig({provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl});
+        await saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl });
         fetchModelsForProvider(aiProvider, '', aiOllamaUrl)
     };
 
     const handleSaveMedia = async () => {
         const api = getApi();
-        await api.mediaSearch.setConfig({provider: mediaProvider, apiKey: ''})
+        await api.mediaSearch.setConfig({ provider: mediaProvider, apiKey: '' })
     };
 
     const handleDeleteCredential = async (id: string) => {
@@ -231,11 +231,11 @@ export default function SettingsDialog({
                 <div className="settings-dialog settings-dialog--wide" data-tutorial="settings-dialog">
                     <div className="settings-dialog-header">
                         <div className="settings-dialog-title">
-                            <Settings size={18}/>
+                            <Settings size={18} />
                             <span>Global Settings</span>
                         </div>
                         <button className="settings-dialog-close" onClick={onClose} title="Close">
-                            <X size={18}/>
+                            <X size={18} />
                         </button>
                     </div>
 
@@ -245,28 +245,28 @@ export default function SettingsDialog({
                                 className={`settings-dialog-tab ${activeTab === 'general' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('general')}
                             >
-                                <Monitor size={16}/>
+                                <Monitor size={16} />
                                 <span>General</span>
                             </button>
                             <button
                                 className={`settings-dialog-tab ${activeTab === 'keys' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('keys')}
                             >
-                                <KeyRound size={16}/>
+                                <KeyRound size={16} />
                                 <span>Credentials</span>
                             </button>
                             <button
                                 className={`settings-dialog-tab ${activeTab === 'ai' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('ai')}
                             >
-                                <Sparkles size={16}/>
+                                <Sparkles size={16} />
                                 <span>AI Assistant</span>
                             </button>
                             <button
                                 className={`settings-dialog-tab ${activeTab === 'media' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('media')}
                             >
-                                <ImageIcon size={16}/>
+                                <ImageIcon size={16} />
                                 <span>Media Search</span>
                             </button>
                         </div>
@@ -287,13 +287,13 @@ export default function SettingsDialog({
                                                     className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
                                                     onClick={() => setTheme('light')}
                                                 >
-                                                    <Sun size={14}/> Light
+                                                    <Sun size={14} /> Light
                                                 </button>
                                                 <button
                                                     className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
                                                     onClick={() => setTheme('dark')}
                                                 >
-                                                    <Moon size={14}/> Dark
+                                                    <Moon size={14} /> Dark
                                                 </button>
                                             </div>
                                         </div>
@@ -306,7 +306,7 @@ export default function SettingsDialog({
                                         </div>
                                         <div className="settings-control">
                                             <div className="select-wrapper">
-                                                <LayoutPanelLeft size={14} className="select-icon"/>
+                                                <LayoutPanelLeft size={14} className="select-icon" />
                                                 <select
                                                     value={defaultLayout}
                                                     onChange={(e) => setDefaultLayout(e.target.value as EditorLayout)}
@@ -395,60 +395,60 @@ export default function SettingsDialog({
                                     ) : (
                                         <table className="cred-table">
                                             <thead>
-                                            <tr>
-                                                <th>Type</th>
-                                                <th>Provider</th>
-                                                <th>Actions</th>
-                                            </tr>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>Provider</th>
+                                                    <th>Actions</th>
+                                                </tr>
                                             </thead>
                                             <tbody>
-                                            {visibleCredentials.map((cred) => (
-                                                <tr key={cred.id}>
-                                                    <td>
-                              <span className={`cred-pill cred-pill--${cred.category}`}>
-                                {cred.categoryLabel}
-                              </span>
-                                                    </td>
-                                                    <td className="cred-table-provider">{cred.label}</td>
-                                                    <td>
-                                                        <div className="cred-table-actions">
-                                                            {confirmDeleteId === cred.id ? (
-                                                                <>
-                                                                    <span
-                                                                        className="cred-confirm-text">Are you sure?</span>
-                                                                    <button
-                                                                        className="settings-btn-danger"
-                                                                        onClick={() => handleDeleteCredential(cred.id)}
-                                                                    >
-                                                                        Yes, Delete
-                                                                    </button>
-                                                                    <button
-                                                                        className="settings-btn-secondary"
-                                                                        onClick={() => setConfirmDeleteId(null)}
-                                                                    >
-                                                                        Cancel
-                                                                    </button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <button
-                                                                        className="settings-btn-secondary"
-                                                                        onClick={() => openEditModal(cred)}
-                                                                    >
-                                                                        Edit
-                                                                    </button>
-                                                                    <button
-                                                                        className="settings-btn-danger"
-                                                                        onClick={() => setConfirmDeleteId(cred.id)}
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                {visibleCredentials.map((cred) => (
+                                                    <tr key={cred.id}>
+                                                        <td>
+                                                            <span className={`cred-pill cred-pill--${cred.category}`}>
+                                                                {cred.categoryLabel}
+                                                            </span>
+                                                        </td>
+                                                        <td className="cred-table-provider">{cred.label}</td>
+                                                        <td>
+                                                            <div className="cred-table-actions">
+                                                                {confirmDeleteId === cred.id ? (
+                                                                    <>
+                                                                        <span
+                                                                            className="cred-confirm-text">Are you sure?</span>
+                                                                        <button
+                                                                            className="settings-btn-danger"
+                                                                            onClick={() => handleDeleteCredential(cred.id)}
+                                                                        >
+                                                                            Yes, Delete
+                                                                        </button>
+                                                                        <button
+                                                                            className="settings-btn-secondary"
+                                                                            onClick={() => setConfirmDeleteId(null)}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <button
+                                                                            className="settings-btn-secondary"
+                                                                            onClick={() => openEditModal(cred)}
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            className="settings-btn-danger"
+                                                                            onClick={() => setConfirmDeleteId(cred.id)}
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     )}
@@ -509,7 +509,7 @@ export default function SettingsDialog({
                                         {isCliProvider && (
                                             <div className="settings-field">
                                                 <label>CLI Status</label>
-                                                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     {checkingCli ? (
                                                         <span style={{
                                                             fontSize: '13px',
@@ -523,8 +523,8 @@ export default function SettingsDialog({
                                                             alignItems: 'center',
                                                             gap: '4px'
                                                         }}>
-                              ✓ Installed ({cliAvailability[aiProvider].version || 'Unknown version'})
-                            </span>
+                                                            ✓ Installed ({cliAvailability[aiProvider].version || 'Unknown version'})
+                                                        </span>
                                                     ) : (
                                                         <span style={{
                                                             fontSize: '13px',
@@ -533,13 +533,13 @@ export default function SettingsDialog({
                                                             alignItems: 'center',
                                                             gap: '4px'
                                                         }}>
-                              ✗ Not found
-                            </span>
+                                                            ✗ Not found
+                                                        </span>
                                                     )}
                                                     <button
                                                         type="button"
                                                         className="settings-btn-secondary"
-                                                        style={{padding: '2px 8px', fontSize: '12px'}}
+                                                        style={{ padding: '2px 8px', fontSize: '12px' }}
                                                         onClick={refreshCliAvailability}
                                                         disabled={checkingCli}
                                                     >
@@ -548,9 +548,9 @@ export default function SettingsDialog({
                                                 </div>
                                                 {!cliAvailability[aiProvider]?.available && !checkingCli && (
                                                     <span className="settings-hint"
-                                                          style={{color: 'var(--color-error, #ef4444)'}}>
-                            This CLI tool is required. Please install it to use this provider.
-                          </span>
+                                                        style={{ color: 'var(--color-error, #ef4444)' }}>
+                                                        This CLI tool is required. Please install it to use this provider.
+                                                    </span>
                                                 )}
                                             </div>
                                         )}
@@ -590,34 +590,39 @@ export default function SettingsDialog({
                                                     <option key={model} value={model}>{model}</option>
                                                 ))}
                                             </select>
+                                            {isCliProvider && (
+                                                <span className="settings-hint">
+                                                    For CLI integration, available models may depend on the CLI version installed. Update the CLI tool to access newer models.
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div className="settings-info-notice">
                                             <span>API keys are managed in the </span>
                                             <button className="settings-notice-link"
-                                                    onClick={() => setActiveTab('keys')}>Credentials tab
+                                                onClick={() => setActiveTab('keys')}>Credentials tab
                                             </button>
                                         </div>
                                     </div>
 
                                     <div className="settings-row settings-row--danger">
                                         <div className="settings-label">
-                      <span className="settings-label-title settings-label-title--danger">
-                        Enable Dangerous Features
-                        <span className="settings-danger-info-wrap">
-                          <Info size={13} className="settings-danger-info-icon"/>
-                          <span className="settings-danger-tooltip">
-                            <strong>Dangerous features (disabled by default):</strong>
-                            <ul>
-                              <li>Claude CLI — AI provider via local Claude CLI tool</li>
-                              <li>Gemini CLI — AI provider via local Gemini CLI tool</li>
-                              <li>Junie CLI — AI provider via local Junie CLI tool</li>
-                            </ul>
-                            These features interact with local system tools and may expose your environment to risk. Additionally some of these features may
-                            cause your accounts to be banned. Use at your own risk.
-                          </span>
-                        </span>
-                      </span>
+                                            <span className="settings-label-title settings-label-title--danger">
+                                                Enable Dangerous Features
+                                                <span className="settings-danger-info-wrap">
+                                                    <Info size={13} className="settings-danger-info-icon" />
+                                                    <span className="settings-danger-tooltip">
+                                                        <strong>Dangerous features (disabled by default):</strong>
+                                                        <ul>
+                                                            <li>Claude CLI — AI provider via local Claude CLI tool</li>
+                                                            <li>Gemini CLI — AI provider via local Gemini CLI tool</li>
+                                                            <li>Junie CLI — AI provider via local Junie CLI tool</li>
+                                                        </ul>
+                                                        These features interact with local system tools and may expose your environment to risk. Additionally some of these features may
+                                                        cause your accounts to be banned. Use at your own risk.
+                                                    </span>
+                                                </span>
+                                            </span>
                                             <span className="settings-label-desc">Use at your own risk. Powerful features but may have unintended side-effects and/or consequences.</span>
                                         </div>
                                         <div className="settings-control">
@@ -674,7 +679,7 @@ export default function SettingsDialog({
                                         <div className="settings-info-notice">
                                             <span>API keys are managed in the </span>
                                             <button className="settings-notice-link"
-                                                    onClick={() => setActiveTab('keys')}>Credentials tab
+                                                onClick={() => setActiveTab('keys')}>Credentials tab
                                             </button>
                                         </div>
                                     </div>
