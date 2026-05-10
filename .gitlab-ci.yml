@@ -1,0 +1,136 @@
+stages:
+  - build
+  - release
+
+workflow:
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v/"
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
+
+variables:
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+  RELEASE_PACKAGE_NAME: "$CI_PROJECT_NAME"
+
+cache:
+  key:
+    files:
+      - package-lock.json
+  paths:
+    - .npm/
+
+build:linux:
+  stage: build
+  image: node:22-bookworm
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v/"
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl fakeroot rpm
+    - node --version
+    - npm --version
+    - npm ci --cache "$NPM_CONFIG_CACHE" --prefer-offline
+  script:
+    - npm run build
+    - npm run dist:linux -- --publish never
+    - mkdir -p ci-release/linux
+    - find release -maxdepth 1 -type f -exec cp {} ci-release/linux/ \;
+  artifacts:
+    name: "$CI_PROJECT_NAME-linux-$CI_COMMIT_REF_SLUG"
+    paths:
+      - ci-release/linux/
+    expire_in: 1 week
+
+build:windows:
+  stage: build
+  tags:
+    - saas-windows-medium-amd64
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v/"
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  before_script:
+    - node --version
+    - npm --version
+    - npm ci
+  script:
+    - npm run build
+    - npm run dist:win -- --publish never
+    - New-Item -ItemType Directory -Force ci-release/windows
+    - Copy-Item -Path release/* -Destination ci-release/windows -Recurse
+  artifacts:
+    name: "$CI_PROJECT_NAME-windows-$CI_COMMIT_REF_SLUG"
+    paths:
+      - ci-release/windows/
+    expire_in: 1 week
+
+release:gitlab:
+  stage: release
+  image: alpine:3.22
+  needs:
+    - job: build:linux
+      artifacts: true
+    - job: build:windows
+      artifacts: true
+  rules:
+    - if: "$CI_COMMIT_TAG =~ /^v/"
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - PACKAGE_VERSION="${CI_COMMIT_TAG#v}"
+    - PACKAGE_REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/${RELEASE_PACKAGE_NAME}/${PACKAGE_VERSION}"
+    - ASSETS_LINKS="[]"
+    - |
+      find ci-release -type f | sort | while read -r file; do
+        display_name="$(basename "$file")"
+        platform="$(basename "$(dirname "$file")")"
+        safe_name="$(printf '%s-%s' "$platform" "$display_name" | tr ' ' '_' | tr -cd 'A-Za-z0-9._-')"
+        asset_url="${PACKAGE_REGISTRY_URL}/${safe_name}"
+
+        curl --fail --location \
+          --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+          --upload-file "$file" \
+          "$asset_url"
+
+        ASSETS_LINKS="$(printf '%s' "$ASSETS_LINKS" | jq -c \
+          --arg name "$display_name" \
+          --arg url "$asset_url" \
+          '. + [{name: $name, url: $url, link_type: "package"}]')"
+
+        printf '%s' "$ASSETS_LINKS" > assets-links.json
+      done
+    - |
+      if [ ! -s assets-links.json ]; then
+        echo "No release assets were produced."
+        exit 1
+      fi
+    - |
+      jq -n \
+        --arg tag_name "$CI_COMMIT_TAG" \
+        --arg name "Release $CI_COMMIT_TAG" \
+        --arg description "Automated GitLab release for $CI_COMMIT_TAG." \
+        --slurpfile links assets-links.json \
+        '{
+          tag_name: $tag_name,
+          name: $name,
+          description: $description,
+          assets: { links: $links[0] }
+        }' > release-payload.json
+    - |
+      status="$(curl --silent --output /tmp/release-response.json --write-out "%{http_code}" \
+        --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases/${CI_COMMIT_TAG}")"
+
+      if [ "$status" = "200" ]; then
+        curl --fail --request PUT \
+          --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+          --header "Content-Type: application/json" \
+          --data @release-payload.json \
+          "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases/${CI_COMMIT_TAG}"
+      else
+        curl --fail --request POST \
+          --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+          --header "Content-Type: application/json" \
+          --data @release-payload.json \
+          "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/releases"
+      fi
