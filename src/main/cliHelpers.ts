@@ -56,8 +56,14 @@ function getNonEmptyLines(value: string): string[] {
         .filter((line) => line.length > 0)
 }
 
-function getFirstNonEmptyLine(value: string): string | undefined {
-    return getNonEmptyLines(value)[0]
+function parseBooleanLike(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') return value;
+    if (typeof value !== 'string') return undefined;
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+    return undefined
 }
 
 function normalizeCliVersionLine(binary: CliBinary, line: string | undefined): string | undefined {
@@ -254,7 +260,7 @@ async function findCopilotSdkPath(version: string): Promise<string | undefined> 
 async function fetchGithubCliSdkModels(copilotBinary: string): Promise<string[]> {
     const versionResult = await runProcess(copilotBinary, ['--version'], undefined, LOOKUP_TIMEOUT_MS).catch(() => null);
     const versionLine = versionResult
-        ? getFirstNonEmptyLine(versionResult.stdout) ?? getFirstNonEmptyLine(versionResult.stderr)
+        ? getNonEmptyLines(versionResult.stdout)[0] ?? getNonEmptyLines(versionResult.stderr)[0]
         : undefined;
     const version = versionLine ? parseCopilotCliVersion(versionLine) : undefined;
     if (!version) return [];
@@ -545,19 +551,19 @@ async function findBinaryPath(name: string): Promise<string | undefined> {
 export async function detectCli(
     name: CliBinary
 ): Promise<{ available: boolean; path?: string; version?: string }> {
-    const path = await findBinaryPath(name);
-    if (!path) return {available: false};
+    const binaryPath = await findBinaryPath(name);
+    if (!binaryPath) return {available: false};
 
     const versionArgs = CLI_VERSION_ARGS[name] ?? ['--version'];
-    const versionResult = await runProcess(path, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null);
+    const versionResult = await runProcess(binaryPath, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null);
     const versionLine = versionResult
-        ? getFirstNonEmptyLine(versionResult.stdout) ?? getFirstNonEmptyLine(versionResult.stderr)
+        ? getNonEmptyLines(versionResult.stdout)[0] ?? getNonEmptyLines(versionResult.stderr)[0]
         : undefined;
     const version = normalizeCliVersionLine(name, versionLine);
 
     return {
         available: true,
-        path,
+        path: binaryPath,
         ...(version ? {version} : {})
     }
 }
@@ -658,7 +664,7 @@ async function fetchGeminiCliModels(fallbackModels: string[]): Promise<string[]>
     return modelsWithFallback(uniqueNonEmpty([configuredModel]), fallbackModels)
 }
 
-async function fetchGithubCliModels(_fallbackModels: string[]): Promise<string[]> {
+async function fetchGithubCliModels(fallbackModels: string[]): Promise<string[]> {
     const homeDir = os.homedir();
     const copilotHome = process.env.COPILOT_HOME?.trim();
     const configDir = copilotHome || path.join(homeDir, '.copilot');
@@ -678,7 +684,7 @@ async function fetchGithubCliModels(_fallbackModels: string[]): Promise<string[]
         getTrimmedString(config?.model)
     ])[0];
 
-    return modelsWithFallback([configuredModel, ...availableModels], _fallbackModels)
+    return modelsWithFallback([configuredModel, ...availableModels], fallbackModels)
 }
 
 async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> {
@@ -714,10 +720,7 @@ async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> 
         ...getConfigArrayStrings(projectConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location']),
         ...getConfigArrayStrings(userConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location'])
     ];
-    const useDefaultModelLocations = getConfigBoolean(
-        {value: process.env.JUNIE_MODEL_DEFAULT_LOCATIONS},
-        ['value']
-    ) ?? getConfigBoolean(
+    const useDefaultModelLocations = parseBooleanLike(process.env.JUNIE_MODEL_DEFAULT_LOCATIONS) ?? getConfigBoolean(
         projectConfig,
         ['modelDefaultLocations', 'modelDefaultLocation', 'model_default_locations', 'model-default-locations']
     ) ?? getConfigBoolean(
