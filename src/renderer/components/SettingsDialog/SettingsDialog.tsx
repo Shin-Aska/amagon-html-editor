@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type MouseEvent, useEffect, useRef, useState } from 'react'
 import {
     Image as ImageIcon,
     Info,
@@ -14,13 +14,27 @@ import {
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useAppSettingsStore } from '../../store/appSettingsStore'
-import { useAiStore } from '../../store/aiStore'
+import { type AiProvider, useAiStore } from '../../store/aiStore'
 import { useTutorialStore } from '../../store/tutorialStore'
 import type { EditorLayout } from '../../store/types'
 import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
 import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import './SettingsDialog.css'
+
+const DANGEROUS_CLI_PROVIDERS: AiProvider[] = ['gemini-cli', 'junie-cli']
+const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((provider) => `ai:${provider}`)
+
+type CliAvailability = Record<string, {
+    available: boolean
+    path?: string
+    version?: string
+}>
+
+type ModelRefreshStatus = {
+    type: 'success' | 'error'
+    message: string
+}
 
 interface SettingsDialogProps {
     open: boolean
@@ -34,9 +48,9 @@ export default function SettingsDialog({
     open,
     onClose,
     initialTab = 'general'
-}: SettingsDialogProps): JSX.Element | null {
-    const [activeTab, setActiveTab] = useState<TabType>(initialTab);
-    const overlayRef = useRef<HTMLDivElement>(null);
+}: SettingsDialogProps) {
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+    const overlayRef = useRef<HTMLDivElement>(null)
 
     const theme = useAppSettingsStore((s) => s.theme);
     const setTheme = useAppSettingsStore((s) => s.setTheme);
@@ -62,205 +76,195 @@ export default function SettingsDialog({
 
     const [aiProvider, setAiProvider] = useState(aiConfig?.provider || 'openai');
     const [aiModel, setAiModel] = useState(aiConfig?.model || '');
-    const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434');
-    const [refreshingModels, setRefreshingModels] = useState(false);
-    const [modelRefreshStatus, setModelRefreshStatus] = useState<{
-        type: 'success' | 'error';
-        message: string
-    } | null>(null);
+    const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434')
+    const [refreshingModels, setRefreshingModels] = useState(false)
+    const [modelRefreshStatus, setModelRefreshStatus] = useState<ModelRefreshStatus | null>(null)
 
-    const [cliAvailability, setCliAvailability] = useState<Record<string, {
-        available: boolean;
-        path?: string;
-        version?: string
-    }>>({});
-    const [checkingCli, setCheckingCli] = useState(false);
+    const [cliAvailability, setCliAvailability] = useState<CliAvailability>({})
+    const [checkingCli, setCheckingCli] = useState(false)
 
-    const refreshCliAvailability = useCallback(async () => {
-        setCheckingCli(true);
+    const refreshCliAvailability = async () => {
+        setCheckingCli(true)
         try {
-            const api = getApi();
-            const result = await (api as any).ai.checkCliAvailability();
+            const result = await getApi().ai.checkCliAvailability()
             if (result.success && result.availability) {
                 setCliAvailability(result.availability)
             }
         } finally {
             setCheckingCli(false)
         }
-    }, []);
+    }
 
-    const [mediaProvider, setMediaProvider] = useState('unsplash');
+    const [mediaProvider, setMediaProvider] = useState('unsplash')
 
-    const [credentials, setCredentials] = useState<CredentialRecordInfo[]>([]);
-    const [definitions, setDefinitions] = useState<CredentialDefinitionInfo[]>([]);
-    const [credentialLoading, setCredentialLoading] = useState(false);
+    const [credentials, setCredentials] = useState<CredentialRecordInfo[]>([])
+    const [definitions, setDefinitions] = useState<CredentialDefinitionInfo[]>([])
+    const [credentialLoading, setCredentialLoading] = useState(false)
 
-    const [modalOpen, setModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-    const [modalCredential, setModalCredential] = useState<CredentialRecordInfo | null>(null);
-    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false)
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
+    const [modalCredential, setModalCredential] = useState<CredentialRecordInfo | null>(null)
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-    const refreshCredentials = useCallback(async (): Promise<void> => {
-        setCredentialLoading(true);
+    const refreshCredentials = async (): Promise<void> => {
+        setCredentialLoading(true)
         try {
-            const api = getApi();
-            const result = await api.app.getCredentials();
+            const api = getApi()
+            const result = await api.app.getCredentials()
             if (result.success) {
-                setCredentials(Array.isArray(result.credentials) ? result.credentials : []);
+                setCredentials(Array.isArray(result.credentials) ? result.credentials : [])
                 setDefinitions(Array.isArray(result.definitions) ? result.definitions : [])
             }
         } finally {
             setCredentialLoading(false)
         }
-    }, []);
+    }
 
-    const refreshFeatureConfigs = useCallback(async (): Promise<void> => {
-        const api = getApi();
-        await loadAiConfig();
-        await loadAiModels();
+    const refreshFeatureConfigs = async (): Promise<void> => {
+        const api = getApi()
+        await loadAiConfig()
+        await loadAiModels()
 
-        const result = await api.mediaSearch.getConfig();
+        const result = await api.mediaSearch.getConfig()
         if (result.success && result.config) {
             setMediaProvider(result.config.provider || 'unsplash')
         }
-    }, [loadAiConfig, loadAiModels]);
+    }
 
-    const refreshCredentialsAndFeatureConfigs = useCallback(async (): Promise<void> => {
+    const refreshCredentialsAndFeatureConfigs = async (): Promise<void> => {
         await Promise.all([refreshCredentials(), refreshFeatureConfigs(), refreshCliAvailability()])
-    }, [refreshCredentials, refreshFeatureConfigs, refreshCliAvailability]);
+    }
 
     useEffect(() => {
         if (open) {
-            setActiveTab(initialTab);
+            setActiveTab(initialTab)
             void refreshCredentialsAndFeatureConfigs()
         }
-    }, [open, initialTab, refreshCredentialsAndFeatureConfigs]);
+    }, [open, initialTab])
 
     useEffect(() => {
         if (aiConfig) {
-            setAiProvider(aiConfig.provider);
-            setAiModel(aiConfig.model);
+            setAiProvider(aiConfig.provider)
+            setAiModel(aiConfig.model)
             setAiOllamaUrl(aiConfig.ollamaUrl || 'http://localhost:11434')
         }
-    }, [aiConfig]);
+    }, [aiConfig])
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) return
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose()
-        };
-        document.addEventListener('keydown', handler);
+        }
+        document.addEventListener('keydown', handler)
         return () => document.removeEventListener('keydown', handler)
-    }, [open, onClose]);
+    }, [open, onClose])
 
     useEffect(() => {
-        if (!open || !aiProvider.endsWith('-cli')) return;
+        if (!open || !aiProvider.endsWith('-cli')) return
 
-        let cancelled = false;
+        let cancelled = false
         fetchModelsForProvider(aiProvider, '', aiOllamaUrl).then((models) => {
-            if (cancelled || models.length === 0) return;
-            if (aiModel && models.includes(aiModel)) return;
+            if (cancelled || models.length === 0) return
+            if (aiModel && models.includes(aiModel)) return
 
-            const nextModel = models[0];
-            setAiModel(nextModel);
-            void saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
-        });
+            const nextModel = models[0]
+            setAiModel(nextModel)
+            void saveAiConfig({ provider: aiProvider as AiProvider, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
+        })
 
         return () => {
             cancelled = true
         }
-    }, [open, aiProvider, aiOllamaUrl, aiModel, fetchModelsForProvider, saveAiConfig]);
+    }, [open, aiProvider, aiOllamaUrl, aiModel, fetchModelsForProvider, saveAiConfig])
 
-    const handleOverlayClick = (e: React.MouseEvent) => {
+    const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
         if (e.target === overlayRef.current) {
             onClose()
         }
-    };
+    }
 
-    const handleRefreshModels = useCallback(async (provider = aiProvider, currentModel = aiModel): Promise<string[]> => {
-        setRefreshingModels(true);
-        setModelRefreshStatus(null);
+    const handleRefreshModels = async (provider = aiProvider, currentModel = aiModel): Promise<string[]> => {
+        setRefreshingModels(true)
+        setModelRefreshStatus(null)
 
         try {
-            const models = await fetchModelsForProvider(provider, '', aiOllamaUrl);
+            const models = await fetchModelsForProvider(provider, '', aiOllamaUrl)
             if (models.length === 0) {
                 setModelRefreshStatus({
                     type: 'error',
                     message: provider.endsWith('-cli')
                         ? 'No models returned. Check that the CLI is installed, signed in, and up to date.'
                         : 'No models returned. Check the provider credentials or connection.'
-                });
+                })
                 return []
             }
 
-            const nextModel = currentModel && models.includes(currentModel) ? currentModel : models[0];
-            setAiModel(nextModel);
-            await saveAiConfig({ provider: provider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl });
+            const nextModel = currentModel && models.includes(currentModel) ? currentModel : models[0]
+            setAiModel(nextModel)
+            await saveAiConfig({ provider: provider as AiProvider, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
             setModelRefreshStatus({
                 type: 'success',
                 message: `Loaded ${models.length} model${models.length === 1 ? '' : 's'} from ${provider}.`
-            });
+            })
             return models
         } finally {
             setRefreshingModels(false)
         }
-    }, [aiProvider, aiModel, aiOllamaUrl, fetchModelsForProvider, saveAiConfig]);
+    }
 
     const handleSaveAi = async () => {
-        const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '');
-        await saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl });
+        const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '')
+        await saveAiConfig({ provider: aiProvider as AiProvider, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
         void handleRefreshModels(aiProvider, nextModel)
-    };
+    }
 
-    const handleSaveMedia = async () => {
-        const api = getApi();
-        await api.mediaSearch.setConfig({ provider: mediaProvider, apiKey: '' })
-    };
+    const handleSaveMedia = async (provider = mediaProvider) => {
+        const api = getApi()
+        await api.mediaSearch.setConfig({ provider, apiKey: '' })
+    }
 
     const handleDeleteCredential = async (id: string) => {
-        const api = getApi();
-        const result = await api.app.deleteCredential(id);
+        const api = getApi()
+        const result = await api.app.deleteCredential(id)
         if (!result.success) {
-            setConfirmDeleteId(null);
+            setConfirmDeleteId(null)
             return
         }
-        dispatchAiAvailabilityChanged();
-        await refreshCredentialsAndFeatureConfigs();
+        dispatchAiAvailabilityChanged()
+        await refreshCredentialsAndFeatureConfigs()
         setConfirmDeleteId(null)
-    };
+    }
 
     const openCreateModal = () => {
-        setModalMode('create');
-        setModalCredential(null);
+        setModalMode('create')
+        setModalCredential(null)
         setModalOpen(true)
-    };
+    }
 
     const openEditModal = (credential: CredentialRecordInfo) => {
-        setModalMode('edit');
-        setModalCredential(credential);
+        setModalMode('edit')
+        setModalCredential(credential)
         setModalOpen(true)
-    };
+    }
 
     const handleRestartTutorial = () => {
-        setTutorialEnabled(true);
-        setTutorialCompleted(false);
-        onClose();
+        setTutorialEnabled(true)
+        setTutorialCompleted(false)
+        onClose()
         startTutorial(tutorialSteps)
-    };
+    }
 
-    if (!open) return null;
-
-    const DANGEROUS_CLI_PROVIDERS = ['gemini-cli', 'junie-cli'];
-    const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((p) => `ai:${p}`);
+    if (!open) return null
     const visibleCredentials = enableDangerousFeatures
         ? credentials
-        : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id));
+        : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id))
     const visibleDefinitions = enableDangerousFeatures
         ? definitions
-        : definitions.filter((d) => !DANGEROUS_CRED_IDS.includes(d.id));
-    const availableModels = providerModels[aiProvider] || [];
-    const selectedAiModel = aiModel || availableModels[0] || '';
-    const isCliProvider = aiProvider.endsWith('-cli');
+        : definitions.filter((d) => !DANGEROUS_CRED_IDS.includes(d.id))
+    const availableModels = providerModels[aiProvider] || []
+    const selectedAiModel = aiModel || availableModels[0] || ''
+    const isCliProvider = aiProvider.endsWith('-cli')
+    const cliStatus = cliAvailability[aiProvider]
 
     return (
         <>
@@ -524,15 +528,15 @@ export default function SettingsDialog({
                                             <select
                                                 value={aiProvider}
                                                 onChange={(e) => {
-                                                    const nextProvider = e.target.value as any;
-                                                    setAiProvider(nextProvider);
-                                                    setAiModel('');
+                                                    const nextProvider = e.target.value as AiProvider
+                                                    setAiProvider(nextProvider)
+                                                    setAiModel('')
                                                     void saveAiConfig({
                                                         provider: nextProvider,
                                                         model: '',
                                                         apiKey: '',
                                                         ollamaUrl: aiOllamaUrl
-                                                    });
+                                                    })
                                                     void handleRefreshModels(nextProvider, '')
                                                 }}
                                                 className="settings-input"
@@ -561,46 +565,29 @@ export default function SettingsDialog({
                                         {isCliProvider && (
                                             <div className="settings-field">
                                                 <label>CLI Status</label>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div className="settings-inline-row">
                                                     {checkingCli ? (
-                                                        <span style={{
-                                                            fontSize: '13px',
-                                                            color: 'var(--color-text-muted)'
-                                                        }}>Checking...</span>
-                                                    ) : cliAvailability[aiProvider]?.available ? (
-                                                        <span style={{
-                                                            fontSize: '13px',
-                                                            color: 'var(--color-success, #10b981)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px'
-                                                        }}>
-                                                            ✓ Installed ({cliAvailability[aiProvider].version || 'Unknown version'})
+                                                        <span className="settings-cli-status settings-cli-status--muted">Checking...</span>
+                                                    ) : cliStatus?.available ? (
+                                                        <span className="settings-cli-status settings-cli-status--success">
+                                                            ✓ Installed ({cliStatus.version || 'Unknown version'})
                                                         </span>
                                                     ) : (
-                                                        <span style={{
-                                                            fontSize: '13px',
-                                                            color: 'var(--color-error, #ef4444)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px'
-                                                        }}>
+                                                        <span className="settings-cli-status settings-cli-status--error">
                                                             ✗ Not found
                                                         </span>
                                                     )}
                                                     <button
                                                         type="button"
-                                                        className="settings-btn-secondary"
-                                                        style={{ padding: '2px 8px', fontSize: '12px' }}
+                                                        className="settings-btn-secondary settings-btn-secondary--compact"
                                                         onClick={refreshCliAvailability}
                                                         disabled={checkingCli}
                                                     >
                                                         Refresh
                                                     </button>
                                                 </div>
-                                                {!cliAvailability[aiProvider]?.available && !checkingCli && (
-                                                    <span className="settings-hint"
-                                                        style={{ color: 'var(--color-error, #ef4444)' }}>
+                                                {!cliStatus?.available && !checkingCli && (
+                                                    <span className="settings-hint settings-hint--error">
                                                         This CLI tool is required. Please install it to use this provider.
                                                     </span>
                                                 )}
@@ -624,21 +611,20 @@ export default function SettingsDialog({
 
                                         <div className="settings-field">
                                             <label>Model</label>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div className="settings-inline-row">
                                                 <select
                                                     value={selectedAiModel}
                                                     onChange={(e) => {
-                                                        const nextModel = e.target.value;
-                                                        setAiModel(nextModel);
+                                                        const nextModel = e.target.value
+                                                        setAiModel(nextModel)
                                                         saveAiConfig({
-                                                            provider: aiProvider as any,
+                                                            provider: aiProvider as AiProvider,
                                                             model: nextModel,
                                                             apiKey: '',
                                                             ollamaUrl: aiOllamaUrl
                                                         })
                                                     }}
-                                                    className="settings-input"
-                                                    style={{ flex: 1 }}
+                                                    className="settings-input settings-input--flex"
                                                 >
                                                     {availableModels.map((model) => (
                                                         <option key={model} value={model}>{model}</option>
@@ -646,8 +632,7 @@ export default function SettingsDialog({
                                                 </select>
                                                 <button
                                                     type="button"
-                                                    className="settings-btn-secondary"
-                                                    style={{ whiteSpace: 'nowrap' }}
+                                                    className="settings-btn-secondary settings-btn-secondary--compact"
                                                     onClick={() => void handleRefreshModels()}
                                                     disabled={refreshingModels}
                                                 >
@@ -706,18 +691,18 @@ export default function SettingsDialog({
                                                     type="checkbox"
                                                     checked={enableDangerousFeatures}
                                                     onChange={(e) => {
-                                                        const next = e.target.checked;
-                                                        setEnableDangerousFeatures(next);
-                                                        if (!next && DANGEROUS_CLI_PROVIDERS.includes(aiProvider)) {
-                                                            const fallback = 'openai';
-                                                            setAiProvider(fallback);
-                                                            setAiModel('');
+                                                        const next = e.target.checked
+                                                        setEnableDangerousFeatures(next)
+                                                        if (!next && DANGEROUS_CRED_IDS.includes(`ai:${aiProvider}`)) {
+                                                            const fallback = 'openai'
+                                                            setAiProvider(fallback)
+                                                            setAiModel('')
                                                             void saveAiConfig({
-                                                                provider: fallback as any,
+                                                                provider: fallback as AiProvider,
                                                                 model: '',
                                                                 apiKey: '',
                                                                 ollamaUrl: aiOllamaUrl
-                                                            });
+                                                            })
                                                             void handleRefreshModels(fallback, '')
                                                         }
                                                     }}
@@ -738,8 +723,9 @@ export default function SettingsDialog({
                                             <select
                                                 value={mediaProvider}
                                                 onChange={(e) => {
-                                                    setMediaProvider(e.target.value);
-                                                    setTimeout(handleSaveMedia, 0)
+                                                    const nextProvider = e.target.value
+                                                    setMediaProvider(nextProvider)
+                                                    void handleSaveMedia(nextProvider)
                                                 }}
                                                 className="settings-input"
                                             >
