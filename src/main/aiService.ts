@@ -24,7 +24,6 @@ export type AiProvider =
     | 'google'
     | 'ollama'
     | 'mistral'
-    | 'claude-cli'
     | 'codex-cli'
     | 'gemini-cli'
     | 'github-cli'
@@ -43,7 +42,7 @@ interface ProviderResponse {
     error?: string
 }
 
-type CliProvider = Extract<AiProvider, 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'>
+type CliProvider = Extract<AiProvider, 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'>
 
 /** Shape of the config as persisted to disk (API keys are encrypted). */
 interface PersistedAiConfig {
@@ -76,7 +75,6 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
     ollama: [],
     mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo'],
-    'claude-cli': [],
     'codex-cli': [],
     'gemini-cli': [],
     'github-cli': [],
@@ -104,7 +102,7 @@ function getDefaultModelForProvider(provider: AiProvider, preferredModel?: strin
 }
 
 function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>): AiProvider | null {
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
 }
 
@@ -197,7 +195,7 @@ export async function loadAllProviderCredentials(): Promise<{
     maskedKey: string
 }[]> {
     const {encryptedApiKeys} = await loadPersistedRaw();
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = [];
 
     for (const provider of providers) {
@@ -602,13 +600,10 @@ function normalizeOpencodeOutput(output: string): string {
 }
 
 function isCliProvider(provider: AiProvider): provider is CliProvider {
-    return provider === 'claude-cli' || provider === 'codex-cli' || provider === 'gemini-cli' || provider === 'github-cli' || provider === 'junie-cli' || provider === 'opencode-cli'
+    return provider === 'codex-cli' || provider === 'gemini-cli' || provider === 'github-cli' || provider === 'junie-cli' || provider === 'opencode-cli'
 }
 
 function getCliInstallInstruction(provider: CliProvider): string {
-    if (provider === 'claude-cli') {
-        return 'Claude CLI is not installed. Install it from https://docs.anthropic.com/en/docs/claude-cli'
-    }
     if (provider === 'codex-cli') {
         return 'Codex CLI is not installed. Install it from https://github.com/openai/codex'
     }
@@ -673,20 +668,10 @@ function normalizeCliModel(provider: CliProvider, model: string): string {
         return normalized
     }
 
-    if (provider !== 'claude-cli') return normalized;
-
-    const lower = normalized.toLowerCase();
-    if (!lower || lower === 'default') return 'sonnet';
-    if (lower.includes('opus')) return 'opus';
-    if (lower.includes('haiku')) return 'haiku';
-    if (lower.includes('sonnet')) return 'sonnet';
     return normalized
 }
 
 function getCliEmptyError(provider: CliProvider, exitCode: number): string {
-    if (provider === 'claude-cli') {
-        return `Claude CLI exited with code ${exitCode}. Try running "claude --print \"hello\"" in a terminal to verify Claude Code is authenticated and can run non-interactively.`
-    }
     if (provider === 'codex-cli') {
         return `Codex CLI exited with code ${exitCode}. Try running "codex exec \"hello\"" in a terminal to verify Codex is authenticated.`
     }
@@ -736,14 +721,6 @@ async function runCliChat(
         }
         return {content: '', error: err?.message ?? 'CLI request failed.'}
     }
-}
-
-async function chatClaudeCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    return runCliChat(
-        'claude-cli',
-        ['--print', '--input-format', 'text', '--model', normalizeCliModel('claude-cli', config.model), '--output-format', 'text'],
-        messages
-    )
 }
 
 async function chatCodexCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
@@ -832,7 +809,6 @@ const ADAPTERS: Record<AiProvider, (msgs: ChatMessage[], cfg: AiConfig) => Promi
     google: chatGoogle,
     ollama: chatOllama,
     mistral: chatMistral,
-    'claude-cli': chatClaudeCli,
     'codex-cli': chatCodexCli,
     'gemini-cli': chatGeminiCli,
     'github-cli': chatGithubCli,
@@ -982,7 +958,6 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         google: [],
         ollama: [],
         mistral: [],
-        'claude-cli': [],
         'codex-cli': [],
         'gemini-cli': [],
         'github-cli': [],
@@ -1041,7 +1016,7 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
             })
     );
 
-    const cliProviders: CliProvider[] = ['claude-cli', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const cliProviders: CliProvider[] = ['codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
     for (const provider of cliProviders) {
         fetchers.push(
             fetchCliModels(provider, FALLBACK_MODELS[provider])

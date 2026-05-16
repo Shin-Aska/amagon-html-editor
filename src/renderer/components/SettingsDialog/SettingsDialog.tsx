@@ -215,7 +215,7 @@ export default function SettingsDialog({
 
     if (!open) return null;
 
-    const DANGEROUS_CLI_PROVIDERS = ['claude-cli', 'gemini-cli', 'junie-cli'];
+    const DANGEROUS_CLI_PROVIDERS = ['gemini-cli', 'junie-cli'];
     const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((p) => `ai:${p}`);
     const visibleCredentials = enableDangerousFeatures
         ? credentials
@@ -518,7 +518,6 @@ export default function SettingsDialog({
                                                     <option value="opencode-cli">Opencode CLI</option>
                                                     {enableDangerousFeatures && (
                                                         <>
-                                                            <option value="claude-cli">Claude CLI</option>
                                                             <option value="gemini-cli">Gemini CLI</option>
                                                             <option value="junie-cli">Junie CLI</option>
                                                         </>
@@ -635,7 +634,6 @@ export default function SettingsDialog({
                                                     <span className="settings-danger-tooltip">
                                                         <strong>Dangerous features (disabled by default):</strong>
                                                         <ul>
-                                                            <li>Claude CLI — AI provider via local Claude CLI tool</li>
                                                             <li>Gemini CLI — AI provider via local Gemini CLI tool</li>
                                                             <li>Junie CLI — AI provider via local Junie CLI tool</li>
                                                         </ul>

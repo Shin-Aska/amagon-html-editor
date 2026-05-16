@@ -9,7 +9,6 @@ const PROVIDER_LABELS: Record<AiProvider, string> = {
     google: 'Gemini',
     mistral: 'Mistral',
     ollama: 'Ollama',
-    'claude-cli': 'Claude CLI',
     'codex-cli': 'Codex CLI',
     'gemini-cli': 'Gemini CLI',
     'github-cli': 'GitHub Copilot CLI',
@@ -33,7 +32,7 @@ export default function AiProviderSelector(): JSX.Element {
         }
     }, [configLoaded, loadConfig, loadModels]);
 
-    const DANGEROUS_PROVIDERS: AiProvider[] = ['claude-cli', 'gemini-cli', 'junie-cli'];
+    const DANGEROUS_PROVIDERS: AiProvider[] = ['gemini-cli', 'junie-cli'];
 
     const isReady = configLoaded && modelsLoaded;
 
