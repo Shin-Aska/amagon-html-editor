@@ -19,7 +19,6 @@ export type AiProvider =
     | 'google'
     | 'ollama'
     | 'mistral'
-    | 'claude-cli'
     | 'codex-cli'
     | 'gemini-cli'
     | 'github-cli'

@@ -4,8 +4,8 @@ import * as fs from 'fs/promises'
 import * as os from 'os'
 import * as path from 'path'
 
-type CliProvider = 'claude-cli' | 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
-type CliBinary = 'claude' | 'codex' | 'gemini' | 'copilot' | 'junie' | 'opencode'
+type CliProvider = 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
+type CliBinary = 'codex' | 'gemini' | 'copilot' | 'junie' | 'opencode'
 
 const LOOKUP_TIMEOUT_MS = 10_000;
 const OPENCODE_LOOKUP_TIMEOUT_MS = 45_000;
@@ -41,7 +41,6 @@ const JUNIE_BUILT_IN_MODEL_IDS = [
 ];
 
 export const CLI_BINARY_NAMES: Record<CliProvider, CliBinary> = {
-    'claude-cli': 'claude',
     'codex-cli': 'codex',
     'gemini-cli': 'gemini',
     'github-cli': 'copilot',
@@ -558,16 +557,6 @@ async function fetchCodexCliModels(fallbackModels: string[]): Promise<string[]> 
     return modelsWithFallback([configuredModel, ...cachedModels], fallbackModels)
 }
 
-async function fetchClaudeCliModels(fallbackModels: string[]): Promise<string[]> {
-    const settings = await readJsonFile(path.join(os.homedir(), '.claude', 'settings.json'));
-    const configuredModel = typeof settings?.model === 'string' ? settings.model : undefined;
-    const overrides = settings?.modelOverrides && typeof settings.modelOverrides === 'object'
-        ? Object.values(settings.modelOverrides).filter((value): value is string => typeof value === 'string')
-        : [];
-
-    return modelsWithFallback([configuredModel, ...overrides], fallbackModels)
-}
-
 async function fetchGeminiCliModels(fallbackModels: string[]): Promise<string[]> {
     const settings = await readJsonFile(path.join(os.homedir(), '.gemini', 'settings.json'));
     const configuredModel = getTrimmedString(settings?.model);
@@ -695,7 +684,6 @@ export async function fetchCliModels(
     if (!status.available) return [];
 
     if (provider === 'codex-cli') return fetchCodexCliModels(fallbackModels);
-    if (provider === 'claude-cli') return fetchClaudeCliModels(fallbackModels);
     if (provider === 'github-cli') return fetchGithubCliModels(fallbackModels);
     if (provider === 'junie-cli') return fetchJunieCliModels(fallbackModels);
     if (provider === 'opencode-cli') return fetchOpencodeCliModels(fallbackModels);

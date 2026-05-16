@@ -56,7 +56,6 @@ const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
     google: 'Google Gemini',
     ollama: 'Ollama',
     mistral: 'Mistral',
-    'claude-cli': 'Claude CLI',
     'codex-cli': 'Codex CLI',
     'gemini-cli': 'Gemini CLI',
     'github-cli': 'GitHub Copilot CLI',
