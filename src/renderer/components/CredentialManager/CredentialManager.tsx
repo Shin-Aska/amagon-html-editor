@@ -45,7 +45,7 @@ export default function CredentialManager({open, onClose}: CredentialManagerProp
     const popoverRef = useRef<HTMLDivElement>(null);
     const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures);
 
-    const DANGEROUS_CRED_IDS = ['ai:claude-cli', 'ai:gemini-cli', 'ai:junie-cli'];
+    const DANGEROUS_CRED_IDS = ['ai:gemini-cli', 'ai:junie-cli'];
     const visibleCredentials = enableDangerousFeatures
         ? credentials
         : credentials.filter((c) => !DANGEROUS_CRED_IDS.includes(c.id));
