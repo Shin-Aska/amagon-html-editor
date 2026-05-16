@@ -1,20 +1,14 @@
 # Amagon HTML Editor — Codebase Guidelines
 
-> **Purpose:** This file gives AI assistants (Claude, Gemini, ChatGPT, etc.) enough context to work on this codebase without reading every file. Keep it up-to-date as the project evolves.
+> **Purpose:** Compact reference for AI assistants working in this codebase.
 >
-> **Documentation Maintenance Rule:** When you add, remove, or significantly change a feature, update the following docs in the same PR or commit:
-> - **`GUIDELINES.md`** (this file) — architecture, data models, IPC channels, conventions
-> - **`README.md`** — user-facing feature list, project structure, getting started
-> - **`docs/getting-started-contributing.md`** — contributor-facing "where to look" guide and architecture overview
-> - **`.aiassistant/rules/project-context.md`** — concise system cheat-sheet for AI assistants
->
-> These four files should always stay in sync. If a feature is documented in one, it should be discoverable in the others.
+> **Documentation rule:** When a feature changes, update `GUIDELINES.md`, `README.md`, `docs/getting-started-contributing.md`, and `.aiassistant/rules/project-context.md` in the same PR or commit.
 
 ---
 
 ## 1. What Is This?
 
-**Amagon HTML Editor** is an offline, AI-powered visual HTML editor — a desktop alternative to Pingendo, Mobirise, and Bootstrap Studio. Users drag-and-drop blocks onto a canvas, edit properties in an inspector panel, toggle to a Monaco code editor for raw HTML, and export standalone sites.
+**Amagon HTML Editor** is an offline, AI-powered visual HTML editor for drag-and-drop page building, inline editing, Monaco code editing, and static-site export.
 
 - **Repo:** `github.com/Shin-Aska/amagon-html-editor`
 - **License:** GPL v3.0
@@ -164,10 +158,10 @@ flowchart TB
 ```
 
 **Key patterns:**
-- **IPC bridge** — The preload script (`preload/index.ts`) exposes a typed `window.api` object with namespaces: `project`, `assets`, `autosave`, `menu`, `app`, `ai`, `mediaSearch`, `fonts`.
-- **Block-based model** — The UI is a tree of `Block` objects, not direct DOM manipulation. Blocks have `id`, `type`, `props`, `styles`, `classes`, `events`, `children`.
-- **Bidirectional sync** — `blockToHtml` and `htmlToBlocks` keep the visual canvas and code editor in sync.
-- **Canvas isolation** — The live preview runs in an iframe. The renderer and iframe communicate via `postMessage`.
+- **IPC bridge** — `preload/index.ts` exposes typed `window.api` namespaces: `project`, `assets`, `autosave`, `menu`, `app`, `ai`, `mediaSearch`, `fonts`.
+- **Block model** — The UI uses `Block` objects instead of direct DOM mutation.
+- **Sync layer** — `blockToHtml` and `htmlToBlocks` keep the canvas and code editor aligned.
+- **Canvas isolation** — Live preview runs in an iframe and uses `postMessage`.
 
 ---
 
@@ -203,7 +197,7 @@ interface FontAsset {
 }
 ```
 
-FontAssets are stored in `state.fonts` (top-level in projectStore, not nested under `settings`). System fonts have an empty `relativePath` and are resolved by CSS name only.
+FontAssets are stored in `state.fonts` at the top level of `projectStore`. System fonts use an empty `relativePath` and resolve by CSS name only.
 
 ### Project File (`.json`)
 
@@ -294,9 +288,9 @@ The AI service lives in `src/main/aiService.ts`. It:
 
 **IPC channels:** `ai:chat`, `ai:getConfig`, `ai:setConfig`, `ai:getModels`, `ai:fetchModelsForProvider`, `ai:checkCliAvailability`.
 
-**CLI providers** run local CLI binaries instead of API calls. Gemini CLI and Junie CLI are gated behind the "Enable Dangerous Features" toggle; Codex CLI, GitHub Copilot CLI, and Opencode CLI are available without that toggle. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; do not integrate it through `gh models`. Prefer the bundled Copilot SDK `models.list` API for model discovery, and fall back to `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json` only when the SDK path cannot be resolved, because `/model` is an interactive slash command.
+**CLI providers** run local CLI binaries instead of API calls. Gemini CLI and Junie CLI require the "Enable Dangerous Features" toggle; Codex CLI, GitHub Copilot CLI, and Opencode CLI do not. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; use the bundled Copilot SDK `models.list` API for model discovery and fall back to `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json` only if the SDK path is unavailable.
 
-**CLI model discovery:** Available models for CLI providers depend on the installed CLI version. The AI settings tab shows a hint reminding users to update their CLI tool to access newer models.
+**CLI model discovery:** Available models depend on the installed CLI version; the AI settings tab shows an update hint.
 
 API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an AES-256-GCM fallback. Keys are stored per-provider in `ai-config.json` and never leave the main process.
 
@@ -352,7 +346,7 @@ Each registration defines: label, icon, default props schema, allowed children, 
 
 ### PropType Reference
 
-Each block's props are typed using one of these PropTypes (defined in `src/renderer/registry/ComponentRegistry.ts`):
+Each block's props use these PropTypes (defined in `src/renderer/registry/ComponentRegistry.ts`):
 
 - **text** — Plain text input
 - **textarea** — Multi-line text input
@@ -423,23 +417,21 @@ The bundled catalog lives at `src/renderer/data/google-fonts-catalog.json` (~870
 
 ### Export Bundling
 
-The export engine (`src/renderer/utils/exportEngine.ts`) handles fonts in two ways:
+The export engine (`src/renderer/utils/exportEngine.ts`) handles fonts in two cases:
 
 **Self-hosted fonts** — Fonts with a `relativePath` (imported files or downloaded Google Fonts):
 1. Copies each font file to `<output>/assets/fonts/`
 2. Generates `@font-face` CSS with the correct relative path
 
 **CDN-only fonts** — Font families typed by name (not downloaded):
-1. System fonts — Omitted from export (rely on OS fonts in the user's browser)
-2. Google Fonts by name — Generates `<link>` tags to Google Fonts CDN (`https://fonts.googleapis.com/css2?family=...`), so only fonts without a corresponding `FontAsset` entry are linked
+1. System fonts — omitted from export
+2. Google Fonts by name — emitted as Google Fonts `<link>` tags when no `FontAsset` exists
 
-Downloaded Google Fonts are self-hosted via `@font-face` + bundled `.woff2` files, making exported sites fully offline-capable. Font families used but not downloaded still reference the CDN.
-
-No manual export step is required.
+Downloaded Google Fonts are self-hosted via `@font-face` and bundled `.woff2` files. Undownloaded families continue to reference the CDN.
 
 ### IPC Handlers
 
-All font IPC handlers are in `src/main/index.ts` under the `fonts:` prefix. The preload bridge exposes them under `window.api.fonts`.
+All font IPC handlers live in `src/main/index.ts` under the `fonts:` prefix and are exposed through `window.api.fonts`.
 
 | Channel | Description |
 |---------|-------------|
@@ -476,9 +468,9 @@ npm run dist:linux   # Linux AppImage + deb
 - **Store files** use camelCase (e.g. `editorStore.ts`).
 - **CSS** — component-scoped CSS files in `styles/` or co-located. Theme uses CSS custom properties (`--theme-*`).
 - **IPC** — all main ↔ renderer communication goes through the typed `window.api` bridge. Never use `ipcRenderer` directly in renderer code.
-- **Block IDs** — generated with prefix `blk_` followed by a random string.
-- **History** — 50-entry undo/redo stack managed by `editorStore`. Mutations push snapshots; undo/redo restores them.
-- **No direct DOM manipulation** in the renderer. All visual changes flow through the block model → `blockToHtml` → canvas iframe re-render.
+- **Block IDs** — prefix `blk_` plus a random string.
+- **History** — 50-entry undo/redo stack in `editorStore`.
+- **DOM access** — Renderer updates flow through the block model and canvas re-render.
 
 ---
 
@@ -502,38 +494,38 @@ The publish system is a self-contained package at `src/publish/` with a versione
 
 ## 13. Interactive Tutorial System
 
-The tutorial system provides a branching, spotlight-driven onboarding experience for new users.
+The tutorial system provides branching, spotlight-driven onboarding.
 
 **Architecture:**
-- **`tutorialStore`** (`src/renderer/store/tutorialStore.ts`) — Zustand store holding the active step list, current step index, branch state, and the `dispatchTutorialAction()` function that drives reactive step advancement.
-- **`TutorialOverlay`** — Renders the spotlight mask (`SpotlightMask`), the floating info box (`TutorialInfoBox`), and the pointer arrow (`TutorialArrow`). Resolves `data-tutorial="<marker>"` attributes on DOM elements as spotlight targets.
-- **`WelcomeTourDialog`** — Initial dialog shown to first-time users; launches the tutorial.
-- **`TutorialStep`** — Each step defines: `target` (CSS selector or `data-tutorial` marker), `placement`, `action` (the `TutorialActionType` that auto-advances the step), `choices` (optional branching), `onEnter`/`onExit` callbacks.
-- **Branches** (`src/renderer/components/Tutorial/branches/`) — Three optional deep-dive paths: AI Assistance, Publish Workflow, Web Media Search.
-- **`data-tutorial` markers** — Added to key UI elements (`data-tutorial="toolbar-publish"`, `data-tutorial="theme-editor-colors"`, etc.) so tutorial steps can target them without fragile CSS selectors.
-- **Action dispatch** — Components call `dispatchTutorialAction({ type, targetValue })` after meaningful interactions; the store checks if it matches the current step's expected action and auto-advances.
-- **Restart tutorial button** — A `?` button in the status bar restarts the tutorial. Its visibility is controlled by the `showRestartTutorialButton` setting in `appSettingsStore` (toggle in Settings → General).
+- **`tutorialStore`** (`src/renderer/store/tutorialStore.ts`) — Zustand store for active steps, branching state, and `dispatchTutorialAction()`.
+- **`TutorialOverlay`** — Renders `SpotlightMask`, `TutorialInfoBox`, and `TutorialArrow`; targets `data-tutorial` markers.
+- **`WelcomeTourDialog`** — First-run entry point for the tutorial.
+- **`TutorialStep`** — Defines `target`, `placement`, `action`, optional `choices`, and `onEnter`/`onExit` callbacks.
+- **Branches** (`src/renderer/components/Tutorial/branches/`) — AI Assistance, Publish Workflow, Web Media Search.
+- **`data-tutorial` markers** — Added to key UI elements for selector-free targeting.
+- **Action dispatch** — Components call `dispatchTutorialAction({ type, targetValue })` after interactions.
+- **Restart tutorial button** — `?` in the status bar; visibility is controlled by `showRestartTutorialButton`.
 
 ---
 
 ## 14. Theme Gallery & Theme Packs
 
-The theme gallery provides a browsable, categorized collection of pre-built themes that users can apply to their projects. Each theme is wrapped in a `ThemePack` that includes light/dark variants, component tokens, and suggested sections/pages.
+The theme gallery provides pre-built themes wrapped in `ThemePack` objects with light/dark variants, component tokens, and suggested sections/pages.
 
 **Architecture:**
 - **`themeGalleryTypes.ts`** (`src/renderer/themes/themeGalleryTypes.ts`) — Type definitions for `ThemeGalleryItem`, `ThemePack`, and `ThemeGalleryFilters`. Categories include: business, creative, dark, editorial, ecommerce, landing-page, minimal, portfolio, saas, startup, wellness.
 - **`themePacks.ts`** (`src/renderer/themes/themePacks.ts`) — Built-in `ThemePack` definitions (~10 packs) with complete color, typography, spacing, border, and component token configurations.
 - **`themeGalleryRegistry.ts`** (`src/renderer/themes/themeGalleryRegistry.ts`) — Registry that converts `ThemePack`s into `ThemeGalleryItem`s with preview blocks and searchable metadata.
-- **`ThemeMiniPreview.tsx`** (`src/renderer/components/ThemeGallery/ThemeMiniPreview.tsx`) — Renders a live mini preview of a theme using sample blocks (heading, paragraph, button, card) so users can visualize the theme before applying it.
+- **`ThemeMiniPreview.tsx`** (`src/renderer/components/ThemeGallery/ThemeMiniPreview.tsx`) — Renders live previews from sample blocks.
 - **Dark variant support** — Each pack can define a `darkTheme`; the gallery UI allows toggling between light and dark previews.
 
-Themes are applied through the `ThemeEditor` component, which imports from the gallery registry and presents them as selectable cards with live previews.
+`ThemeEditor` imports the gallery registry and presents themes as selectable cards with live previews.
 
 ---
 
 ## 15. Page & Section Templates
 
-The template system provides reusable, theme-aware page and section layouts that users can insert into their projects from the sidebar.
+The template system provides reusable, theme-aware page and section layouts available from the sidebar.
 
 **Architecture:**
 - **`templateTypes.ts`** (`src/renderer/templates/templateTypes.ts`) — Type definitions for `PageTemplate` and `SectionTemplate`, with categories:
@@ -543,13 +535,13 @@ The template system provides reusable, theme-aware page and section layouts that
 - **`sectionTemplates.ts`** (`src/renderer/templates/sectionTemplates.ts`) — Built-in section templates (single reusable sections) that can be inserted into any page.
 - **`templateWidgets.ts`** (`src/renderer/templates/templateWidgets.ts`) — Helper widgets for template rendering and metadata.
 
-Templates are **theme-aware** — they reference theme variables (colors, spacing, typography) so they adapt visually to the active project theme. The `Sidebar` component provides a template gallery UI for browsing and inserting templates.
+Templates reference theme variables (colors, spacing, typography) so they adapt to the active project theme. The `Sidebar` component provides the template gallery UI.
 
 ---
 
 ## 16. Key Files to Read First
 
-If you need deeper context, start with these:
+Start here for deeper context:
 
 1. **`src/renderer/store/types.ts`** — All TypeScript interfaces (Block, Page, ProjectSettings, Theme, PublisherConfig, ComponentTokens, etc.)
 2. **`src/renderer/registry/registerBlocks.ts`** — Every block type definition
@@ -572,7 +564,7 @@ If you need deeper context, start with these:
 
 ## Appendix: Google Fonts Browser Implementation
 
-The Google Fonts browser feature adds a no-API-key way to discover and download fonts. Here's a quick reference:
+The Google Fonts browser provides catalog browsing and font download without an API key:
 
 - **Catalog:** Static JSON bundled at build time (`src/renderer/data/google-fonts-catalog.json`, ~1,500 entries)
 - **Type helper:** `googleFontsCatalog.ts` exports the catalog and `getGoogleFontPreviewUrl()` helper
