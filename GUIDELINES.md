@@ -294,7 +294,7 @@ The AI service lives in `src/main/aiService.ts`. It:
 
 **IPC channels:** `ai:chat`, `ai:getConfig`, `ai:setConfig`, `ai:getModels`, `ai:fetchModelsForProvider`, `ai:checkCliAvailability`.
 
-**CLI providers** run local CLI binaries instead of API calls. Gemini CLI and Junie CLI are gated behind the "Enable Dangerous Features" toggle; Codex CLI, GitHub Copilot CLI, and Opencode CLI are available without that toggle. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; do not integrate it through `gh models`. Its model dropdown is populated from `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json`, because `/model` is an interactive slash command.
+**CLI providers** run local CLI binaries instead of API calls. Gemini CLI and Junie CLI are gated behind the "Enable Dangerous Features" toggle; Codex CLI, GitHub Copilot CLI, and Opencode CLI are available without that toggle. GitHub Copilot CLI uses the standalone `copilot` binary with `copilot -p`; do not integrate it through `gh models`. Prefer the bundled Copilot SDK `models.list` API for model discovery, and fall back to `copilot help config` plus `COPILOT_MODEL` / `~/.copilot/config.json` only when the SDK path cannot be resolved, because `/model` is an interactive slash command.
 
 **CLI model discovery:** Available models for CLI providers depend on the installed CLI version. The AI settings tab shows a hint reminding users to update their CLI tool to access newer models.
 
