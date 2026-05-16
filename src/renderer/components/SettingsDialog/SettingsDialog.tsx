@@ -6,6 +6,7 @@ import {
     LayoutPanelLeft,
     Monitor,
     Moon,
+    RefreshCw,
     Settings,
     Sparkles,
     Sun,
@@ -62,6 +63,11 @@ export default function SettingsDialog({
     const [aiProvider, setAiProvider] = useState(aiConfig?.provider || 'openai');
     const [aiModel, setAiModel] = useState(aiConfig?.model || '');
     const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434');
+    const [refreshingModels, setRefreshingModels] = useState(false);
+    const [modelRefreshStatus, setModelRefreshStatus] = useState<{
+        type: 'success' | 'error';
+        message: string
+    } | null>(null);
 
     const [cliAvailability, setCliAvailability] = useState<Record<string, {
         available: boolean;
@@ -171,10 +177,39 @@ export default function SettingsDialog({
         }
     };
 
+    const handleRefreshModels = useCallback(async (provider = aiProvider, currentModel = aiModel): Promise<string[]> => {
+        setRefreshingModels(true);
+        setModelRefreshStatus(null);
+
+        try {
+            const models = await fetchModelsForProvider(provider, '', aiOllamaUrl);
+            if (models.length === 0) {
+                setModelRefreshStatus({
+                    type: 'error',
+                    message: provider.endsWith('-cli')
+                        ? 'No models returned. Check that the CLI is installed, signed in, and up to date.'
+                        : 'No models returned. Check the provider credentials or connection.'
+                });
+                return []
+            }
+
+            const nextModel = currentModel && models.includes(currentModel) ? currentModel : models[0];
+            setAiModel(nextModel);
+            await saveAiConfig({ provider: provider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl });
+            setModelRefreshStatus({
+                type: 'success',
+                message: `Loaded ${models.length} model${models.length === 1 ? '' : 's'} from ${provider}.`
+            });
+            return models
+        } finally {
+            setRefreshingModels(false)
+        }
+    }, [aiProvider, aiModel, aiOllamaUrl, fetchModelsForProvider, saveAiConfig]);
+
     const handleSaveAi = async () => {
         const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '');
         await saveAiConfig({ provider: aiProvider as any, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl });
-        fetchModelsForProvider(aiProvider, '', aiOllamaUrl)
+        void handleRefreshModels(aiProvider, nextModel)
     };
 
     const handleSaveMedia = async () => {
@@ -492,16 +527,13 @@ export default function SettingsDialog({
                                                     const nextProvider = e.target.value as any;
                                                     setAiProvider(nextProvider);
                                                     setAiModel('');
-                                                    fetchModelsForProvider(nextProvider, '', aiOllamaUrl).then((models) => {
-                                                        const nextModel = models[0] ?? '';
-                                                        setAiModel(nextModel);
-                                                        saveAiConfig({
-                                                            provider: nextProvider,
-                                                            model: nextModel,
-                                                            apiKey: '',
-                                                            ollamaUrl: aiOllamaUrl
-                                                        })
-                                                    })
+                                                    void saveAiConfig({
+                                                        provider: nextProvider,
+                                                        model: '',
+                                                        apiKey: '',
+                                                        ollamaUrl: aiOllamaUrl
+                                                    });
+                                                    void handleRefreshModels(nextProvider, '')
                                                 }}
                                                 className="settings-input"
                                             >
@@ -592,24 +624,48 @@ export default function SettingsDialog({
 
                                         <div className="settings-field">
                                             <label>Model</label>
-                                            <select
-                                                value={selectedAiModel}
-                                                onChange={(e) => {
-                                                    const nextModel = e.target.value;
-                                                    setAiModel(nextModel);
-                                                    saveAiConfig({
-                                                        provider: aiProvider as any,
-                                                        model: nextModel,
-                                                        apiKey: '',
-                                                        ollamaUrl: aiOllamaUrl
-                                                    })
-                                                }}
-                                                className="settings-input"
-                                            >
-                                                {availableModels.map((model) => (
-                                                    <option key={model} value={model}>{model}</option>
-                                                ))}
-                                            </select>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <select
+                                                    value={selectedAiModel}
+                                                    onChange={(e) => {
+                                                        const nextModel = e.target.value;
+                                                        setAiModel(nextModel);
+                                                        saveAiConfig({
+                                                            provider: aiProvider as any,
+                                                            model: nextModel,
+                                                            apiKey: '',
+                                                            ollamaUrl: aiOllamaUrl
+                                                        })
+                                                    }}
+                                                    className="settings-input"
+                                                    style={{ flex: 1 }}
+                                                >
+                                                    {availableModels.map((model) => (
+                                                        <option key={model} value={model}>{model}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    className="settings-btn-secondary"
+                                                    style={{ whiteSpace: 'nowrap' }}
+                                                    onClick={() => void handleRefreshModels()}
+                                                    disabled={refreshingModels}
+                                                >
+                                                    <RefreshCw
+                                                        size={14}
+                                                        className={refreshingModels ? 'settings-spin-icon' : undefined}
+                                                    />
+                                                    {refreshingModels ? 'Refreshing...' : 'Refresh Models List'}
+                                                </button>
+                                            </div>
+                                            {modelRefreshStatus && (
+                                                <span
+                                                    className={`settings-hint settings-hint--${modelRefreshStatus.type}`}
+                                                    aria-live="polite"
+                                                >
+                                                    {modelRefreshStatus.message}
+                                                </span>
+                                            )}
                                             {isCliProvider && (
                                                 <span className="settings-hint">
                                                     For CLI integration, available models may depend on the CLI version installed. Update the CLI tool to access newer models.
@@ -656,16 +712,13 @@ export default function SettingsDialog({
                                                             const fallback = 'openai';
                                                             setAiProvider(fallback);
                                                             setAiModel('');
-                                                            fetchModelsForProvider(fallback, '', aiOllamaUrl).then((models) => {
-                                                                const nextModel = models[0] ?? '';
-                                                                setAiModel(nextModel);
-                                                                saveAiConfig({
-                                                                    provider: fallback as any,
-                                                                    model: nextModel,
-                                                                    apiKey: '',
-                                                                    ollamaUrl: aiOllamaUrl
-                                                                })
-                                                            })
+                                                            void saveAiConfig({
+                                                                provider: fallback as any,
+                                                                model: '',
+                                                                apiKey: '',
+                                                                ollamaUrl: aiOllamaUrl
+                                                            });
+                                                            void handleRefreshModels(fallback, '')
                                                         }
                                                     }}
                                                 />
