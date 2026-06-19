@@ -3,6 +3,7 @@ import * as syncFs from 'fs'
 import * as fs from 'fs/promises'
 import * as os from 'os'
 import * as path from 'path'
+import {pathToFileURL} from 'url'
 
 type CliProvider = 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
 type CliBinary = 'codex' | 'gemini' | 'copilot' | 'junie' | 'opencode'
@@ -55,8 +56,14 @@ function getNonEmptyLines(value: string): string[] {
         .filter((line) => line.length > 0)
 }
 
-function getFirstNonEmptyLine(value: string): string | undefined {
-    return getNonEmptyLines(value)[0]
+function parseBooleanLike(value: unknown): boolean | undefined {
+    if (typeof value === 'boolean') return value;
+    if (typeof value !== 'string') return undefined;
+
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+    return undefined
 }
 
 function normalizeCliVersionLine(binary: CliBinary, line: string | undefined): string | undefined {
@@ -194,6 +201,99 @@ function parseCopilotHelpConfigModels(stdout: string): string[] {
     }
 
     return uniqueNonEmpty(models)
+}
+
+function parseCopilotCliVersion(output: string): string | undefined {
+    const match = output.match(/(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/);
+    return match?.[1]
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+    try {
+        await fs.access(filePath);
+        return true
+    } catch {
+        return false
+    }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+    let timeout: NodeJS.Timeout | undefined;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise<T>((_, reject) => {
+                timeout = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs)
+            })
+        ])
+    } finally {
+        if (timeout) clearTimeout(timeout)
+    }
+}
+
+async function findCopilotSdkPath(version: string): Promise<string | undefined> {
+    const candidateRoots = uniqueNonEmpty([
+        process.env.XDG_CACHE_HOME ? path.join(process.env.XDG_CACHE_HOME, 'copilot', 'pkg') : undefined,
+        path.join(os.homedir(), '.cache', 'copilot', 'pkg'),
+        process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'copilot', 'pkg') : undefined,
+        process.env.APPDATA ? path.join(process.env.APPDATA, 'copilot', 'pkg') : undefined
+    ]);
+
+    for (const root of candidateRoots) {
+        let platformDirs: syncFs.Dirent[] = [];
+        try {
+            platformDirs = await fs.readdir(root, {withFileTypes: true})
+        } catch {
+            continue
+        }
+
+        for (const platformDir of platformDirs) {
+            if (!platformDir.isDirectory()) continue;
+            const candidate = path.join(root, platformDir.name, version, 'copilot-sdk', 'index.js');
+            if (await fileExists(candidate)) return candidate
+        }
+    }
+
+    return undefined
+}
+
+async function fetchGithubCliSdkModels(copilotBinary: string): Promise<string[]> {
+    const versionResult = await runProcess(copilotBinary, ['--version'], undefined, LOOKUP_TIMEOUT_MS).catch(() => null);
+    const versionLine = versionResult
+        ? getNonEmptyLines(versionResult.stdout)[0] ?? getNonEmptyLines(versionResult.stderr)[0]
+        : undefined;
+    const version = versionLine ? parseCopilotCliVersion(versionLine) : undefined;
+    if (!version) return [];
+
+    const sdkPath = await findCopilotSdkPath(version);
+    if (!sdkPath) return [];
+
+    try {
+        const sdkModule: any = await import(pathToFileURL(sdkPath).href);
+        const CopilotClient = sdkModule?.CopilotClient;
+        if (typeof CopilotClient !== 'function') return [];
+
+        const client = new CopilotClient({
+            cliPath: copilotBinary,
+            logLevel: 'error'
+        });
+
+        try {
+            await withTimeout(client.start(), LOOKUP_TIMEOUT_MS, 'Copilot SDK startup');
+            const models = await withTimeout(client.listModels(), LOOKUP_TIMEOUT_MS, 'Copilot SDK model lookup');
+            return uniqueNonEmpty(
+                Array.isArray(models)
+                    ? models.map((model: any) => typeof model?.id === 'string' ? model.id : undefined)
+                    : []
+            )
+        } finally {
+            if (typeof client.stop === 'function') {
+                await withTimeout(Promise.resolve(client.stop()), LOOKUP_TIMEOUT_MS, 'Copilot SDK shutdown').catch(() => undefined)
+            }
+        }
+    } catch {
+        return []
+    }
 }
 
 function parseJunieAvailableModels(output: string): string[] {
@@ -451,19 +551,19 @@ async function findBinaryPath(name: string): Promise<string | undefined> {
 export async function detectCli(
     name: CliBinary
 ): Promise<{ available: boolean; path?: string; version?: string }> {
-    const path = await findBinaryPath(name);
-    if (!path) return {available: false};
+    const binaryPath = await findBinaryPath(name);
+    if (!binaryPath) return {available: false};
 
     const versionArgs = CLI_VERSION_ARGS[name] ?? ['--version'];
-    const versionResult = await runProcess(path, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null);
+    const versionResult = await runProcess(binaryPath, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null);
     const versionLine = versionResult
-        ? getFirstNonEmptyLine(versionResult.stdout) ?? getFirstNonEmptyLine(versionResult.stderr)
+        ? getNonEmptyLines(versionResult.stdout)[0] ?? getNonEmptyLines(versionResult.stderr)[0]
         : undefined;
     const version = normalizeCliVersionLine(name, versionLine);
 
     return {
         available: true,
-        path,
+        path: binaryPath,
         ...(version ? {version} : {})
     }
 }
@@ -564,25 +664,27 @@ async function fetchGeminiCliModels(fallbackModels: string[]): Promise<string[]>
     return modelsWithFallback(uniqueNonEmpty([configuredModel]), fallbackModels)
 }
 
-async function fetchGithubCliModels(_fallbackModels: string[]): Promise<string[]> {
+async function fetchGithubCliModels(fallbackModels: string[]): Promise<string[]> {
     const homeDir = os.homedir();
     const copilotHome = process.env.COPILOT_HOME?.trim();
     const configDir = copilotHome || path.join(homeDir, '.copilot');
     const copilotBinary = await findBinaryPath('copilot') ?? 'copilot';
 
     const config = await readJsonFile(path.join(configDir, 'config.json'));
+    const sdkModels = await fetchGithubCliSdkModels(copilotBinary);
     const helpConfigResult = await runProcess(copilotBinary, ['help', 'config'], undefined, LOOKUP_TIMEOUT_MS)
         .catch(() => null);
-    const availableModels = helpConfigResult?.exitCode === 0
+    const helpConfigModels = helpConfigResult?.exitCode === 0
         ? parseCopilotHelpConfigModels(helpConfigResult.stdout)
         : [];
+    const availableModels = sdkModels.length > 0 ? sdkModels : helpConfigModels;
 
     const configuredModel = uniqueNonEmpty([
         getTrimmedString(process.env.COPILOT_MODEL),
         getTrimmedString(config?.model)
     ])[0];
 
-    return modelsWithFallback([configuredModel, ...availableModels], _fallbackModels)
+    return modelsWithFallback([configuredModel, ...availableModels], fallbackModels)
 }
 
 async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> {
@@ -618,10 +720,7 @@ async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> 
         ...getConfigArrayStrings(projectConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location']),
         ...getConfigArrayStrings(userConfig, ['modelLocations', 'modelLocation', 'model_locations', 'model-location'])
     ];
-    const useDefaultModelLocations = getConfigBoolean(
-        {value: process.env.JUNIE_MODEL_DEFAULT_LOCATIONS},
-        ['value']
-    ) ?? getConfigBoolean(
+    const useDefaultModelLocations = parseBooleanLike(process.env.JUNIE_MODEL_DEFAULT_LOCATIONS) ?? getConfigBoolean(
         projectConfig,
         ['modelDefaultLocations', 'modelDefaultLocation', 'model_default_locations', 'model-default-locations']
     ) ?? getConfigBoolean(
