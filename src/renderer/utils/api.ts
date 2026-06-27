@@ -730,10 +730,9 @@ const mockApi: ElectronApi = {
                 success: true,
                 availability: {
                     'codex-cli': {available: false},
-                    'gemini-cli': {available: false},
                     'github-cli': {available: false},
                     'junie-cli': {available: false},
-                    'opencode-cli': {available: false}
+                    opencode: {available: false}
                 }
             }
         },
@@ -766,10 +765,9 @@ const mockApi: ElectronApi = {
                     ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3'],
                     mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo'],
                     'codex-cli': [],
-                    'gemini-cli': [],
                     'github-cli': ['default'],
                     'junie-cli': ['default', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview', 'gemini-flash', 'gemini-pro', 'gpt', 'gpt-5-2025-08-07', 'gpt-5.2-2025-12-11', 'gpt-5.3-codex', 'gpt-5.4', 'gpt-codex', 'grok', 'grok-4-1-fast-reasoning', 'opus', 'sonnet'],
-                    'opencode-cli': ['opencode/gpt-5.2', 'opencode/gpt-5.1', 'opencode/gpt-5', 'opencode/claude-sonnet-4-6', 'opencode/claude-opus-4-6', 'opencode/gemini-3-flash', 'opencode/kimi-k2.5']
+                    opencode: ['opencode/gpt-5.2', 'opencode/gpt-5.1', 'opencode/gpt-5', 'opencode/claude-sonnet-4-6', 'opencode/claude-opus-4-6', 'opencode/gemini-3-flash', 'opencode/kimi-k2.5']
                 }
             }
         },
@@ -788,12 +786,11 @@ const mockApi: ElectronApi = {
                 ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3'],
                 mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo'],
                 'codex-cli': ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5.2'],
-                'gemini-cli': ['gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'],
                 'github-cli': ['default'],
                 'junie-cli': ['default', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-sonnet-4-6', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview', 'gemini-3.1-pro-preview', 'gemini-flash', 'gemini-pro', 'gpt', 'gpt-5-2025-08-07', 'gpt-5.2-2025-12-11', 'gpt-5.3-codex', 'gpt-5.4', 'gpt-codex', 'grok', 'grok-4-1-fast-reasoning', 'opus', 'sonnet'],
-                'opencode-cli': ['opencode/gpt-5.2', 'opencode/gpt-5.1', 'opencode/gpt-5', 'opencode/claude-sonnet-4-6', 'opencode/claude-opus-4-6', 'opencode/gemini-3-flash', 'opencode/kimi-k2.5']
+                opencode: ['opencode/gpt-5.2', 'opencode/gpt-5.1', 'opencode/gpt-5', 'opencode/claude-sonnet-4-6', 'opencode/claude-opus-4-6', 'opencode/gemini-3-flash', 'opencode/kimi-k2.5']
             };
-            if (data.provider.endsWith('-cli')) {
+            if (data.provider.endsWith('-cli') || data.provider === 'opencode') {
                 return {success: true, models: fallback[data.provider] || []}
             }
             if (!data.apiKey && data.provider !== 'ollama') {

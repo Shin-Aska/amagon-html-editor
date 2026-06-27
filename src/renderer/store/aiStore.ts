@@ -20,10 +20,9 @@ export type AiProvider =
     | 'ollama'
     | 'mistral'
     | 'codex-cli'
-    | 'gemini-cli'
     | 'github-cli'
     | 'junie-cli'
-    | 'opencode-cli'
+    | 'opencode'
 
 export interface ChatMessage {
     id: string

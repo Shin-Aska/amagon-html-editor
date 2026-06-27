@@ -22,7 +22,7 @@ import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import './SettingsDialog.css'
 
-const DANGEROUS_CLI_PROVIDERS: AiProvider[] = ['gemini-cli', 'junie-cli']
+const DANGEROUS_CLI_PROVIDERS: AiProvider[] = ['junie-cli']
 const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((provider) => `ai:${provider}`)
 
 type CliAvailability = Record<string, {
@@ -160,7 +160,7 @@ export default function SettingsDialog({
     }, [open, onClose])
 
     useEffect(() => {
-        if (!open || !aiProvider.endsWith('-cli')) return
+        if (!open || (!aiProvider.endsWith('-cli') && aiProvider !== 'opencode')) return
 
         let cancelled = false
         fetchModelsForProvider(aiProvider, '', aiOllamaUrl).then((models) => {
@@ -192,8 +192,10 @@ export default function SettingsDialog({
             if (models.length === 0) {
                 setModelRefreshStatus({
                     type: 'error',
-                    message: provider.endsWith('-cli')
-                        ? 'No models returned. Check that the CLI is installed, signed in, and up to date.'
+                    message: provider.endsWith('-cli') || provider === 'opencode'
+                        ? (provider === 'opencode'
+                            ? 'No models returned. Check that the OpenCode service is installed and running.'
+                            : 'No models returned. Check that the CLI is installed, signed in, and up to date.')
                         : 'No models returned. Check the provider credentials or connection.'
                 })
                 return []
@@ -264,6 +266,8 @@ export default function SettingsDialog({
     const availableModels = providerModels[aiProvider] || []
     const selectedAiModel = aiModel || availableModels[0] || ''
     const isCliProvider = aiProvider.endsWith('-cli')
+    const isOpenCode = aiProvider === 'opencode'
+    const showStatusCheck = isCliProvider || isOpenCode
     const cliStatus = cliAvailability[aiProvider]
 
     return (
@@ -551,10 +555,9 @@ export default function SettingsDialog({
                                                     <option value="ollama">Ollama (Local)</option>
                                                     <option value="codex-cli">Codex CLI</option>
                                                     <option value="github-cli">GitHub Copilot CLI</option>
-                                                    <option value="opencode-cli">Opencode CLI</option>
+                                                    <option value="opencode">OpenCode</option>
                                                     {enableDangerousFeatures && (
                                                         <>
-                                                            <option value="gemini-cli">Gemini CLI</option>
                                                             <option value="junie-cli">Junie CLI</option>
                                                         </>
                                                     )}
@@ -562,15 +565,15 @@ export default function SettingsDialog({
                                             </select>
                                         </div>
 
-                                        {isCliProvider && (
+                                        {showStatusCheck && (
                                             <div className="settings-field">
-                                                <label>CLI Status</label>
+                                                <label>{isOpenCode ? 'Service Status' : 'CLI Status'}</label>
                                                 <div className="settings-inline-row">
                                                     {checkingCli ? (
                                                         <span className="settings-cli-status settings-cli-status--muted">Checking...</span>
                                                     ) : cliStatus?.available ? (
                                                         <span className="settings-cli-status settings-cli-status--success">
-                                                            ✓ Installed ({cliStatus.version || 'Unknown version'})
+                                                            ✓ {isOpenCode ? 'Connected' : `Installed (${cliStatus.version || 'Unknown version'})`}
                                                         </span>
                                                     ) : (
                                                         <span className="settings-cli-status settings-cli-status--error">
@@ -588,7 +591,9 @@ export default function SettingsDialog({
                                                 </div>
                                                 {!cliStatus?.available && !checkingCli && (
                                                     <span className="settings-hint settings-hint--error">
-                                                        This CLI tool is required. Please install it to use this provider.
+                                                        {isOpenCode
+                                                            ? 'OpenCode service is not running. Please start the OpenCode background service.'
+                                                            : 'This CLI tool is required. Please install it to use this provider.'}
                                                     </span>
                                                 )}
                                             </div>
@@ -654,6 +659,11 @@ export default function SettingsDialog({
                                             {isCliProvider && (
                                                 <span className="settings-hint">
                                                     For CLI integration, available models may depend on the CLI version installed. Update the CLI tool to access newer models.
+                                                </span>
+                                            )}
+                                            {isOpenCode && (
+                                                <span className="settings-hint">
+                                                    For OpenCode, available models are retrieved from the running OpenCode service. Start or restart the OpenCode service to update the list.
                                                 </span>
                                             )}
                                         </div>
