@@ -46,7 +46,7 @@ Common setups:
 | **Ollama** (local) | Install [Ollama](https://ollama.com/), pull a model, and it auto-connects at `localhost:11434` |
 | **Codex CLI** | Install [Codex](https://github.com/openai/codex) and authenticate it locally |
 
-Other supported providers include Mistral and several CLI-based tools (Gemini CLI, GitHub Copilot CLI, Junie CLI, and Opencode CLI).
+Other supported providers include Mistral and several CLI-based tools (GitHub Copilot CLI, Junie CLI, and OpenCode).
 
 Open the AI panel from the sidebar, click the settings icon, choose a provider, and add credentials if needed. Ollama and the CLI providers use your local setup, and Amagon discovers available models automatically.
 

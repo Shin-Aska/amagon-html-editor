@@ -57,10 +57,9 @@ const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
     ollama: 'Ollama',
     mistral: 'Mistral',
     'codex-cli': 'Codex CLI',
-    'gemini-cli': 'Gemini CLI',
     'github-cli': 'GitHub Copilot CLI',
     'junie-cli': 'Junie CLI',
-    'opencode-cli': 'Opencode CLI'
+    opencode: 'OpenCode'
 };
 
 const MEDIA_PROVIDER_LABELS: Record<MediaSearchProvider, string> = {
