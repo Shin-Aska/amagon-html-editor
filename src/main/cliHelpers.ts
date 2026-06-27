@@ -5,20 +5,17 @@ import * as os from 'os'
 import * as path from 'path'
 import {pathToFileURL} from 'url'
 
-type CliProvider = 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'
-type CliBinary = 'codex' | 'gemini' | 'copilot' | 'junie' | 'opencode'
+type CliProvider = 'codex-cli' | 'github-cli' | 'junie-cli'
+type CliBinary = 'codex' | 'copilot' | 'junie'
 
 const LOOKUP_TIMEOUT_MS = 10_000;
-const OPENCODE_LOOKUP_TIMEOUT_MS = 45_000;
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000;
 const MAX_CLI_MODELS = 80;
 const JUNIE_MODEL_PROBE_ID = '__amagon_model_probe__';
 const CLI_VERSION_ARGS: Partial<Record<CliBinary, string[]>> = {
     junie: ['--skip-update-check', '--version']
 };
-const CLI_VERSION_TIMEOUTS: Partial<Record<CliBinary, number>> = {
-    opencode: OPENCODE_LOOKUP_TIMEOUT_MS
-};
+const CLI_VERSION_TIMEOUTS: Partial<Record<CliBinary, number>> = {};
 const JUNIE_BUILT_IN_MODEL_IDS = [
     'default',
     'claude-opus-4-6',
@@ -43,10 +40,8 @@ const JUNIE_BUILT_IN_MODEL_IDS = [
 
 export const CLI_BINARY_NAMES: Record<CliProvider, CliBinary> = {
     'codex-cli': 'codex',
-    'gemini-cli': 'gemini',
     'github-cli': 'copilot',
-    'junie-cli': 'junie',
-    'opencode-cli': 'opencode'
+    'junie-cli': 'junie'
 };
 
 function getNonEmptyLines(value: string): string[] {
@@ -177,11 +172,7 @@ function modelsWithFallback(models: string[], fallbackModels: string[]): string[
     return uniqueNonEmpty([...models, ...fallbackModels]).slice(0, MAX_CLI_MODELS)
 }
 
-function parseOpencodeModels(stdout: string): string[] {
-    return uniqueNonEmpty(
-        getNonEmptyLines(stdout).filter((line) => /^[a-zA-Z0-9_-]+\//.test(line))
-    )
-}
+// parseOpencodeModels removed — opencode now uses the SDK
 
 function parseCopilotHelpConfigModels(stdout: string): string[] {
     const models: string[] = [];
@@ -657,12 +648,7 @@ async function fetchCodexCliModels(fallbackModels: string[]): Promise<string[]> 
     return modelsWithFallback([configuredModel, ...cachedModels], fallbackModels)
 }
 
-async function fetchGeminiCliModels(fallbackModels: string[]): Promise<string[]> {
-    const settings = await readJsonFile(path.join(os.homedir(), '.gemini', 'settings.json'));
-    const configuredModel = getTrimmedString(settings?.model);
-
-    return modelsWithFallback(uniqueNonEmpty([configuredModel]), fallbackModels)
-}
+// fetchGeminiCliModels removed — gemini-cli provider has been retired
 
 async function fetchGithubCliModels(fallbackModels: string[]): Promise<string[]> {
     const homeDir = os.homedir();
@@ -751,29 +737,7 @@ async function fetchJunieCliModels(fallbackModels: string[]): Promise<string[]> 
     )
 }
 
-async function fetchOpencodeCliModels(fallbackModels: string[]): Promise<string[]> {
-    const configHome = process.env.XDG_CONFIG_HOME?.trim() || path.join(os.homedir(), '.config');
-    const configPath = process.env.OPENCODE_CONFIG?.trim() || path.join(configHome, 'opencode', 'opencode.json');
-    const opencodeBinary = await findBinaryPath('opencode') ?? 'opencode';
-
-    const [globalConfig, projectConfig, modelsResult] = await Promise.all([
-        readJsonFile(configPath),
-        readJsonFile(path.join(process.cwd(), 'opencode.json')),
-        runProcess(opencodeBinary, ['models'], undefined, OPENCODE_LOOKUP_TIMEOUT_MS).catch(() => null)
-    ]);
-
-    const configuredModel = uniqueNonEmpty([
-        getTrimmedString(process.env.OPENCODE_MODEL),
-        getTrimmedString(globalConfig?.model),
-        getTrimmedString(projectConfig?.model)
-    ])[0];
-
-    const availableModels = modelsResult?.exitCode === 0
-        ? parseOpencodeModels(modelsResult.stdout)
-        : [];
-
-    return modelsWithFallback([configuredModel, ...availableModels], fallbackModels)
-}
+// fetchOpencodeCliModels removed — opencode now uses the SDK
 
 export async function fetchCliModels(
     provider: CliProvider,
@@ -784,7 +748,5 @@ export async function fetchCliModels(
 
     if (provider === 'codex-cli') return fetchCodexCliModels(fallbackModels);
     if (provider === 'github-cli') return fetchGithubCliModels(fallbackModels);
-    if (provider === 'junie-cli') return fetchJunieCliModels(fallbackModels);
-    if (provider === 'opencode-cli') return fetchOpencodeCliModels(fallbackModels);
-    return fetchGeminiCliModels(fallbackModels)
+    return fetchJunieCliModels(fallbackModels)
 }

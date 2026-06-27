@@ -8,6 +8,7 @@ import * as fs from 'fs/promises'
 import {app, net} from 'electron'
 import {decryptApiKey, encryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
 import {CLI_BINARY_NAMES, fetchCliModels, spawnCliChat} from './cliHelpers'
+import {createOpencode, createOpencodeClient} from '@opencode-ai/sdk'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,10 +26,9 @@ export type AiProvider =
     | 'ollama'
     | 'mistral'
     | 'codex-cli'
-    | 'gemini-cli'
     | 'github-cli'
     | 'junie-cli'
-    | 'opencode-cli'
+    | 'opencode'
 
 export interface AiConfig {
     provider: AiProvider
@@ -42,7 +42,7 @@ interface ProviderResponse {
     error?: string
 }
 
-type CliProvider = Extract<AiProvider, 'codex-cli' | 'gemini-cli' | 'github-cli' | 'junie-cli' | 'opencode-cli'>
+type CliProvider = Extract<AiProvider, 'codex-cli' | 'github-cli' | 'junie-cli'>
 
 /** Shape of the config as persisted to disk (API keys are encrypted). */
 interface PersistedAiConfig {
@@ -76,10 +76,9 @@ const FALLBACK_MODELS: Record<AiProvider, string[]> = {
     ollama: [],
     mistral: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest', 'codestral-latest', 'mistral-nemo'],
     'codex-cli': [],
-    'gemini-cli': [],
     'github-cli': [],
     'junie-cli': [],
-    'opencode-cli': [
+    opencode: [
         'opencode/gpt-5.2',
         'opencode/gpt-5.1',
         'opencode/gpt-5',
@@ -102,7 +101,7 @@ function getDefaultModelForProvider(provider: AiProvider, preferredModel?: strin
 }
 
 function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>): AiProvider | null {
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'github-cli', 'junie-cli', 'opencode'];
     return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
 }
 
@@ -143,6 +142,19 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
                 return {persisted: migrated, encryptedApiKeys}
             }
         }
+
+        // Migrate removed/renamed providers
+        if ((parsed.provider as string) === 'gemini-cli') {
+            parsed.provider = 'google';
+        }
+        if ((parsed.provider as string) === 'opencode-cli') {
+            parsed.provider = 'opencode';
+        }
+        if (encryptedApiKeys['opencode-cli']) {
+            encryptedApiKeys['opencode'] = encryptedApiKeys['opencode-cli'];
+            delete encryptedApiKeys['opencode-cli'];
+        }
+        delete encryptedApiKeys['gemini-cli'];
 
         return {persisted: parsed, encryptedApiKeys}
     } catch {
@@ -195,7 +207,7 @@ export async function loadAllProviderCredentials(): Promise<{
     maskedKey: string
 }[]> {
     const {encryptedApiKeys} = await loadPersistedRaw();
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'github-cli', 'junie-cli', 'opencode'];
     const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = [];
 
     for (const provider of providers) {
@@ -595,26 +607,18 @@ function normalizeJunieCliOutput(output: string): string {
         .trim()
 }
 
-function normalizeOpencodeOutput(output: string): string {
-    return stripAnsi(output).trim()
-}
+// normalizeOpencodeOutput removed — opencode now uses the SDK instead of CLI subprocess
 
 function isCliProvider(provider: AiProvider): provider is CliProvider {
-    return provider === 'codex-cli' || provider === 'gemini-cli' || provider === 'github-cli' || provider === 'junie-cli' || provider === 'opencode-cli'
+    return provider === 'codex-cli' || provider === 'github-cli' || provider === 'junie-cli'
 }
 
 function getCliInstallInstruction(provider: CliProvider): string {
     if (provider === 'codex-cli') {
         return 'Codex CLI is not installed. Install it from https://github.com/openai/codex'
     }
-    if (provider === 'gemini-cli') {
-        return 'Gemini CLI is not installed. Install it from https://github.com/google-gemini/gemini-cli'
-    }
     if (provider === 'github-cli') {
         return 'GitHub Copilot CLI is not installed. Install it from https://github.com/github/copilot-cli and authenticate with `copilot login`.'
-    }
-    if (provider === 'opencode-cli') {
-        return 'Opencode CLI is not installed. Install it from https://opencode.ai'
     }
     return 'Junie CLI is not installed. Install it from https://junie.jetbrains.com/docs/junie-cli.html'
 }
@@ -662,11 +666,6 @@ function normalizeCliModel(provider: CliProvider, model: string): string {
         return aliases[lower] ?? normalized
     }
 
-    if (provider === 'opencode-cli') {
-        const lower = normalized.toLowerCase();
-        if (!lower || lower === 'default') return 'default';
-        return normalized
-    }
 
     return normalized
 }
@@ -675,14 +674,8 @@ function getCliEmptyError(provider: CliProvider, exitCode: number): string {
     if (provider === 'codex-cli') {
         return `Codex CLI exited with code ${exitCode}. Try running "codex exec \"hello\"" in a terminal to verify Codex is authenticated.`
     }
-    if (provider === 'gemini-cli') {
-        return `Gemini CLI exited with code ${exitCode}. Try running "gemini --prompt \"hello\"" in a terminal to verify Gemini is authenticated.`
-    }
     if (provider === 'github-cli') {
         return `GitHub Copilot CLI exited with code ${exitCode}. Try running "copilot login", then "copilot -p \"hello\" --silent --output-format text".`
-    }
-    if (provider === 'opencode-cli') {
-        return `Opencode CLI exited with code ${exitCode}. Try running "opencode run -q \\"hello\\"" in a terminal to verify opencode is authenticated.`
     }
     return `Junie CLI exited with code ${exitCode}. Try running "junie --task \"hello\" --output-format text" in a terminal to verify Junie is authenticated.`
 }
@@ -707,9 +700,7 @@ async function runCliChat(
             ? normalizeCopilotCliOutput(result.stdout)
             : provider === 'junie-cli'
                 ? normalizeJunieCliOutput(result.stdout)
-                : provider === 'opencode-cli'
-                    ? normalizeOpencodeOutput(result.stdout)
-                    : result.stdout.trim();
+                : result.stdout.trim();
         if (!content) {
             const error = result.stderr.trim() || 'CLI returned no output.';
             return {content: '', error}
@@ -731,13 +722,7 @@ async function chatCodexCli(messages: ChatMessage[], config: AiConfig): Promise<
     )
 }
 
-async function chatGeminiCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    return runCliChat(
-        'gemini-cli',
-        ['--prompt', ' ', '--model', normalizeCliModel('gemini-cli', config.model)],
-        messages
-    )
-}
+// chatGeminiCli removed — gemini-cli provider has been retired
 
 async function chatGithubCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
     const prompt = formatPromptForCli(messages);
@@ -783,7 +768,17 @@ async function chatJunieCli(messages: ChatMessage[], config: AiConfig): Promise<
     }
 }
 
-async function chatOpencodeCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
+async function getOpencodeClient() {
+    const client = createOpencodeClient({baseUrl: 'http://127.0.0.1:4096'});
+    try {
+        await client.provider.list();
+        return {client}
+    } catch {
+        return await createOpencode()
+    }
+}
+
+async function chatOpencode(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
     const prompt = [
         'You are being used by Amagon as a chat/completion provider, not as a code-editing agent.',
         'Do not inspect, create, modify, delete, or run files.',
@@ -792,11 +787,57 @@ async function chatOpencodeCli(messages: ChatMessage[], config: AiConfig): Promi
         formatPromptForCli(messages)
     ].join('\n');
 
-    const model = normalizeCliModel('opencode-cli', config.model);
-    const args = ['run'];
-    if (model !== 'default') args.push('--model', model);
+    try {
+        const {client} = await getOpencodeClient();
+        const session = await client.session.create();
+        if (!session.data?.id) {
+            throw new Error('Failed to create session: session ID is missing');
+        }
+        const sessionId = session.data.id;
 
-    return runCliChat('opencode-cli', args, messages, prompt, 300_000)
+        let providerID: string | undefined;
+        let modelID: string | undefined;
+
+        if (config.model && config.model !== 'default') {
+            const parts = config.model.split('/');
+            if (parts.length === 2) {
+                providerID = parts[0];
+                modelID = parts[1];
+            } else {
+                modelID = config.model;
+            }
+        }
+
+        const result = await client.session.prompt({
+            path: { id: sessionId },
+            body: {
+                parts: [{type: 'text', text: prompt}],
+                ...(providerID && modelID ? {
+                    model: { providerID, modelID }
+                } : {})
+            }
+        });
+
+        // Collect assistant messages directly from response parts
+        const content = (result.data?.parts ?? [])
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
+            .join('')
+            .trim();
+
+        if (!content) {
+            return {content: '', error: 'OpenCode returned no output.'}
+        }
+        return {content}
+    } catch (err: any) {
+        if (err?.code === 'ENOENT' || err?.message?.includes('not found') || err?.message?.includes('ENOENT')) {
+            return {
+                content: '',
+                error: 'OpenCode is not installed. Install it from https://opencode.ai'
+            }
+        }
+        return {content: '', error: err?.message ?? 'OpenCode request failed.'}
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -810,10 +851,9 @@ const ADAPTERS: Record<AiProvider, (msgs: ChatMessage[], cfg: AiConfig) => Promi
     ollama: chatOllama,
     mistral: chatMistral,
     'codex-cli': chatCodexCli,
-    'gemini-cli': chatGeminiCli,
     'github-cli': chatGithubCli,
     'junie-cli': chatJunieCli,
-    'opencode-cli': chatOpencodeCli
+    opencode: chatOpencode
 };
 
 // ---------------------------------------------------------------------------
@@ -916,6 +956,44 @@ async function fetchMistralModels(apiKey: string): Promise<string[]> {
     }
 }
 
+function uniqueNonEmpty(values: Array<string | undefined>): string[] {
+    const result: string[] = [];
+    for (const val of values) {
+        if (val) {
+            const trimmed = val.trim();
+            if (trimmed && !result.includes(trimmed)) {
+                result.push(trimmed)
+            }
+        }
+    }
+    return result
+}
+
+async function fetchOpencodeModels(): Promise<string[]> {
+    try {
+        const {client} = await getOpencodeClient();
+        const providers = await client.provider.list();
+        const connected = providers.data?.connected || [];
+        const models: string[] = [];
+        if (providers.data?.all) {
+            for (const p of providers.data.all) {
+                if (connected.includes(p.id)) {
+                    const modelIds = Object.keys(p.models || {});
+                    for (const mId of modelIds) {
+                        models.push(`${p.id}/${mId}`);
+                    }
+                }
+            }
+        }
+        if (models.length > 0) {
+            return uniqueNonEmpty(models)
+        }
+    } catch (err: any) {
+        console.error('[AI Service] fetchOpencodeModels failed:', err);
+    }
+    return [...FALLBACK_MODELS.opencode]
+}
+
 export async function fetchModelsForProvider(
     provider: AiProvider,
     apiKey: string,
@@ -923,6 +1001,7 @@ export async function fetchModelsForProvider(
 ): Promise<string[]> {
     try {
         if (isCliProvider(provider)) return await fetchCliModels(provider, FALLBACK_MODELS[provider]);
+        if (provider === 'opencode') return await fetchOpencodeModels();
         if (provider !== 'ollama' && provider !== 'anthropic' && !apiKey) return [];
         if (provider === 'openai') return await fetchOpenAIModels(apiKey);
         if (provider === 'google') return await fetchGoogleModels(apiKey);
@@ -959,10 +1038,9 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
         ollama: [],
         mistral: [],
         'codex-cli': [],
-        'gemini-cli': [],
         'github-cli': [],
         'junie-cli': [],
-        'opencode-cli': []
+        opencode: []
     };
 
     const fetchers: Promise<void>[] = [];
@@ -1016,7 +1094,7 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
             })
     );
 
-    const cliProviders: CliProvider[] = ['codex-cli', 'gemini-cli', 'github-cli', 'junie-cli', 'opencode-cli'];
+    const cliProviders: CliProvider[] = ['codex-cli', 'github-cli', 'junie-cli'];
     for (const provider of cliProviders) {
         fetchers.push(
             fetchCliModels(provider, FALLBACK_MODELS[provider])
@@ -1027,6 +1105,13 @@ export async function fetchAvailableModels(): Promise<Record<AiProvider, string[
                 })
         )
     }
+
+    // OpenCode: fetch models via SDK
+    fetchers.push(
+        fetchOpencodeModels()
+            .then((models) => { result.opencode = models })
+            .catch(() => { /* leave empty */ })
+    );
 
     await Promise.allSettled(fetchers);
     return result
@@ -1041,7 +1126,7 @@ export async function chat(
         : await loadConfig();
 
     // Validate config
-    if (!isCliProvider(cfg.provider) && cfg.provider !== 'ollama' && !cfg.apiKey) {
+    if (!isCliProvider(cfg.provider) && cfg.provider !== 'ollama' && cfg.provider !== 'opencode' && !cfg.apiKey) {
         return {
             content: '',
             error: `No API key configured for ${cfg.provider}. Please add your API key in the AI settings.`

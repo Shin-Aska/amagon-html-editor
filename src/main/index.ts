@@ -2043,9 +2043,23 @@ function registerIpcHandlers(): void {
         ),
       );
 
+      // Also probe OpenCode SDK availability
+      let opencodeAvailable = false;
+      try {
+        const { createOpencodeClient } = await import("@opencode-ai/sdk");
+        const client = createOpencodeClient({ baseUrl: "http://127.0.0.1:4096" });
+        await client.provider.list();
+        opencodeAvailable = true;
+      } catch {
+        // OpenCode service is not currently running
+      }
+
       return {
         success: true,
-        availability: Object.fromEntries(entries),
+        availability: {
+          ...Object.fromEntries(entries),
+          opencode: { available: opencodeAvailable },
+        },
       };
     } catch (error: any) {
       return { success: false, error: error.message };
