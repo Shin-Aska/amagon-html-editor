@@ -74,6 +74,17 @@ export default function WelcomeScreen(): JSX.Element {
     const [showSettings, setShowSettings] = useState(false);
 
     useEffect(() => {
+        const linkId = 'welcome-inter-font';
+        if (!document.getElementById(linkId)) {
+            const link = document.createElement('link');
+            link.id = linkId;
+            link.rel = 'stylesheet';
+            link.href = 'app-framework://asset/google-fonts/Inter/inter.css';
+            document.head.appendChild(link);
+        }
+    }, []);
+
+    useEffect(() => {
         async function loadRecent() {
             const result = await api.project.getRecent();
             if (result.success && result.projects) {
