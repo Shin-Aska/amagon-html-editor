@@ -129,6 +129,8 @@ declare global {
                 variants: { weight: string; style: string }[]
             }) => Promise<any>
             copySystemFont: (args: { familyName: string; filePaths: string[] }) => Promise<any>
+            fetchGoogleFontCss: (args: { family: string; weight: string; style: string }) => Promise<any>
+            fetchGoogleFontFile: (args: { url: string }) => Promise<any>
             deleteFont: (args: { relativePath: string }) => Promise<any>
             listProject: () => Promise<any>
         }

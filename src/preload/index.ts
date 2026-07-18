@@ -193,6 +193,12 @@ const api = {
         copySystemFont: (args: { familyName: string; filePaths: string[] }) =>
             ipcRenderer.invoke('fonts:copySystemFont', args),
 
+        fetchGoogleFontCss: (args: { family: string; weight: string; style: string }) =>
+            ipcRenderer.invoke('fonts:fetchGoogleFontCss', args),
+
+        fetchGoogleFontFile: (args: { url: string }) =>
+            ipcRenderer.invoke('fonts:fetchGoogleFontFile', args),
+
         deleteFont: (args: { relativePath: string }) =>
             ipcRenderer.invoke('fonts:deleteFont', args),
 
