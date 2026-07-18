@@ -25,12 +25,19 @@ export interface ExportEngineOptions {
     inlineCss?: boolean
     inlineAssets?: boolean
     onlyPageId?: string
+    inlineFrameworkAssets?: boolean
 }
 
 export interface ResolvedAsset {
     bytes: Uint8Array
     mimeType?: string
     suggestedFileName?: string
+}
+
+interface FrameworkAssetContent {
+    css: string | null
+    js: string | null
+    iconsCss: string | null
 }
 
 interface BuildContext {
@@ -48,6 +55,7 @@ interface BuildContext {
     usedAssetNames: Set<string>
     assetsToFetch: Set<string>
     assetSeq: number
+    frameworkAssets: FrameworkAssetContent | null
 }
 
 const GENERIC_FONTS = new Set([
@@ -68,10 +76,11 @@ const GENERIC_FONTS = new Set([
 ]);
 
 const EXPORT_STYLESHEET_HREF = './styles.css';
-const BOOTSTRAP_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
-const BOOTSTRAP_ICONS_EXPORT_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css';
-const BOOTSTRAP_EXPORT_JS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
-const TAILWIND_EXPORT_JS_URL = 'https://cdn.tailwindcss.com';
+const FRAMEWORK_BASE_URL = 'app-framework://asset';
+const BOOTSTRAP_EXPORT_CSS_URL = `${FRAMEWORK_BASE_URL}/bootstrap/5.3.3/css/bootstrap.min.css`;
+const BOOTSTRAP_ICONS_EXPORT_CSS_URL = `${FRAMEWORK_BASE_URL}/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css`;
+const BOOTSTRAP_EXPORT_JS_URL = `${FRAMEWORK_BASE_URL}/bootstrap/5.3.3/js/bootstrap.bundle.min.js`;
+const TAILWIND_EXPORT_JS_URL = `${FRAMEWORK_BASE_URL}/tailwind/tailwindcss-browser.js`;
 
 export async function exportProject(
     project: ProjectData,
@@ -110,7 +119,8 @@ export async function exportProject(
         pageTitleToFileName,
         usedAssetNames: new Set(),
         assetsToFetch: new Set(),
-        assetSeq: 0
+        assetSeq: 0,
+        frameworkAssets: null
     };
 
     const pagesToExport = options.onlyPageId
@@ -126,6 +136,7 @@ export async function exportProject(
     });
 
     const resolveAsset = options.resolveAsset ?? createDefaultAssetResolver();
+    ctx.frameworkAssets = await loadFrameworkAssets(project.projectSettings.framework, options.includeJs ?? true);
     const assetFiles = await buildAssetFiles(ctx, resolveAsset, Boolean(options.inlineAssets));
     const fontFiles = await buildFontFiles(exportFonts, resolveAsset);
     const selfHostedFamilies = getSelfHostedFontFamilies(exportFonts);
@@ -143,6 +154,11 @@ export async function exportProject(
         })
     }
 
+    const inlineFrameworkAssets = options.inlineFrameworkAssets ?? true;
+    if (!inlineFrameworkAssets && ctx.frameworkAssets) {
+        files.push(...buildFrameworkAssetFiles(ctx.frameworkAssets, project.projectSettings.framework))
+    }
+
     for (const page of exportPages) {
         const rawHtml = buildPageHtml({
             title: page.pageTitle || page.title,
@@ -156,7 +172,9 @@ export async function exportProject(
             selfHostedFamilies,
             includeJs: options.includeJs ?? true,
             pages: project.pages,
-            folders: project.folders
+            folders: project.folders,
+            inlineFrameworkAssets,
+            frameworkAssets: ctx.frameworkAssets
         });
 
         const htmlRaw = replaceAssetTokens(rawHtml, ctx);
@@ -710,6 +728,8 @@ function buildPageHtml(params: {
     pages?: Page[]
     folders?: PageFolder[]
     fullWidthFormControls?: boolean
+    inlineFrameworkAssets?: boolean
+    frameworkAssets?: FrameworkAssetContent | null
 }): string {
     const bodyHtml = blockToHtml(params.bodyBlocks, {
         indent: 1,
@@ -740,7 +760,7 @@ function buildPageHtml(params: {
     headParts.push(`    <title>${escapeHtml(params.title)}</title>`);
 
     // Framework
-    headParts.push(getFrameworkHead(params.framework, params.includeJs));
+    headParts.push(getFrameworkHead(params.framework, params.includeJs, params.inlineFrameworkAssets ?? true, params.frameworkAssets));
 
     // Google Fonts
     const googleFontLinks = buildGoogleFontsHead(params.googleFonts, params.selfHostedFamilies);
@@ -772,24 +792,109 @@ ${bodyHtml}
 </html>`
 }
 
-function getFrameworkHead(framework: FrameworkChoice, includeJs: boolean): string {
+function getFrameworkHead(
+    framework: FrameworkChoice,
+    includeJs: boolean,
+    inline: boolean,
+    assets: FrameworkAssetContent | null | undefined
+): string {
+    const content = assets ?? {css: null, js: null, iconsCss: null};
+
     switch (framework) {
-        case 'bootstrap-5':
-            return includeJs
-                ? `    <link href="${BOOTSTRAP_EXPORT_CSS_URL}" rel="stylesheet">
-    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">
-    <script src="${BOOTSTRAP_EXPORT_JS_URL}" defer><\/script>`
-                : `    <link href="${BOOTSTRAP_EXPORT_CSS_URL}" rel="stylesheet">
-    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">`;
-        case 'tailwind':
-            return includeJs
-                ? `    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">
-    <script src="${TAILWIND_EXPORT_JS_URL}"><\/script>`
-                : `    <link href="${BOOTSTRAP_ICONS_EXPORT_CSS_URL}" rel="stylesheet">`;
+        case 'bootstrap-5': {
+            const cssLink = inline && content.css
+                ? `    <style>${content.css}</style>`
+                : `    <link href="./assets/frameworks/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">`;
+            const iconsLink = inline && content.iconsCss
+                ? `    <style>${content.iconsCss}</style>`
+                : `    <link href="./assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css" rel="stylesheet">`;
+            const jsScript = includeJs
+                ? inline && content.js
+                    ? `    <script>${content.js}<\/script>`
+                    : `    <script src="./assets/frameworks/bootstrap/5.3.3/js/bootstrap.bundle.min.js" defer><\/script>`
+                : '';
+            return [cssLink, iconsLink, jsScript].filter(Boolean).join('\n');
+        }
+        case 'tailwind': {
+            const iconsLink = inline && content.iconsCss
+                ? `    <style>${content.iconsCss}</style>`
+                : `    <link href="./assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css" rel="stylesheet">`;
+            const jsScript = includeJs
+                ? inline && content.js
+                    ? `    <script>${content.js}<\/script>`
+                    : `    <script src="./assets/frameworks/tailwind/tailwindcss-browser.js"><\/script>`
+                : '';
+            return [iconsLink, jsScript].filter(Boolean).join('\n');
+        }
         case 'vanilla':
         default:
             return ''
     }
+}
+
+async function loadFrameworkAssets(
+    framework: FrameworkChoice,
+    includeJs: boolean
+): Promise<FrameworkAssetContent> {
+    const empty: FrameworkAssetContent = {css: null, js: null, iconsCss: null};
+
+    if (framework === 'vanilla') return empty;
+
+    const loadText = async (url: string): Promise<string | null> => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            return await response.text()
+        } catch {
+            return null
+        }
+    };
+
+    if (framework === 'bootstrap-5') {
+        const [css, iconsCss, js] = await Promise.all([
+            loadText(BOOTSTRAP_EXPORT_CSS_URL),
+            loadText(BOOTSTRAP_ICONS_EXPORT_CSS_URL),
+            includeJs ? loadText(BOOTSTRAP_EXPORT_JS_URL) : Promise.resolve(null)
+        ]);
+        return {css, js, iconsCss}
+    }
+
+    const [iconsCss, js] = await Promise.all([
+        loadText(BOOTSTRAP_ICONS_EXPORT_CSS_URL),
+        includeJs ? loadText(TAILWIND_EXPORT_JS_URL) : Promise.resolve(null)
+    ]);
+    return {css: null, js, iconsCss}
+}
+
+function buildFrameworkAssetFiles(
+    assets: FrameworkAssetContent,
+    framework: FrameworkChoice
+): ExportFile[] {
+    const files: ExportFile[] = [];
+
+    if (framework === 'bootstrap-5') {
+        if (assets.css) {
+            files.push({path: 'assets/frameworks/bootstrap/5.3.3/css/bootstrap.min.css', content: assets.css})
+        }
+        if (assets.iconsCss) {
+            files.push({path: 'assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css', content: assets.iconsCss})
+        }
+        if (assets.js) {
+            files.push({path: 'assets/frameworks/bootstrap/5.3.3/js/bootstrap.bundle.min.js', content: assets.js})
+        }
+        // Bootstrap Icons font files are referenced by the CSS via relative ../fonts/ path
+        // They need to be available, but we cannot fetch binary files from the renderer.
+        // For now, non-inlined Tailwind/Bootstrap exports fall back to CDN unless icons are inlined as base64.
+    } else if (framework === 'tailwind') {
+        if (assets.iconsCss) {
+            files.push({path: 'assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css', content: assets.iconsCss})
+        }
+        if (assets.js) {
+            files.push({path: 'assets/frameworks/tailwind/tailwindcss-browser.js', content: assets.js})
+        }
+    }
+
+    return files
 }
 
 function minifyCss(css: string): string {

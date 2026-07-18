@@ -483,6 +483,14 @@ const mockApi: ElectronApi = {
             console.log('[Mock API] copySystemFont (mocked)');
             return {success: false, error: 'Not supported in browser mode', fonts: []}
         },
+        fetchGoogleFontCss: async (_args: { family: string; weight: string; style: string }): Promise<IpcResult & { css: string }> => {
+            console.log('[Mock API] fetchGoogleFontCss (mocked)');
+            return {success: false, error: 'Not supported in browser mode', css: ''}
+        },
+        fetchGoogleFontFile: async (_args: { url: string }): Promise<IpcResult & { dataUri: string }> => {
+            console.log('[Mock API] fetchGoogleFontFile (mocked)');
+            return {success: false, error: 'Not supported in browser mode', dataUri: ''}
+        },
         deleteFont: async (_args: { relativePath: string }): Promise<IpcResult> => {
             console.log('[Mock API] deleteFont (mocked)');
             return {success: true}

@@ -59,6 +59,8 @@ declare global {
             copySystemFont: (args: { familyName: string; filePaths: string[] }) => Promise<IpcResult & {
                 fonts: FontAsset[]
             }>
+            fetchGoogleFontCss: (args: { family: string; weight: string; style: string }) => Promise<IpcResult & { css: string }>
+            fetchGoogleFontFile: (args: { url: string }) => Promise<IpcResult & { dataUri: string }>
             deleteFont: (args: { relativePath: string }) => Promise<IpcResult>
             checkFileExists: (args: { relativePath: string }) => Promise<{ exists: boolean }>
             listProject: () => Promise<IpcResult & { fonts: FontAsset[] }>

@@ -185,8 +185,7 @@ export function registerBlocks(): void {
                     {label: 'Gradient Underline', value: 'gradient-underline'}
                 ],
                 default: 'none'
-            },
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
+            }
         }
     });
 
@@ -218,8 +217,7 @@ export function registerBlocks(): void {
                     {label: '3 Columns', value: '3'}
                 ],
                 default: '1'
-            },
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
+            }
         }
     });
 
@@ -466,8 +464,7 @@ export function registerBlocks(): void {
             block: {type: 'boolean', label: 'Block Width', default: false},
             loading: {type: 'boolean', label: 'Loading State', default: false},
             loadingText: {type: 'text', label: 'Loading Text', default: 'Loading...'},
-            disabled: {type: 'boolean', label: 'Disabled', default: false},
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
+            disabled: {type: 'boolean', label: 'Disabled', default: false}
         }
     });
 
@@ -770,8 +767,7 @@ export function registerBlocks(): void {
                 group: 'Layout'
             },
             fullHeight: {type: 'boolean', label: 'Full Viewport Height', default: false, group: 'Layout'},
-            ctaButtons: {type: 'array', label: 'CTA Buttons', default: [], group: 'Content'},
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: '', group: 'Typography'}
+            ctaButtons: {type: 'array', label: 'CTA Buttons', default: [], group: 'Content'}
         }
     });
 
@@ -801,9 +797,7 @@ export function registerBlocks(): void {
                 ]
             }
         ],
-        propsSchema: {
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
-        }
+        propsSchema: {}
     });
 
     componentRegistry.register({
@@ -958,9 +952,7 @@ export function registerBlocks(): void {
             },
             // ... Duplicate for other plans if needed, but user can duplicate the column
         ],
-        propsSchema: {
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
-        }
+        propsSchema: {}
     });
 
     componentRegistry.register({
@@ -990,9 +982,7 @@ export function registerBlocks(): void {
                 ]
             }
         ],
-        propsSchema: {
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
-        }
+        propsSchema: {}
     });
 
     componentRegistry.register({
@@ -1260,8 +1250,7 @@ export function registerBlocks(): void {
                     {label: 'Large Quote', value: 'large-quote'}
                 ],
                 default: 'none'
-            },
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
+            }
         }
     });
 
@@ -1285,8 +1274,7 @@ export function registerBlocks(): void {
                 ],
                 default: 'disc'
             },
-            horizontal: {type: 'boolean', label: 'Horizontal (Inline)', default: false},
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
+            horizontal: {type: 'boolean', label: 'Horizontal (Inline)', default: false}
         }
     });
 
@@ -1782,8 +1770,7 @@ export function registerBlocks(): void {
                 ],
                 default: 'default'
             },
-            outline: {type: 'boolean', label: 'Outline Variant', default: false},
-            fontFamily: {type: 'font-picker', label: 'Font Family', default: ''}
+            outline: {type: 'boolean', label: 'Outline Variant', default: false}
         }
     });
 

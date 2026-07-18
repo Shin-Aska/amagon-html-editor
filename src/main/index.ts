@@ -5,7 +5,8 @@ import * as fs from "fs/promises";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import * as os from "os";
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
+import { createHash } from "crypto";
 import { getFonts } from "font-list";
 import {
   buildSystemPrompt,
@@ -220,6 +221,266 @@ async function createWindow(): Promise<void> {
   mainWindow.on("closed", () => {
     mainWindow = null;
     stopAutoSave();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Local framework asset path
+// ---------------------------------------------------------------------------
+
+function getFrameworksDirectory(): string {
+  // Packaged renderer assets are included inside app.asar under out/renderer.
+  // During development, the public/ folder is used.
+  if (app.isPackaged) {
+    return path.join(app.getAppPath(), "out", "renderer", "frameworks");
+  }
+  return path.join(__dirname, "..", "..", "public", "frameworks");
+}
+
+const GOOGLE_FONTS_ALLOWED_ORIGINS = new Set([
+  "https://fonts.googleapis.com",
+  "https://fonts.gstatic.com",
+]);
+const GOOGLE_FONTS_MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
+const GOOGLE_FONTS_REQUEST_TIMEOUT_MS = 30_000;
+const GOOGLE_FONTS_MAX_CONCURRENT_REQUESTS = 4;
+const GOOGLE_FONTS_MAX_QUEUED_REQUESTS = 100;
+
+let activeGoogleFontsRequests = 0;
+const queuedGoogleFontsRequests: Array<() => void> = [];
+
+function isGoogleFontsUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" &&
+      GOOGLE_FONTS_ALLOWED_ORIGINS.has(`${parsed.protocol}//${parsed.host}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function fetchGoogleFontsWithCurl(
+  url: string,
+  options?: { headers?: Record<string, string> },
+): Promise<Buffer> {
+  const curlPath = process.platform === "win32" ? "curl.exe" : "curl";
+  const args = [
+    "--disable",
+    "--fail",
+    "--silent",
+    "--show-error",
+    "--proto",
+    "=https",
+    "--connect-timeout",
+    "10",
+    "--max-time",
+    "30",
+  ];
+  const userAgent = options?.headers?.["User-Agent"];
+  if (userAgent) {
+    args.push("--user-agent", userAgent);
+  }
+  args.push("--url", url);
+
+  return new Promise((resolve, reject) => {
+    execFile(
+      curlPath,
+      args,
+      { encoding: "buffer", maxBuffer: 10 * 1024 * 1024, windowsHide: true },
+      (error, stdout, stderr) => {
+        if (error) {
+          const details = stderr.toString().trim();
+          reject(new Error(details || error.message));
+          return;
+        }
+        resolve(stdout);
+      },
+    );
+  });
+}
+
+async function fetchGoogleFontsWithNode(
+  url: string,
+  options?: { headers?: Record<string, string> },
+): Promise<Buffer> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    GOOGLE_FONTS_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(url, {
+      headers: options?.headers,
+      redirect: "error",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Google Fonts request failed (${response.status})`);
+    }
+
+    const contentLength = Number(response.headers.get("content-length"));
+    if (
+      Number.isFinite(contentLength) &&
+      contentLength > GOOGLE_FONTS_MAX_RESPONSE_BYTES
+    ) {
+      throw new Error("Google Fonts response exceeds the 10 MB limit");
+    }
+    if (!response.body) {
+      throw new Error("Google Fonts response has no body");
+    }
+
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let totalBytes = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > GOOGLE_FONTS_MAX_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error("Google Fonts response exceeds the 10 MB limit");
+      }
+      chunks.push(value);
+    }
+    return Buffer.concat(chunks);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function isCurlUnavailable(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "ENOENT" || code === "EACCES";
+}
+
+async function fetchGoogleFontsBuffer(
+  url: string,
+  options?: { headers?: Record<string, string> },
+): Promise<Buffer> {
+  if (!isGoogleFontsUrl(url)) {
+    throw new Error("Unexpected font URL origin (blocked)");
+  }
+
+  const releaseRequest = await acquireGoogleFontsRequest();
+  try {
+    try {
+      return await fetchGoogleFontsWithCurl(url, options);
+    } catch (curlError) {
+      if (!isCurlUnavailable(curlError)) {
+        throw curlError;
+      }
+      return fetchGoogleFontsWithNode(url, options);
+    }
+  } finally {
+    releaseRequest();
+  }
+}
+
+async function acquireGoogleFontsRequest(): Promise<() => void> {
+  if (activeGoogleFontsRequests < GOOGLE_FONTS_MAX_CONCURRENT_REQUESTS) {
+    activeGoogleFontsRequests++;
+    return releaseGoogleFontsRequest;
+  }
+  if (queuedGoogleFontsRequests.length >= GOOGLE_FONTS_MAX_QUEUED_REQUESTS) {
+    throw new Error("Too many Google Fonts requests in progress");
+  }
+
+  return new Promise((resolve) => {
+    queuedGoogleFontsRequests.push(() => {
+      activeGoogleFontsRequests++;
+      resolve(releaseGoogleFontsRequest);
+    });
+  });
+}
+
+function releaseGoogleFontsRequest(): void {
+  activeGoogleFontsRequests--;
+  const nextRequest = queuedGoogleFontsRequests.shift();
+  if (nextRequest) {
+    nextRequest();
+  }
+}
+
+async function fetchGoogleFontsText(
+  url: string,
+  options?: { headers?: Record<string, string> },
+): Promise<string> {
+  const buffer = await fetchGoogleFontsBuffer(url, options);
+  return buffer.toString("utf-8");
+}
+
+// ---------------------------------------------------------------------------
+// Google Fonts preview file cache
+// ---------------------------------------------------------------------------
+
+function getGoogleFontsCacheDirectory(): string {
+  return path.join(app.getPath("temp"), "amagon-google-fonts-cache-v2");
+}
+
+async function ensureGoogleFontsCacheDirectory(): Promise<string> {
+  const dir = getGoogleFontsCacheDirectory();
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+async function fetchGoogleFontFileBuffer(url: string): Promise<Buffer> {
+  return fetchGoogleFontsBuffer(url);
+}
+
+async function cacheGoogleFontFile(url: string): Promise<{ filePath: string; mimeType: string }> {
+  const cacheDir = await ensureGoogleFontsCacheDirectory();
+  const urlHash = createHash("sha256").update(url).digest("hex");
+  const originalExt = path.extname(new URL(url).pathname).toLowerCase() || ".woff2";
+  const fileName = `${urlHash}${originalExt}`;
+  const filePath = path.join(cacheDir, fileName);
+
+  if (!existsSync(filePath)) {
+    const buffer = await fetchGoogleFontFileBuffer(url);
+    await fs.writeFile(filePath, buffer);
+  }
+
+  return { filePath, mimeType: getMimeType(filePath) };
+}
+
+// ---------------------------------------------------------------------------
+// app-framework:// protocol handler (serves bundled Bootstrap/Tailwind/etc.)
+// ---------------------------------------------------------------------------
+
+function registerAppFrameworkProtocol(): void {
+  const baseDir = getFrameworksDirectory();
+
+  protocol.handle("app-framework", async (request) => {
+    const url = new URL(request.url);
+    // URL format: app-framework://asset/<relative-path>
+    const relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+    if (!relativePath) {
+      return new Response("Missing asset path", { status: 400 });
+    }
+
+    const filePath = path.join(baseDir, relativePath);
+
+    // Security: keep requests inside the frameworks directory
+    if (!isPathSafe(filePath, baseDir)) {
+      return new Response("Forbidden: path traversal detected", { status: 403 });
+    }
+
+    if (!existsSync(filePath)) {
+      return new Response("File not found", { status: 404 });
+    }
+
+    try {
+      const data = await fs.readFile(filePath);
+      const mimeType = getMimeType(filePath);
+      return new Response(data, {
+        headers: { "Content-Type": mimeType },
+      });
+    } catch (err: any) {
+      return new Response(`Error reading file: ${err.message}`, { status: 500 });
+    }
   });
 }
 
@@ -709,19 +970,10 @@ function registerIpcHandlers(): void {
 
           try {
             const cssUrl = `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${italic},${weight}&display=swap`;
-            const cssResponse = await net.fetch(cssUrl, {
-              headers: {
-                "User-Agent": userAgent,
-              },
+            const css = await fetchGoogleFontsText(cssUrl, {
+              headers: { "User-Agent": userAgent },
             });
-            if (!cssResponse.ok) {
-              errors.push(
-                `${family} ${weight} ${style}: CSS request failed (${cssResponse.status})`,
-              );
-              continue;
-            }
 
-            const css = await cssResponse.text();
             const latinBlock = css.match(
               /\/\*\s*latin\s*\*\/[\s\S]*?src:\s*url\(([^)]+)\)/i,
             );
@@ -741,15 +993,7 @@ function registerIpcHandlers(): void {
               );
               continue;
             }
-            const fontResponse = await net.fetch(woff2Url);
-            if (!fontResponse.ok) {
-              errors.push(
-                `${family} ${weight} ${style}: Font request failed (${fontResponse.status})`,
-              );
-              continue;
-            }
-
-            const buffer = Buffer.from(await fontResponse.arrayBuffer());
+            const buffer = await fetchGoogleFontsBuffer(woff2Url);
             if (buffer.length === 0) {
               errors.push(
                 `${family} ${weight} ${style}: Downloaded file is empty`,
@@ -801,6 +1045,69 @@ function registerIpcHandlers(): void {
         };
       } catch (error: any) {
         return { success: false, error: error.message, fonts: [] };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    "fonts:fetchGoogleFontCss",
+    async (_, args: { family: string; weight: string; style: string }) => {
+      if (!args?.family || typeof args.family !== "string") {
+        return { success: false, error: "family required", css: "" };
+      }
+
+      try {
+        const family = args.family.trim();
+        const style =
+          String(args?.style || "normal").toLowerCase() === "italic"
+            ? "italic"
+            : "normal";
+        const weightRaw = String(args?.weight || "400");
+        const weightMatch = weightRaw.match(/\d{3}/);
+        const weight = weightMatch ? weightMatch[0] : "400";
+        const italic = style === "italic" ? "1" : "0";
+
+        const encodedFamily = encodeURIComponent(family).replace(/%20/g, "+");
+        const cssUrl = `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${italic},${weight}&display=swap`;
+        const css = await fetchGoogleFontsText(cssUrl, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          },
+        });
+        return { success: true, css };
+      } catch (error: any) {
+        return { success: false, error: error.message, css: "" };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    "fonts:fetchGoogleFontFile",
+    async (_, args: { url: string }) => {
+      if (!args?.url || typeof args.url !== "string") {
+        return { success: false, error: "url required", dataUri: "" };
+      }
+
+      try {
+        const url = args.url.trim();
+        if (!isGoogleFontsUrl(url)) {
+          return {
+            success: false,
+            error: "Unexpected font URL origin (blocked)",
+            dataUri: "",
+          };
+        }
+
+        const { filePath, mimeType } = await cacheGoogleFontFile(url);
+        const data = await fs.readFile(filePath);
+        const base64 = data.toString("base64");
+        return {
+          success: true,
+          dataUri: `data:${mimeType};base64,${base64}`,
+        };
+      } catch (error: any) {
+        return { success: false, error: error.message, dataUri: "" };
       }
     },
   );
@@ -2225,6 +2532,7 @@ function registerIpcHandlers(): void {
 // ---------------------------------------------------------------------------
 
 app.whenReady().then(async () => {
+  registerAppFrameworkProtocol();
   registerAppMediaProtocol();
   registerIpcHandlers();
   await createWindow();
