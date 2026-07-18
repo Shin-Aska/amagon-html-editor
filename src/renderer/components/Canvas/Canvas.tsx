@@ -8,7 +8,10 @@ import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {blockToHtml} from '../../utils/blockToHtml'
 import type {Block} from '../../store/types'
 import {createBlock, themeToCSS} from '../../store/types'
-import canvasDocumentUrl from '../../canvas.html?url'
+
+// `canvas.html` is an electron-vite renderer entry point. A relative URL keeps
+// the iframe beside `index.html` in both the Vite dev server and packaged app.
+const canvasDocumentUrl = './canvas.html'
 
 type CanvasRuntimeMessage =
     | { source: 'canvas-runtime'; type: 'ready' }
