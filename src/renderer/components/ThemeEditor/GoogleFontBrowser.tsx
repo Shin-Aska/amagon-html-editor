@@ -2,15 +2,16 @@ import React, {useEffect, useMemo, useState} from 'react';
 import {AlertCircle, Check, ChevronLeft, ChevronRight, Download, Search} from 'lucide-react';
 import {useProjectStore} from '../../store/projectStore';
 import {useToastStore} from '../../store/toastStore';
-import {getGoogleFontPreviewUrl, type GoogleFontMeta, googleFontsCatalog} from '../../data/googleFontsCatalog';
+import {type GoogleFontMeta, googleFontsCatalog} from '../../data/googleFontsCatalog';
+import {
+    applyGoogleFontPreviewStyle,
+    fetchGoogleFontPreviewCss,
+    getPreviewFontIdForFamily,
+} from '../../utils/googleFontCss';
 import './GoogleFontBrowser.css';
 
 const CATEGORIES = ['All', 'sans-serif', 'serif', 'display', 'handwriting', 'monospace'];
 const RESULTS_PER_PAGE = 8;
-
-function getScopedPreviewFontId(family: string): string {
-    return `__gfont_preview_${family.replace(/\s+/g, '_')}`;
-}
 
 export default function GoogleFontBrowser(): JSX.Element {
     const [query, setQuery] = useState('');
@@ -45,55 +46,51 @@ export default function GoogleFontBrowser(): JSX.Element {
 
     const visibleEndIndex = currentPage * RESULTS_PER_PAGE;
     const visibleStartIndex = visibleEndIndex - RESULTS_PER_PAGE;
-    const visibleFonts = filteredFonts.slice(visibleStartIndex, visibleEndIndex);
+    const visibleFonts = useMemo(
+        () => filteredFonts.slice(visibleStartIndex, visibleEndIndex),
+        [filteredFonts, visibleStartIndex, visibleEndIndex],
+    );
 
     useEffect(() => {
-        const injectedIds = new Set<string>();
-        const abortControllers: AbortController[] = [];
+        const cancellation = { cancelled: false };
+        const cleanups: Array<() => void> = [];
 
         visibleFonts.forEach((font) => {
             const regularVariant = font.variants.find((v) => v.weight === '400') || font.variants[0];
-            const url = getGoogleFontPreviewUrl(font.family, regularVariant.weight, regularVariant.style);
-            const previewId = getScopedPreviewFontId(font.family);
+            const previewId = getPreviewFontIdForFamily(font.family);
 
-            if (document.getElementById(previewId)) {
-                injectedIds.add(previewId);
-                return;
-            }
+            if (document.getElementById(previewId)) return;
 
-            const controller = new AbortController();
-            abortControllers.push(controller);
-
-            fetch(url, {signal: controller.signal})
-                .then((res) => res.text())
-                .then((css) => {
-                    const escapedFamily = font.family.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const scopedCss = css.replace(
-                        new RegExp(`font-family:\\s*['"]?${escapedFamily}['"]?`, 'g'),
-                        `font-family: "${previewId}"`
+            fetchGoogleFontPreviewCss(
+                {
+                    family: font.family,
+                    weight: regularVariant.weight,
+                    style: regularVariant.style,
+                },
+                {
+                    fetchGoogleFontCss: (req) => window.api.fonts.fetchGoogleFontCss(req),
+                    fetchGoogleFontFile: (url) => window.api.fonts.fetchGoogleFontFile({ url }),
+                },
+            ).then((result) => {
+                if (!result.success || typeof result.css !== 'string') {
+                    console.warn(
+                        `Failed to load font preview for ${font.family}:`,
+                        result.error || 'Unknown error',
                     );
-
-                    const style = document.createElement('style');
-                    style.id = previewId;
-                    style.setAttribute('data-gfont-preview', 'true');
-                    style.textContent = scopedCss;
-                    document.head.appendChild(style);
-                    injectedIds.add(previewId);
-                })
-                .catch((err) => {
-                    if (err.name !== 'AbortError') {
-                        console.warn(`Failed to load font preview for ${font.family}:`, err);
-                    }
-                });
+                    return;
+                }
+                const cleanup = applyGoogleFontPreviewStyle(
+                    font.family,
+                    result.css,
+                    cancellation,
+                );
+                if (cleanup) cleanups.push(cleanup);
+            });
         });
 
         return () => {
-            abortControllers.forEach((ctrl) => ctrl.abort());
-            document.querySelectorAll('style[data-gfont-preview="true"]').forEach((el) => {
-                if (!injectedIds.has(el.id)) {
-                    el.parentNode?.removeChild(el);
-                }
-            });
+            cancellation.cancelled = true;
+            cleanups.forEach((cleanup) => cleanup());
         };
     }, [visibleFonts]);
 
@@ -219,7 +216,7 @@ export default function GoogleFontBrowser(): JSX.Element {
                                 <div
                                     className="theme-font-preview"
                                     style={{
-                                        fontFamily: `"${getScopedPreviewFontId(font.family)}", sans-serif`,
+                                        fontFamily: `"${getPreviewFontIdForFamily(font.family)}", sans-serif`,
                                         fontWeight: regularVariant.weight,
                                         fontStyle: regularVariant.style,
                                     }}

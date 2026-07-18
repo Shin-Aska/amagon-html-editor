@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Globe,
   PackageCheck,
   Search,
   Trash2,
@@ -13,11 +12,12 @@ import {
 import { useProjectStore } from "../../store/projectStore";
 import { useToastStore } from "../../store/toastStore";
 import type { FontAsset, ThemeTypography } from "../../store/types";
+import { type GoogleFontMeta, googleFontsCatalog } from "../../data/googleFontsCatalog";
 import {
-  getGoogleFontPreviewUrl,
-  type GoogleFontMeta,
-  googleFontsCatalog,
-} from "../../data/googleFontsCatalog";
+  applyGoogleFontPreviewStyle,
+  fetchGoogleFontPreviewCss,
+  getPreviewFontIdForFamily,
+} from "../../utils/googleFontCss";
 import TypographyFontPicker from "./TypographyFontPicker";
 import "./FontManager.css";
 
@@ -33,10 +33,6 @@ interface UnifiedFont {
 }
 
 const PAGE_SIZE = 50;
-
-function getScopedPreviewFontId(family: string): string {
-  return `__gfont_preview_${family.replace(/\s+/g, "_")}`;
-}
 
 function variantLabel(v: { weight: string; style: string }): string {
   const styleLabel = v.style === "italic" ? "Italic" : "Regular";
@@ -196,9 +192,13 @@ export default function FontManager({
 
   const totalPages = Math.max(1, Math.ceil(unifiedList.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const pageItems = unifiedList.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+  const pageItems = useMemo(
+    () =>
+      unifiedList.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+      ),
+    [unifiedList, currentPage],
   );
 
   useEffect(() => {
@@ -206,69 +206,54 @@ export default function FontManager({
   }, [filter, searchQuery]);
 
   useEffect(() => {
-    const injectedIds = new Set<string>();
-    const abortControllers: AbortController[] = [];
+    const cancellation = { cancelled: false };
+    const cleanups: Array<() => void> = [];
 
     const internetItems = pageItems.filter(
-      (i) => i.source === "internet" && i.internetMeta,
+      (i): i is typeof i & { internetMeta: NonNullable<typeof i.internetMeta> } =>
+        i.source === "internet" && i.internetMeta != null,
     );
+
     internetItems.forEach((item) => {
-      const meta = item.internetMeta!;
+      const meta = item.internetMeta;
       const regularVariant =
         meta.variants.find((v) => v.weight === "400" && v.style === "normal") ||
         meta.variants[0];
-      const url = getGoogleFontPreviewUrl(
-        meta.family,
-        regularVariant.weight,
-        regularVariant.style,
-      );
-      const previewId = getScopedPreviewFontId(meta.family);
+      const previewId = getPreviewFontIdForFamily(meta.family);
 
-      if (document.getElementById(previewId)) {
-        injectedIds.add(previewId);
-        return;
-      }
+      if (document.getElementById(previewId)) return;
 
-      const controller = new AbortController();
-      abortControllers.push(controller);
-
-      fetch(url, { signal: controller.signal })
-        .then((res) => res.text())
-        .then((css) => {
-          const escapedFamily = meta.family.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&",
+      fetchGoogleFontPreviewCss(
+        {
+          family: meta.family,
+          weight: regularVariant.weight,
+          style: regularVariant.style,
+        },
+        {
+          fetchGoogleFontCss: (req) => window.api.fonts.fetchGoogleFontCss(req),
+          fetchGoogleFontFile: (url) =>
+            window.api.fonts.fetchGoogleFontFile({ url }),
+        },
+      ).then((result) => {
+        if (!result.success || typeof result.css !== "string") {
+          console.warn(
+            `Failed to load font preview for ${meta.family}:`,
+            result.error || "Unknown error",
           );
-          const scopedCss = css.replace(
-            new RegExp(`font-family:\\s*['"]?${escapedFamily}['"]?`, "g"),
-            `font-family: "${previewId}"`,
-          );
-          const style = document.createElement("style");
-          style.id = previewId;
-          style.setAttribute("data-gfont-preview", "true");
-          style.textContent = scopedCss;
-          document.head.appendChild(style);
-          injectedIds.add(previewId);
-        })
-        .catch((err) => {
-          if (err.name !== "AbortError") {
-            console.warn(
-              `Failed to load font preview for ${meta.family}:`,
-              err,
-            );
-          }
-        });
+          return;
+        }
+        const cleanup = applyGoogleFontPreviewStyle(
+          meta.family,
+          result.css,
+          cancellation,
+        );
+        if (cleanup) cleanups.push(cleanup);
+      });
     });
 
     return () => {
-      abortControllers.forEach((ctrl) => ctrl.abort());
-      document
-        .querySelectorAll('style[data-gfont-preview="true"]')
-        .forEach((el) => {
-          if (!injectedIds.has(el.id)) {
-            el.parentNode?.removeChild(el);
-          }
-        });
+      cancellation.cancelled = true;
+      cleanups.forEach((cleanup) => cleanup());
     };
   }, [pageItems]);
 
@@ -409,7 +394,7 @@ export default function FontManager({
 
   const previewFamily = (item: UnifiedFont): string => {
     if (item.source === "internet" && item.internetMeta) {
-      return `"${getScopedPreviewFontId(item.name)}", sans-serif`;
+      return `"${getPreviewFontIdForFamily(item.name)}", sans-serif`;
     }
     return `"${item.name}", sans-serif`;
   };
