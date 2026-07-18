@@ -7,10 +7,11 @@ import {getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon, rende
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 import type {Block, FrameworkChoice, Page, PageFolder} from '../store/types'
 
-const BOOTSTRAP_PAGE_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
-const BOOTSTRAP_ICONS_PAGE_CSS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'
-const BOOTSTRAP_PAGE_JS_URL = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
-const TAILWIND_PAGE_JS_URL = 'https://cdn.tailwindcss.com'
+const FRAMEWORK_BASE_PATH = 'app-framework://asset'
+const BOOTSTRAP_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.3/css/bootstrap.min.css`
+const BOOTSTRAP_ICONS_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css`
+const BOOTSTRAP_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.3/js/bootstrap.bundle.min.js`
+const TAILWIND_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/tailwind/tailwindcss-browser.js`
 
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
 

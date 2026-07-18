@@ -300,9 +300,9 @@ async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): 
 
     if (framework === 'bootstrap-5') {
         await Promise.all([
-            upsertFrameworkLink('editor-framework-bootstrap-css', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'),
-            upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'),
-            upsertFrameworkScript('editor-framework-bootstrap-js', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js', true)
+            upsertFrameworkLink('editor-framework-bootstrap-css', 'app-framework://asset/bootstrap/5.3.3/css/bootstrap.min.css'),
+            upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'app-framework://asset/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css'),
+            upsertFrameworkScript('editor-framework-bootstrap-js', 'app-framework://asset/bootstrap/5.3.3/js/bootstrap.bundle.min.js', true)
         ]);
         ensureEditorCssOrder();
         return
@@ -310,8 +310,8 @@ async function setFramework(framework: 'bootstrap-5' | 'tailwind' | 'vanilla'): 
 
     if (framework === 'tailwind') {
         await Promise.all([
-            upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'),
-            upsertFrameworkScript('editor-framework-tailwind-js', 'https://cdn.tailwindcss.com')
+            upsertFrameworkLink('editor-framework-bootstrap-icons-css', 'app-framework://asset/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css'),
+            upsertFrameworkScript('editor-framework-tailwind-js', 'app-framework://asset/tailwind/tailwindcss-browser.js')
         ]);
         startTailwindCssOrdering();
         ensureEditorCssOrder();
@@ -559,7 +559,7 @@ function initRuntime(): void {
     hljsStyle.rel = 'stylesheet';
     hljsStyle.id = 'hljs-theme';
     // Use a default dark theme for now, we can update it dynamically if needed based on `isDark`
-    hljsStyle.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css';
+    hljsStyle.href = 'app-framework://asset/highlight.js/11.11.1/styles/github-dark.min.css';
     document.head.appendChild(hljsStyle);
 
     // Canvas-only overrides: disable interactive form controls that are only

@@ -560,15 +560,16 @@ describe('pageToHtml', () => {
         expect(html).toContain('</html>')
     });
 
-    it('includes Bootstrap 5 CDN for bootstrap-5 framework', () => {
+    it('includes local Bootstrap 5 assets for bootstrap-5 framework', () => {
         const html = pageToHtml([], {framework: 'bootstrap-5'});
-        expect(html).toContain('bootstrap@5.3.3');
-        expect(html).toContain('bootstrap.min.css')
+        expect(html).toContain('app-framework://asset/bootstrap/5.3.3/css/bootstrap.min.css');
+        expect(html).toContain('app-framework://asset/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css');
+        expect(html).toContain('app-framework://asset/bootstrap/5.3.3/js/bootstrap.bundle.min.js')
     });
 
-    it('includes Tailwind CDN for tailwind framework', () => {
+    it('includes local Tailwind asset for tailwind framework', () => {
         const html = pageToHtml([], {framework: 'tailwind'});
-        expect(html).toContain('tailwindcss.com');
+        expect(html).toContain('app-framework://asset/tailwind/tailwindcss-browser.js');
         expect(html).not.toContain('bootstrap.min.css');
         expect(html).not.toContain('bootstrap.bundle.min.js')
     });
