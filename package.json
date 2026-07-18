@@ -1,6 +1,6 @@
 {
   "name": "hoarses-html-editor",
-  "version": "1.8.8",
+  "version": "1.8.9",
   "description": "Amagon — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
   "author": "Shin-Aska <Orillarichard@pm.me>",
   "license": "GPL-3.0-or-later",
@@ -28,6 +28,8 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@monaco-editor/react": "^4.7.0",
     "@opencode-ai/sdk": "^1.17.11",
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
     "fflate": "^0.8.2",
     "font-list": "^2.0.2",
     "highlight.js": "^11.11.1",
@@ -38,6 +40,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-resizable-panels": "^4.9.0",
+    "tailwindcss": "^3.4.17",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
