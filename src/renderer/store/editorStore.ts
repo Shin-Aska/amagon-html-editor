@@ -1,6 +1,6 @@
 import {create} from 'zustand'
 import {useAppSettingsStore} from './appSettingsStore'
-import type {Block, EditorActions, EditorState, HistoryEntry} from './types'
+import type {Block, BlockAnimation, BlockHoverEffect, EditorActions, EditorState, HistoryEntry} from './types'
 
 // Callback registered by projectStore to sync blocks on tab exit (avoids circular import)
 let _onExitTabEditMode: ((blocks: Block[]) => void) | null = null;
@@ -122,9 +122,11 @@ function syncButtonClasses(
 function updateBlockInTree(
     blocks: Block[],
     id: string,
-    patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & {
+    patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles' | 'animation' | 'hoverEffect'>> & {
         props?: Record<string, unknown>;
-        styles?: Record<string, string | undefined>
+        styles?: Record<string, string | undefined>;
+        animation?: BlockAnimation | undefined;
+        hoverEffect?: BlockHoverEffect | undefined
     }
 ): Block[] {
     return blocks.map((block) => {
@@ -283,9 +285,11 @@ export const useEditorStore = create<EditorStore>((set, get) => {
             })
         },
 
-        updateBlock: (id, patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & {
+        updateBlock: (id, patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles' | 'animation' | 'hoverEffect'>> & {
             props?: Record<string, unknown>;
-            styles?: Record<string, string | undefined>
+            styles?: Record<string, string | undefined>;
+            animation?: BlockAnimation | undefined;
+            hoverEffect?: BlockHoverEffect | undefined
         }) => {
             set((state) => {
                 const newBlocks = updateBlockInTree(state.blocks, id, patch);

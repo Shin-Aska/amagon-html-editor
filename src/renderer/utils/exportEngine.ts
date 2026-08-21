@@ -1,6 +1,8 @@
 import type {Block, FontAsset, FrameworkChoice, Page, PageFolder, ProjectData} from '../store/types'
 import {themeToCSS} from '../store/types'
 import {blockToHtml} from './blockToHtml'
+import {buildAnimationStylesCss} from './animationPresets'
+import {buildHoverEffectStylesCss} from './hoverEffects'
 import {getApi} from './api'
 
 export interface ExportFile {
@@ -560,6 +562,16 @@ function buildStylesCss(
 
     const globalStyles = buildGlobalStylesCss(project.projectSettings.globalStyles);
     if (globalStyles) lines.push(globalStyles);
+
+    const animationCss = buildAnimationStylesCss();
+    if (animationCss.trim().length > 0) {
+        lines.push(animationCss.trim())
+    }
+
+    const hoverEffectCss = buildHoverEffectStylesCss();
+    if (hoverEffectCss.trim().length > 0) {
+        lines.push(hoverEffectCss.trim())
+    }
 
     if (customCss && customCss.trim().length > 0) {
         lines.push(customCss.trim())

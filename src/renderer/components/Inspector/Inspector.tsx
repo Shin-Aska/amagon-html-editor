@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {useEditorStore} from '../../store/editorStore'
 import {componentRegistry, type PropSchema} from '../../registry/ComponentRegistry'
 import SpacingEditor from './SpacingEditor'
-import {BackgroundEditor, BorderEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
+import {AnimationEditor, BackgroundEditor, BorderEditor, HoverEffectEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
 import CssClassesEditor from './CssClassesEditor'
 import BlockActions from './BlockActions'
 import EventActionsEditor from './EventActionsEditor'
@@ -23,6 +23,9 @@ import ArrayField, {type ArrayRecordField} from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
 import {Check, Clipboard} from 'lucide-react'
+import {clearAnimationFromBlock, isBlockEligibleForAnimation} from '../../utils/animationPresets'
+import {clearHoverEffectFromBlock, isBlockEligibleForHoverEffect} from '../../utils/hoverEffects'
+import type {BlockAnimation, BlockHoverEffect} from '../../store/types'
 
 interface ArrayEditorConfig {
     itemFields: ArrayRecordField[]
@@ -263,6 +266,24 @@ function Inspector(): JSX.Element {
 
     const handleClassesChange = (classes: string[]) => {
         updateBlock(block.id, {classes})
+    };
+
+    const handleAnimationChange = (animation?: BlockAnimation) => {
+        if (!isBlockEligibleForAnimation(block.type)) return;
+        const cleaned = clearAnimationFromBlock(block);
+        updateBlock(block.id, {
+            ...cleaned,
+            animation
+        })
+    };
+
+    const handleHoverEffectChange = (hoverEffect?: BlockHoverEffect) => {
+        if (!isBlockEligibleForHoverEffect(block.type)) return;
+        const cleaned = clearHoverEffectFromBlock(block);
+        updateBlock(block.id, {
+            ...cleaned,
+            hoverEffect
+        })
     };
 
     const handleElementIdChange = (value: string) => {
@@ -629,6 +650,32 @@ function Inspector(): JSX.Element {
                         ))}
                     </div>
                 ))}
+
+                <div className="inspector-group">
+                    <h4 className="inspector-group-title">
+                        Animation
+                        <span className="style-info-btn"
+                              title="Friendly entrance animation preset for this element. Respects reduced-motion preferences.">?</span>
+                    </h4>
+                    <AnimationEditor
+                        animation={block.animation}
+                        eligible={isBlockEligibleForAnimation(block.type)}
+                        onChange={handleAnimationChange}
+                    />
+                </div>
+
+                <div className="inspector-group">
+                    <h4 className="inspector-group-title">
+                        Hover
+                        <span className="style-info-btn"
+                              title="Optional hover feedback for interactive and media widgets. Touch devices keep the static state.">?</span>
+                    </h4>
+                    <HoverEffectEditor
+                        hoverEffect={block.hoverEffect}
+                        eligible={isBlockEligibleForHoverEffect(block.type)}
+                        onChange={handleHoverEffectChange}
+                    />
+                </div>
 
                 <div className="inspector-group">
                     <h4 className="inspector-group-title">

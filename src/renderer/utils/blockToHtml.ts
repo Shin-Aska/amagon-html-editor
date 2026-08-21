@@ -3,6 +3,18 @@ import {renderToStaticMarkup} from 'react-dom/server'
 import {IMAGE_PLACEHOLDER} from './placeholders'
 import hljs from 'highlight.js'
 import {getLucideIconComponent, isRenderableGlyph, mapLegacyBootstrapIcon, renderLucideIconSvg} from './iconCatalog'
+import {
+    buildAnimationStyleVariables,
+    buildAnimationStylesCss,
+    getAnimationClasses,
+    isBlockEligibleForAnimation
+} from './animationPresets'
+import {
+    AMAGON_HOVER_EFFECT_CSS_ID,
+    buildHoverEffectStylesCss,
+    getHoverEffectClasses,
+    isBlockEligibleForHoverEffect
+} from './hoverEffects'
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 import type {Block, FrameworkChoice, Page, PageFolder} from '../store/types'
@@ -12,6 +24,7 @@ const BOOTSTRAP_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.3/css/boots
 const BOOTSTRAP_ICONS_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css`
 const BOOTSTRAP_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.3/js/bootstrap.bundle.min.js`
 const TAILWIND_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/tailwind/tailwindcss-browser.js`
+const BUTTON_VARIANT_CLASS_PATTERN = /^btn(?:-outline)?-(?:primary|secondary|success|danger|warning|info|light|dark|link)$/
 
 // ─── Tag Defaults ────────────────────────────────────────────────────────────
 
@@ -497,8 +510,8 @@ function stylesToString(styles: Record<string, string>): string {
         .join('; ')
 }
 
-function getEffectiveStyles(block: Block, framework?: FrameworkChoice): Record<string, string> {
-    const styles = {...block.styles};
+function getEffectiveStyles(block: Block, framework?: FrameworkChoice, includeAnimation: boolean = true): Record<string, string> {
+    const styles: Record<string, string> = {...block.styles};
 
     if (block.type === 'navbar' && block.props.sticky) {
         // In Tailwind mode, sticky positioning is handled by classes (sticky, top-0, z-30)
@@ -510,7 +523,57 @@ function getEffectiveStyles(block: Block, framework?: FrameworkChoice): Record<s
         }
     }
 
+    if (includeAnimation && block.animation && isBlockEligibleForAnimation(block.type)) {
+        const variables = buildAnimationStyleVariables(block.animation);
+        for (const [key, value] of Object.entries(variables)) {
+            if (styles[key] === undefined) styles[key] = value
+        }
+    }
+
     return styles
+}
+
+/**
+ * Build root class/style attribute strings for special block render branches
+ * that do not go through the generic fallback. Merges animation classes and
+ * CSS variables for eligible block types without duplicating work already done
+ * by resolveFrameworkClasses/getEffectiveStyles.
+ */
+function rootPresentationAttributes(
+    block: Block,
+    options: {
+        classes?: string[];
+        styles?: Record<string, string>;
+        includeAnimationClasses?: boolean;
+        includeAnimationStyles?: boolean;
+        includeAnimation?: boolean;
+        includeHoverEffects?: boolean;
+    } = {}
+): {classAttr: string; styleAttr: string} {
+    let classes = [...(options.classes ?? [])];
+    let styles: Record<string, string> = {...(options.styles ?? {})};
+
+    const blockAnimation = block.animation;
+    const includeClasses = options.includeAnimation !== false && options.includeAnimationClasses !== false;
+    const includeStyles = options.includeAnimation !== false && options.includeAnimationStyles !== false;
+    if (includeClasses && isBlockEligibleForAnimation(block.type) && blockAnimation) {
+        classes = dedupeClasses([...classes, ...getAnimationClasses(blockAnimation)])
+    }
+    if (includeStyles && isBlockEligibleForAnimation(block.type) && blockAnimation) {
+        const variables = buildAnimationStyleVariables(blockAnimation);
+        for (const [key, value] of Object.entries(variables)) {
+            if (styles[key] === undefined) styles[key] = value
+        }
+    }
+
+    if (options.includeHoverEffects !== false && isBlockEligibleForHoverEffect(block.type) && block.hoverEffect) {
+        classes = dedupeClasses([...classes, ...getHoverEffectClasses(block.hoverEffect)])
+    }
+
+    return {
+        classAttr: classes.length > 0 ? ` class="${classes.join(' ')}"` : '',
+        styleAttr: Object.keys(styles).length > 0 ? ` style="${stylesToString(styles)}"` : ''
+    }
 }
 
 function eventsToAttributes(events?: Record<string, string>): string {
@@ -1469,7 +1532,13 @@ function getPropDrivenClasses(block: Block): string[] {
 }
 
 function resolveFrameworkClasses(block: Block, framework: FrameworkChoice, options?: BlockToHtmlOptions): string[] {
-    let baseClasses = [...block.classes];
+    const includeAnimation = options?.includeAnimation !== false && isBlockEligibleForAnimation(block.type);
+    const includeHoverEffects = options?.includeHoverEffects !== false && isBlockEligibleForHoverEffect(block.type);
+    let baseClasses = [
+        ...block.classes,
+        ...(includeAnimation ? getAnimationClasses(block.animation) : []),
+        ...(includeHoverEffects ? getHoverEffectClasses(block.hoverEffect) : [])
+    ];
     if (block.type === 'container' && block.props.fluid) {
         baseClasses = baseClasses.filter((cls) => cls !== 'container')
     }
@@ -2308,6 +2377,8 @@ export interface BlockToHtmlOptions {
     folders?: PageFolder[]   // Folder list for effective tag resolution
     framework?: FrameworkChoice
     fullWidthFormControls?: boolean
+    includeAnimation?: boolean // Include entrance-animation classes on the rendered root (default true)
+    includeHoverEffects?: boolean
 }
 
 export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): string {
@@ -2319,9 +2390,11 @@ export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): 
         pages,
         folders,
         framework = 'bootstrap-5',
-        fullWidthFormControls = true
+        fullWidthFormControls = true,
+        includeAnimation = true,
+        includeHoverEffects = true
     } = options;
-    return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n')
+    return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n')
 }
 
 function renderBlock(
@@ -2333,12 +2406,14 @@ function renderBlock(
     pages?: Page[],
     folders?: PageFolder[],
     framework: FrameworkChoice = 'bootstrap-5',
-    fullWidthFormControls: boolean = true
+    fullWidthFormControls: boolean = true,
+    includeAnimation: boolean = true,
+    includeHoverEffects: boolean = true
 ): string {
     const pad = ' '.repeat(indent * indentSize);
     const eventAttr = eventsToAttributes(block.events);
     // Computed once here so all block-specific handlers can reference it directly
-    const finalClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
+    const finalClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
 
     if (block.type === 'image') {
         const src = String(block.props.src ?? IMAGE_PLACEHOLDER).trim() || IMAGE_PLACEHOLDER;
@@ -2349,16 +2424,9 @@ function renderBlock(
         const aspectRatio = normalizeImageAspectRatio(block.props.aspectRatio);
         const lazyLoad = toBoolean(block.props.lazyLoad, true);
         const lightbox = toBoolean(block.props.lightbox, false);
-        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls})
+        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation: false, includeHoverEffects: false})
             .filter((cls) => !/^ratio(?:-|$)/.test(cls) && !/^object-fit-/.test(cls));
-        const styles = {...block.styles};
         const twObjectFitClass = `object-${objectFit === 'scale-down' ? 'scale-down' : objectFit}`;
-        const aspectStyleValue = ratioToCssValue(aspectRatio);
-        if (framework !== 'tailwind') {
-            if (!styles.objectFit) styles.objectFit = objectFit;
-            if (aspectStyleValue && !styles.aspectRatio) styles.aspectRatio = aspectStyleValue
-        }
-
         const imgClasses = framework === 'tailwind'
             ? dedupeClasses([
                 ...classes,
@@ -2366,48 +2434,48 @@ function renderBlock(
                 aspectRatio !== 'auto' ? ratioToTailwindClass(aspectRatio) : ''
             ]).join(' ')
             : dedupeClasses(classes).join(' ');
-        const styleStr = stylesToString(styles);
-        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+        const imgStyles: Record<string, string> = {...block.styles};
+        const aspectStyleValue = ratioToCssValue(aspectRatio);
+        if (framework !== 'tailwind') {
+            if (!imgStyles.objectFit) imgStyles.objectFit = objectFit;
+            if (aspectStyleValue && !imgStyles.aspectRatio) imgStyles.aspectRatio = aspectStyleValue
+        }
+        const imgStyleStr = stylesToString(imgStyles);
+        const imgStyleAttr = imgStyleStr ? ` style="${imgStyleStr}"` : '';
         const loadingAttr = lazyLoad ? ' loading="lazy"' : '';
-        const imageMarkup = `<img class="${imgClasses}" src="${escapeAttrValue(src)}" alt="${escapeAttrValue(alt)}"${styleAttr}${loadingAttr}${eventAttr ? ` ${eventAttr}` : ''} />`;
-        const mediaMarkup = lightbox
-            ? `<a href="${escapeAttrValue(src)}" class="${framework === 'tailwind' ? 'inline-block' : 'd-inline-block'}" data-amagon-lightbox="true">${imageMarkup}</a>`
-            : imageMarkup;
+        const imageMarkup = `<img class="${imgClasses}" src="${escapeAttrValue(src)}" alt="${escapeAttrValue(alt)}"${imgStyleAttr}${loadingAttr}${eventAttr ? ` ${eventAttr}` : ''} />`;
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="image"` : '';
 
         if (caption) {
-            if (captionPosition === 'overlay-bottom') {
-                const figureClass = framework === 'tailwind'
-                    ? 'relative overflow-hidden'
-                    : 'position-relative d-inline-block';
-                const captionClass = framework === 'tailwind'
-                    ? 'absolute inset-x-0 bottom-0 bg-black/60 px-3 py-2 text-sm text-white'
-                    : 'position-absolute bottom-0 start-0 end-0 px-3 py-2 text-white';
-                return `${pad}<figure class="${figureClass}"${dataAttr}>
-${pad}  ${mediaMarkup}
-${pad}  <figcaption class="${captionClass}">${escapeAttrValue(caption)}</figcaption>
-${pad}</figure>`
-            }
-
-            const figureClass = framework === 'tailwind'
-                ? 'space-y-2'
-                : 'mb-0';
+            const figureBaseClass = framework === 'tailwind'
+                ? (captionPosition === 'overlay-bottom' ? 'relative overflow-hidden' : 'space-y-2')
+                : (captionPosition === 'overlay-bottom' ? 'position-relative d-inline-block' : 'mb-0');
+            const {classAttr: figureClassAttr, styleAttr: figureStyleAttr} = rootPresentationAttributes(block, {classes: [figureBaseClass], styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
             const captionClass = framework === 'tailwind'
-                ? 'text-sm text-[var(--theme-text-muted)]'
-                : 'figure-caption';
-            return `${pad}<figure class="${figureClass}"${dataAttr}>
-${pad}  ${mediaMarkup}
+                ? (captionPosition === 'overlay-bottom'
+                    ? 'absolute inset-x-0 bottom-0 bg-black/60 px-3 py-2 text-sm text-white'
+                    : 'text-sm text-[var(--theme-text-muted)]')
+                : (captionPosition === 'overlay-bottom'
+                    ? 'position-absolute bottom-0 start-0 end-0 px-3 py-2 text-white'
+                    : 'figure-caption');
+            const media = lightbox
+                ? `<a href="${escapeAttrValue(src)}" class="${framework === 'tailwind' ? 'inline-block' : 'd-inline-block'}" data-amagon-lightbox="true">${imageMarkup}</a>`
+                : imageMarkup;
+            return `${pad}<figure${figureClassAttr}${figureStyleAttr}${dataAttr}>
+${pad}  ${media}
 ${pad}  <figcaption class="${captionClass}">${escapeAttrValue(caption)}</figcaption>
 ${pad}</figure>`
         }
 
         if (lightbox) {
-            return `${pad}<a href="${escapeAttrValue(src)}" class="${framework === 'tailwind' ? 'inline-block' : 'd-inline-block'}"${dataAttr}>
+            const {classAttr: linkClassAttr, styleAttr: linkStyleAttr} = rootPresentationAttributes(block, {classes: [framework === 'tailwind' ? 'inline-block' : 'd-inline-block'], styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
+            return `${pad}<a${linkClassAttr} href="${escapeAttrValue(src)}"${linkStyleAttr}${dataAttr}>
 ${pad}  ${imageMarkup}
 ${pad}</a>`
         }
 
-        return `${pad}<img class="${imgClasses}" src="${escapeAttrValue(src)}" alt="${escapeAttrValue(alt)}"${styleAttr}${loadingAttr}${eventAttr ? ` ${eventAttr}` : ''}${dataAttr} />`
+        const {classAttr, styleAttr} = rootPresentationAttributes(block, {classes: imgClasses.split(/\s+/).filter(Boolean), styles: {...getEffectiveStyles(block, framework, includeAnimation), ...imgStyles}, includeAnimation, includeHoverEffects});
+        return `${pad}<img${classAttr} src="${escapeAttrValue(src)}" alt="${escapeAttrValue(alt)}"${styleAttr}${loadingAttr}${eventAttr ? ` ${eventAttr}` : ''}${dataAttr} />`
     }
 
     if (block.type === 'video') {
@@ -2419,14 +2487,13 @@ ${pad}</a>`
         const preload = String(block.props.preload ?? 'metadata').trim();
         const poster = String(block.props.poster ?? '').trim();
         const aspectRatio = normalizeMediaAspectRatio(block.props.aspectRatio);
-        const wrapperClasses = framework === 'tailwind'
-            ? dedupeClasses(['w-full', ratioToTailwindClass(aspectRatio)]).join(' ')
-            : dedupeClasses(['ratio', ratioToBootstrapClass(aspectRatio)]).join(' ');
+        const wrapperBaseClasses = framework === 'tailwind'
+            ? dedupeClasses(['w-full', ratioToTailwindClass(aspectRatio)])
+            : dedupeClasses(['ratio', ratioToBootstrapClass(aspectRatio)]);
+        const {classAttr: wrapperClassAttr, styleAttr: wrapperStyleAttr} = rootPresentationAttributes(block, {classes: wrapperBaseClasses, styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
         const videoClasses = framework === 'tailwind'
-            ? dedupeClasses(['h-full', 'w-full', 'object-cover', ...resolveFrameworkClasses(block, framework, {fullWidthFormControls})]).join(' ')
+            ? dedupeClasses(['h-full', 'w-full', 'object-cover', ...resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation: false, includeHoverEffects: false})]).join(' ')
             : dedupeClasses(['w-100', 'h-100', ...block.classes]).join(' ');
-        const styleStr = stylesToString(getEffectiveStyles(block, framework));
-        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="video"` : '';
         const attrs = [
             controls ? 'controls' : '',
@@ -2438,7 +2505,7 @@ ${pad}</a>`
             eventAttr
         ].filter(Boolean).join(' ');
 
-        return `${pad}<div class="${wrapperClasses}"${styleAttr}${dataAttr} data-amagon-media-ratio="${aspectRatio}">
+        return `${pad}<div${wrapperClassAttr}${wrapperStyleAttr}${dataAttr} data-amagon-media-ratio="${aspectRatio}">
 ${pad}  <video class="${videoClasses}" src="${escapeAttrValue(src)}"${attrs ? ` ${attrs}` : ''}></video>
 ${pad}</div>`
     }
@@ -2457,7 +2524,7 @@ ${pad}</div>`
         const iconLeftMarkup = renderInlineIcon(block.props.iconLeft);
         const iconRightMarkup = renderInlineIcon(block.props.iconRight);
         const variantClass = outline ? `btn-outline-${variantToken}` : `btn-${variantToken}`;
-        const baseClasses = block.classes.filter((cls) => !/^btn(?:-outline)?-[a-z]+$/.test(cls) && cls !== 'd-block' && cls !== 'w-100');
+        const baseClasses = block.classes.filter((cls) => !BUTTON_VARIANT_CLASS_PATTERN.test(cls) && cls !== 'd-block' && cls !== 'w-100');
         const bootstrapClasses = dedupeClasses([
             'btn',
             variantClass,
@@ -2466,11 +2533,10 @@ ${pad}</div>`
             blockWidth ? 'w-100' : '',
             ...baseClasses
         ]);
-        const classes = framework === 'tailwind'
-            ? dedupeClasses(bootstrapClasses.flatMap((cls) => mapBootstrapClassToTailwind(cls)).concat(disabled ? ['opacity-60', 'pointer-events-none'] : [])).join(' ')
-            : bootstrapClasses.join(' ');
-        const styleStr = stylesToString(getEffectiveStyles(block, framework));
-        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+        const buttonBaseClasses = framework === 'tailwind'
+            ? dedupeClasses(bootstrapClasses.flatMap((cls) => mapBootstrapClassToTailwind(cls)).concat(disabled ? ['opacity-60', 'pointer-events-none'] : []))
+            : bootstrapClasses;
+        const {classAttr: buttonClassAttr, styleAttr: buttonStyleAttr} = rootPresentationAttributes(block, {classes: buttonBaseClasses, styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="button"` : '';
         const stateAttrs = ` data-amagon-button-variant="${escapeAttrValue(variantToken)}" data-amagon-button-size="${escapeAttrValue(sizeClass)}" data-amagon-button-outline="${outline}" data-amagon-button-block="${blockWidth}" data-amagon-button-loading="${loading}" data-amagon-button-loading-text="${escapeAttrValue(loadingText)}"`;
         const spinnerMarkup = loading
@@ -2490,11 +2556,11 @@ ${pad}</div>`
 
         if (href) {
             const disabledAttrs = disabled ? ' aria-disabled="true" tabindex="-1"' : '';
-            return `${pad}<a class="${classes}" href="${escapeAttrValue(disabled ? '#' : href)}"${target ? ` target="${escapeAttrValue(target)}"` : ''}${styleAttr}${stateAttrs}${eventAttr ? ` ${eventAttr}` : ''}${disabledAttrs}${dataAttr}>${contentParts}</a>`
+            return `${pad}<a${buttonClassAttr} href="${escapeAttrValue(disabled ? '#' : href)}"${target ? ` target="${escapeAttrValue(target)}"` : ''}${buttonStyleAttr}${stateAttrs}${eventAttr ? ` ${eventAttr}` : ''}${disabledAttrs}${dataAttr}>${contentParts}</a>`
         }
 
         const type = String(block.props.type ?? 'button').trim() || 'button';
-        return `${pad}<button type="${escapeAttrValue(type)}" class="${classes}"${disabled ? ' disabled' : ''}${styleAttr}${stateAttrs}${eventAttr ? ` ${eventAttr}` : ''}${dataAttr}>${contentParts}</button>`
+        return `${pad}<button type="${escapeAttrValue(type)}"${buttonClassAttr}${disabled ? ' disabled' : ''}${buttonStyleAttr}${stateAttrs}${eventAttr ? ` ${eventAttr}` : ''}${dataAttr}>${contentParts}</button>`
     }
 
     if (block.type === 'code-block') {
@@ -2507,8 +2573,8 @@ ${pad}</div>`
         const lines = code.split(/\r?\n/);
         const lineNumbers = lines.map((_, index) => `${index + 1}`).join('\n');
         const encodedCode = encodeURIComponent(code);
-        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
-        const styleStr = stylesToString(block.styles);
+        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects}).join(' ');
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="code-block"` : '';
         const stateAttrs = `data-amagon-code-block="true" data-code-language="${escapeAttrValue(language)}" data-code-show-line-numbers="${showLineNumbers}" data-code-filename="${escapeAttrValue(filename)}" data-code-copy-button="${copyButton}" data-code-content="${escapeAttrValue(encodedCode)}"`;
@@ -2548,14 +2614,13 @@ ${pad}</div>`
         const aspectRatio = normalizeMediaAspectRatio(block.props.aspectRatio);
         const allowFullscreen = toBoolean(block.props.allowFullscreen, true);
         const lazy = toBoolean(block.props.lazy, false);
-        const wrapperClass = framework === 'tailwind'
-            ? dedupeClasses(['w-full', ratioToTailwindClass(aspectRatio)]).join(' ')
-            : dedupeClasses(['ratio', ratioToBootstrapClass(aspectRatio)]).join(' ');
-        const iframeClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
-        const styleStr = stylesToString(block.styles);
-        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+        const wrapperBaseClasses = framework === 'tailwind'
+            ? dedupeClasses(['w-full', ratioToTailwindClass(aspectRatio)])
+            : dedupeClasses(['ratio', ratioToBootstrapClass(aspectRatio)]);
+        const {classAttr: wrapperClassAttr, styleAttr: wrapperStyleAttr} = rootPresentationAttributes(block, {classes: wrapperBaseClasses, styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
+        const iframeClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation: false, includeHoverEffects: false}).join(' ');
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="iframe"` : '';
-        return `${pad}<div class="${wrapperClass}" data-amagon-embed-ratio="${aspectRatio}"${styleAttr}${dataAttr}>
+        return `${pad}<div${wrapperClassAttr} data-amagon-embed-ratio="${aspectRatio}"${wrapperStyleAttr}${dataAttr}>
 ${pad}  <iframe class="${iframeClasses}" src="${escapeAttrValue(src)}" title="${escapeAttrValue(title)}"${allowFullscreen ? ' allowfullscreen' : ''}${lazy ? ' loading="lazy"' : ''}${eventAttr ? ` ${eventAttr}` : ''}></iframe>
 ${pad}</div>`
     }
@@ -2589,7 +2654,7 @@ ${pad}</div>`
         const size = normalizeSize(block.props.size) === 'sm' ? 'sm' : 'default';
         const variant = String(block.props.variant ?? 'default') === 'dark' ? 'dark' : 'default';
         const isTailwind = framework === 'tailwind';
-        const tableClasses = isTailwind
+        const tableBaseClasses = isTailwind
             ? dedupeClasses([
                 'w-full',
                 'border-collapse',
@@ -2597,15 +2662,18 @@ ${pad}</div>`
                 size === 'sm' ? 'text-xs' : 'text-sm',
                 bordered ? 'border border-[var(--theme-border)]' : '',
                 variant === 'dark' ? 'bg-slate-900 text-white' : ''
-            ]).join(' ')
+            ])
             : ['table', striped ? 'table-striped' : '', bordered ? 'table-bordered' : '', hover ? 'table-hover' : '', size === 'sm' ? 'table-sm' : '', variant === 'dark' ? 'table-dark' : '']
-                .filter(Boolean)
-                .join(' ');
-
-        const tableStyles = stylesToString(block.styles);
-        const tableStyleAttr = tableStyles ? ` style="${tableStyles}"` : '';
+                .filter(Boolean);
         const rootDataAttrs = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="table"` : '';
         const stateAttrs = ` data-amagon-table="true" data-table-striped="${striped}" data-table-bordered="${bordered}" data-table-hover="${hover}" data-table-responsive="${responsive}" data-table-size="${size}" data-table-variant="${variant}"`;
+        const tableEffectiveStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const innerTableStyles = getEffectiveStyles(block, framework, false);
+        const tableRootPresentation = responsive
+            ? rootPresentationAttributes(block, {classes: tableBaseClasses, styles: innerTableStyles, includeAnimation: false})
+            : rootPresentationAttributes(block, {classes: tableBaseClasses, styles: tableEffectiveStyles, includeAnimation, includeHoverEffects});
+        const tableClassAttr = tableRootPresentation.classAttr;
+        const tableStyleAttr = tableRootPresentation.styleAttr;
 
         const theadClass = isTailwind
             ? variant === 'dark' ? 'bg-slate-800 text-slate-100' : 'bg-[var(--theme-surface)]'
@@ -2650,7 +2718,7 @@ ${cells}
 ${pad}    </tr>`
         }).join('\n');
 
-        const tableHtml = `${pad}<table class="${tableClasses}"${tableStyleAttr}${stateAttrs}${responsive ? ' data-amagon-table-inner="true"' : ''}${responsive ? '' : rootDataAttrs}>
+        const tableHtml = `${pad}<table${tableClassAttr}${tableStyleAttr}${stateAttrs}${responsive ? ' data-amagon-table-inner="true"' : ''}${responsive ? '' : rootDataAttrs}>
 ${pad}  <thead${theadClass ? ` class="${theadClass}"` : ''}>
 ${pad}    <tr>
 ${headHtml}
@@ -2662,8 +2730,14 @@ ${pad}  </tbody>
 ${pad}</table>`;
 
         if (responsive) {
-            const wrapperClasses = isTailwind ? 'overflow-x-auto' : 'table-responsive';
-            return `${pad}<div class="${wrapperClasses}"${stateAttrs}${rootDataAttrs}>
+            const wrapperBaseClasses = [isTailwind ? 'overflow-x-auto' : 'table-responsive'];
+            const {classAttr: wrapperClassAttr, styleAttr: wrapperStyleAttr} = rootPresentationAttributes(block, {
+                classes: wrapperBaseClasses,
+                styles: tableEffectiveStyles,
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<div${wrapperClassAttr}${wrapperStyleAttr}${stateAttrs}${rootDataAttrs}>
 ${tableHtml}
 ${pad}</div>`
         }
@@ -2711,9 +2785,11 @@ ${pad}</div>`
 
             const menuVisibilityClass = isExportMode ? 'hidden' : 'block';
             const toggleScript = `(function(btn){var root=btn.closest('[data-amagon-dropdown]');if(!root)return;var menu=root.querySelector('[data-tw-dropdown-menu]');if(!menu)return;menu.classList.toggle('hidden');})(this)`;
+            const twRootBase = split ? ['relative', 'inline-flex', 'items-center'] : ['relative', 'inline-block', 'text-left'];
+            const {classAttr: twRootClassAttr, styleAttr: twRootStyleAttr} = rootPresentationAttributes(block, {classes: twRootBase, styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
 
             if (split) {
-                return `${pad}<div class="relative inline-flex items-center"${dataAttr ? ` ${dataAttr}` : ''} ${stateAttrs}>
+                return `${pad}<div${twRootClassAttr}${twRootStyleAttr}${dataAttr ? ` ${dataAttr}` : ''} ${stateAttrs}>
 ${pad}  <button type="button" class="${baseButton} ${buttonVariant}">${escapeAttrValue(label)}</button>
 ${pad}  <button type="button" class="${baseButton} ${buttonVariant} px-3" aria-expanded="${isExportMode ? 'false' : 'true'}" aria-controls="${menuId}"${isExportMode ? ` onclick="${toggleScript}"` : ''}>▼</button>
 ${pad}  <div id="${menuId}" data-tw-dropdown-menu class="absolute ${directionClass} z-20 min-w-[12rem] rounded-md border border-[var(--theme-border)] bg-[var(--theme-surface)] p-1 shadow-lg ${menuVisibilityClass}">
@@ -2722,7 +2798,7 @@ ${pad}  </div>
 ${pad}</div>`
             }
 
-            return `${pad}<div class="relative inline-block text-left"${dataAttr ? ` ${dataAttr}` : ''} ${stateAttrs}>
+            return `${pad}<div${twRootClassAttr}${twRootStyleAttr}${dataAttr ? ` ${dataAttr}` : ''} ${stateAttrs}>
 ${pad}  <button type="button" class="${baseButton} ${buttonVariant}" aria-expanded="${isExportMode ? 'false' : 'true'}" aria-controls="${menuId}"${isExportMode ? ` onclick="${toggleScript}"` : ''}>
 ${pad}    ${escapeAttrValue(label)}
 ${pad}    <span class="ml-2">▼</span>
@@ -2736,6 +2812,8 @@ ${pad}</div>`
         const directionClass = direction === 'up' ? 'dropup' : direction === 'start' ? 'dropstart' : direction === 'end' ? 'dropend' : 'dropdown';
         const buttonVariantClass = `btn-${variant}`;
         const sizeClass = size === 'sm' ? 'btn-sm' : size === 'lg' ? 'btn-lg' : '';
+        const bsRootBase = split ? ['btn-group', directionClass] : [directionClass];
+        const {classAttr: bsRootClassAttr, styleAttr: bsRootStyleAttr} = rootPresentationAttributes(block, {classes: bsRootBase, styles: getEffectiveStyles(block, framework, includeAnimation), includeAnimation, includeHoverEffects});
         const menuClasses = ['dropdown-menu', includeDataAttributes ? 'show position-static mt-2' : '', variant === 'dark' ? 'dropdown-menu-dark' : '', direction === 'start' ? 'dropdown-menu-end' : '']
             .filter(Boolean)
             .join(' ');
@@ -2748,7 +2826,7 @@ ${pad}</div>`
         }).join('\n');
 
         if (split) {
-            return `${pad}<div class="btn-group ${directionClass}" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
+            return `${pad}<div${bsRootClassAttr}${bsRootStyleAttr}${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
 ${pad}  <button type="button" class="btn ${buttonVariantClass} ${sizeClass}">${escapeAttrValue(label)}</button>
 ${pad}  <button type="button" class="btn ${buttonVariantClass} ${sizeClass} dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="${includeDataAttributes ? 'true' : 'false'}"></button>
 ${pad}  <ul class="${menuClasses}">
@@ -2757,7 +2835,7 @@ ${pad}  </ul>
 ${pad}</div>`
         }
 
-        return `${pad}<div class="${directionClass}" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
+        return `${pad}<div${bsRootClassAttr}${bsRootStyleAttr}${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
 ${pad}  <button class="btn ${buttonVariantClass} ${sizeClass} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="${includeDataAttributes ? 'true' : 'false'}">
 ${pad}    ${escapeAttrValue(label)}
 ${pad}  </button>
@@ -2777,7 +2855,7 @@ ${pad}</div>`
         const isExportMode = !includeDataAttributes;
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="offcanvas"` : '';
         const stateAttrs = `data-amagon-offcanvas="true" data-offcanvas-placement="${placement}" data-offcanvas-backdrop="${backdrop}" data-offcanvas-scroll="${scroll}"`;
-        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n');
+        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
         const themeSurface = 'var(--theme-surface)';
         const themeText = 'var(--theme-text)';
         const themeBorder = 'var(--theme-border)';
@@ -2880,9 +2958,9 @@ ${pad}</div>`
         const normalizedText = escapeAttrValue(text).replace(/\n/g, '<br>');
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="card"` : '';
         const stateAttrs = `data-amagon-card="true" data-card-variant="${variant}" data-card-outline="${outline}" data-card-image-position="${imagePosition}"`;
-        const styleString = stylesToString(block.styles);
+        const styleString = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleString ? ` style="${styleString}"` : '';
-        const childBlocksHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n');
+        const childBlocksHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
         const hasChildren = childBlocksHtml.trim().length > 0;
         const contentHtml = `${title ? `${pad}      <h5 class="card-title">${escapeAttrValue(title)}</h5>` : ''}
 ${subtitle ? `${pad}      <h6 class="card-subtitle mb-2 text-body-secondary">${escapeAttrValue(subtitle)}</h6>` : ''}
@@ -2898,6 +2976,8 @@ ${pad}    </div>`
                 block.classes.flatMap((cls) => mapBootstrapClassToTailwind(cls))
             );
             const variantClasses = getCardVariantTailwindClasses(variant, outline);
+            const cardAnimationClasses = includeAnimation ? getAnimationClasses(block.animation) : [];
+            const cardHoverClasses = includeHoverEffects ? getHoverEffectClasses(block.hoverEffect) : [];
             const rootClasses = dedupeClasses([
                 'relative',
                 'overflow-hidden',
@@ -2907,7 +2987,9 @@ ${pad}    </div>`
                 'bg-[var(--theme-surface)]',
                 'shadow-sm',
                 ...variantClasses,
-                ...mappedCustomRoot
+                ...mappedCustomRoot,
+                ...cardAnimationClasses,
+                ...cardHoverClasses
             ]).join(' ');
             const sectionPadding = 'px-6 py-4';
             const bodyClasses = imagePosition === 'overlay' && imageUrl
@@ -2951,7 +3033,9 @@ ${pad}</div>`
         }
 
         const variantClasses = getCardVariantBootstrapClasses(variant, outline);
-        const rootClasses = dedupeClasses(['card', ...variantClasses, ...block.classes]).join(' ');
+        const cardAnimationClasses = includeAnimation ? getAnimationClasses(block.animation) : [];
+        const cardHoverClasses = includeHoverEffects ? getHoverEffectClasses(block.hoverEffect) : [];
+        const rootClasses = dedupeClasses(['card', ...variantClasses, ...block.classes, ...cardAnimationClasses, ...cardHoverClasses]).join(' ');
         const topImage = imageUrl && imagePosition === 'top'
             ? `${pad}  <img src="${escapeAttrValue(imageUrl)}" class="card-img-top" alt="${escapeAttrValue(title || 'Card image')}" data-card-image="true">`
             : '';
@@ -3008,7 +3092,13 @@ ${pad}      <p class="mt-2 text-sm text-[var(--theme-text-muted)]">${escapeAttrV
 ${pad}    </div>`
             }).join('\n');
 
-            return `${pad}<section class="stats-section py-12" ${dataAttrs}>
+            const sectionRoot = rootPresentationAttributes(block, {
+                classes: ['stats-section', 'py-12'],
+                styles: getEffectiveStyles(block, framework, includeAnimation),
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
 ${pad}    <div class="grid grid-cols-1 gap-4 ${gridCols}">
 ${itemsHtml}
@@ -3037,7 +3127,13 @@ ${pad}        </div>
 ${pad}      </div>`
         }).join('\n');
 
-        return `${pad}<section class="stats-section py-5 ${alignClass}" ${dataAttrs}>
+        const sectionRoot = rootPresentationAttributes(block, {
+            classes: ['stats-section', 'py-5', alignClass],
+            styles: getEffectiveStyles(block, framework, includeAnimation),
+            includeAnimation,
+                includeHoverEffects
+        });
+        return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="container">
 ${pad}    <div class="row row-cols-1 ${rowCols} g-4">
 ${itemsHtml}
@@ -3082,7 +3178,13 @@ ${pad}      ${member.bio ? `<p class="mt-2 text-sm text-[var(--theme-text)]">${e
 ${pad}      ${renderSocialLinks(member.socialLinks)}
 ${pad}    </article>`).join('\n');
 
-            return `${pad}<section class="team-grid py-12" ${dataAttrs}>
+            const sectionRoot = rootPresentationAttributes(block, {
+                classes: ['team-grid', 'py-12'],
+                styles: getEffectiveStyles(block, framework, includeAnimation),
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
 ${pad}    <div class="grid grid-cols-1 gap-5 ${gridCols}">
 ${membersHtml}
@@ -3103,7 +3205,13 @@ ${pad}          ${showSocial ? `<div class="${cardStyle === 'simple' ? 'pt-2' : 
 ${pad}        </article>
 ${pad}      </div>`).join('\n');
 
-        return `${pad}<section class="team-grid py-5" ${dataAttrs}>
+        const sectionRoot = rootPresentationAttributes(block, {
+            classes: ['team-grid', 'py-5'],
+            styles: getEffectiveStyles(block, framework, includeAnimation),
+            includeAnimation,
+                includeHoverEffects
+        });
+        return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="container">
 ${pad}    <div class="row row-cols-1 ${rowCols} g-4">
 ${membersHtml}
@@ -3139,7 +3247,13 @@ ${pad}        ${lightbox ? '</a>' : ''}
 ${pad}        ${image.caption ? `<figcaption class="px-3 py-2 text-sm text-[var(--theme-text-muted)]">${escapeAttrValue(image.caption)}</figcaption>` : ''}
 ${pad}      </figure>`).join('\n');
 
-            return `${pad}<section class="gallery py-12" ${dataAttrs}>
+            const sectionRoot = rootPresentationAttributes(block, {
+                classes: ['gallery', 'py-12'],
+                styles: getEffectiveStyles(block, framework, includeAnimation),
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
 ${filterable && categories.length > 0 ? `${pad}    <div class="mb-4 flex flex-wrap gap-2" data-gallery-filters="true">${categories.map((category) => `<span class="rounded-full border border-[var(--theme-border)] px-3 py-1 text-xs text-[var(--theme-text-muted)]">${escapeAttrValue(category)}</span>`).join('')}</div>
 ` : ''}${layout === 'masonry'
@@ -3163,7 +3277,13 @@ ${pad}          ${image.caption ? `<figcaption class="small text-muted px-3 py-2
 ${pad}        </figure>
 ${pad}      </div>`).join('\n');
 
-        return `${pad}<section class="gallery py-5" ${dataAttrs}>
+        const sectionRoot = rootPresentationAttributes(block, {
+            classes: ['gallery', 'py-5'],
+            styles: getEffectiveStyles(block, framework, includeAnimation),
+            includeAnimation,
+                includeHoverEffects
+        });
+        return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="container">
 ${filterable && categories.length > 0 ? `${pad}    <div class="d-flex flex-wrap gap-2 mb-3" data-gallery-filters="true">${categories.map((category) => `<span class="badge bg-light text-dark border">${escapeAttrValue(category)}</span>`).join('')}</div>
 ` : ''}${pad}    <div class="row row-cols-1 ${rowCols} ${gapClass}" data-gallery-grid="true">
@@ -3198,7 +3318,13 @@ ${pad}      <p class="mt-2 text-sm text-[var(--theme-text)]">${escapeAttrValue(i
 ${pad}    </article>`
             }).join('\n');
 
-            return `${pad}<section class="timeline py-12" style="--timeline-line-color: ${escapeAttrValue(lineColor)};" ${dataAttrs}>
+            const sectionRoot = rootPresentationAttributes(block, {
+                classes: ['timeline', 'py-12'],
+                styles: {...getEffectiveStyles(block, framework, includeAnimation), '--timeline-line-color': lineColor},
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
 ${pad}    <div class="${containerClass}">
 ${itemsHtml}
@@ -3221,7 +3347,13 @@ ${pad}        </article>${orientation === 'horizontal' ? `
 ${pad}      </div>` : ''}`
         }).join('\n');
 
-        return `${pad}<section class="timeline py-5" style="--timeline-line-color: ${escapeAttrValue(lineColor)};" ${dataAttrs}>
+        const sectionRoot = rootPresentationAttributes(block, {
+            classes: ['timeline', 'py-5'],
+            styles: {...getEffectiveStyles(block, framework, includeAnimation), '--timeline-line-color': lineColor},
+            includeAnimation,
+                includeHoverEffects
+        });
+        return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="container">
 ${pad}    <div class="${containerClass}">
 ${itemsHtml}
@@ -3255,7 +3387,13 @@ ${pad}        <img src="${escapeAttrValue(logo.imageUrl || IMAGE_PLACEHOLDER)}" 
 ${pad}        ${logo.href ? '</a>' : ''}
 ${pad}      </div>`).join('\n');
 
-            return `${pad}<section class="logo-cloud py-12" ${dataAttrs}>
+            const sectionRoot = rootPresentationAttributes(block, {
+                classes: ['logo-cloud', 'py-12'],
+                styles: getEffectiveStyles(block, framework, includeAnimation),
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
 ${title ? `${pad}    <h2 class="mb-6 text-center text-2xl font-semibold">${escapeAttrValue(title)}</h2>
 ` : ''}${pad}    <div class="grid grid-cols-2 gap-4 ${gridCols}">
@@ -3274,7 +3412,13 @@ ${pad}          ${logo.href ? '</a>' : ''}
 ${pad}        </div>
 ${pad}      </div>`).join('\n');
 
-        return `${pad}<section class="logo-cloud py-5" ${dataAttrs}>
+        const sectionRoot = rootPresentationAttributes(block, {
+            classes: ['logo-cloud', 'py-5'],
+            styles: getEffectiveStyles(block, framework, includeAnimation),
+            includeAnimation,
+                includeHoverEffects
+        });
+        return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="container">
 ${title ? `${pad}    <h2 class="h4 text-center mb-4">${escapeAttrValue(title)}</h2>
 ` : ''}${pad}    <div class="row row-cols-2 ${rowCols} g-3">
@@ -3313,7 +3457,13 @@ ${pad}      <p class="mt-2 text-sm text-[var(--theme-text-muted)]">${escapeAttrV
 ${pad}    </article>`
             }).join('\n');
 
-            return `${pad}<section class="process-steps py-12" ${dataAttrs}>
+            const sectionRoot = rootPresentationAttributes(block, {
+                classes: ['process-steps', 'py-12'],
+                styles: getEffectiveStyles(block, framework, includeAnimation),
+                includeAnimation,
+                includeHoverEffects
+            });
+            return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="mx-auto max-w-6xl px-4">
 ${pad}    <div class="${containerClass}">
 ${stepsHtml}
@@ -3336,7 +3486,13 @@ ${pad}        </article>${layout === 'horizontal' ? `
 ${pad}      </div>` : ''}`
         }).join('\n');
 
-        return `${pad}<section class="process-steps py-5" ${dataAttrs}>
+        const sectionRoot = rootPresentationAttributes(block, {
+            classes: ['process-steps', 'py-5'],
+            styles: getEffectiveStyles(block, framework, includeAnimation),
+            includeAnimation,
+                includeHoverEffects
+        });
+        return `${pad}<section${sectionRoot.classAttr}${sectionRoot.styleAttr} ${dataAttrs}>
 ${pad}  <div class="container">
 ${pad}    <div class="${containerClass}" data-process-connector="${connectorStyle}">
 ${stepsHtml}
@@ -3357,13 +3513,17 @@ ${pad}</section>`
         const variant = String(block.props.variant || 'simple');
         const dataAttrs = `data-block-type="newsletter"${includeDataAttributes ? ` data-block-id="${block.id}"` : ''}`;
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+        const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+
         if (framework === 'tailwind') {
             const containerClass = variant === 'card' ? 'max-w-2xl mx-auto bg-[var(--theme-surface)] p-8 rounded-xl shadow-sm border border-[var(--theme-border)]' : 'max-w-2xl mx-auto text-center';
             const formClass = layout === 'inline' ? 'flex flex-col sm:flex-row gap-3 mt-6' : 'flex flex-col gap-4 mt-6';
             const inputClass = 'flex-1 px-4 py-2 rounded-lg border border-[var(--theme-border)] bg-transparent focus:ring-2 focus:ring-[var(--theme-primary)] outline-none';
             const btnClass = `px-6 py-2 rounded-lg font-medium transition-colors ${buttonVariant === 'primary' ? 'bg-[var(--theme-primary)] text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`;
 
-            return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-12">
+            return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-12"${animationStyleAttr}>
 ${pad}  <div class="container mx-auto px-4">
 ${pad}    <div class="${containerClass}">
 ${title ? `${pad}      <h2 class="text-3xl font-bold mb-3">${escapeAttrValue(title)}</h2>\n` : ''}
@@ -3382,9 +3542,9 @@ ${pad}</section>`
         const formClass = layout === 'inline' ? 'd-flex flex-column flex-sm-row gap-2 mt-4' : 'd-flex flex-column gap-3 mt-4';
         const btnClass = `btn btn-${buttonVariant}`;
 
-        return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-5">
+        return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-5" style="max-width: 600px;${animationStyleStr ? ` ${animationStyleStr}` : ''}">
 ${pad}  <div class="container">
-${pad}    <div class="${containerClass}" style="max-width: 600px;">
+${pad}    <div class="${containerClass}">
 ${title ? `${pad}      <h2 class="mb-3">${escapeAttrValue(title)}</h2>\n` : ''}
 ${description ? `${pad}      <p class="text-muted">${escapeAttrValue(description)}</p>\n` : ''}
 ${pad}      <form class="${formClass}">
@@ -3402,6 +3562,10 @@ ${pad}</section>`
         const cols = Number(block.props.columns) || 2;
         const dataAttrs = `data-block-type="comparison-table"${includeDataAttributes ? ` data-block-id="${block.id}"` : ''}`;
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+        const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+
         if (framework === 'tailwind') {
             const gridClass = `grid grid-cols-1 md:grid-cols-${Math.min(Math.max(cols, 1), 4)} gap-6`;
             const plansHtml = plans.map(plan => `
@@ -3417,7 +3581,7 @@ ${pad}        </ul>
 ${pad}        <a href="${escapeAttrValue(plan.ctaHref || '#')}" class="block w-full py-2 text-center rounded-lg font-medium transition-colors ${plan.highlighted ? 'bg-[var(--theme-primary)] text-white hover:bg-blue-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}">${escapeAttrValue(plan.ctaText || 'Select')}</a>
 ${pad}      </div>`).join('');
 
-            return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-12">
+            return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-12"${animationStyleAttr}>
 ${pad}  <div class="container mx-auto px-4">
 ${pad}    <div class="${gridClass}">
 ${plansHtml}
@@ -3443,7 +3607,7 @@ ${pad}          </div>
 ${pad}        </div>
 ${pad}      </div>`).join('');
 
-        return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-5">
+        return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} py-5"${animationStyleAttr}>
 ${pad}  <div class="container">
 ${pad}    <div class="row row-cols-1 row-cols-md-${Math.min(Math.max(cols, 1), 4)} g-4">
 ${plansHtml}
@@ -3462,10 +3626,14 @@ ${pad}</section>`
         const imageUrl = String(block.props.imageUrl || IMAGE_PLACEHOLDER);
         const layout = String(block.props.layout || 'vertical');
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+
         if (framework === 'tailwind') {
             const cardClass = layout === 'horizontal' ? 'flex flex-col md:flex-row gap-6 items-center' : 'flex flex-col text-center';
             const imgClass = layout === 'horizontal' ? 'w-32 h-32 rounded-full object-cover shrink-0' : 'w-32 h-32 rounded-full object-cover mx-auto mb-4';
-            return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} p-6 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)] max-w-lg mx-auto">
+            const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+            return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} p-6 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)] max-w-lg mx-auto"${animationStyleAttr}>
 ${pad}  <div class="${cardClass}">
 ${pad}    <img src="${escapeAttrValue(imageUrl)}" alt="${escapeAttrValue(name)}" class="${imgClass}">
 ${pad}    <div>
@@ -3483,7 +3651,7 @@ ${pad}</section>`
 
         const cardClass = layout === 'horizontal' ? 'd-flex flex-column flex-md-row gap-4 align-items-center text-center text-md-start' : 'd-flex flex-column align-items-center text-center';
         const imgClass = 'rounded-circle object-fit-cover';
-        return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} card shadow-sm mx-auto" style="max-width: 600px;">
+        return `${pad}<section ${dataAttrs} class="${finalClasses.join(' ')} card shadow-sm mx-auto" style="max-width: 600px;${animationStyleStr ? ` ${animationStyleStr}` : ''}">
 ${pad}  <div class="card-body p-4 p-md-5 ${cardClass}">
 ${pad}    <img src="${escapeAttrValue(imageUrl)}" alt="${escapeAttrValue(name)}" class="${imgClass}" style="width: 120px; height: 120px;">
 ${pad}    <div>
@@ -3505,6 +3673,10 @@ ${pad}</section>`
         const style = String(block.props.style || 'icons-only');
         const size = String(block.props.size || 'md');
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+        const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+
         if (framework === 'tailwind') {
             const sizeClass = size === 'sm' ? 'text-sm gap-2' : size === 'lg' ? 'text-xl gap-6' : 'text-base gap-4';
             const linksHtml = links.map(link => `
@@ -3512,7 +3684,7 @@ ${pad}    <a href="${escapeAttrValue(link.url || '#')}" class="inline-flex items
 ${pad}      ${style !== 'text-only' ? `<span class="social-link-icon">${renderSocialPlatformIcon(link.platform)}</span>` : ''}
 ${pad}      ${style !== 'icons-only' ? `<span>${escapeAttrValue(link.label || link.platform || 'Link')}</span>` : ''}
 ${pad}    </a>`).join('');
-            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} flex flex-wrap justify-center ${sizeClass}">
+            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} flex flex-wrap justify-center ${sizeClass}"${animationStyleAttr}>
 ${linksHtml}
 ${pad}</div>`
         }
@@ -3523,7 +3695,7 @@ ${pad}    <a href="${escapeAttrValue(link.url || '#')}" class="text-decoration-n
 ${pad}      ${style !== 'text-only' ? `<span class="social-link-icon">${renderSocialPlatformIcon(link.platform)}</span>` : ''}
 ${pad}      ${style !== 'icons-only' ? `<span>${escapeAttrValue(link.label || link.platform || 'Link')}</span>` : ''}
 ${pad}    </a>`).join('');
-        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} d-flex flex-wrap justify-content-center ${sizeClass}">
+        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} d-flex flex-wrap justify-content-center ${sizeClass}"${animationStyleAttr}>
 ${linksHtml}
 ${pad}</div>`
     }
@@ -3535,9 +3707,13 @@ ${pad}</div>`
         const declineText = String(block.props.declineText || 'Decline');
         const position = String(block.props.position || 'bottom');
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+        const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+
         if (framework === 'tailwind') {
             const posClass = position === 'top' ? 'top-0 border-b' : 'bottom-0 border-t';
-            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} fixed left-0 right-0 ${posClass} border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 z-50 shadow-lg">
+            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} fixed left-0 right-0 ${posClass} border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 z-50 shadow-lg"${animationStyleAttr}>
 ${pad}  <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
 ${pad}    <p class="text-[var(--theme-text)] m-0">${escapeAttrValue(message)}</p>
 ${pad}    <div class="flex gap-2 shrink-0">
@@ -3549,7 +3725,7 @@ ${pad}</div>`
         }
 
         const posClass = position === 'top' ? 'top-0 border-bottom' : 'bottom-0 border-top';
-        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} fixed-${position === 'top' ? 'top' : 'bottom'} bg-body ${posClass} p-3 z-3 shadow">
+        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} fixed-${position === 'top' ? 'top' : 'bottom'} bg-body ${posClass} p-3 z-3 shadow"${animationStyleAttr}>
 ${pad}  <div class="container d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3 text-center text-sm-start">
 ${pad}    <p class="mb-0 small">${escapeAttrValue(message)}</p>
 ${pad}    <div class="d-flex gap-2 flex-shrink-0">
@@ -3565,17 +3741,21 @@ ${pad}</div>`
         const style = String(block.props.style || 'circle');
         const pos = String(block.props.position || 'bottom-right');
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+
         if (framework === 'tailwind') {
             const radiusClass = style === 'circle' ? 'rounded-full' : style === 'rounded' ? 'rounded-lg' : 'rounded-none';
             const posClass = pos === 'bottom-left' ? 'bottom-6 left-6' : 'bottom-6 right-6';
-            return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} fixed ${posClass} ${radiusClass} p-3 bg-[var(--theme-primary)] text-white shadow-lg hover:bg-blue-600 transition-colors z-40 flex items-center justify-center" aria-label="Back to top">
+            const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+            return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} fixed ${posClass} ${radiusClass} p-3 bg-[var(--theme-primary)] text-white shadow-lg hover:bg-blue-600 transition-colors z-40 flex items-center justify-center"${animationStyleAttr} aria-label="Back to top">
 ${pad}  ↑
 ${pad}</button>`
         }
 
         const radiusClass = style === 'circle' ? 'rounded-circle' : style === 'rounded' ? 'rounded' : 'rounded-0';
         const posStyle = pos === 'bottom-left' ? 'bottom: 1.5rem; left: 1.5rem;' : 'bottom: 1.5rem; right: 1.5rem;';
-        return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} btn btn-primary ${radiusClass} shadow position-fixed z-3 d-flex align-items-center justify-content-center" style="${posStyle} width: 3rem; height: 3rem;" aria-label="Back to top">
+        return `${pad}<button ${dataAttrs} class="${finalClasses.join(' ')} btn btn-primary ${radiusClass} shadow position-fixed z-3 d-flex align-items-center justify-content-center" style="${posStyle} width: 3rem; height: 3rem;${animationStyleStr ? ` ${animationStyleStr}` : ''}" aria-label="Back to top">
 ${pad}  ↑
 ${pad}</button>`
     }
@@ -3589,8 +3769,12 @@ ${pad}</button>`
             seconds: 'Seconds'
         };
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+        const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+
         if (framework === 'tailwind') {
-            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} flex flex-wrap justify-center gap-4 text-center">
+            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} flex flex-wrap justify-center gap-4 text-center"${animationStyleAttr}>
 ${pad}  <div class="flex flex-col p-4 bg-[var(--theme-surface)] rounded-xl border border-[var(--theme-border)] min-w-[100px]">
 ${pad}    <span class="text-3xl font-bold">00</span>
 ${pad}    <span class="text-sm text-[var(--theme-text-muted)] uppercase tracking-wider">${escapeAttrValue(labels.days || 'Days')}</span>
@@ -3610,7 +3794,7 @@ ${pad}  </div>
 ${pad}</div>`
         }
 
-        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} d-flex flex-wrap justify-content-center gap-3 text-center">
+        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} d-flex flex-wrap justify-content-center gap-3 text-center"${animationStyleAttr}>
 ${pad}  <div class="card shadow-sm border-0" style="min-width: 90px;">
 ${pad}    <div class="card-body p-3">
 ${pad}      <div class="h2 mb-0 fw-bold">00</div>
@@ -3643,8 +3827,12 @@ ${pad}</div>`
         const bImg = String(block.props.beforeImage || IMAGE_PLACEHOLDER);
         const aImg = String(block.props.afterImage || IMAGE_PLACEHOLDER);
 
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+
         if (framework === 'tailwind') {
-            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} relative w-full overflow-hidden rounded-xl bg-gray-200 aspect-video group">
+            const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
+            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} relative w-full overflow-hidden rounded-xl bg-gray-200 aspect-video group"${animationStyleAttr}>
 ${pad}  <img src="${escapeAttrValue(aImg)}" alt="After" class="absolute inset-0 w-full h-full object-cover">
 ${pad}  <div class="absolute inset-y-0 left-0 w-1/2 overflow-hidden border-r-2 border-white shadow-[1px_0_4px_rgba(0,0,0,0.5)]">
 ${pad}    <img src="${escapeAttrValue(bImg)}" alt="Before" class="absolute inset-0 w-[200%] h-full max-w-none object-cover">
@@ -3655,7 +3843,7 @@ ${pad}  </div>
 ${pad}</div>`
         }
 
-        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} position-relative w-100 overflow-hidden rounded bg-light" style="aspect-ratio: 16/9;">
+        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} position-relative w-100 overflow-hidden rounded bg-light" style="aspect-ratio: 16/9;${animationStyleStr ? ` ${animationStyleStr}` : ''}">
 ${pad}  <img src="${escapeAttrValue(aImg)}" alt="After" class="position-absolute top-0 start-0 w-100 h-100 object-fit-cover">
 ${pad}  <div class="position-absolute top-0 start-0 h-100 border-end border-white border-2 shadow-sm" style="width: 50%;">
 ${pad}    <img src="${escapeAttrValue(bImg)}" alt="Before" class="position-absolute top-0 start-0 h-100 object-fit-cover" style="width: 200%; max-width: none;">
@@ -3674,14 +3862,17 @@ ${pad}</div>`
         const title = String(block.props.title || 'Location Map');
 
         const filterStyle = grayscale ? 'filter: grayscale(100%) invert(10%);' : '';
+        const animationStyles = getEffectiveStyles(block, framework, includeAnimation);
+        const animationStyleStr = stylesToString(animationStyles);
+        const animationStyleAttr = animationStyleStr ? ` style="${animationStyleStr}"` : '';
 
         if (framework === 'tailwind') {
-            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} w-full overflow-hidden rounded-xl border border-[var(--theme-border)]">
+            return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} w-full overflow-hidden rounded-xl border border-[var(--theme-border)]"${animationStyleAttr}>
 ${pad}  <iframe src="${escapeAttrValue(embedUrl)}" width="100%" height="${escapeAttrValue(height)}" style="border:0; ${filterStyle}" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="${escapeAttrValue(title)}"></iframe>
 ${pad}</div>`
         }
 
-        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} w-100 overflow-hidden rounded border">
+        return `${pad}<div ${dataAttrs} class="${finalClasses.join(' ')} w-100 overflow-hidden rounded border"${animationStyleAttr}>
 ${pad}  <iframe src="${escapeAttrValue(embedUrl)}" width="100%" height="${escapeAttrValue(height)}" style="border:0; ${filterStyle}" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="${escapeAttrValue(title)}"></iframe>
 ${pad}</div>`
     }
@@ -3704,7 +3895,7 @@ ${pad}</div>`
         const themeBorder = 'var(--theme-border)';
         const isExportMode = !includeDataAttributes;
 
-        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n');
+        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="modal"` : '';
 
         if (!isExportMode) {
@@ -3800,7 +3991,7 @@ ${pad}</div>`
         const iconLeftMarkup = renderInlineIcon(block.props.iconLeft);
         const iconRightMarkup = renderInlineIcon(block.props.iconRight);
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="link"` : '';
-        const styleStr = stylesToString(block.styles);
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
 
         if (isButton) {
@@ -3808,9 +3999,10 @@ ${pad}</div>`
             const isOutline = variantToken.startsWith('outline-');
             const baseVariant = isOutline ? variantToken.replace('outline-', '') : variantToken;
             const btnClass = isOutline ? `btn-outline-${baseVariant}` : `btn-${baseVariant}`;
-            const classes = framework === 'tailwind'
-                ? dedupeClasses(resolveFrameworkClasses(block, framework, {fullWidthFormControls})).join(' ') || dedupeClasses([btnClass].flatMap(c => mapBootstrapClassToTailwind(c))).join(' ')
-                : dedupeClasses(['btn', btnClass, ...block.classes]).join(' ');
+            const linkButtonBaseClasses = framework === 'tailwind'
+                ? dedupeClasses(resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects})) || dedupeClasses([btnClass].flatMap(c => mapBootstrapClassToTailwind(c)))
+                : dedupeClasses(['btn', btnClass, ...block.classes]);
+            const {classAttr: linkButtonClassAttr} = rootPresentationAttributes(block, {classes: linkButtonBaseClasses, includeAnimation: false, includeHoverEffects});
             const hasDecorators = !!iconLeftMarkup || !!iconRightMarkup;
             const label = escapeAttrValue(text);
             const contentParts = hasDecorators
@@ -3820,11 +4012,11 @@ ${pad}</div>`
                     iconRightMarkup ? `<span aria-hidden="true">${iconRightMarkup}</span>` : ''
                 ].filter(Boolean).join(' ')
                 : label;
-            return `${pad}<a class="${classes}" href="${escapeAttrValue(href)}"${targetAttr}${relAttr}${styleAttr}${dataAttr}>${contentParts}</a>`
+            return `${pad}<a${linkButtonClassAttr} href="${escapeAttrValue(href)}"${targetAttr}${relAttr}${styleAttr}${dataAttr}>${contentParts}</a>`
         }
 
         if (iconLeftMarkup || iconRightMarkup) {
-            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
+            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects}).join(' ');
             const classAttr = classes ? ` class="${classes}"` : '';
             const label = escapeAttrValue(text);
             const contentParts = [
@@ -3837,7 +4029,7 @@ ${pad}</div>`
 
         // Plain link — add newTab/rel if needed
         if (newTab) {
-            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
+            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects}).join(' ');
             const classAttr = classes ? ` class="${classes}"` : '';
             return `${pad}<a${classAttr} href="${escapeAttrValue(href)}"${targetAttr}${relAttr}${styleAttr}${dataAttr}>${escapeAttrValue(text)}</a>`
         }
@@ -3880,7 +4072,7 @@ ${pad}</div>`
             color ? `border-color: ${color};` : '',
             thickness !== '1px' ? `border-width: ${thickness};` : ''
         ].filter(Boolean).join(' ');
-        const hrClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
+        const hrClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects}).join(' ');
         return `${pad}<hr${hrClasses ? ` class="${hrClasses}"` : ''}${hrStyle ? ` style="${hrStyle}"` : ''}${dataAttr}>`
     }
 
@@ -3901,17 +4093,23 @@ ${pad}</div>`
         const radioInline = toBoolean(block.props.inline, false);
         const radioId = `radio-${sanitizeElementId(block.id, block.id)}`;
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="radio"` : '';
-        const styleStr = stylesToString(block.styles);
-        const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+        const includeBlockAnimation = includeAnimation && isBlockEligibleForAnimation(block.type);
+        const animationClasses = includeBlockAnimation ? getAnimationClasses(block.animation) : [];
+        const baseRadioStyles = getEffectiveStyles(block, framework, false);
+        const radioWrapperStyles = includeBlockAnimation && block.animation
+            ? {...baseRadioStyles, ...buildAnimationStyleVariables(block.animation)}
+            : baseRadioStyles;
+        const radioStyleStr = stylesToString(radioWrapperStyles);
+        const radioStyleAttr = radioStyleStr ? ` style="${radioStyleStr}"` : '';
         if (framework === 'tailwind') {
-            const wrapperClass = radioInline ? 'inline-flex items-center gap-2 mr-4' : 'flex items-center gap-2 mb-2';
-            return `${pad}<label class="${wrapperClass}"${dataAttr}${styleAttr}>
+            const wrapperClass = dedupeClasses([radioInline ? 'inline-flex' : 'flex', 'items-center', 'gap-2', radioInline ? 'mr-4' : 'mb-2', ...animationClasses]).join(' ');
+            return `${pad}<label class="${wrapperClass}"${dataAttr}${radioStyleAttr}>
 ${pad}  <input type="radio" id="${radioId}" name="${radioName}" value="${radioValue}" ${radioChecked} ${radioDisabled} class="w-4 h-4 accent-[var(--theme-primary)]">
 ${pad}  <span class="text-[var(--theme-text)]">${radioLabel}</span>
 ${pad}</label>`
         }
-        const wrapperClass = ['form-check', radioInline ? 'form-check-inline' : ''].filter(Boolean).join(' ');
-        return `${pad}<div class="${wrapperClass}"${dataAttr}${styleAttr}>
+        const wrapperClass = dedupeClasses(['form-check', radioInline ? 'form-check-inline' : '', ...animationClasses]).join(' ');
+        return `${pad}<div class="${wrapperClass}"${dataAttr}${radioStyleAttr}>
 ${pad}  <input class="form-check-input" type="radio" id="${radioId}" name="${radioName}" value="${radioValue}" ${radioChecked} ${radioDisabled}>
 ${pad}  <label class="form-check-label" for="${radioId}">${radioLabel}</label>
 ${pad}</div>`
@@ -3927,15 +4125,19 @@ ${pad}</div>`
         const rangeDisabled = toBoolean(block.props.disabled, false) ? ' disabled' : '';
         const rangeId = `range-${sanitizeElementId(block.id, block.id)}`;
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="range"` : '';
-        const styleStr = stylesToString(block.styles);
+        const includeBlockAnimation = includeAnimation && isBlockEligibleForAnimation(block.type);
+        const animationClasses = includeBlockAnimation ? getAnimationClasses(block.animation) : [];
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
+        const twWrapperClass = dedupeClasses([...animationClasses]).join(' ');
+        const bsWrapperClass = dedupeClasses([...animationClasses]).join(' ');
         if (framework === 'tailwind') {
-            return `${pad}<div${dataAttr}${styleAttr}>
+            return `${pad}<div${twWrapperClass ? ` class="${twWrapperClass}"` : ''}${dataAttr}${styleAttr}>
 ${rangeLabel ? `${pad}  <label for="${rangeId}" class="block mb-2 text-sm font-medium text-[var(--theme-text)]">${rangeLabel}</label>` : ''}
 ${pad}  <input type="range" id="${rangeId}" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[var(--theme-primary)]" min="${rangeMin}" max="${rangeMax}" step="${rangeStep}" value="${rangeValue}"${rangeDisabled}>
 ${pad}</div>`
         }
-        return `${pad}<div${dataAttr}${styleAttr}>
+        return `${pad}<div${bsWrapperClass ? ` class="${bsWrapperClass}"` : ''}${dataAttr}${styleAttr}>
 ${rangeLabel ? `${pad}  <label for="${rangeId}" class="form-label">${rangeLabel}</label>` : ''}
 ${pad}  <input type="range" id="${rangeId}" class="form-range" min="${rangeMin}" max="${rangeMax}" step="${rangeStep}" value="${rangeValue}"${rangeDisabled}>
 ${pad}</div>`
@@ -3950,17 +4152,21 @@ ${pad}</div>`
         const fileSize = String(block.props.size ?? 'default');
         const fileId = `file-${sanitizeElementId(block.id, block.id)}`;
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="file-input"` : '';
-        const styleStr = stylesToString(block.styles);
+        const includeBlockAnimation = includeAnimation && isBlockEligibleForAnimation(block.type);
+        const animationClasses = includeBlockAnimation ? getAnimationClasses(block.animation) : [];
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const acceptAttr = fileAccept ? ` accept="${escapeAttrValue(fileAccept)}"` : '';
+        const twWrapperClass = dedupeClasses([...animationClasses]).join(' ');
+        const bsWrapperClass = dedupeClasses([...animationClasses]).join(' ');
         if (framework === 'tailwind') {
-            return `${pad}<div${dataAttr}${styleAttr}>
+            return `${pad}<div${twWrapperClass ? ` class="${twWrapperClass}"` : ''}${dataAttr}${styleAttr}>
 ${fileLabel ? `${pad}  <label for="${fileId}" class="block mb-2 text-sm font-medium text-[var(--theme-text)]">${fileLabel}</label>` : ''}
 ${pad}  <input type="file" id="${fileId}" class="block w-full text-sm text-gray-900 border border-[var(--theme-border)] rounded-lg cursor-pointer bg-[var(--theme-surface)]"${acceptAttr}${fileMultiple}${fileDisabled}>
 ${pad}</div>`
         }
         const sizeClass = fileSize === 'sm' ? ' form-control-sm' : fileSize === 'lg' ? ' form-control-lg' : '';
-        return `${pad}<div${dataAttr}${styleAttr}>
+        return `${pad}<div${bsWrapperClass ? ` class="${bsWrapperClass}"` : ''}${dataAttr}${styleAttr}>
 ${fileLabel ? `${pad}  <label for="${fileId}" class="form-label">${fileLabel}</label>` : ''}
 ${pad}  <input type="file" id="${fileId}" class="form-control${sizeClass}"${acceptAttr}${fileMultiple}${fileDisabled}>
 ${pad}</div>`
@@ -3972,7 +4178,9 @@ ${pad}</div>`
         const crumbDivider = String(block.props.divider ?? 'slash');
         const dividerChar = crumbDivider === 'chevron' ? '>' : crumbDivider === 'dot' ? '·' : '/';
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="breadcrumb"` : '';
-        const styleStr = stylesToString(block.styles);
+        const includeBlockAnimation = includeAnimation && isBlockEligibleForAnimation(block.type);
+        const animationClasses = includeBlockAnimation ? getAnimationClasses(block.animation) : [];
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         if (framework === 'tailwind') {
             const listItems = crumbItems.map((item) =>
@@ -3980,7 +4188,8 @@ ${pad}</div>`
                     ? `${pad}    <li class="flex items-center text-sm font-medium text-[var(--theme-text)]" aria-current="page">${escapeAttrValue(item.label)}</li>`
                     : `${pad}    <li class="flex items-center text-sm font-medium text-[var(--theme-text-muted)] hover:text-[var(--theme-text)]"><a href="${escapeAttrValue(item.href)}">${escapeAttrValue(item.label)}</a><span class="mx-2">${dividerChar}</span></li>`
             ).join('\n');
-            return `${pad}<nav aria-label="breadcrumb"${dataAttr}${styleAttr}>
+            const twWrapperClass = dedupeClasses(['flex', 'flex-wrap', 'items-center', ...animationClasses]).join(' ');
+            return `${pad}<nav class="${twWrapperClass}" aria-label="breadcrumb"${dataAttr}${styleAttr}>
 ${pad}  <ol class="flex flex-wrap items-center">
 ${listItems}
 ${pad}  </ol>
@@ -3992,7 +4201,8 @@ ${pad}</nav>`
                 : `${pad}    <li class="breadcrumb-item"><a href="${escapeAttrValue(item.href)}">${escapeAttrValue(item.label)}</a></li>`
         ).join('\n');
         const dividerStyle = dividerChar !== '/' ? ` style="--bs-breadcrumb-divider: '${dividerChar}';"` : '';
-        return `${pad}<nav aria-label="breadcrumb"${dataAttr}${styleAttr}${dividerStyle}>
+        const bsWrapperClass = dedupeClasses([...animationClasses]).join(' ');
+        return `${pad}<nav${bsWrapperClass ? ` class="${bsWrapperClass}"` : ''} aria-label="breadcrumb"${dataAttr}${styleAttr}${dividerStyle}>
 ${pad}  <ol class="breadcrumb">
 ${listItems}
 ${pad}  </ol>
@@ -4008,7 +4218,9 @@ ${pad}</nav>`
         const showPrevNext = toBoolean(block.props.showPrevNext, true);
         const showFirstLast = toBoolean(block.props.showFirstLast, false);
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="pagination"` : '';
-        const styleStr = stylesToString(block.styles);
+        const includeBlockAnimation = includeAnimation && isBlockEligibleForAnimation(block.type);
+        const animationClasses = includeBlockAnimation ? getAnimationClasses(block.animation) : [];
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         if (framework === 'tailwind') {
             const flexAlign = pgAlignment === 'center' ? 'justify-center' : pgAlignment === 'end' ? 'justify-end' : 'justify-start';
@@ -4025,7 +4237,8 @@ ${pad}</nav>`
             const prevItem = showPrevNext ? `${pad}    <li><a href="#" class="${twLink}">Previous</a></li>` : '';
             const nextItem = showPrevNext ? `${pad}    <li><a href="#" class="${twLink}">Next</a></li>` : '';
             const lastItem = showFirstLast ? `${pad}    <li><a href="#" class="${twLink}">»</a></li>` : '';
-            return `${pad}<nav aria-label="Page navigation"${dataAttr}${styleAttr}>
+            const twWrapperClass = dedupeClasses([...animationClasses]).join(' ');
+            return `${pad}<nav${twWrapperClass ? ` class="${twWrapperClass}"` : ''} aria-label="Page navigation"${dataAttr}${styleAttr}>
 ${pad}  <ul class="flex ${flexAlign} flex-wrap gap-1">
 ${[firstItem, prevItem, pgItems, nextItem, lastItem].filter(Boolean).join('\n')}
 ${pad}  </ul>
@@ -4043,7 +4256,8 @@ ${pad}</nav>`
         const prevItem = showPrevNext ? `${pad}    <li class="page-item"><a class="page-link" href="#">Previous</a></li>` : '';
         const nextItem = showPrevNext ? `${pad}    <li class="page-item"><a class="page-link" href="#">Next</a></li>` : '';
         const lastItem = showFirstLast ? `${pad}    <li class="page-item"><a class="page-link" href="#">»</a></li>` : '';
-        return `${pad}<nav aria-label="Page navigation"${dataAttr}${styleAttr}>
+        const bsWrapperClass = dedupeClasses([...animationClasses]).join(' ');
+        return `${pad}<nav${bsWrapperClass ? ` class="${bsWrapperClass}"` : ''} aria-label="Page navigation"${dataAttr}${styleAttr}>
 ${pad}  <ul class="pagination${sizeClass}${alignClass}">
 ${[firstItem, prevItem, pgItems, nextItem, lastItem].filter(Boolean).join('\n')}
 ${pad}  </ul>
@@ -4059,26 +4273,35 @@ ${pad}</nav>`
         const inline = toBoolean(block.props.inline, false);
         const id = sanitizeElementId(String(block.props.id || block.id), block.id);
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="checkbox"` : '';
-        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
+        const includeBlockAnimation = includeAnimation && isBlockEligibleForAnimation(block.type);
+        const animationClasses = includeBlockAnimation ? getAnimationClasses(block.animation) : [];
+        const baseStyles = getEffectiveStyles(block, framework, false);
+        const wrapperStyles = includeBlockAnimation && block.animation
+            ? {...baseStyles, ...buildAnimationStyleVariables(block.animation)}
+            : baseStyles;
+        const wrapperStyleStr = stylesToString(wrapperStyles);
+        const styleAttr = wrapperStyleStr ? ` style="${wrapperStyleStr}"` : '';
+        const inputClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation: false, includeHoverEffects: false}).join(' ');
 
         if (framework === 'tailwind') {
+            const twWrapperClasses = dedupeClasses(['mb-4', inline ? 'inline-flex' : 'flex', 'items-center', 'gap-3', 'text-[var(--theme-text)]', ...animationClasses]).join(' ');
             if (switchMode) {
-                return `${pad}<label class="mb-4 ${inline ? 'inline-flex' : 'flex'} items-center gap-3 text-[var(--theme-text)]" ${dataAttr}>
-${pad}  <input class="peer sr-only ${classes}" type="checkbox" id="${id}" ${name} ${checked}>
+                return `${pad}<label class="${twWrapperClasses}"${styleAttr} ${dataAttr}>
+${pad}  <input class="peer sr-only ${inputClasses}" type="checkbox" id="${id}" ${name} ${checked}>
 ${pad}  <span class="relative h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-[var(--theme-primary)] after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"></span>
 ${pad}  <span>${label}</span>
 ${pad}</label>`
             }
 
-            return `${pad}<label class="mb-4 ${inline ? 'inline-flex' : 'flex'} items-center gap-3 text-[var(--theme-text)]" ${dataAttr}>
-${pad}  <input class="${classes}" type="checkbox" id="${id}" ${name} ${checked}>
+            return `${pad}<label class="${twWrapperClasses}"${styleAttr} ${dataAttr}>
+${pad}  <input class="${inputClasses}" type="checkbox" id="${id}" ${name} ${checked}>
 ${pad}  <span>${label}</span>
 ${pad}</label>`
         }
 
-        const wrapperClasses = dedupeClasses(['form-check', switchMode ? 'form-switch' : '', inline ? 'form-check-inline' : '']).join(' ');
-        return `${pad}<div class="${wrapperClasses}" ${dataAttr}>
-${pad}  <input class="${classes}" type="checkbox" id="${id}" ${name} ${checked}>
+        const wrapperClasses = dedupeClasses(['form-check', switchMode ? 'form-switch' : '', inline ? 'form-check-inline' : '', ...animationClasses]).join(' ');
+        return `${pad}<div class="${wrapperClasses}"${styleAttr} ${dataAttr}>
+${pad}  <input class="${inputClasses}" type="checkbox" id="${id}" ${name} ${checked}>
 ${pad}  <label class="form-check-label" for="${id}">
 ${pad}    ${label}
 ${pad}  </label>
@@ -4101,9 +4324,9 @@ ${pad}</div>`
         if (!hasBgMedia && !overlay && !fullHeight && ctaButtons.length === 0 && alignment === 'center') {
             // No special rendering needed — fall through to generic
         } else {
-            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n');
-            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
-            const styleStr = stylesToString(block.styles);
+            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
+            const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
             const styleAttrs: string[] = [];
 
             if (bgImage && !bgVideo) styleAttrs.push(`background-image: url('${escapeAttrValue(bgImage)}'); background-size: cover; background-position: center;`);
@@ -4164,9 +4387,9 @@ ${pad}</div>`
 
         if (hasEnhancements) {
             const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="footer"` : '';
-            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n');
-            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
-            const styleStr = stylesToString(block.styles);
+            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
+            const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
             const styleAttr = styleStr ? ` style="${styleStr}"` : '';
 
             const socialHtml = showSocialLinks && socialLinks.length > 0
@@ -4197,9 +4420,10 @@ ${pad}</footer>`
     // Special handling for Navbar with pages datasource
     if (block.type === 'navbar' && block.props.usePages && pages && pages.length > 0) {
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="navbar"` : '';
-        const classesArray = normalizeNavbarThemeClasses([...block.classes, ...getPropDrivenClasses(block)]);
+        const animationClasses = includeAnimation ? getAnimationClasses(block.animation) : [];
+        const classesArray = normalizeNavbarThemeClasses([...block.classes, ...getPropDrivenClasses(block), ...animationClasses]);
         const classes = classesArray.join(' ');
-        let effectiveStyles = getEffectiveStyles(block, framework);
+        let effectiveStyles = getEffectiveStyles(block, framework, includeAnimation);
         const brandText = escapeAttrValue(String(block.props.brandText || 'Brand'));
         const brandImage = String(block.props.brandImage || '').trim();
         const filterTag = String(block.props.filterTag || '').trim();
@@ -4313,8 +4537,8 @@ ${pad}</nav>`
     // Special handling for Page List with pagination
     if (block.type === 'page-list' && pages && pages.length > 0) {
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="page-list"` : '';
-        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls}).join(' ');
-        const styleStr = stylesToString(block.styles);
+        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects}).join(' ');
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const filterTag = String(block.props.filterTag || '').trim();
         const itemsPerPage = Math.max(1, Number(block.props.itemsPerPage) || 6);
@@ -4658,7 +4882,7 @@ ${pad}  <\/script>`;
         const id = sanitizeElementId(String(block.props.id || block.id), block.id);
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="${block.type}"` : '';
         const tag = block.type;
-        const baseClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls})
+        const baseClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects})
             .filter((cls) => !['is-valid', 'is-invalid'].includes(cls));
         const validationState = String(block.props.validationState ?? 'none').trim();
         const validationClass = validationState === 'valid' ? 'is-valid' : validationState === 'invalid' ? 'is-invalid' : '';
@@ -4668,7 +4892,7 @@ ${pad}  <\/script>`;
         attrs.push(`class="${classes}"`);
         attrs.push(`id="${id}"`);
 
-        const styleStr = stylesToString(block.styles);
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         if (styleStr) attrs.push(`style="${styleStr}"`);
 
         const skipKeys = new Set([
@@ -4787,10 +5011,10 @@ ${pad}</div>`
             : mappedLegacyLucide || '';
         const resolvedGlyph = !resolvedLucideName && isRenderableGlyph(rawIconValue) ? rawIconValue : '';
         const classes = stripLegacyBootstrapIconClasses(
-            resolveFrameworkClasses(block, framework, {fullWidthFormControls})
+            resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects})
         );
 
-        const styles = {...block.styles};
+        const styles: Record<string, string> = {...getEffectiveStyles(block, framework, includeAnimation)};
         const rawSize = String(block.props.size ?? '').trim();
         if (rawSize && !['xs', 'sm', 'md', 'lg', 'xl', '2xl'].includes(rawSize) && !styles.fontSize) {
             styles.fontSize = rawSize
@@ -4851,12 +5075,12 @@ ${pad}</div>`
         const decorative = String(block.props.decorative ?? 'none').trim();
         const tag = `h${Math.max(1, Math.min(6, Number(block.props.level) || 2))}`;
         const text = escapeAttrValue(String(block.props.text ?? ''));
-        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
+        const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
         if (decorative === 'underline') classes.push('amagon-heading-underline');
         else if (decorative === 'gradient-underline') classes.push('amagon-heading-gradient-underline');
         const classAttr = classes.length > 0 ? ` class="${dedupeClasses(classes).join(' ')}"` : '';
         const elementId = anchorId || block.id;
-        const styleStr = stylesToString(block.styles);
+        const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleStr ? ` style="${styleStr}"` : '';
         const attrStr = propsToAttributes(tag, block.type, block.props);
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="heading"` : '';
@@ -4870,9 +5094,9 @@ ${pad}</div>`
         const hasExtras = dropCap || columns !== '1';
         if (hasExtras) {
             const text = escapeAttrValue(String(block.props.text ?? ''));
-            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
+            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
             const classAttr = classes.length > 0 ? ` class="${dedupeClasses(classes).join(' ')}"` : '';
-            const styles: Record<string, string> = {...block.styles};
+            const styles: Record<string, string> = {...getEffectiveStyles(block, framework, includeAnimation)};
             if (columns === '2') styles.columnCount = '2';
             else if (columns === '3') styles.columnCount = '3';
             if (dropCap) styles['--drop-cap'] = '1';
@@ -4891,8 +5115,8 @@ ${pad}</div>`
         const bgOverlay = String(block.props.bgOverlay ?? '').trim();
         if (bgColor || bgImage || bgOverlay) {
             const tag = resolveTag(block);
-            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls});
-            const styles: Record<string, string> = {...block.styles};
+            const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
+            const styles: Record<string, string> = {...getEffectiveStyles(block, framework, includeAnimation)};
             if (bgColor) styles.backgroundColor = bgColor;
             if (bgImage) {
                 styles.backgroundImage = `url('${bgImage}')`;
@@ -4904,7 +5128,7 @@ ${pad}</div>`
             const attrStr = propsToAttributes(tag, block.type, block.props);
             const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="container"` : '';
             const elementId = String(block.props.id || block.id);
-            const childrenHtml = block.children.map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls)).join('\n');
+            const childrenHtml = block.children.map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
 
             const overlayHtml = bgOverlay
                 ? framework === 'tailwind'
@@ -4933,7 +5157,7 @@ ${pad}</${tag}>`
     const parts: string[] = [];
 
     // Inline styles
-    let effectiveStyles = getEffectiveStyles(block, framework);
+    let effectiveStyles = getEffectiveStyles(block, framework, includeAnimation);
     if (block.type === 'navbar' && block.classes.some((c) => c.startsWith('x-')) && effectiveStyles.fontSize) {
         const {fontSize, ...rest} = effectiveStyles;
         effectiveStyles = rest
@@ -5016,7 +5240,7 @@ ${pad}</${tag}>`
         fullAttrString.trim().length === 0
     ) {
         return block.children
-            .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls))
+            .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects))
             .join('\n')
     }
 
@@ -5038,7 +5262,7 @@ ${pad}</${tag}>`
 
     if (hasChildren) {
         for (const child of block.children) {
-            lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls))
+            lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects))
         }
     } else if (tag === 'form' && includeDataAttributes) {
         // Empty form indicator for editor mode
@@ -5083,6 +5307,8 @@ export interface PageHtmlOptions extends BlockToHtmlOptions {
     framework?: 'bootstrap-5' | 'tailwind' | 'vanilla'
     meta?: Record<string, string>
     customCss?: string
+    includeAnimationCss?: boolean
+    includeHoverEffectCss?: boolean
     pages?: Page[]
     folders?: PageFolder[]
 }
@@ -5094,6 +5320,8 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
         framework = 'bootstrap-5',
         meta = {},
         customCss = '',
+        includeAnimationCss = true,
+        includeHoverEffectCss = true,
         ...blockOptions
     } = options;
 
@@ -5104,7 +5332,9 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
         indent: 1,
         pages: options.pages,
         folders: options.folders,
-        framework
+        framework,
+        includeAnimation: options.includeAnimation !== false,
+        includeHoverEffects: options.includeHoverEffects !== false
     });
 
     const metaTags = Object.entries(meta)
@@ -5112,6 +5342,15 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
         .join('\n');
 
     const frameworkHead = getFrameworkHead(framework);
+
+    const animationCss = includeAnimationCss ? buildAnimationStylesCss() : '';
+    const animationCssTag = animationCss
+        ? `    <style id="amagon-enter-animations">\n${animationCss}\n    </style>\n`
+        : '';
+    const hoverEffectCss = includeHoverEffectCss ? buildHoverEffectStylesCss() : '';
+    const hoverEffectCssTag = hoverEffectCss
+        ? `    <style id="${AMAGON_HOVER_EFFECT_CSS_ID}">\n${hoverEffectCss}\n    </style>\n`
+        : '';
 
     const customCssTag =
         customCss.trim().length > 0
@@ -5124,7 +5363,7 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 ${metaTags ? metaTags + '\n' : ''}    <title>${escapeAttrValue(effectiveTitle)}</title>
-${frameworkHead}${customCssTag}</head>
+${frameworkHead}${animationCssTag}${hoverEffectCssTag}${customCssTag}</head>
 <body>
 ${bodyHtml}
 </body>

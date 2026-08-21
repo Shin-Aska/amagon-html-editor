@@ -34,6 +34,7 @@ import {getApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useToastStore} from '../../store/toastStore'
+import {cloneBlockTree} from '../../templates/templateFactories'
 import type {Block, EditorLayout} from '../../store/types'
 import {createBlock} from '../../store/types'
 import AssetManager from '../AssetManager/AssetManager'
@@ -270,18 +271,7 @@ export default function Toolbar({
 
     const handlePaste = () => {
         if (clipboard) {
-            // Clone the clipboard block to generate new IDs
-            const cloneBlock = (b: Block): Block => {
-                return createBlock(b.type, {
-                    props: {...b.props},
-                    styles: {...b.styles},
-                    classes: [...b.classes],
-                    content: b.content,
-                    children: b.children.map(cloneBlock)
-                })
-            };
-
-            const newBlock = cloneBlock(clipboard);
+            const newBlock = cloneBlockTree(clipboard);
             addBlock(newBlock, selectedBlockId) // Add as child of selected, or root
         }
     };
