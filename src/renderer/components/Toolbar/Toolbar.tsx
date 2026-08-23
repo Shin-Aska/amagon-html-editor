@@ -393,7 +393,7 @@ export default function Toolbar({
                             <Save size={16} aria-hidden="true"/>
                         </button>
                         <button className="toolbar-btn" onClick={handleExport} title="Export"
-                                aria-label="Export project">
+                                aria-label="Export project" data-tutorial="toolbar-export">
                             <Download size={16} aria-hidden="true"/>
                         </button>
                         <button
@@ -501,7 +501,8 @@ export default function Toolbar({
                                 <span className="toolbar-page-theme-label">D</span>
                             </button>
                             <div className="toolbar-divider"/>
-                            <div className="toolbar-motion-group" role="group" aria-label="Motion preview">
+                            <div className="toolbar-motion-group" role="group" aria-label="Motion preview"
+                                 data-tutorial="toolbar-motion-preview">
                                 <button
                                     className={`toolbar-btn toolbar-motion-btn ${motionPreviewMode === 'system' ? 'active' : ''}`}
                                     onClick={() => setMotionPreviewMode('system')}

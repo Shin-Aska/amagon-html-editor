@@ -308,107 +308,38 @@ before the overlay is active.
 
 ---
 
-## 7. Tutorial Step Sequence (13 Steps)
+## 7. Tutorial Step Sequence (17 Core Steps)
 
-| #  | ID                   | Title              | Target selector                         | Placement | Action            | Auto-advance |
-|----|----------------------|--------------------|-----------------------------------------|-----------|-------------------|--------------|
-| 1  | `welcome`            | Welcome to Amagon! | `null`                                  | —         | `none`            | false        |
-| 2  | `sidebar-pages`      | Pages panel        | `[data-tutorial="sidebar-tab-pages"]`   | `right`   | `none`            | false        |
-| 3  | `sidebar-widgets`    | Widgets panel      | `[data-tutorial="sidebar-tab-widgets"]` | `right`   | `none`            | false        |
-| 4  | `drag-widget`        | Drag a widget      | `[data-tutorial="widget-grid"]`         | `right`   | `drag-to-canvas`  | true         |
-| 5  | `canvas-select`      | Select a block     | `[data-tutorial="canvas"]`              | `top`     | `select-block`    | true         |
-| 6  | `inspector`          | Edit properties    | `[data-tutorial="inspector"]`           | `left`    | `edit-property`   | true         |
-| 7  | `sidebar-layers`     | Layers panel       | `[data-tutorial="sidebar-tab-layers"]`  | `right`   | `none`            | false        |
-| 8  | `toolbar-viewport`   | Viewport modes     | `[data-tutorial="toolbar-viewport"]`    | `bottom`  | `change-viewport` | true         |
-| 9  | `toolbar-undo-redo`  | Undo / Redo        | `[data-tutorial="toolbar-undo-redo"]`   | `bottom`  | `none`            | false        |
-| 10 | `toolbar-layout`     | Layout modes       | `[data-tutorial="toolbar-layout"]`      | `bottom`  | `none`            | false        |
-| 11 | `toolbar-zoom`       | Zoom controls      | `[data-tutorial="toolbar-zoom"]`        | `bottom`  | `none`            | false        |
-| 12 | `keyboard-shortcuts` | Keyboard shortcuts | `null`                                  | —         | `none`            | false        |
-| 13 | `completion`         | You're all set!    | `null`                                  | —         | `none`            | false        |
+| #  | ID                       | Title                   | Target selector                                  | Placement | Action           | Auto-advance |
+|----|--------------------------|-------------------------|--------------------------------------------------|-----------|------------------|--------------|
+| 1  | `welcome`                | Welcome to Amagon!      | `null`                                           | `bottom`  | `none`           | false        |
+| 2  | `canvas-intro`           | The Canvas              | `[data-tutorial="canvas"]`                       | `left`    | `none`           | false        |
+| 3  | `sidebar-pages`          | Pages                   | `[data-tutorial="sidebar-tab-pages"]`            | `right`   | `none`           | false        |
+| 4  | `page-context-menu`      | Page options            | `[data-tutorial="page-list-item"]`               | `right`   | `none`           | false        |
+| 5  | `sidebar-widgets`        | Widgets                 | `[data-tutorial="sidebar-tab-widgets"]`          | `right`   | `none`           | false        |
+| 6  | `drag-widget`            | Drag a widget           | `[data-tutorial="widget-grid"]`                  | `right`   | `drag-to-canvas` | true         |
+| 7  | `canvas-select`          | Select a block          | `[data-tutorial="canvas"]`                       | `top`     | `select-block`   | true         |
+| 8  | `inspector`              | Edit properties         | `[data-tutorial="inspector"]`                    | `left`    | `none`           | false        |
+| 9  | `sidebar-layers`         | Layers panel            | `[data-tutorial="sidebar-tab-layers"]`           | `right`   | `none`           | false        |
+| 10 | `toolbar-export`         | Export your site        | `[data-tutorial="toolbar-export"]`               | `bottom`  | `none`           | false        |
+| 11 | `toolbar-viewport`       | Responsive preview      | `[data-tutorial="toolbar-viewport"]`             | `bottom`  | `none`           | false        |
+| 12 | `toolbar-motion-preview` | Motion preview          | `[data-tutorial="toolbar-motion-preview"]`       | `bottom`  | `none`           | false        |
+| 13 | `toolbar-undo-redo`      | Undo and Redo           | `[data-tutorial="toolbar-undo-redo"]`            | `bottom`  | `none`           | false        |
+| 14 | `toolbar-layout`         | Layout modes            | `[data-tutorial="toolbar-layout"]`               | `bottom`  | `none`           | false        |
+| 15 | `toolbar-zoom`           | Zoom controls           | `[data-tutorial="toolbar-zoom"]`                 | `bottom`  | `none`           | false        |
+| 16 | `keyboard-shortcuts`     | Keyboard shortcuts      | `[data-tutorial="help-menu-btn"]`                | `bottom`  | `none`           | false        |
+| 17 | `branch-choice`          | Explore advanced topics | `null`                                           | `bottom`  | `none`           | false        |
 
-### Step content details
+All toolbar steps call `ensureToolbarMenuOpen()` so their targets remain visible when the compact toolbar is active at
+screen widths up to 840px.
 
-**Step 1 — Welcome** (`welcome`)
+### Toolbar additions
 
-- Title: "Welcome to Amagon!"
-- Body: "Let's take a quick tour of the editor. It takes about 2 minutes. You can skip at any time."
-- No spotlight target; dim entire screen. Show "Let's go →" (Next) button only (no Back).
-
-**Step 2 — Pages** (`sidebar-pages`)
-
-- onEnter: switch sidebar to `pages` tab (`setActiveTab('pages')`)
-- Title: "Pages"
-- Body: "Manage your site's pages here. Create new pages, organize them into folders, and switch between them."
-
-**Step 3 — Widgets** (`sidebar-widgets`)
-
-- onEnter: switch sidebar to `widgets` tab
-- Title: "Widgets"
-- Body: "Browse all available building blocks. Drag any widget onto the canvas to add it to your page."
-
-**Step 4 — Drag a widget** (`drag-widget`)
-
-- Spotlight: the widget grid area (`[data-tutorial="widget-grid"]`)
-- Title: "Drag a widget to the canvas"
-- Body: "Try it now — grab any widget and drop it onto the canvas on the right."
-- Arrow points right (toward canvas)
-- autoAdvance: true (detects new block added to editorStore.blocks)
-
-**Step 5 — Select a block** (`canvas-select`)
-
-- Spotlight: canvas container
-- Title: "Select a block"
-- Body: "Click any block on the canvas to select it. The block will be highlighted with a blue outline."
-- autoAdvance: true (detects editorStore.selectedBlockId becoming non-null)
-
-**Step 6 — Inspector** (`inspector`)
-
-- onEnter: ensure right panel (inspector) is open
-- Title: "Edit properties"
-- Body: "The Inspector shows all properties for the selected block. Change text, colors, spacing, and more."
-- autoAdvance: true (detects any block property update via editorStore)
-
-**Step 7 — Layers** (`sidebar-layers`)
-
-- onEnter: switch sidebar to `layers` tab
-- Title: "Layers panel"
-- Body: "The Layers panel shows a tree of all blocks on the page. Use it to select, reorder, and nest blocks."
-
-**Step 8 — Viewport modes** (`toolbar-viewport`)
-
-- Title: "Responsive preview"
-- Body: "Switch between Desktop, Tablet, and Mobile views to check how your page looks at each breakpoint."
-- autoAdvance: true (detects editorStore.viewportMode change away from 'desktop')
-
-**Step 9 — Undo / Redo** (`toolbar-undo-redo`)
-
-- Title: "Undo and Redo"
-- Body: "Made a mistake? Use <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd> or these buttons to step through your history."
-
-**Step 10 — Layout modes** (`toolbar-layout`)
-
-- Title: "Layout modes"
-- Body: "Toggle the sidebar and inspector panels, or enter focus mode. Choose the layout that fits your workflow."
-
-**Step 11 — Zoom** (`toolbar-zoom`)
-
-- Title: "Zoom controls"
-- Body: "Use the zoom controls to get a closer look at your design, or zoom out to see the full page."
-
-**Step 12 — Keyboard shortcuts** (`keyboard-shortcuts`)
-
-- No spotlight target; info box centered on screen.
-- Title: "Keyboard shortcuts"
-- Body: "Press <kbd>?</kbd> or click the <strong>Help</strong> menu to view all keyboard shortcuts."
-
-**Step 13 — Completion** (`completion`)
-
-- No spotlight; celebratory state.
-- Title: "You're all set!"
-- Body: "That's the tour. Explore Amagon and build something great. You can restart this tutorial any time from
-  Settings → General."
-- Shows "Explore on your own →" button (calls `completeTutorial()` instead of `nextStep()`).
-- Simple CSS confetti animation (keyframe, 1.5s, 6–8 colored dots falling from top of info box).
+- **Export your site** introduces the Export command without opening the dialog or interrupting the tour.
+- **Motion preview** explains System, Full, and Reduced editor preview modes and explicitly states that exported sites
+  continue to respect each visitor's reduced-motion preference.
+- After the core flow, the branch choice can load an advanced tutorial. The shared completion step follows the selected
+  branch or the user's decision to explore independently.
 
 ---
 
@@ -556,7 +487,9 @@ Attributes to add in Phase 4. Listed here for reference during implementation of
 | `[data-tutorial="widget-grid"]`         | Widget grid container div                   | 4                  |
 | `[data-tutorial="canvas"]`              | Canvas root container in `Canvas.tsx`       | 4                  |
 | `[data-tutorial="inspector"]`           | Inspector root container in `Inspector.tsx` | 4                  |
+| `[data-tutorial="toolbar-export"]`      | Export button in `Toolbar.tsx`              | Current            |
 | `[data-tutorial="toolbar-viewport"]`    | Viewport button group in `Toolbar.tsx`      | 4                  |
+| `[data-tutorial="toolbar-motion-preview"]` | Motion preview button group              | Current            |
 | `[data-tutorial="toolbar-undo-redo"]`   | Undo/Redo button group                      | 4                  |
 | `[data-tutorial="toolbar-layout"]`      | Layout mode button group                    | 4                  |
 | `[data-tutorial="toolbar-zoom"]`        | Zoom control group                          | 4                  |
@@ -635,7 +568,7 @@ const isTutorialActive = useTutorialStore((s) => s.isActive)
 - [ ] All interfaces compile with `npx tsc --noEmit`
 - [ ] Target selectors in step table match elements present in the current codebase (verified by grep)
 - [ ] No AI tab or publishing references in step sequence
-- [ ] `data-tutorial` attribute map covers all 13 step targets
+- [ ] `data-tutorial` attribute map covers all current step targets
 - [ ] Action detection covers all 5 interactive step types
 - [ ] CSS z-index strategy doesn't conflict with existing modal z-indices
 - [ ] Dark mode CSS variables cover all tutorial surfaces

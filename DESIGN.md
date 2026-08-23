@@ -119,6 +119,7 @@ All spacing derives from 4px.
 - Use CSS-only `transform`, `opacity`, `filter`, `box-shadow`, and color changes; never animate layout properties.
 - Respect `(hover: hover) and (pointer: fine)` to avoid sticky hover on touch.
 - Respect `prefers-reduced-motion: reduce` by disabling entrance, hover, and action transforms/filters while keeping stable final state.
+- The toolbar offers System, Full, and Reduced motion previews for the editor canvas only; exported sites always retain the visitor-facing reduced-motion media query.
 
 ## 7. Depth & Surface
 
