@@ -71,6 +71,7 @@ All spacing derives from 4px.
 
 - App shell: fixed toolbar plus resizable left, center, and right panels.
 - Inspector controls: single-column fields, two-column rows only when labels remain readable.
+- At phone widths, the Inspector overlays the canvas at a usable width instead of compressing controls into unreadable columns.
 - Breakpoints follow the app shell rather than document-style section layout.
 
 ### Rules
@@ -93,7 +94,7 @@ All spacing derives from 4px.
 ### Preset Radio Grid
 
 - **Structure**: label row, grid of label-wrapped radio inputs using visually hidden native inputs.
-- **Variants**: animation presets, hover-effect presets.
+- **Variants**: entrance, hover, and action-effect presets.
 - **Spacing**: 6px grid gap, 6px by 4px button padding.
 - **States**: default, hover, active, focus via native radio, disabled/ineligible note.
 - **Accessibility**: `radiogroup` with labelled native radios and arrow-key support.
@@ -113,9 +114,11 @@ All spacing derives from 4px.
 ### Rules
 
 - Hover effects are affordance feedback for interactive or media/content widgets, not decoration on every block.
+- Action effects replay on pointer or keyboard activation for genuinely activatable widgets only. Presets use a short press, pop, pulse, or shake response inspired by beui.dev's spring-press button mechanism, adapted to CSS keyframes.
+- The Inspector presents Entrance, Hover, and Action as subsections of one Animations group.
 - Use CSS-only `transform`, `opacity`, `filter`, `box-shadow`, and color changes; never animate layout properties.
 - Respect `(hover: hover) and (pointer: fine)` to avoid sticky hover on touch.
-- Respect `prefers-reduced-motion: reduce` by disabling transform/filter motion while keeping stable final state.
+- Respect `prefers-reduced-motion: reduce` by disabling entrance, hover, and action transforms/filters while keeping stable final state.
 
 ## 7. Depth & Surface
 

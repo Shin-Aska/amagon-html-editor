@@ -1,7 +1,7 @@
 import {useState, type KeyboardEvent} from 'react'
 import './StyleEditor.css'
 import FontPickerField from './FontPickerField'
-import type {BlockAnimation, BlockHoverEffect, HoverEffectPreset} from '../../store/types'
+import type {ActionEffectPreset, BlockActionEffect, BlockAnimation, BlockHoverEffect, HoverEffectPreset} from '../../store/types'
 import {
     clampDelayMs,
     clampDurationMs,
@@ -11,6 +11,7 @@ import {
     PRESETS
 } from '../../utils/animationPresets'
 import {HOVER_EFFECT_LABELS, HOVER_EFFECT_PRESETS} from '../../utils/hoverEffects'
+import {ACTION_EFFECT_LABELS, ACTION_EFFECT_PRESETS} from '../../utils/actionEffects'
 
 interface StyleEditorProps {
     styles: Record<string, string>
@@ -873,6 +874,113 @@ export function HoverEffectEditor({hoverEffect, eligible, onChange}: HoverEffect
 
             <p className="hover-effect-reduced-motion-note">
                 Applies on hover-capable pointers and respects reduced motion.
+            </p>
+        </div>
+    )
+}
+
+interface ActionEffectEditorProps {
+    actionEffect?: BlockActionEffect
+    eligible: boolean
+    onChange: (actionEffect?: BlockActionEffect) => void
+}
+
+export function ActionEffectEditor({actionEffect, eligible, onChange}: ActionEffectEditorProps): JSX.Element {
+    const selectedPreset = actionEffect?.preset;
+
+    const handleSelectPreset = (preset: ActionEffectPreset | 'none') => {
+        if (!eligible) return;
+        onChange(preset === 'none' ? undefined : {preset})
+    };
+
+    const handlePresetKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+            ? 1
+            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0;
+        if (direction === 0) return;
+
+        const group = event.currentTarget.closest('[role="radiogroup"]');
+        const radios = Array.from(group?.querySelectorAll<HTMLInputElement>('input[name="action-effect-preset"]') ?? []);
+        const currentIndex = radios.indexOf(event.currentTarget);
+        if (currentIndex === -1 || radios.length === 0) return;
+
+        event.preventDefault();
+        const next = radios[(currentIndex + direction + radios.length) % radios.length];
+        next.focus();
+        next.click()
+    };
+
+    if (!eligible) {
+        return (
+            <div className="style-editor-section">
+                <p className="action-effect-ineligible-note">
+                    This element type does not support action effects.
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="style-editor-section">
+            <div className="style-label-row" id="action-effect-preset-label">
+                <label className="style-label">Action preset</label>
+                <span
+                    className="style-info-btn"
+                    title="Pick feedback that replays when this widget is clicked, tapped, or activated from the keyboard."
+                >?</span>
+            </div>
+            <div
+                className="action-effect-preset-grid"
+                role="radiogroup"
+                aria-labelledby="action-effect-preset-label"
+            >
+                <label className={`action-effect-preset-btn ${!selectedPreset ? 'active' : ''}`}>
+                    <input
+                        type="radio"
+                        name="action-effect-preset"
+                        value=""
+                        checked={!selectedPreset}
+                        onChange={() => handleSelectPreset('none')}
+                        onKeyDown={handlePresetKeyDown}
+                        className="sr-only"
+                    />
+                    None
+                </label>
+                {ACTION_EFFECT_PRESETS.map((preset) => (
+                    <label
+                        key={preset}
+                        className={`action-effect-preset-btn ${selectedPreset === preset ? 'active' : ''}`}
+                    >
+                        <input
+                            type="radio"
+                            name="action-effect-preset"
+                            value={preset}
+                            checked={selectedPreset === preset}
+                            onChange={() => handleSelectPreset(preset)}
+                            onKeyDown={handlePresetKeyDown}
+                            className="sr-only"
+                        />
+                        {ACTION_EFFECT_LABELS[preset]}
+                    </label>
+                ))}
+            </div>
+
+            {selectedPreset && (
+                <div className="style-row">
+                    <button
+                        type="button"
+                        className="action-effect-clear-btn"
+                        onClick={() => onChange(undefined)}
+                    >
+                        Clear action effect
+                    </button>
+                </div>
+            )}
+
+            <p className="action-effect-reduced-motion-note">
+                Replays on pointer or keyboard activation and respects reduced motion.
             </p>
         </div>
     )

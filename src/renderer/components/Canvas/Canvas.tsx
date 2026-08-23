@@ -8,6 +8,7 @@ import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {blockToHtml} from '../../utils/blockToHtml'
 import {buildAnimationStylesCss} from '../../utils/animationPresets'
 import {buildHoverEffectStylesCss} from '../../utils/hoverEffects'
+import {buildActionEffectStylesCss} from '../../utils/actionEffects'
 import {cloneBlockTree} from '../../templates/templateFactories'
 import type {Block} from '../../store/types'
 import {createBlock, themeToCSS} from '../../store/types'
@@ -341,7 +342,10 @@ function Canvas(): JSX.Element {
         if (!runtimeReady) return;
         const themeCss = themeToCSS(projectTheme, projectThemeVariants, projectFonts, {componentTokens});
         postToIframe({type: 'setThemeCss', css: themeCss});
-        postToIframe({type: 'setAnimationCss', css: `${buildAnimationStylesCss()}\n${buildHoverEffectStylesCss()}`})
+        postToIframe({
+            type: 'setAnimationCss',
+            css: `${buildAnimationStylesCss()}\n${buildHoverEffectStylesCss()}\n${buildActionEffectStylesCss()}`
+        })
     }, [projectTheme, projectThemeVariants, projectFonts, componentTokens, runtimeReady]);
 
     useEffect(() => {

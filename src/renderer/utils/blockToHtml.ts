@@ -15,6 +15,13 @@ import {
     getHoverEffectClasses,
     isBlockEligibleForHoverEffect
 } from './hoverEffects'
+import {
+    AMAGON_ACTION_EFFECT_CSS_ID,
+    buildActionEffectRuntimeScript,
+    buildActionEffectStylesCss,
+    getActionEffectClasses,
+    isBlockEligibleForActionEffect
+} from './actionEffects'
 
 // We will inject the CSS for highlight.js in global.css or the canvas iframe CSS.
 import type {Block, FrameworkChoice, Page, PageFolder} from '../store/types'
@@ -568,6 +575,10 @@ function rootPresentationAttributes(
 
     if (options.includeHoverEffects !== false && isBlockEligibleForHoverEffect(block.type) && block.hoverEffect) {
         classes = dedupeClasses([...classes, ...getHoverEffectClasses(block.hoverEffect)])
+    }
+
+    if (isBlockEligibleForActionEffect(block.type) && block.actionEffect) {
+        classes = dedupeClasses([...classes, ...getActionEffectClasses(block.actionEffect)])
     }
 
     return {
@@ -1534,10 +1545,12 @@ function getPropDrivenClasses(block: Block): string[] {
 function resolveFrameworkClasses(block: Block, framework: FrameworkChoice, options?: BlockToHtmlOptions): string[] {
     const includeAnimation = options?.includeAnimation !== false && isBlockEligibleForAnimation(block.type);
     const includeHoverEffects = options?.includeHoverEffects !== false && isBlockEligibleForHoverEffect(block.type);
+    const includeActionEffects = isBlockEligibleForActionEffect(block.type);
     let baseClasses = [
         ...block.classes,
         ...(includeAnimation ? getAnimationClasses(block.animation) : []),
-        ...(includeHoverEffects ? getHoverEffectClasses(block.hoverEffect) : [])
+        ...(includeHoverEffects ? getHoverEffectClasses(block.hoverEffect) : []),
+        ...(includeActionEffects ? getActionEffectClasses(block.actionEffect) : [])
     ];
     if (block.type === 'container' && block.props.fluid) {
         baseClasses = baseClasses.filter((cls) => cls !== 'container')
@@ -5309,6 +5322,7 @@ export interface PageHtmlOptions extends BlockToHtmlOptions {
     customCss?: string
     includeAnimationCss?: boolean
     includeHoverEffectCss?: boolean
+    includeActionEffectCss?: boolean
     pages?: Page[]
     folders?: PageFolder[]
 }
@@ -5322,6 +5336,7 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
         customCss = '',
         includeAnimationCss = true,
         includeHoverEffectCss = true,
+        includeActionEffectCss = true,
         ...blockOptions
     } = options;
 
@@ -5351,6 +5366,13 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
     const hoverEffectCssTag = hoverEffectCss
         ? `    <style id="${AMAGON_HOVER_EFFECT_CSS_ID}">\n${hoverEffectCss}\n    </style>\n`
         : '';
+    const actionEffectCss = includeActionEffectCss ? buildActionEffectStylesCss() : '';
+    const actionEffectCssTag = actionEffectCss
+        ? `    <style id="${AMAGON_ACTION_EFFECT_CSS_ID}">\n${actionEffectCss}\n    </style>\n`
+        : '';
+    const actionEffectRuntime = includeActionEffectCss
+        ? `\n<script>${buildActionEffectRuntimeScript()}<\/script>`
+        : '';
 
     const customCssTag =
         customCss.trim().length > 0
@@ -5363,9 +5385,9 @@ export function pageToHtml(blocks: Block[], options: PageHtmlOptions = {}): stri
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 ${metaTags ? metaTags + '\n' : ''}    <title>${escapeAttrValue(effectiveTitle)}</title>
-${frameworkHead}${animationCssTag}${hoverEffectCssTag}${customCssTag}</head>
+${frameworkHead}${animationCssTag}${hoverEffectCssTag}${actionEffectCssTag}${customCssTag}</head>
 <body>
-${bodyHtml}
+${bodyHtml}${actionEffectRuntime}
 </body>
 </html>`
 }

@@ -127,14 +127,16 @@
 }
 
 .animation-preset-grid,
-.hover-effect-preset-grid {
+.hover-effect-preset-grid,
+.action-effect-preset-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
 }
 
 .animation-preset-btn,
-.hover-effect-preset-btn {
+.hover-effect-preset-btn,
+.action-effect-preset-btn {
     padding: 6px 4px;
     font-size: 11px;
     border: 1px solid var(--color-border);
@@ -143,22 +145,28 @@
     color: var(--color-text-primary);
     cursor: pointer;
     transition: all 0.2s;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: center;
 }
 
 .animation-preset-btn:hover,
-.hover-effect-preset-btn:hover {
+.hover-effect-preset-btn:hover,
+.action-effect-preset-btn:hover {
     background: var(--color-bg-secondary);
 }
 
 .animation-preset-btn.active,
-.hover-effect-preset-btn.active {
+.hover-effect-preset-btn.active,
+.action-effect-preset-btn.active {
     background: var(--color-accent);
     border-color: var(--color-accent);
     color: white;
 }
 
 .animation-clear-btn,
-.hover-effect-clear-btn {
+.hover-effect-clear-btn,
+.action-effect-clear-btn {
     width: 100%;
     padding: 6px;
     font-size: 11px;
@@ -170,17 +178,34 @@
 }
 
 .animation-clear-btn:hover,
-.hover-effect-clear-btn:hover {
+.hover-effect-clear-btn:hover,
+.action-effect-clear-btn:hover {
     background: var(--color-bg-secondary);
 }
 
 .animation-ineligible-note,
 .animation-reduced-motion-note,
 .hover-effect-ineligible-note,
-.hover-effect-reduced-motion-note {
+.hover-effect-reduced-motion-note,
+.action-effect-ineligible-note,
+.action-effect-reduced-motion-note {
     font-size: 11px;
     color: var(--color-text-secondary);
     margin: 0;
+}
+
+.motion-editor-stack > .style-editor-section + .style-editor-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+}
+
+@container inspector (max-width: 240px) {
+    .animation-preset-grid,
+    .hover-effect-preset-grid,
+    .action-effect-preset-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .sr-only {

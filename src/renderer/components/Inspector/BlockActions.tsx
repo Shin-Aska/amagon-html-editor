@@ -57,6 +57,7 @@ export default function BlockActions({blockId, blockType}: BlockActionsProps): J
                 classes: [...node.classes],
                 animation: node.animation ? {...node.animation} : undefined,
                 hoverEffect: node.hoverEffect ? {...node.hoverEffect} : undefined,
+                actionEffect: node.actionEffect ? {...node.actionEffect} : undefined,
                 content: node.content,
                 tag: node.tag
             });

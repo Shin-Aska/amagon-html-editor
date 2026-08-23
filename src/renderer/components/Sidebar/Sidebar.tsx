@@ -569,6 +569,7 @@ function Sidebar(): JSX.Element {
                 classes: [...b.classes],
                 animation: b.animation ? {...b.animation} : undefined,
                 hoverEffect: b.hoverEffect ? {...b.hoverEffect} : undefined,
+                actionEffect: b.actionEffect ? {...b.actionEffect} : undefined,
                 content: b.content,
                 tag: b.tag
             });

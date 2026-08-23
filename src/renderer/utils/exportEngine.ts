@@ -3,6 +3,7 @@ import {themeToCSS} from '../store/types'
 import {blockToHtml} from './blockToHtml'
 import {buildAnimationStylesCss} from './animationPresets'
 import {buildHoverEffectStylesCss} from './hoverEffects'
+import {buildActionEffectRuntimeScript, buildActionEffectStylesCss} from './actionEffects'
 import {getApi} from './api'
 
 export interface ExportFile {
@@ -573,6 +574,11 @@ function buildStylesCss(
         lines.push(hoverEffectCss.trim())
     }
 
+    const actionEffectCss = buildActionEffectStylesCss();
+    if (actionEffectCss.trim().length > 0) {
+        lines.push(actionEffectCss.trim())
+    }
+
     if (customCss && customCss.trim().length > 0) {
         lines.push(customCss.trim())
     }
@@ -799,7 +805,7 @@ function buildPageHtml(params: {
 ${head}
 </head>
 <body>
-${bodyHtml}
+${bodyHtml}${params.includeJs ? `\n<script>${buildActionEffectRuntimeScript()}<\/script>` : ''}
 </body>
 </html>`
 }

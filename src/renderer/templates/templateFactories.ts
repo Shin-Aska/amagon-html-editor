@@ -8,6 +8,7 @@ export interface TemplateBlockInit {
     classes?: string[]
     animation?: Block['animation']
     hoverEffect?: Block['hoverEffect']
+    actionEffect?: Block['actionEffect']
     events?: Record<string, string>
     content?: string
     children?: Block[]
@@ -22,6 +23,7 @@ export function createTemplateBlock(type: string, init: TemplateBlockInit = {}):
         classes: init.classes ?? [],
         ...(init.animation !== undefined ? {animation: init.animation} : {}),
         ...(init.hoverEffect !== undefined ? {hoverEffect: init.hoverEffect} : {}),
+        ...(init.actionEffect !== undefined ? {actionEffect: init.actionEffect} : {}),
         events: init.events ?? {},
         ...(init.content !== undefined ? {content: init.content} : {}),
         children: init.children ?? [],
@@ -37,6 +39,7 @@ export function cloneBlockTree(block: Block): Block {
         classes: [...block.classes],
         animation: block.animation ? {...block.animation} : undefined,
         hoverEffect: block.hoverEffect ? {...block.hoverEffect} : undefined,
+        actionEffect: block.actionEffect ? {...block.actionEffect} : undefined,
         events: block.events ? {...block.events} : {},
         ...(block.content !== undefined ? {content: block.content} : {}),
         children: block.children.map(cloneBlockTree),

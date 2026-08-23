@@ -2,8 +2,8 @@ import {describe, expect, it, vi} from 'vitest'
 import {createElement, act, useState} from 'react'
 import {createRoot} from 'react-dom/client'
 import userEvent from '@testing-library/user-event'
-import {AnimationEditor, HoverEffectEditor} from '../StyleEditors'
-import type {BlockAnimation, BlockHoverEffect} from '../../../store/types'
+import {ActionEffectEditor, AnimationEditor, HoverEffectEditor} from '../StyleEditors'
+import type {BlockActionEffect, BlockAnimation, BlockHoverEffect} from '../../../store/types'
 
 (globalThis as unknown as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -51,6 +51,15 @@ function hoverEffectRadio(container: HTMLElement, label: string): HTMLInputEleme
     return found
 }
 
+function actionEffectRadio(container: HTMLElement, label: string): HTMLInputElement {
+    const radios = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="radio"][name="action-effect-preset"]'));
+    const found = radios.find((radio) => radio.parentElement?.textContent?.trim() === label);
+    if (!found) {
+        throw new Error(`Action effect radio "${label}" not found`)
+    }
+    return found
+}
+
 function ControlledAnimationEditor({
     initialAnimation,
     onChange
@@ -83,6 +92,24 @@ function ControlledHoverEffectEditor({
         onChange: (nextHoverEffect) => {
             setHoverEffect(nextHoverEffect);
             onChange(nextHoverEffect)
+        }
+    })
+}
+
+function ControlledActionEffectEditor({
+    initialActionEffect,
+    onChange
+}: {
+    initialActionEffect: BlockActionEffect
+    onChange: (actionEffect?: BlockActionEffect) => void
+}): JSX.Element {
+    const [actionEffect, setActionEffect] = useState<BlockActionEffect | undefined>(initialActionEffect);
+    return createElement(ActionEffectEditor, {
+        eligible: true,
+        actionEffect,
+        onChange: (nextActionEffect) => {
+            setActionEffect(nextActionEffect);
+            onChange(nextActionEffect)
         }
     })
 }
@@ -389,6 +416,74 @@ describe('HoverEffectEditor', () => {
         expect(grow.checked).toBe(true);
         expect(lift.checked).toBe(false);
         expect(onChange).toHaveBeenLastCalledWith({preset: 'grow'});
+        unmount()
+    })
+});
+
+describe('ActionEffectEditor', () => {
+    it('renders the action preset grid with None selected by default', () => {
+        const onChange = vi.fn();
+        const {container, unmount} = renderIntoContainer(
+            createElement(ActionEffectEditor, {eligible: true, onChange})
+        );
+
+        const radios = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="radio"][name="action-effect-preset"]'));
+        expect(radios.length).toBe(5);
+        expect(actionEffectRadio(container, 'None').checked).toBe(true);
+        expect(radios.map((radio) => radio.parentElement?.textContent?.trim())).toEqual([
+            'None',
+            'Press',
+            'Pop',
+            'Pulse',
+            'Shake'
+        ]);
+        unmount()
+    });
+
+    it('selects, clears, and keyboard-navigates action presets', async () => {
+        const onChange = vi.fn();
+        const {container, unmount} = renderIntoContainer(
+            createElement(ControlledActionEffectEditor, {
+                initialActionEffect: {preset: 'press'},
+                onChange
+            })
+        );
+        const user = userEvent.setup();
+        const press = actionEffectRadio(container, 'Press');
+        const pop = actionEffectRadio(container, 'Pop');
+
+        act(() => press.focus());
+        await act(async () => user.keyboard('{ArrowRight}'));
+
+        expect(document.activeElement).toBe(pop);
+        expect(pop.checked).toBe(true);
+        expect(onChange).toHaveBeenLastCalledWith({preset: 'pop'});
+
+        act(() => actionEffectRadio(container, 'None').click());
+        expect(onChange).toHaveBeenLastCalledWith(undefined);
+        unmount()
+    });
+
+    it('shows an ineligible message without controls', () => {
+        const onChange = vi.fn();
+        const {container, unmount} = renderIntoContainer(
+            createElement(ActionEffectEditor, {eligible: false, onChange})
+        );
+
+        expect(container.textContent).toContain('does not support action effects');
+        expect(container.querySelectorAll('input[name="action-effect-preset"]')).toHaveLength(0);
+        expect(onChange).not.toHaveBeenCalled();
+        unmount()
+    });
+
+    it('labels the action radiogroup for assistive technology', () => {
+        const onChange = vi.fn();
+        const {container, unmount} = renderIntoContainer(
+            createElement(ActionEffectEditor, {eligible: true, onChange})
+        );
+
+        const grid = mustSelect(container, '[role="radiogroup"]');
+        expect(grid.getAttribute('aria-labelledby')).toBe('action-effect-preset-label');
         unmount()
     })
 });

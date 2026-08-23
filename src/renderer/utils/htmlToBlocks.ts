@@ -4,12 +4,13 @@ import {parse} from 'parse5'
 import {isRenderableGlyph} from './iconCatalog'
 import {animationFromClassNameAndStyles, isBlockEligibleForAnimation, stripAnimationTokens, stripLegacyAnimationStyles} from './animationPresets'
 import {hoverEffectFromClassNames, isBlockEligibleForHoverEffect, stripHoverEffectTokens} from './hoverEffects'
+import {actionEffectFromClassNames, isBlockEligibleForActionEffect, stripActionEffectTokens} from './actionEffects'
 
 function finalizeBlock(block: Block, rootEl?: Element): Block {
     const animationCleaned = stripAnimationTokens(block.classes, block.styles);
     const nextBlock: Block = {
         ...block,
-        classes: stripHoverEffectTokens(animationCleaned.classes),
+        classes: stripActionEffectTokens(stripHoverEffectTokens(animationCleaned.classes)),
         styles: animationCleaned.styles
     };
     if (!rootEl) return nextBlock;
@@ -22,10 +23,14 @@ function finalizeBlock(block: Block, rootEl?: Element): Block {
     const hoverEffect = isBlockEligibleForHoverEffect(block.type)
         ? hoverEffectFromClassNames(rootClasses)
         : undefined;
+    const actionEffect = isBlockEligibleForActionEffect(block.type)
+        ? actionEffectFromClassNames(rootClasses)
+        : undefined;
     const animatedBlock = animation
         ? {...nextBlock, styles: stripLegacyAnimationStyles(nextBlock.styles), animation}
         : nextBlock;
-    return hoverEffect ? {...animatedBlock, hoverEffect} : animatedBlock
+    const hoveredBlock = hoverEffect ? {...animatedBlock, hoverEffect} : animatedBlock;
+    return actionEffect ? {...hoveredBlock, actionEffect} : hoveredBlock
 }
 
 // ─── Tag → Block Type Mapping ────────────────────────────────────────────────

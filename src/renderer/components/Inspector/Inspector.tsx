@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {useEditorStore} from '../../store/editorStore'
 import {componentRegistry, type PropSchema} from '../../registry/ComponentRegistry'
 import SpacingEditor from './SpacingEditor'
-import {AnimationEditor, BackgroundEditor, BorderEditor, HoverEffectEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
+import {ActionEffectEditor, AnimationEditor, BackgroundEditor, BorderEditor, HoverEffectEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
 import CssClassesEditor from './CssClassesEditor'
 import BlockActions from './BlockActions'
 import EventActionsEditor from './EventActionsEditor'
@@ -25,7 +25,8 @@ import './Inspector.css'
 import {Check, Clipboard} from 'lucide-react'
 import {clearAnimationFromBlock, isBlockEligibleForAnimation} from '../../utils/animationPresets'
 import {clearHoverEffectFromBlock, isBlockEligibleForHoverEffect} from '../../utils/hoverEffects'
-import type {BlockAnimation, BlockHoverEffect} from '../../store/types'
+import {clearActionEffectFromBlock, isBlockEligibleForActionEffect} from '../../utils/actionEffects'
+import type {BlockActionEffect, BlockAnimation, BlockHoverEffect} from '../../store/types'
 
 interface ArrayEditorConfig {
     itemFields: ArrayRecordField[]
@@ -283,6 +284,15 @@ function Inspector(): JSX.Element {
         updateBlock(block.id, {
             ...cleaned,
             hoverEffect
+        })
+    };
+
+    const handleActionEffectChange = (actionEffect?: BlockActionEffect) => {
+        if (!isBlockEligibleForActionEffect(block.type)) return;
+        const cleaned = clearActionEffectFromBlock(block);
+        updateBlock(block.id, {
+            ...cleaned,
+            actionEffect
         })
     };
 
@@ -653,28 +663,27 @@ function Inspector(): JSX.Element {
 
                 <div className="inspector-group">
                     <h4 className="inspector-group-title">
-                        Animation
+                        Animations
                         <span className="style-info-btn"
-                              title="Friendly entrance animation preset for this element. Respects reduced-motion preferences.">?</span>
+                              title="Entrance, hover, and action feedback for this selected widget. All effects respect reduced-motion preferences.">?</span>
                     </h4>
-                    <AnimationEditor
-                        animation={block.animation}
-                        eligible={isBlockEligibleForAnimation(block.type)}
-                        onChange={handleAnimationChange}
-                    />
-                </div>
-
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Hover
-                        <span className="style-info-btn"
-                              title="Optional hover feedback for interactive and media widgets. Touch devices keep the static state.">?</span>
-                    </h4>
-                    <HoverEffectEditor
-                        hoverEffect={block.hoverEffect}
-                        eligible={isBlockEligibleForHoverEffect(block.type)}
-                        onChange={handleHoverEffectChange}
-                    />
+                    <div className="motion-editor-stack">
+                        <AnimationEditor
+                            animation={block.animation}
+                            eligible={isBlockEligibleForAnimation(block.type)}
+                            onChange={handleAnimationChange}
+                        />
+                        <HoverEffectEditor
+                            hoverEffect={block.hoverEffect}
+                            eligible={isBlockEligibleForHoverEffect(block.type)}
+                            onChange={handleHoverEffectChange}
+                        />
+                        <ActionEffectEditor
+                            actionEffect={block.actionEffect}
+                            eligible={isBlockEligibleForActionEffect(block.type)}
+                            onChange={handleActionEffectChange}
+                        />
+                    </div>
                 </div>
 
                 <div className="inspector-group">

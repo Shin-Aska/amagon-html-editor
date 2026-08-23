@@ -1,3 +1,5 @@
+import {triggerActionEffectFromTarget} from '../renderer/utils/actionEffects'
+
 // Canvas Runtime Script
 // This script is injected into the iframe to handle editor interactions.
 // It communicates with the parent editor via postMessage.
@@ -765,6 +767,7 @@ function attachBlockListeners(): void {
     if (!listenersInstalled) {
         listenersInstalled = true;
         document.addEventListener('click', (e) => {
+            if (e.detail === 0) triggerActionEffectFromTarget(e.target);
             const tabsRoot = getNestedTabContentSelectionTarget(e.target);
             debugTabSelection('document-click-capture', e.target, tabsRoot);
             if (!tabsRoot) return;
@@ -792,6 +795,15 @@ function attachBlockListeners(): void {
                     bottom: rect.bottom
                 }
             })
+        }, true);
+
+        document.addEventListener('pointerdown', (e) => {
+            triggerActionEffectFromTarget(e.target)
+        }, true);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat || (e.key !== 'Enter' && e.key !== ' ')) return;
+            triggerActionEffectFromTarget(e.target)
         }, true);
 
         document.addEventListener('dblclick', (e) => {
