@@ -1,5 +1,6 @@
 import {useCallback, useEffect} from 'react'
 import {useEditorStore} from '../store/editorStore'
+import {cloneBlockTree} from '../templates/templateFactories'
 import {type Block, createBlock} from '../store/types'
 
 interface UseKeyboardShortcutsOptions {
@@ -15,23 +16,6 @@ interface UseKeyboardShortcutsOptions {
     codeEditorOpen: boolean
     onNewProject: () => void
     onSetEditorLayout?: (layout: 'standard' | 'no-sidebar' | 'no-inspector' | 'canvas-only' | 'code-focus' | 'zen') => void
-}
-
-// Deep clone a block tree with new IDs
-function cloneBlockTree(block: Block): Block {
-    const newBlock = createBlock(block.type, {
-        props: {...block.props},
-        styles: {...block.styles},
-        classes: [...block.classes],
-        content: block.content,
-        tag: block.tag
-    });
-
-    if (block.children && block.children.length > 0) {
-        newBlock.children = block.children.map(child => cloneBlockTree(child))
-    }
-
-    return newBlock
 }
 
 // Get siblings of a block

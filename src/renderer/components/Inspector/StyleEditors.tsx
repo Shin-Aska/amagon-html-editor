@@ -1,6 +1,17 @@
-import {useState} from 'react'
+import {useState, type KeyboardEvent} from 'react'
 import './StyleEditor.css'
 import FontPickerField from './FontPickerField'
+import type {ActionEffectPreset, BlockActionEffect, BlockAnimation, BlockHoverEffect, HoverEffectPreset} from '../../store/types'
+import {
+    clampDelayMs,
+    clampDurationMs,
+    EASING_OPTIONS,
+    normalizeEasing,
+    PRESET_LABELS,
+    PRESETS
+} from '../../utils/animationPresets'
+import {HOVER_EFFECT_LABELS, HOVER_EFFECT_PRESETS} from '../../utils/hoverEffects'
+import {ACTION_EFFECT_LABELS, ACTION_EFFECT_PRESETS} from '../../utils/actionEffects'
 
 interface StyleEditorProps {
     styles: Record<string, string>
@@ -551,6 +562,426 @@ export function LayoutEditor({styles, onChange}: StyleEditorProps): JSX.Element 
                            onChange={handleChange}/>
                 </div>
             </div>
+        </div>
+    )
+}
+
+interface AnimationEditorProps {
+    animation?: BlockAnimation
+    eligible: boolean
+    onChange: (animation?: BlockAnimation) => void
+}
+
+export function AnimationEditor({animation, eligible, onChange}: AnimationEditorProps): JSX.Element {
+    const selectedPreset = animation?.preset;
+
+    const handleSelectPreset = (preset: string) => {
+        if (!eligible) return;
+        if (preset === '' || preset === 'none') {
+            onChange(undefined);
+            return
+        }
+        const p = preset as BlockAnimation['preset'];
+        onChange({
+            preset: p,
+            durationMs: clampDurationMs(animation?.durationMs),
+            delayMs: clampDelayMs(animation?.delayMs),
+            easing: normalizeEasing(animation?.easing)
+        })
+    };
+
+    const handleDurationChange = (value: string) => {
+        if (!animation || !eligible) return;
+        const num = Number(value);
+        onChange({
+            ...animation,
+            durationMs: Number.isFinite(num) ? clampDurationMs(num) : clampDurationMs(undefined)
+        })
+    };
+
+    const handleDelayChange = (value: string) => {
+        if (!animation || !eligible) return;
+        const num = Number(value);
+        onChange({
+            ...animation,
+            delayMs: Number.isFinite(num) ? clampDelayMs(num) : clampDelayMs(undefined)
+        })
+    };
+
+    const handleEasingChange = (value: string) => {
+        if (!animation || !eligible) return;
+        onChange({
+            ...animation,
+            easing: normalizeEasing(value)
+        })
+    };
+
+    const clear = () => onChange(undefined);
+
+    const handlePresetKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+            ? 1
+            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0;
+        if (direction === 0) return;
+
+        const group = event.currentTarget.closest('[role="radiogroup"]');
+        const radios = Array.from(group?.querySelectorAll<HTMLInputElement>('input[name="animation-preset"]') ?? []);
+        const currentIndex = radios.indexOf(event.currentTarget);
+        if (currentIndex === -1 || radios.length === 0) return;
+
+        event.preventDefault();
+        const next = radios[(currentIndex + direction + radios.length) % radios.length];
+        next.focus();
+        next.click()
+    };
+
+    if (!eligible) {
+        return (
+            <div className="style-editor-section">
+                <p className="animation-ineligible-note">
+                    This element type does not support entrance animations.
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="style-editor-section">
+            <div className="style-label-row" id="animation-preset-label">
+                <label className="style-label">Entrance preset</label>
+                <span
+                    className="style-info-btn"
+                    title="Pick a friendly entrance animation. Animations run once when the page loads."
+                >?</span>
+            </div>
+            <div
+                className="animation-preset-grid"
+                role="radiogroup"
+                aria-labelledby="animation-preset-label"
+            >
+                <label
+                    className={`animation-preset-btn ${!selectedPreset ? 'active' : ''}`}
+                >
+                    <input
+                        type="radio"
+                        name="animation-preset"
+                        value=""
+                        checked={!selectedPreset}
+                        onChange={() => handleSelectPreset('none')}
+                        onKeyDown={handlePresetKeyDown}
+                        className="sr-only"
+                    />
+                    None
+                </label>
+                {PRESETS.map((preset) => (
+                    <label
+                        key={preset}
+                        className={`animation-preset-btn ${selectedPreset === preset ? 'active' : ''}`}
+                    >
+                        <input
+                            type="radio"
+                            name="animation-preset"
+                            value={preset}
+                            checked={selectedPreset === preset}
+                            onChange={() => handleSelectPreset(preset)}
+                            onKeyDown={handlePresetKeyDown}
+                            className="sr-only"
+                        />
+                        {PRESET_LABELS[preset]}
+                    </label>
+                ))}
+            </div>
+
+            {selectedPreset && (
+                <>
+                    <div className="style-row">
+                        <div className="style-col">
+                            <div className="style-label-row">
+                                <label className="style-label" htmlFor="animation-duration">
+                                    Duration (ms)
+                                </label>
+                            </div>
+                            <input
+                                id="animation-duration"
+                                className="inspector-input"
+                                type="number"
+                                min={100}
+                                max={3000}
+                                step={50}
+                                value={animation?.durationMs ?? 600}
+                                onChange={(e) => handleDurationChange(e.target.value)}
+                            />
+                        </div>
+                        <div className="style-col">
+                            <div className="style-label-row">
+                                <label className="style-label" htmlFor="animation-delay">
+                                    Delay (ms)
+                                </label>
+                            </div>
+                            <input
+                                id="animation-delay"
+                                className="inspector-input"
+                                type="number"
+                                min={0}
+                                max={2000}
+                                step={50}
+                                value={animation?.delayMs ?? 0}
+                                onChange={(e) => handleDelayChange(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="style-row">
+                        <div className="style-col">
+                            <div className="style-label-row">
+                                <label className="style-label" htmlFor="animation-easing">
+                                    Easing
+                                </label>
+                            </div>
+                            <select
+                                id="animation-easing"
+                                className="inspector-select"
+                                value={animation?.easing ?? 'ease-out'}
+                                onChange={(e) => handleEasingChange(e.target.value)}
+                            >
+                                {EASING_OPTIONS.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <div className="style-row">
+                        <button
+                            type="button"
+                            className="animation-clear-btn"
+                            onClick={clear}
+                        >
+                            Clear animation
+                        </button>
+                    </div>
+                </>
+            )}
+
+            <p className="animation-reduced-motion-note">
+                Respects prefers-reduced-motion automatically.
+            </p>
+        </div>
+    )
+}
+
+interface HoverEffectEditorProps {
+    hoverEffect?: BlockHoverEffect
+    eligible: boolean
+    onChange: (hoverEffect?: BlockHoverEffect) => void
+}
+
+export function HoverEffectEditor({hoverEffect, eligible, onChange}: HoverEffectEditorProps): JSX.Element {
+    const selectedPreset = hoverEffect?.preset;
+
+    const handleSelectPreset = (preset: HoverEffectPreset | 'none') => {
+        if (!eligible) return;
+        onChange(preset === 'none' ? undefined : {preset})
+    };
+
+    const handlePresetKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+            ? 1
+            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0;
+        if (direction === 0) return;
+
+        const group = event.currentTarget.closest('[role="radiogroup"]');
+        const radios = Array.from(group?.querySelectorAll<HTMLInputElement>('input[name="hover-effect-preset"]') ?? []);
+        const currentIndex = radios.indexOf(event.currentTarget);
+        if (currentIndex === -1 || radios.length === 0) return;
+
+        event.preventDefault();
+        const next = radios[(currentIndex + direction + radios.length) % radios.length];
+        next.focus();
+        next.click()
+    };
+
+    if (!eligible) {
+        return (
+            <div className="style-editor-section">
+                <p className="hover-effect-ineligible-note">
+                    This element type does not support hover effects.
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="style-editor-section">
+            <div className="style-label-row" id="hover-effect-preset-label">
+                <label className="style-label">Hover preset</label>
+                <span
+                    className="style-info-btn"
+                    title="Pick optional hover feedback for interactive and media widgets."
+                >?</span>
+            </div>
+            <div
+                className="hover-effect-preset-grid"
+                role="radiogroup"
+                aria-labelledby="hover-effect-preset-label"
+            >
+                <label
+                    className={`hover-effect-preset-btn ${!selectedPreset ? 'active' : ''}`}
+                >
+                    <input
+                        type="radio"
+                        name="hover-effect-preset"
+                        value=""
+                        checked={!selectedPreset}
+                        onChange={() => handleSelectPreset('none')}
+                        onKeyDown={handlePresetKeyDown}
+                        className="sr-only"
+                    />
+                    None
+                </label>
+                {HOVER_EFFECT_PRESETS.map((preset) => (
+                    <label
+                        key={preset}
+                        className={`hover-effect-preset-btn ${selectedPreset === preset ? 'active' : ''}`}
+                    >
+                        <input
+                            type="radio"
+                            name="hover-effect-preset"
+                            value={preset}
+                            checked={selectedPreset === preset}
+                            onChange={() => handleSelectPreset(preset)}
+                            onKeyDown={handlePresetKeyDown}
+                            className="sr-only"
+                        />
+                        {HOVER_EFFECT_LABELS[preset]}
+                    </label>
+                ))}
+            </div>
+
+            {selectedPreset && (
+                <div className="style-row">
+                    <button
+                        type="button"
+                        className="hover-effect-clear-btn"
+                        onClick={() => onChange(undefined)}
+                    >
+                        Clear hover effect
+                    </button>
+                </div>
+            )}
+
+            <p className="hover-effect-reduced-motion-note">
+                Applies on hover-capable pointers and respects reduced motion.
+            </p>
+        </div>
+    )
+}
+
+interface ActionEffectEditorProps {
+    actionEffect?: BlockActionEffect
+    eligible: boolean
+    onChange: (actionEffect?: BlockActionEffect) => void
+}
+
+export function ActionEffectEditor({actionEffect, eligible, onChange}: ActionEffectEditorProps): JSX.Element {
+    const selectedPreset = actionEffect?.preset;
+
+    const handleSelectPreset = (preset: ActionEffectPreset | 'none') => {
+        if (!eligible) return;
+        onChange(preset === 'none' ? undefined : {preset})
+    };
+
+    const handlePresetKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+            ? 1
+            : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                ? -1
+                : 0;
+        if (direction === 0) return;
+
+        const group = event.currentTarget.closest('[role="radiogroup"]');
+        const radios = Array.from(group?.querySelectorAll<HTMLInputElement>('input[name="action-effect-preset"]') ?? []);
+        const currentIndex = radios.indexOf(event.currentTarget);
+        if (currentIndex === -1 || radios.length === 0) return;
+
+        event.preventDefault();
+        const next = radios[(currentIndex + direction + radios.length) % radios.length];
+        next.focus();
+        next.click()
+    };
+
+    if (!eligible) {
+        return (
+            <div className="style-editor-section">
+                <p className="action-effect-ineligible-note">
+                    This element type does not support action effects.
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <div className="style-editor-section">
+            <div className="style-label-row" id="action-effect-preset-label">
+                <label className="style-label">Action preset</label>
+                <span
+                    className="style-info-btn"
+                    title="Pick feedback that replays when this widget is clicked, tapped, or activated from the keyboard."
+                >?</span>
+            </div>
+            <div
+                className="action-effect-preset-grid"
+                role="radiogroup"
+                aria-labelledby="action-effect-preset-label"
+            >
+                <label className={`action-effect-preset-btn ${!selectedPreset ? 'active' : ''}`}>
+                    <input
+                        type="radio"
+                        name="action-effect-preset"
+                        value=""
+                        checked={!selectedPreset}
+                        onChange={() => handleSelectPreset('none')}
+                        onKeyDown={handlePresetKeyDown}
+                        className="sr-only"
+                    />
+                    None
+                </label>
+                {ACTION_EFFECT_PRESETS.map((preset) => (
+                    <label
+                        key={preset}
+                        className={`action-effect-preset-btn ${selectedPreset === preset ? 'active' : ''}`}
+                    >
+                        <input
+                            type="radio"
+                            name="action-effect-preset"
+                            value={preset}
+                            checked={selectedPreset === preset}
+                            onChange={() => handleSelectPreset(preset)}
+                            onKeyDown={handlePresetKeyDown}
+                            className="sr-only"
+                        />
+                        {ACTION_EFFECT_LABELS[preset]}
+                    </label>
+                ))}
+            </div>
+
+            {selectedPreset && (
+                <div className="style-row">
+                    <button
+                        type="button"
+                        className="action-effect-clear-btn"
+                        onClick={() => onChange(undefined)}
+                    >
+                        Clear action effect
+                    </button>
+                </div>
+            )}
+
+            <p className="action-effect-reduced-motion-note">
+                Replays on pointer or keyboard activation and respects reduced motion.
+            </p>
         </div>
     )
 }

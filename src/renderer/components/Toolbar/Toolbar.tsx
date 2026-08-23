@@ -15,8 +15,11 @@ import {
     LayoutTemplate,
     Menu,
     Monitor,
+    MonitorCog,
     Moon,
+    Pause,
     Palette,
+    Play,
     Redo,
     Save,
     Scissors,
@@ -33,7 +36,9 @@ import {
 import {getApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {useToastStore} from '../../store/toastStore'
+import {cloneBlockTree} from '../../templates/templateFactories'
 import type {Block, EditorLayout} from '../../store/types'
 import {createBlock} from '../../store/types'
 import AssetManager from '../AssetManager/AssetManager'
@@ -87,6 +92,9 @@ export default function Toolbar({
     const updateSettings = useProjectStore((s) => s.updateSettings);
     const updatePage = useProjectStore((s) => s.updatePage);
     const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode);
+
+    const motionPreviewMode = useAppSettingsStore((s) => s.motionPreviewMode);
+    const setMotionPreviewMode = useAppSettingsStore((s) => s.setMotionPreviewMode);
 
     // Editor Store
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
@@ -270,18 +278,7 @@ export default function Toolbar({
 
     const handlePaste = () => {
         if (clipboard) {
-            // Clone the clipboard block to generate new IDs
-            const cloneBlock = (b: Block): Block => {
-                return createBlock(b.type, {
-                    props: {...b.props},
-                    styles: {...b.styles},
-                    classes: [...b.classes],
-                    content: b.content,
-                    children: b.children.map(cloneBlock)
-                })
-            };
-
-            const newBlock = cloneBlock(clipboard);
+            const newBlock = cloneBlockTree(clipboard);
             addBlock(newBlock, selectedBlockId) // Add as child of selected, or root
         }
     };
@@ -396,7 +393,7 @@ export default function Toolbar({
                             <Save size={16} aria-hidden="true"/>
                         </button>
                         <button className="toolbar-btn" onClick={handleExport} title="Export"
-                                aria-label="Export project">
+                                aria-label="Export project" data-tutorial="toolbar-export">
                             <Download size={16} aria-hidden="true"/>
                         </button>
                         <button
@@ -503,6 +500,37 @@ export default function Toolbar({
                             >
                                 <span className="toolbar-page-theme-label">D</span>
                             </button>
+                            <div className="toolbar-divider"/>
+                            <div className="toolbar-motion-group" role="group" aria-label="Motion preview"
+                                 data-tutorial="toolbar-motion-preview">
+                                <button
+                                    className={`toolbar-btn toolbar-motion-btn ${motionPreviewMode === 'system' ? 'active' : ''}`}
+                                    onClick={() => setMotionPreviewMode('system')}
+                                    title="Preview motion using the system preference"
+                                    aria-label="Preview motion using the system preference"
+                                    aria-pressed={motionPreviewMode === 'system'}
+                                >
+                                    <MonitorCog size={15} aria-hidden="true"/>
+                                </button>
+                                <button
+                                    className={`toolbar-btn toolbar-motion-btn ${motionPreviewMode === 'full' ? 'active' : ''}`}
+                                    onClick={() => setMotionPreviewMode('full')}
+                                    title="Preview full motion"
+                                    aria-label="Preview full motion"
+                                    aria-pressed={motionPreviewMode === 'full'}
+                                >
+                                    <Play size={15} aria-hidden="true"/>
+                                </button>
+                                <button
+                                    className={`toolbar-btn toolbar-motion-btn ${motionPreviewMode === 'reduced' ? 'active' : ''}`}
+                                    onClick={() => setMotionPreviewMode('reduced')}
+                                    title="Preview reduced motion"
+                                    aria-label="Preview reduced motion"
+                                    aria-pressed={motionPreviewMode === 'reduced'}
+                                >
+                                    <Pause size={15} aria-hidden="true"/>
+                                </button>
+                            </div>
                             <div className="toolbar-divider"/>
                             <button
                                 className={`toolbar-btn ${showLayoutOutlines ? 'active' : ''}`}

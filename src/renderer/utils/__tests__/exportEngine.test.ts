@@ -651,5 +651,51 @@ describe('exportEngine', () => {
         expect(htmlText).not.toContain('html-editor-');
         expect(htmlText).not.toContain('editor-');
         expect(htmlText).not.toContain('canvas-')
+    });
+
+    it('includes entrance animation CSS before user custom CSS', async () => {
+        const project: ProjectData = {
+            projectSettings: {
+                name: 'Test',
+                framework: 'vanilla',
+                theme: createDefaultTheme(),
+                globalStyles: {}
+            },
+            pages: [
+                {
+                    id: 'p1',
+                    title: 'Index',
+                    slug: 'index',
+                    meta: {},
+                    blocks: [
+                        createBlock('heading', {
+                            props: {text: 'Hello'},
+                            animation: {preset: 'fade', durationMs: 600, delayMs: 0, easing: 'ease-out'}
+                        })
+                    ]
+                }
+            ],
+            userBlocks: []
+        };
+
+        const files = await exportProject(project, {
+            customCss: '.override { opacity: 1; }',
+            resolveAsset: async () => null
+        });
+
+        const html = files.find((f) => f.path === 'index.html');
+        const htmlText = html && typeof html.content === 'string' ? html.content : '';
+        const css = files.find((f) => f.path === 'styles.css');
+        const cssText = css && typeof css.content === 'string' ? css.content : '';
+
+        expect(htmlText).toContain('amagon-enter-fade');
+        expect(htmlText).toContain('--amagon-enter-duration: 600ms');
+        expect(cssText).toContain('@keyframes amagon-enter-fade');
+        expect(cssText).toContain('.override { opacity: 1; }');
+
+        const animationIndex = cssText.indexOf('@keyframes amagon-enter-fade');
+        const customIndex = cssText.indexOf('.override { opacity: 1; }');
+        expect(animationIndex).toBeGreaterThan(0);
+        expect(customIndex).toBeGreaterThan(animationIndex)
     })
 });

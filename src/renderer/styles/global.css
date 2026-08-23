@@ -199,6 +199,25 @@ body {
     background: var(--color-bg-surface);
 }
 
+@media (max-width: 600px) {
+    #html-editor-layout {
+        position: relative;
+    }
+
+    #html-editor-layout > #panel-right {
+        position: absolute;
+        inset: 0 0 0 auto;
+        z-index: 20;
+        width: min(300px, calc(100vw - 72px)) !important;
+        min-width: min(300px, calc(100vw - 72px)) !important;
+        max-width: none !important;
+    }
+
+    #html-editor-layout > .panel-resize-handle:has(+ #panel-right) {
+        display: none;
+    }
+}
+
 /* Code editor smooth appearance */
 .code-editor-area {
     min-height: 100px;

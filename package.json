@@ -1,6 +1,6 @@
 {
   "name": "hoarses-html-editor",
-  "version": "1.8.10",
+  "version": "1.9.0",
   "description": "Amagon — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
   "author": "Shin-Aska <Orillarichard@pm.me>",
   "license": "GPL-3.0-or-later",
@@ -44,6 +44,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@testing-library/user-event": "^14.6.5",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

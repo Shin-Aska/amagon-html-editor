@@ -1,3 +1,5 @@
+import {triggerActionEffectFromTarget} from '../renderer/utils/actionEffects'
+
 // Canvas Runtime Script
 // This script is injected into the iframe to handle editor interactions.
 // It communicates with the parent editor via postMessage.
@@ -11,6 +13,7 @@ type EditorMessage =
     | { type: 'scrollToElement'; blockId?: string | null }
     | { type: 'setCustomCss'; css?: string }
     | { type: 'setThemeCss'; css?: string }
+    | { type: 'setAnimationCss'; css?: string }
     | { type: 'setPageThemeMode'; mode?: 'device' | 'light' | 'dark' }
     | { type: 'setUiTheme'; isDark: boolean }
     | { type: 'toggleLayoutOutlines'; show: boolean }
@@ -239,18 +242,17 @@ let tailwindReorderTimer: number | null = null;
 let isReorderingEditorCss = false;
 
 function ensureEditorCssOrder(): void {
-    // Tailwind CDN injects its stylesheet at runtime, which can end up after the
-    // theme/custom CSS if those were applied before the script finished loading.
-    // Re-appending guarantees our editor-driven styles remain last in cascade.
     if (isReorderingEditorCss) return;
     isReorderingEditorCss = true;
     const themeEl = document.querySelector<HTMLStyleElement>('style#hoarses-theme-css');
+    const animationEl = document.querySelector<HTMLStyleElement>('style#amagon-enter-animations');
     const customEl = document.querySelector<HTMLStyleElement>('style#html-editor-custom-css');
     const canvasOverridesEl = document.querySelector<HTMLStyleElement>('style#editor-canvas-overrides');
     const outlinesEl = document.querySelector<HTMLStyleElement>('style#editor-layout-outlines-css');
 
     try {
         if (themeEl) document.head.appendChild(themeEl);
+        if (animationEl) document.head.appendChild(animationEl);
         if (customEl) document.head.appendChild(customEl);
         // Canvas overrides should win over any user CSS for safety in the editor canvas.
         if (canvasOverridesEl) document.head.appendChild(canvasOverridesEl);
@@ -498,7 +500,7 @@ function injectLayoutOutlinesCss(): void {
     document.head.appendChild(style)
 }
 
-function setThemeCss(css: string): void {
+export function setThemeCss(css: string): void {
     const trimmed = css.trim();
     const existing = document.querySelector<HTMLStyleElement>('style#hoarses-theme-css');
 
@@ -507,15 +509,15 @@ function setThemeCss(css: string): void {
         return
     }
 
-    if (existing) {
-        existing.textContent = trimmed;
+    const style = existing ?? document.createElement('style');
+    style.id = 'hoarses-theme-css';
+    style.textContent = trimmed;
+    const animationCssEl = document.querySelector('style#amagon-enter-animations');
+    if (animationCssEl) {
+        animationCssEl.before(style);
         return
     }
 
-    const style = document.createElement('style');
-    style.id = 'hoarses-theme-css';
-    style.textContent = trimmed;
-    // Insert theme CSS before custom CSS so custom CSS can override
     const customCssEl = document.querySelector('style#html-editor-custom-css');
     if (customCssEl) {
         customCssEl.before(style)
@@ -524,7 +526,7 @@ function setThemeCss(css: string): void {
     }
 }
 
-function setCustomCss(css: string): void {
+export function setCustomCss(css: string): void {
     const trimmed = css.trim();
     const existing = document.querySelector<HTMLStyleElement>('style#html-editor-custom-css');
 
@@ -544,6 +546,32 @@ function setCustomCss(css: string): void {
     document.head.appendChild(style)
 }
 
+export function setAnimationCss(css: string): void {
+    const trimmed = css.trim();
+    const existing = document.querySelector<HTMLStyleElement>('style#amagon-enter-animations');
+
+    if (trimmed.length === 0) {
+        existing?.remove();
+        return
+    }
+
+    const style = existing ?? document.createElement('style');
+    style.id = 'amagon-enter-animations';
+    style.textContent = trimmed;
+    const customCssEl = document.querySelector('style#html-editor-custom-css');
+    if (customCssEl) {
+        customCssEl.before(style)
+        return
+    }
+
+    const themeCssEl = document.querySelector('style#hoarses-theme-css');
+    if (themeCssEl) {
+        themeCssEl.after(style)
+    } else {
+        document.head.appendChild(style)
+    }
+}
+
 function setPageThemeMode(mode: 'device' | 'light' | 'dark'): void {
     if (mode === 'device') {
         document.documentElement.setAttribute('data-page-theme', 'device');
@@ -551,6 +579,90 @@ function setPageThemeMode(mode: 'device' | 'light' | 'dark'): void {
     }
 
     document.documentElement.setAttribute('data-page-theme', mode)
+}
+
+export function handleEditorMessage(event: MessageEvent): void {
+    const data = event.data as Partial<EditorMessage> | undefined;
+    const type = data?.type;
+    if (!type) return;
+
+    switch (type) {
+        case 'render':
+            if (typeof data.html === 'string') {
+                const html = data.html;
+                const renderRequestId = ++latestRenderRequestId;
+                void frameworkReadyPromise.finally(() => {
+                    if (renderRequestId !== latestRenderRequestId) return;
+                    endExistingDrag(true);
+                    document.body.innerHTML = html;
+                    ensureOverlayRoot();
+                    attachBlockListeners();
+                    refreshOverlays()
+                })
+            }
+            break;
+        case 'setFramework':
+            frameworkReadyPromise = setFramework((data as {
+                framework?: 'bootstrap-5' | 'tailwind' | 'vanilla'
+            }).framework ?? 'bootstrap-5');
+            break;
+        case 'setCustomCss':
+            setCustomCss((data as { css?: string }).css ?? '');
+            break;
+        case 'setThemeCss':
+            setThemeCss((data as { css?: string }).css ?? '');
+            break;
+        case 'setAnimationCss':
+            setAnimationCss((data as { css?: string }).css ?? '');
+            break;
+        case 'setPageThemeMode':
+            setPageThemeMode((data as { mode?: 'device' | 'light' | 'dark' }).mode ?? 'device');
+            break;
+        case 'setUiTheme':
+            if ((data as { isDark?: boolean }).isDark) {
+                document.body.classList.add('dark')
+            } else {
+                document.body.classList.remove('dark')
+            }
+
+            const overlays = document.querySelectorAll('.editor-overlay');
+            overlays.forEach(o => o.remove());
+
+            refreshOverlays();
+            break;
+        case 'select':
+            setSelected((data as { blockId?: string | null }).blockId ?? null);
+            break;
+        case 'highlight':
+            setHovered((data as { blockId?: string | null }).blockId ?? null);
+            break;
+        case 'clearSelection':
+            setSelected(null);
+            setHovered(null);
+            break;
+        case 'scrollToElement':
+            if ((data as { blockId?: string | null }).blockId) {
+                const id = (data as { blockId: string }).blockId;
+                const el = document.querySelector<HTMLElement>(`[data-block-id="${id}"]`);
+                const scrollTarget = el ? getScrollTargetElement(el) : null;
+                scrollTarget?.scrollIntoView({behavior: 'smooth', block: 'center'})
+            }
+            break;
+        case 'dragMove': {
+            const x = (data as { x: number }).x;
+            const y = (data as { y: number }).y;
+            handleDragMove(x, y);
+            break
+        }
+        case 'dragEnd':
+            clearDropIndicator();
+            clearContainerHoverIndicator();
+            publishDropTarget(null);
+            break;
+        case 'toggleLayoutOutlines':
+            setLayoutOutlines(Boolean((data as { show?: boolean }).show));
+            break
+    }
 }
 
 function initRuntime(): void {
@@ -588,88 +700,8 @@ function initRuntime(): void {
   `;
     document.head.appendChild(canvasOverrides);
 
-    // Listen for messages from the parent editor
-    window.addEventListener('message', (event: MessageEvent) => {
-        const data = event.data as Partial<EditorMessage> | undefined;
-        const type = data?.type;
-        if (!type) return;
-
-        switch (type) {
-            case 'render':
-                if (typeof data.html === 'string') {
-                    const html = data.html;
-                    const renderRequestId = ++latestRenderRequestId;
-                    void frameworkReadyPromise.finally(() => {
-                        if (renderRequestId !== latestRenderRequestId) return;
-                        endExistingDrag(true);
-                        document.body.innerHTML = html;
-                        ensureOverlayRoot();
-                        attachBlockListeners();
-                        refreshOverlays()
-                    })
-                }
-                break;
-            case 'setFramework':
-                frameworkReadyPromise = setFramework((data as {
-                    framework?: 'bootstrap-5' | 'tailwind' | 'vanilla'
-                }).framework ?? 'bootstrap-5');
-                break;
-            case 'setCustomCss':
-                setCustomCss((data as { css?: string }).css ?? '');
-                break;
-            case 'setThemeCss':
-                setThemeCss((data as { css?: string }).css ?? '');
-                break;
-            case 'setPageThemeMode':
-                setPageThemeMode((data as { mode?: 'device' | 'light' | 'dark' }).mode ?? 'device');
-                break;
-            case 'setUiTheme':
-                if ((data as { isDark?: boolean }).isDark) {
-                    document.body.classList.add('dark')
-                } else {
-                    document.body.classList.remove('dark')
-                }
-
-                // Clear cached overlays so the floating toolbar regenerates with new theme colors
-                const overlays = document.querySelectorAll('.editor-overlay');
-                overlays.forEach(o => o.remove());
-
-                refreshOverlays();
-                break;
-            case 'select':
-                setSelected((data as { blockId?: string | null }).blockId ?? null);
-                break;
-            case 'highlight':
-                setHovered((data as { blockId?: string | null }).blockId ?? null);
-                break;
-            case 'clearSelection':
-                setSelected(null);
-                setHovered(null);
-                break;
-            case 'scrollToElement':
-                if ((data as { blockId?: string | null }).blockId) {
-                    const id = (data as { blockId: string }).blockId;
-                    const el = document.querySelector<HTMLElement>(`[data-block-id="${id}"]`);
-                    const scrollTarget = el ? getScrollTargetElement(el) : null;
-                    scrollTarget?.scrollIntoView({behavior: 'smooth', block: 'center'})
-                }
-                break;
-            case 'dragMove': {
-                const x = (data as { x: number }).x;
-                const y = (data as { y: number }).y;
-                handleDragMove(x, y);
-                break
-            }
-            case 'dragEnd':
-                clearDropIndicator();
-                clearContainerHoverIndicator();
-                publishDropTarget(null);
-                break;
-            case 'toggleLayoutOutlines':
-                setLayoutOutlines(Boolean((data as { show?: boolean }).show));
-                break
-        }
-    });
+    // Listen for messages from the parent editor.
+    window.addEventListener('message', handleEditorMessage);
 
     // Notify parent that runtime is ready
     sendToParent({type: 'ready'})
@@ -735,6 +767,7 @@ function attachBlockListeners(): void {
     if (!listenersInstalled) {
         listenersInstalled = true;
         document.addEventListener('click', (e) => {
+            if (e.detail === 0) triggerActionEffectFromTarget(e.target);
             const tabsRoot = getNestedTabContentSelectionTarget(e.target);
             debugTabSelection('document-click-capture', e.target, tabsRoot);
             if (!tabsRoot) return;
@@ -762,6 +795,15 @@ function attachBlockListeners(): void {
                     bottom: rect.bottom
                 }
             })
+        }, true);
+
+        document.addEventListener('pointerdown', (e) => {
+            triggerActionEffectFromTarget(e.target)
+        }, true);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat || (e.key !== 'Enter' && e.key !== ' ')) return;
+            triggerActionEffectFromTarget(e.target)
         }, true);
 
         document.addEventListener('dblclick', (e) => {
@@ -1574,11 +1616,12 @@ function installOverlayRefreshHandlers(): void {
     installMutationObserver()
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initRuntime)
-} else {
-    initRuntime()
-}
+if (import.meta.env.MODE !== 'test') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRuntime)
+    } else {
+        initRuntime()
+    }
 
-installOverlayRefreshHandlers();
+    installOverlayRefreshHandlers();
+}

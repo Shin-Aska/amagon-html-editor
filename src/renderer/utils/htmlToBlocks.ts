@@ -2,6 +2,36 @@ import type {Block} from '../store/types'
 import {generateBlockId} from '../store/types'
 import {parse} from 'parse5'
 import {isRenderableGlyph} from './iconCatalog'
+import {animationFromClassNameAndStyles, isBlockEligibleForAnimation, stripAnimationTokens, stripLegacyAnimationStyles} from './animationPresets'
+import {hoverEffectFromClassNames, isBlockEligibleForHoverEffect, stripHoverEffectTokens} from './hoverEffects'
+import {actionEffectFromClassNames, isBlockEligibleForActionEffect, stripActionEffectTokens} from './actionEffects'
+
+function finalizeBlock(block: Block, rootEl?: Element): Block {
+    const animationCleaned = stripAnimationTokens(block.classes, block.styles);
+    const nextBlock: Block = {
+        ...block,
+        classes: stripActionEffectTokens(stripHoverEffectTokens(animationCleaned.classes)),
+        styles: animationCleaned.styles
+    };
+    if (!rootEl) return nextBlock;
+
+    const rootClasses = splitClasses(rootEl);
+    const rootStyles = parseInlineStyles(rootEl);
+    const animation = isBlockEligibleForAnimation(block.type)
+        ? animationFromClassNameAndStyles(rootClasses, rootStyles)
+        : undefined;
+    const hoverEffect = isBlockEligibleForHoverEffect(block.type)
+        ? hoverEffectFromClassNames(rootClasses)
+        : undefined;
+    const actionEffect = isBlockEligibleForActionEffect(block.type)
+        ? actionEffectFromClassNames(rootClasses)
+        : undefined;
+    const animatedBlock = animation
+        ? {...nextBlock, styles: stripLegacyAnimationStyles(nextBlock.styles), animation}
+        : nextBlock;
+    const hoveredBlock = hoverEffect ? {...animatedBlock, hoverEffect} : animatedBlock;
+    return actionEffect ? {...hoveredBlock, actionEffect} : hoveredBlock
+}
 
 // ─── Tag → Block Type Mapping ────────────────────────────────────────────────
 
@@ -201,7 +231,7 @@ function parseChildren(parent: Element): Block[] {
         if (node.nodeType === Node.ELEMENT_NODE) {
             const block = elementToBlock(node as Element);
             if (block) {
-                blocks.push(block)
+                blocks.push(finalizeBlock(block, node as Element))
             }
         } else if (node.nodeType === Node.TEXT_NODE) {
             const text = node.textContent?.trim();
@@ -1597,6 +1627,7 @@ function parseInlineStyles(el: Element): Record<string, string> {
 }
 
 function kebabToCamel(str: string): string {
+    if (str.startsWith('--')) return str;
     return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
 

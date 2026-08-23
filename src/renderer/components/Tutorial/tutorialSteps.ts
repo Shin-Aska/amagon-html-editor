@@ -166,10 +166,32 @@ export const tutorialSteps: TutorialStep[] = [
         onEnter: () => openSidebarTab('[data-tutorial="sidebar-tab-layers"]')
     },
     {
+        id: 'toolbar-export',
+        target: '[data-tutorial="toolbar-export"]',
+        title: 'Export your site',
+        body: 'When your project is ready, use Export to package the current site for deployment or further editing.',
+        placement: 'bottom',
+        arrowDirection: 'bottom',
+        action: {type: 'none'},
+        autoAdvance: false,
+        onEnter: () => ensureToolbarMenuOpen()
+    },
+    {
         id: 'toolbar-viewport',
         target: '[data-tutorial="toolbar-viewport"]',
         title: 'Responsive preview',
         body: 'Switch between Desktop, Tablet, and Mobile views to see how your page looks at each breakpoint. Click Next to continue.',
+        placement: 'bottom',
+        arrowDirection: 'bottom',
+        action: {type: 'none'},
+        autoAdvance: false,
+        onEnter: () => ensureToolbarMenuOpen()
+    },
+    {
+        id: 'toolbar-motion-preview',
+        target: '[data-tutorial="toolbar-motion-preview"]',
+        title: 'Motion preview',
+        body: 'Choose System, Full, or Reduced to preview motion in the editor. This only changes the canvas preview; exported sites still respect each visitor\'s reduced-motion preference.',
         placement: 'bottom',
         arrowDirection: 'bottom',
         action: {type: 'none'},

@@ -2,7 +2,7 @@ import {useState} from 'react'
 import {useEditorStore} from '../../store/editorStore'
 import {componentRegistry, type PropSchema} from '../../registry/ComponentRegistry'
 import SpacingEditor from './SpacingEditor'
-import {BackgroundEditor, BorderEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
+import {ActionEffectEditor, AnimationEditor, BackgroundEditor, BorderEditor, HoverEffectEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
 import CssClassesEditor from './CssClassesEditor'
 import BlockActions from './BlockActions'
 import EventActionsEditor from './EventActionsEditor'
@@ -23,6 +23,10 @@ import ArrayField, {type ArrayRecordField} from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
 import {Check, Clipboard} from 'lucide-react'
+import {clearAnimationFromBlock, isBlockEligibleForAnimation} from '../../utils/animationPresets'
+import {clearHoverEffectFromBlock, isBlockEligibleForHoverEffect} from '../../utils/hoverEffects'
+import {clearActionEffectFromBlock, isBlockEligibleForActionEffect} from '../../utils/actionEffects'
+import type {BlockActionEffect, BlockAnimation, BlockHoverEffect} from '../../store/types'
 
 interface ArrayEditorConfig {
     itemFields: ArrayRecordField[]
@@ -263,6 +267,33 @@ function Inspector(): JSX.Element {
 
     const handleClassesChange = (classes: string[]) => {
         updateBlock(block.id, {classes})
+    };
+
+    const handleAnimationChange = (animation?: BlockAnimation) => {
+        if (!isBlockEligibleForAnimation(block.type)) return;
+        const cleaned = clearAnimationFromBlock(block);
+        updateBlock(block.id, {
+            ...cleaned,
+            animation
+        })
+    };
+
+    const handleHoverEffectChange = (hoverEffect?: BlockHoverEffect) => {
+        if (!isBlockEligibleForHoverEffect(block.type)) return;
+        const cleaned = clearHoverEffectFromBlock(block);
+        updateBlock(block.id, {
+            ...cleaned,
+            hoverEffect
+        })
+    };
+
+    const handleActionEffectChange = (actionEffect?: BlockActionEffect) => {
+        if (!isBlockEligibleForActionEffect(block.type)) return;
+        const cleaned = clearActionEffectFromBlock(block);
+        updateBlock(block.id, {
+            ...cleaned,
+            actionEffect
+        })
     };
 
     const handleElementIdChange = (value: string) => {
@@ -629,6 +660,31 @@ function Inspector(): JSX.Element {
                         ))}
                     </div>
                 ))}
+
+                <div className="inspector-group">
+                    <h4 className="inspector-group-title">
+                        Animations
+                        <span className="style-info-btn"
+                              title="Entrance, hover, and action feedback for this selected widget. All effects respect reduced-motion preferences.">?</span>
+                    </h4>
+                    <div className="motion-editor-stack">
+                        <AnimationEditor
+                            animation={block.animation}
+                            eligible={isBlockEligibleForAnimation(block.type)}
+                            onChange={handleAnimationChange}
+                        />
+                        <HoverEffectEditor
+                            hoverEffect={block.hoverEffect}
+                            eligible={isBlockEligibleForHoverEffect(block.type)}
+                            onChange={handleHoverEffectChange}
+                        />
+                        <ActionEffectEditor
+                            actionEffect={block.actionEffect}
+                            eligible={isBlockEligibleForActionEffect(block.type)}
+                            onChange={handleActionEffectChange}
+                        />
+                    </div>
+                </div>
 
                 <div className="inspector-group">
                     <h4 className="inspector-group-title">

@@ -6,6 +6,10 @@ import {useEditorStore} from '../../store/editorStore'
 import {useProjectStore} from '../../store/projectStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {blockToHtml} from '../../utils/blockToHtml'
+import {buildAnimationStylesCss} from '../../utils/animationPresets'
+import {buildHoverEffectStylesCss} from '../../utils/hoverEffects'
+import {buildActionEffectStylesCss} from '../../utils/actionEffects'
+import {cloneBlockTree} from '../../templates/templateFactories'
 import type {Block} from '../../store/types'
 import {createBlock, themeToCSS} from '../../store/types'
 
@@ -128,6 +132,7 @@ function Canvas(): JSX.Element {
     const folders = useProjectStore((s) => s.folders);
     const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning);
     const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning);
+    const motionPreviewMode = useAppSettingsStore((s) => s.motionPreviewMode);
     const activeTabEditBlockId = useEditorStore((s) => s.activeTabEditBlockId);
     const activeTabIndex = useEditorStore((s) => s.activeTabIndex);
     const exitTabEditMode = useEditorStore((s) => s.exitTabEditMode);
@@ -297,16 +302,7 @@ function Canvas(): JSX.Element {
                 disabled: !clipboard,
                 action: () => {
                     if (clipboard) {
-                        const cloneBlock = (b: Block): Block => {
-                            return createBlock(b.type, {
-                                props: {...b.props},
-                                styles: {...b.styles},
-                                classes: [...b.classes],
-                                content: b.content,
-                                children: b.children.map(cloneBlock)
-                            })
-                        };
-                        const newBlock = cloneBlock(clipboard);
+                        const newBlock = cloneBlockTree(clipboard);
                         addBlock(newBlock, blockId)
                     }
                 }
@@ -346,8 +342,12 @@ function Canvas(): JSX.Element {
     useEffect(() => {
         if (!runtimeReady) return;
         const themeCss = themeToCSS(projectTheme, projectThemeVariants, projectFonts, {componentTokens});
-        postToIframe({type: 'setThemeCss', css: themeCss})
-    }, [projectTheme, projectThemeVariants, projectFonts, componentTokens, runtimeReady]);
+        postToIframe({type: 'setThemeCss', css: themeCss});
+        postToIframe({
+            type: 'setAnimationCss',
+            css: `${buildAnimationStylesCss(motionPreviewMode)}\n${buildHoverEffectStylesCss(motionPreviewMode)}\n${buildActionEffectStylesCss(motionPreviewMode)}`
+        })
+    }, [projectTheme, projectThemeVariants, projectFonts, componentTokens, motionPreviewMode, runtimeReady]);
 
     useEffect(() => {
         if (!runtimeReady) return;

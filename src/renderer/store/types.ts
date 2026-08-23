@@ -11,6 +11,43 @@ export interface FontAsset {
     source: 'system' | 'imported' | 'google-fonts'
 }
 
+export type AnimationPreset =
+    | 'fade'
+    | 'slide-up'
+    | 'slide-left'
+    | 'slide-right'
+    | 'scale'
+    | 'zoom'
+    | 'bounce'
+
+export type AnimationEasing = 'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out'
+
+export interface BlockAnimation {
+    preset: AnimationPreset
+    durationMs: number
+    delayMs: number
+    easing: AnimationEasing
+}
+
+export type HoverEffectPreset =
+    | 'lift'
+    | 'grow'
+    | 'glow'
+    | 'shadow'
+    | 'fade'
+    | 'underline'
+    | 'dim'
+
+export interface BlockHoverEffect {
+    preset: HoverEffectPreset
+}
+
+export type ActionEffectPreset = 'press' | 'pop' | 'pulse' | 'shake'
+
+export interface BlockActionEffect {
+    preset: ActionEffectPreset
+}
+
 export interface Block {
     id: string
     type: string           // e.g., 'heading', 'image', 'hero-section', 'container'
@@ -18,6 +55,9 @@ export interface Block {
     props: Record<string, unknown>
     styles: Record<string, string>
     classes: string[]
+    animation?: BlockAnimation
+    hoverEffect?: BlockHoverEffect
+    actionEffect?: BlockActionEffect
     events?: Record<string, string>  // JS event handlers, e.g. { onclick: "alert('hi')" }
     content?: string       // Raw HTML escape hatch
     children: Block[]
@@ -826,9 +866,12 @@ export interface EditorActions {
     addBlock: (block: Block, parentId?: string | null, index?: number) => void
     updateBlock: (
         id: string,
-        patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles'>> & {
+        patch: Partial<Omit<Block, 'id' | 'children' | 'props' | 'styles' | 'animation' | 'hoverEffect' | 'actionEffect'>> & {
             props?: Record<string, unknown>
             styles?: Record<string, string | undefined>
+            animation?: BlockAnimation | undefined
+            hoverEffect?: BlockHoverEffect | undefined
+            actionEffect?: BlockActionEffect | undefined
         }
     ) => void
     moveBlock: (id: string, newParentId: string | null, newIndex: number) => void
