@@ -618,7 +618,7 @@ export function handleEditorMessage(event: MessageEvent): void {
         case 'setPageThemeMode':
             setPageThemeMode((data as { mode?: 'device' | 'light' | 'dark' }).mode ?? 'device');
             break;
-        case 'setUiTheme':
+        case 'setUiTheme': {
             if ((data as { isDark?: boolean }).isDark) {
                 document.body.classList.add('dark')
             } else {
@@ -630,6 +630,7 @@ export function handleEditorMessage(event: MessageEvent): void {
 
             refreshOverlays();
             break;
+        }
         case 'select':
             setSelected((data as { blockId?: string | null }).blockId ?? null);
             break;

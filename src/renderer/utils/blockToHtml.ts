@@ -558,7 +558,7 @@ function rootPresentationAttributes(
     } = {}
 ): {classAttr: string; styleAttr: string} {
     let classes = [...(options.classes ?? [])];
-    let styles: Record<string, string> = {...(options.styles ?? {})};
+    const styles: Record<string, string> = {...(options.styles ?? {})};
 
     const blockAnimation = block.animation;
     const includeClasses = options.includeAnimation !== false && options.includeAnimationClasses !== false;

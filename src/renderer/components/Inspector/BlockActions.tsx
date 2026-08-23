@@ -29,6 +29,33 @@ export default function BlockActions({blockId, blockType}: BlockActionsProps): J
 
     const [showSaveCustomBlock, setShowSaveCustomBlock] = useState(false);
 
+    const saveDefaults = useMemo(() => {
+        const definition = componentRegistry.get(blockType);
+        const defaultLabel = definition?.label ? `${definition.label}` : 'My Custom Block';
+        const defaultIcon = blockType ? `lucide:${blockType}` : 'lucide:user-block';
+        const defaultCategory = definition?.category ? definition.category : 'User Blocks';
+
+        const preferredCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed'];
+        const existingCategories = componentRegistry.getCategories();
+        const userCategories = (userBlocks || []).map((ub) => (ub.category || '').trim()).filter(Boolean);
+
+        const registryLucideIcons = componentRegistry.getAll().map((d) => `lucide:${d.type}`);
+        const userIcons = (userBlocks || [])
+            .map((ub) => (ub.icon || '').trim())
+            .filter((i) => !!i && i.startsWith('lucide:'));
+
+        const availableCategories = Array.from(new Set([...preferredCategories, ...existingCategories, ...userCategories]));
+        const availableIcons = Array.from(new Set([defaultIcon, ...registryLucideIcons, ...userIcons]));
+
+        return {
+            availableCategories,
+            availableIcons,
+            defaultLabel,
+            defaultIcon,
+            defaultCategory
+        }
+    }, [blockType, userBlocks]);
+
     const block = getBlockById(blockId);
     if (!block) return <></>;
 
@@ -117,32 +144,7 @@ export default function BlockActions({blockId, blockType}: BlockActionsProps): J
         setShowSaveCustomBlock(true)
     };
 
-    const saveDefaults = useMemo(() => {
-        const definition = componentRegistry.get(blockType);
-        const defaultLabel = definition?.label ? `${definition.label}` : 'My Custom Block';
-        const defaultIcon = blockType ? `lucide:${blockType}` : 'lucide:user-block';
-        const defaultCategory = definition?.category ? definition.category : 'User Blocks';
 
-        const preferredCategories = ['Layout', 'Typography', 'Media', 'Interactive', 'Components', 'Embed'];
-        const existingCategories = componentRegistry.getCategories();
-        const userCategories = (userBlocks || []).map((ub) => (ub.category || '').trim()).filter(Boolean);
-
-        const registryLucideIcons = componentRegistry.getAll().map((d) => `lucide:${d.type}`);
-        const userIcons = (userBlocks || [])
-            .map((ub) => (ub.icon || '').trim())
-            .filter((i) => !!i && i.startsWith('lucide:'));
-
-        const availableCategories = Array.from(new Set([...preferredCategories, ...existingCategories, ...userCategories]));
-        const availableIcons = Array.from(new Set([defaultIcon, ...registryLucideIcons, ...userIcons]));
-
-        return {
-            availableCategories,
-            availableIcons,
-            defaultLabel,
-            defaultIcon,
-            defaultCategory
-        }
-    }, [blockType, userBlocks]);
 
     return (
         <div className="block-actions-editor">

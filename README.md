@@ -30,6 +30,13 @@ See [docs/development.md](docs/development.md) for the full development guide, b
 
 New to the codebase? Start with [docs/getting-started-contributing.md](docs/getting-started-contributing.md) for a contributor-friendly tour of the architecture, conventions, and where to find things.
 
+Before opening a pull request, run the same core validation used in CI:
+
+```bash
+npm run check
+npm run build
+```
+
 ## System Requirements & Compatibility
 
 Amagon targets standard Windows 10/11 and mainstream Linux distributions. See [docs/post-install.md](docs/post-install.md) for known compatibility issues and fixes (ReviOS, Ubuntu 24.04+ sandbox crash, etc.).

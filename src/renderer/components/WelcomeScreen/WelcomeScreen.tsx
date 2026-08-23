@@ -1,13 +1,14 @@
-import {useEffect, useState} from 'react'
+import {lazy, Suspense, useEffect, useState} from 'react'
 import {ChevronRight, Clock, FilePlus, FolderOpen, Settings, X} from 'lucide-react'
 import appLogo from '../../../../assets/app.png'
 import {getApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
-import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import './WelcomeScreen.css'
+
+const NewProjectWizard = lazy(() => import('../NewProjectWizard/NewProjectWizard'))
 
 function getFrameworkLabel(framework?: string): string {
     if (framework === 'bootstrap-5') return 'B';
@@ -256,9 +257,11 @@ export default function WelcomeScreen(): JSX.Element {
                 </div>
             </div>
 
-            {showNewProject && (
-                <NewProjectWizard onClose={() => setShowNewProject(false)}/>
-            )}
+            <Suspense fallback={null}>
+                {showNewProject && (
+                    <NewProjectWizard onClose={() => setShowNewProject(false)}/>
+                )}
+            </Suspense>
 
             {showSettings && (
                 <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)}/>

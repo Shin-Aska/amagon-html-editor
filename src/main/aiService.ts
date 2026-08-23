@@ -120,7 +120,7 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
         const parsed = JSON.parse(raw) as PersistedAiConfig;
         const provider = parsed.provider ?? DEFAULT_CONFIG.provider;
 
-        let encryptedApiKeys: Record<string, string> = {...(parsed.encryptedApiKeys ?? {})};
+        const encryptedApiKeys: Record<string, string> = {...(parsed.encryptedApiKeys ?? {})};
 
         // Migrate legacy single-key format → per-provider map
         if (Object.keys(encryptedApiKeys).length === 0) {

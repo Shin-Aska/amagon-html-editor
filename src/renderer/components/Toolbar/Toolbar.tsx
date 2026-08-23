@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react'
+import {lazy, Suspense, useEffect, useState} from 'react'
 import {
     ChevronDown,
     Clipboard,
@@ -12,7 +12,6 @@ import {
     Image as ImageIcon,
     KeyRound,
     Layout,
-    LayoutTemplate,
     Menu,
     Monitor,
     MonitorCog,
@@ -40,11 +39,7 @@ import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {useToastStore} from '../../store/toastStore'
 import {cloneBlockTree} from '../../templates/templateFactories'
 import type {Block, EditorLayout} from '../../store/types'
-import {createBlock} from '../../store/types'
-import AssetManager from '../AssetManager/AssetManager'
 import CredentialManager from '../CredentialManager/CredentialManager'
-import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
-import ExportDialog from '../ExportDialog/ExportDialog'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
 import {
     type GlobalSettingsTab,
@@ -52,6 +47,10 @@ import {
     type OpenGlobalSettingsDetail
 } from '../../utils/settingsNavigation'
 import './Toolbar.css'
+
+const AssetManager = lazy(() => import('../AssetManager/AssetManager'))
+const NewProjectWizard = lazy(() => import('../NewProjectWizard/NewProjectWizard'))
+const ExportDialog = lazy(() => import('../ExportDialog/ExportDialog'))
 
 interface ToolbarProps {
     leftPanelOpen: boolean
@@ -781,17 +780,19 @@ export default function Toolbar({
                 {/* end toolbar-collapsible */}
             </div>
 
-            {showAssetManager && (
-                <AssetManager onClose={() => setShowAssetManager(false)}/>
-            )}
+            <Suspense fallback={null}>
+                {showAssetManager && (
+                    <AssetManager onClose={() => setShowAssetManager(false)}/>
+                )}
 
-            {showNewProject && (
-                <NewProjectWizard onClose={() => setShowNewProject(false)}/>
-            )}
+                {showNewProject && (
+                    <NewProjectWizard onClose={() => setShowNewProject(false)}/>
+                )}
 
-            {showExport && (
-                <ExportDialog onClose={() => setShowExport(false)}/>
-            )}
+                {showExport && (
+                    <ExportDialog onClose={() => setShowExport(false)}/>
+                )}
+            </Suspense>
 
             {showSettings && (
                 <SettingsDialog

@@ -758,7 +758,6 @@ const mockApi: ElectronApi = {
         },
 
         setConfig: async (_config: any): Promise<any> => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const {apiKey: _, ...rest} = _config;
             return {success: true, config: {...rest, apiKey: ''}}
         },
