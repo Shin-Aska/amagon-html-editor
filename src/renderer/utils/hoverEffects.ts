@@ -1,4 +1,5 @@
 import type {Block, BlockHoverEffect, HoverEffectPreset} from '../store/types'
+import {buildReducedMotionStyles, type MotionPreviewMode} from './motionPreview'
 
 export const HOVER_EFFECT_CLASS_PREFIX = 'amagon-hover'
 export const AMAGON_HOVER_EFFECT_CSS_ID = 'amagon-hover-effects'
@@ -84,7 +85,20 @@ export function hoverEffectFromClassNames(classes: string[]): BlockHoverEffect |
     return preset ? {preset} : undefined
 }
 
-export function buildHoverEffectStylesCss(): string {
+export function buildHoverEffectStylesCss(motionPreviewMode: MotionPreviewMode = 'system'): string {
+    const reducedMotionStyles = `.${HOVER_EFFECT_CLASS_PREFIX},
+.${HOVER_EFFECT_CLASS_PREFIX}-lift,
+.${HOVER_EFFECT_CLASS_PREFIX}-grow,
+.${HOVER_EFFECT_CLASS_PREFIX}-glow,
+.${HOVER_EFFECT_CLASS_PREFIX}-shadow,
+.${HOVER_EFFECT_CLASS_PREFIX}-fade,
+.${HOVER_EFFECT_CLASS_PREFIX}-underline,
+.${HOVER_EFFECT_CLASS_PREFIX}-dim {
+  transition-duration: 0.01ms !important;
+  transform: none !important;
+  filter: none !important;
+}`;
+
     return `/* Amagon hover effect presets */
 @media (hover: hover) and (pointer: fine) {
   .${HOVER_EFFECT_CLASS_PREFIX} {
@@ -130,19 +144,5 @@ export function buildHoverEffectStylesCss(): string {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .${HOVER_EFFECT_CLASS_PREFIX},
-  .${HOVER_EFFECT_CLASS_PREFIX}-lift,
-  .${HOVER_EFFECT_CLASS_PREFIX}-grow,
-  .${HOVER_EFFECT_CLASS_PREFIX}-glow,
-  .${HOVER_EFFECT_CLASS_PREFIX}-shadow,
-  .${HOVER_EFFECT_CLASS_PREFIX}-fade,
-  .${HOVER_EFFECT_CLASS_PREFIX}-underline,
-  .${HOVER_EFFECT_CLASS_PREFIX}-dim {
-    transition-duration: 0.01ms !important;
-    transform: none !important;
-    filter: none !important;
-  }
-}
-`
+${buildReducedMotionStyles(reducedMotionStyles, motionPreviewMode)}`
 }

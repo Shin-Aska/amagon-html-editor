@@ -282,6 +282,16 @@ describe('animationPresets eligibility', () => {
         expect(reducedBlock).toContain('scale: 1 !important')
     });
 
+    it('supports full and reduced editor preview overrides', () => {
+        const fullCss = buildAnimationStylesCss('full');
+        const reducedCss = buildAnimationStylesCss('reduced');
+
+        expect(fullCss).not.toContain('@media (prefers-reduced-motion: reduce)');
+        expect(fullCss).not.toContain('animation: none !important');
+        expect(reducedCss).not.toContain('@media (prefers-reduced-motion: reduce)');
+        expect(reducedCss).toContain('animation: none !important')
+    });
+
     it('orders base class variables before keyframes and reduced-motion media query', () => {
         const css = buildAnimationStylesCss();
         const baseIndex = css.indexOf('.amagon-enter {');

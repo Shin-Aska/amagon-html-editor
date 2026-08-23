@@ -60,4 +60,14 @@ describe('hover effect presets', () => {
         expect(css).toContain('@media (prefers-reduced-motion: reduce)');
         expect(css).toContain('transition-property: transform, opacity, filter, box-shadow, color, background-color, border-color')
     })
+
+    it('supports full and reduced editor preview overrides', () => {
+        const fullCss = buildHoverEffectStylesCss('full');
+        const reducedCss = buildHoverEffectStylesCss('reduced');
+
+        expect(fullCss).not.toContain('@media (prefers-reduced-motion: reduce)');
+        expect(fullCss).not.toContain('transition-duration: 0.01ms !important');
+        expect(reducedCss).not.toContain('@media (prefers-reduced-motion: reduce)');
+        expect(reducedCss).toContain('transition-duration: 0.01ms !important')
+    })
 });

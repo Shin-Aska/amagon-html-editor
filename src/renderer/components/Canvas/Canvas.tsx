@@ -132,6 +132,7 @@ function Canvas(): JSX.Element {
     const folders = useProjectStore((s) => s.folders);
     const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning);
     const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning);
+    const motionPreviewMode = useAppSettingsStore((s) => s.motionPreviewMode);
     const activeTabEditBlockId = useEditorStore((s) => s.activeTabEditBlockId);
     const activeTabIndex = useEditorStore((s) => s.activeTabIndex);
     const exitTabEditMode = useEditorStore((s) => s.exitTabEditMode);
@@ -344,9 +345,9 @@ function Canvas(): JSX.Element {
         postToIframe({type: 'setThemeCss', css: themeCss});
         postToIframe({
             type: 'setAnimationCss',
-            css: `${buildAnimationStylesCss()}\n${buildHoverEffectStylesCss()}\n${buildActionEffectStylesCss()}`
+            css: `${buildAnimationStylesCss(motionPreviewMode)}\n${buildHoverEffectStylesCss(motionPreviewMode)}\n${buildActionEffectStylesCss(motionPreviewMode)}`
         })
-    }, [projectTheme, projectThemeVariants, projectFonts, componentTokens, runtimeReady]);
+    }, [projectTheme, projectThemeVariants, projectFonts, componentTokens, motionPreviewMode, runtimeReady]);
 
     useEffect(() => {
         if (!runtimeReady) return;

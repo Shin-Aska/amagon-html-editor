@@ -193,6 +193,16 @@
     padding: 4px 8px;
 }
 
+.toolbar-motion-group {
+    display: flex;
+    align-items: center;
+}
+
+.toolbar-motion-btn {
+    width: 34px;
+    padding: 4px 8px;
+}
+
 .toolbar-page-theme-label {
     display: inline-flex;
     align-items: center;

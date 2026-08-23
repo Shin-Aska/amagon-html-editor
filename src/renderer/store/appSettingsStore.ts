@@ -1,6 +1,7 @@
 import {create} from 'zustand'
 import {getApi} from '../utils/api'
 import type {EditorLayout} from './types'
+import {isMotionPreviewMode, type MotionPreviewMode} from '../utils/motionPreview'
 
 export interface AppSettings {
     theme: 'light' | 'dark'
@@ -10,6 +11,7 @@ export interface AppSettings {
     tutorialCompleted: boolean
     enableDangerousFeatures: boolean
     showRestartTutorialButton: boolean
+    motionPreviewMode: MotionPreviewMode
 }
 
 interface AppSettingsState extends AppSettings {
@@ -26,6 +28,7 @@ interface AppSettingsActions {
     setTutorialCompleted: (completed: boolean) => void
     setEnableDangerousFeatures: (enabled: boolean) => void
     setShowRestartTutorialButton: (show: boolean) => void
+    setMotionPreviewMode: (mode: MotionPreviewMode) => void
 }
 
 type AppSettingsStore = AppSettingsState & AppSettingsActions
@@ -37,7 +40,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     tutorialEnabled: true,
     tutorialCompleted: false,
     enableDangerousFeatures: false,
-    showRestartTutorialButton: true
+    showRestartTutorialButton: true,
+    motionPreviewMode: 'system'
 };
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
@@ -49,7 +53,10 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
             const api = getApi();
             const result = await api.app.getSettings();
             if (result.success && result.settings) {
-                set({...DEFAULT_SETTINGS, ...result.settings, loaded: true})
+                const motionPreviewMode = isMotionPreviewMode(result.settings.motionPreviewMode)
+                    ? result.settings.motionPreviewMode
+                    : DEFAULT_SETTINGS.motionPreviewMode;
+                set({...DEFAULT_SETTINGS, ...result.settings, motionPreviewMode, loaded: true})
             } else {
                 set({...DEFAULT_SETTINGS, loaded: true})
             }
@@ -72,11 +79,12 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
             theme: patch.theme ?? current.theme,
             defaultLayout: patch.defaultLayout ?? current.defaultLayout,
             showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
-        tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
-        tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
-        enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures,
-        showRestartTutorialButton: patch.showRestartTutorialButton ?? current.showRestartTutorialButton
-    };
+            tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
+            tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
+            enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures,
+            showRestartTutorialButton: patch.showRestartTutorialButton ?? current.showRestartTutorialButton,
+            motionPreviewMode: patch.motionPreviewMode ?? current.motionPreviewMode
+        };
         set({...nextSettings});
 
         try {
@@ -125,5 +133,10 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
     setShowRestartTutorialButton: (show: boolean) => {
         set({showRestartTutorialButton: show});
         get().saveSettings({showRestartTutorialButton: show})
+    },
+
+    setMotionPreviewMode: (mode: MotionPreviewMode) => {
+        set({motionPreviewMode: mode});
+        get().saveSettings({motionPreviewMode: mode})
     }
 }));

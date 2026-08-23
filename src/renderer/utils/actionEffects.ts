@@ -1,4 +1,5 @@
 import type {ActionEffectPreset, Block, BlockActionEffect} from '../store/types'
+import {buildReducedMotionStyles, type MotionPreviewMode} from './motionPreview'
 
 export const ACTION_EFFECT_CLASS_PREFIX = 'amagon-action'
 export const ACTION_EFFECT_ACTIVE_CLASS = 'amagon-action-active'
@@ -132,7 +133,14 @@ export function buildActionEffectRuntimeScript(): string {
 })();`
 }
 
-export function buildActionEffectStylesCss(): string {
+export function buildActionEffectStylesCss(motionPreviewMode: MotionPreviewMode = 'system'): string {
+    const reducedMotionStyles = `.${ACTION_EFFECT_CLASS_PREFIX},
+.${ACTION_EFFECT_CLASS_PREFIX}.${ACTION_EFFECT_ACTIVE_CLASS} {
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}`;
+
     return `/* Amagon action effect presets */
 .${ACTION_EFFECT_CLASS_PREFIX} {
   transform-origin: center;
@@ -176,13 +184,5 @@ export function buildActionEffectStylesCss(): string {
   75% { transform: translateX(-2px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .${ACTION_EFFECT_CLASS_PREFIX},
-  .${ACTION_EFFECT_CLASS_PREFIX}.${ACTION_EFFECT_ACTIVE_CLASS} {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
-  }
-}
-`
+${buildReducedMotionStyles(reducedMotionStyles, motionPreviewMode)}`
 }

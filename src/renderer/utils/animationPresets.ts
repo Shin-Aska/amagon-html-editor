@@ -1,4 +1,5 @@
 import type {AnimationEasing, AnimationPreset, Block, BlockAnimation} from '../store/types'
+import {buildReducedMotionStyles, type MotionPreviewMode} from './motionPreview'
 
 export const ANIMATION_CLASS_PREFIX = 'amagon-enter'
 export const AMAGON_ANIMATION_CSS_ID = 'amagon-enter-animations'
@@ -143,10 +144,23 @@ export function getAnimationClasses(animation: BlockAnimation | undefined): stri
     return [animationClassForPreset(preset), ANIMATION_CLASS_PREFIX]
 }
 
-export function buildAnimationStylesCss(): string {
+export function buildAnimationStylesCss(motionPreviewMode: MotionPreviewMode = 'system'): string {
     const dur = `${AMAGON_ANIMATION_STYLE_PREFIX}duration`;
     const delay = `${AMAGON_ANIMATION_STYLE_PREFIX}delay`;
     const easing = `${AMAGON_ANIMATION_STYLE_PREFIX}easing`;
+    const reducedMotionStyles = `.${ANIMATION_CLASS_PREFIX},
+.${ANIMATION_CLASS_PREFIX}-fade,
+.${ANIMATION_CLASS_PREFIX}-slide-up,
+.${ANIMATION_CLASS_PREFIX}-slide-left,
+.${ANIMATION_CLASS_PREFIX}-slide-right,
+.${ANIMATION_CLASS_PREFIX}-scale,
+.${ANIMATION_CLASS_PREFIX}-zoom,
+.${ANIMATION_CLASS_PREFIX}-bounce {
+  animation: none !important;
+  opacity: 1 !important;
+  translate: 0 0 !important;
+  scale: 1 !important;
+}`;
 
     return `/* Amagon entrance animation presets */
 .${ANIMATION_CLASS_PREFIX} {
@@ -220,22 +234,7 @@ export function buildAnimationStylesCss(): string {
   100% { opacity: 1; translate: 0 0; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .${ANIMATION_CLASS_PREFIX},
-  .${ANIMATION_CLASS_PREFIX}-fade,
-  .${ANIMATION_CLASS_PREFIX}-slide-up,
-  .${ANIMATION_CLASS_PREFIX}-slide-left,
-  .${ANIMATION_CLASS_PREFIX}-slide-right,
-  .${ANIMATION_CLASS_PREFIX}-scale,
-  .${ANIMATION_CLASS_PREFIX}-zoom,
-  .${ANIMATION_CLASS_PREFIX}-bounce {
-    animation: none !important;
-    opacity: 1 !important;
-    translate: 0 0 !important;
-    scale: 1 !important;
-  }
-}
-`
+${buildReducedMotionStyles(reducedMotionStyles, motionPreviewMode)}`
 }
 
 export function stripLegacyAnimationStyles(

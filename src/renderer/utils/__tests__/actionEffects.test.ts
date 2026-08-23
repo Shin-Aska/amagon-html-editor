@@ -61,6 +61,16 @@ describe('action effect presets', () => {
         expect(css).toContain('animation: none !important')
     });
 
+    it('supports full and reduced editor preview overrides', () => {
+        const fullCss = buildActionEffectStylesCss('full');
+        const reducedCss = buildActionEffectStylesCss('reduced');
+
+        expect(fullCss).not.toContain('@media (prefers-reduced-motion: reduce)');
+        expect(fullCss).not.toContain('animation: none !important');
+        expect(reducedCss).not.toContain('@media (prefers-reduced-motion: reduce)');
+        expect(reducedCss).toContain('animation: none !important')
+    });
+
     it('generates a delegated pointer and keyboard activation runtime', () => {
         const runtime = buildActionEffectRuntimeScript();
 
