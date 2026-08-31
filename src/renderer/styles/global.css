@@ -23,6 +23,35 @@
     --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas,
     'Courier New', monospace;
 
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 28px;
+    --space-8: 32px;
+
+    --welcome-max-width: 960px;
+    --welcome-compact-max-width: 868px;
+    --welcome-beacon-min-width: 340px;
+    --welcome-beacon-compact-width: 320px;
+    --welcome-brand-max-width: 420px;
+    --welcome-body-height: 252px;
+    --welcome-body-compact-height: 232px;
+    --welcome-action-step: 16px;
+    --welcome-action-width-trim: 32px;
+    --welcome-action-start: 0px;
+    --welcome-beacon-rail-width: 32px;
+    --welcome-beacon-inspector-width: 84px;
+    --welcome-beacon-workspace-height: 132px;
+    --welcome-beacon-workspace-compact-height: 108px;
+    --welcome-beacon-page-height: 84px;
+    --welcome-beacon-page-compact-height: 64px;
+    --font-size-tiny: 10px;
+    --welcome-beacon-code-size: 9px;
+    --welcome-beacon-label-size: 8px;
+
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;

@@ -359,6 +359,7 @@ function App(): JSX.Element {
     const showCodeEditor = codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen');
     const showCanvas = editorLayout !== 'code-focus';  // Hide canvas in code-focus layout
     useKeyboardShortcuts({
+        enabled: isProjectLoaded,
         onSave: handleSave,
         onSaveAs: handleSaveAs,
         onOpen: handleLoad,

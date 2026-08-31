@@ -36,12 +36,18 @@ Amagon is a compact visual editor: dense, practical, and calm. The signature is 
 
 | Level | Size | Weight | Line Height | Tracking | Usage |
 |-------|------|--------|-------------|----------|-------|
+| Welcome title | 32px | 700 | 1.1 | -0.5px | Product name on the launcher |
+| Welcome promise | 15px | 400 | 1.5 | 0 | Capability-specific launcher copy |
 | Panel title | 14px | 600 | 1.3 | 0 | Inspector and toolbar headings |
 | Control text | 13px | 400 | 1.4 | 0 | Inputs and selects |
 | Field label | 12px | 400 | 1.4 | 0 | Inspector labels |
 | Group title | 12px | 600 | 1.3 | 0.5px | Uppercase inspector groups |
 | Micro label | 11px | 500 | 1.4 | 0 | Helper text and preset buttons |
 | Tiny control | 10px | 600 | 1.2 | 0 | Mode toggles and badges |
+| Beacon code | 9px | 500 | 1.2 | 0 | Decorative code strip and live state |
+| Beacon annotation | 8px | 700 | 1.2 | 0 | Decorative selection and inspector labels |
+
+CSS type primitives: `--font-size-tiny`, `--welcome-beacon-code-size`, and `--welcome-beacon-label-size` expose the 10px, 9px, and 8px launcher levels to components.
 
 ### Font Stack
 
@@ -65,12 +71,37 @@ All spacing derives from 4px.
 | `--space-2` | 8px | Inline control gaps |
 | `--space-3` | 12px | Group label spacing, compact padding |
 | `--space-4` | 16px | Inspector panel padding |
+| `--space-5` | 20px | Welcome card rhythm and comfortable control gaps |
 | `--space-6` | 24px | Inspector group separation |
+| `--space-7` | 28px | Welcome section separation |
+| `--space-8` | 32px | Welcome card padding and desktop grid gap |
+
+### Welcome Geometry Tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--welcome-max-width` | 960px | Desktop launcher card |
+| `--welcome-compact-max-width` | 868px | 900px Electron window launcher card |
+| `--welcome-beacon-min-width` | 340px | Desktop Beacon column |
+| `--welcome-beacon-compact-width` | 320px | Compact Beacon column |
+| `--welcome-brand-max-width` | 420px | Product promise line length |
+| `--welcome-body-height` | 252px | Desktop action/recent row |
+| `--welcome-body-compact-height` | 232px | Compact action/recent row |
+| `--welcome-action-step` | 16px | Compact horizontal rise between successive launcher actions |
+| `--welcome-action-width-trim` | 32px | Keeps the three cascaded actions equal-width inside the left column |
+| `--welcome-action-start` | 0px | Anchors New Project to the left-column edge |
+| `--welcome-beacon-rail-width` | 32px | Beacon block rail |
+| `--welcome-beacon-inspector-width` | 84px | Beacon inspector |
+| `--welcome-beacon-workspace-height` | 132px | Desktop Beacon workspace |
+| `--welcome-beacon-workspace-compact-height` | 108px | Compact Beacon workspace |
+| `--welcome-beacon-page-height` | 84px | Desktop Beacon page |
+| `--welcome-beacon-page-compact-height` | 64px | Compact Beacon page |
 
 ### Grid
 
 - App shell: fixed toolbar plus resizable left, center, and right panels.
 - Inspector controls: single-column fields, two-column rows only when labels remain readable.
+- Welcome launcher: the header and body share one two-column grid so the Workbench Beacon and Recent Projects panel form a strict vertical edge. The three equal-size actions form a controlled 16px cascade from the left-column edge; hierarchy comes from surface weight rather than exaggerated displacement. Below 980px or 720px height, tighten the Beacon and grid gap without clipping either column.
 - At phone widths, the Inspector overlays the canvas at a usable width instead of compressing controls into unreadable columns.
 - Breakpoints follow the app shell rather than document-style section layout.
 
@@ -101,6 +132,25 @@ All spacing derives from 4px.
 - **Motion**: 200ms color/background/border transitions.
 - **Layout**: four compact columns when space allows.
 
+### Welcome Workbench Beacon
+
+- **Structure**: a miniature block rail, canvas, inspector, and code strip that mirrors the editor's real split-pane workflow.
+- **Variants**: one compact launcher variant; it may reduce detail at short window heights but must remain recognizable.
+- **Spacing**: 8px internal gaps on a 4px grid; one strong selected block, no nested card stack.
+- **States**: continuously animated ambient composition with drifting grid, floating aurora, pulsing grid glow and dot fields, a periodic scanline sweep, and one controlled Beacon selection pulse.
+- **Accessibility**: decorative and `aria-hidden`; the adjacent product promise carries the meaning in text.
+- **Motion**: ambient layers use slow, independently phased transform and opacity loops inspired by beui.dev's shader-background freeze mechanism; `prefers-reduced-motion: reduce` is the sole switch that freezes every continuous launcher effect into its stable resting state.
+- **Layout**: paired with the brand promise on desktop and locked to the same right-column edge as Recent Projects; compressed in place at compact Electron sizes.
+
+### Welcome Action Group
+
+- **Structure**: New Project, Open Project, and Settings actions followed by the recent-project list.
+- **Variants**: primary creation action, secondary open action, quiet utility action, and recent-project row.
+- **States**: default, fine-pointer hover, pressed, and conspicuous `:focus-visible` accent ring.
+- **Accessibility**: every row is a native button; labels describe the action and helper text never replaces the accessible name.
+- **Motion**: explicit transform, border, surface, and shadow transitions only; pressed feedback stays under 2% scale change.
+- **Layout**: the three equal-size rows form a compact 16px cascade from New Project through Settings, while the Beacon and Recent Projects surfaces remain precisely column-aligned. The primary action is visually dominant at rest; Settings uses a quiet contained surface so it remains recognizable as an action without competing with creation.
+
 ## 6. Motion & Interaction
 
 ### Timing
@@ -118,7 +168,9 @@ All spacing derives from 4px.
 - The Inspector presents Entrance, Hover, and Action as subsections of one Animations group.
 - Use CSS-only `transform`, `opacity`, `filter`, `box-shadow`, and color changes; never animate layout properties.
 - Respect `(hover: hover) and (pointer: fine)` to avoid sticky hover on touch.
-- Respect `prefers-reduced-motion: reduce` by disabling entrance, hover, and action transforms/filters while keeping stable final state.
+- Respect `prefers-reduced-motion: reduce` by disabling entrance, hover, action, and continuous ambient transforms/filters while keeping stable final state.
+- The launcher normally runs its full ambient stack: grid drift, aurora float, grid-glow pulse, scanline sweep, dot-field pulses, and the Welcome Workbench Beacon selection pulse. No app mode or layout breakpoint disables these effects; only the visitor's `prefers-reduced-motion: reduce` preference stops them.
+- Keep every ambient layer inside one isolated, paint-contained background stacking context beneath the launcher surface so filtered and transformed effects cannot invalidate foreground rendering.
 - The toolbar offers System, Full, and Reduced motion previews for the editor canvas only; exported sites always retain the visitor-facing reduced-motion media query.
 
 ## 7. Depth & Surface
@@ -140,7 +192,7 @@ Mixed: editor structure uses borders and tonal shifts; exported hover effects ma
 
 - WCAG target: 2.2 AA for editor UI.
 - Every interactive Inspector control must be keyboard reachable.
-- Reduced motion must be honored for entrance and hover effects.
+- Reduced motion must be honored for entrance, hover, Beacon, and every continuous welcome-background effect.
 - Hover-only effects must not be the only indicator of meaning.
 
 ### Accepted Debt

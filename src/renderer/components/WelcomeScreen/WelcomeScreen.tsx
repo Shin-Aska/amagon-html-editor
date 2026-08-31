@@ -7,7 +7,9 @@ import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
+import {WelcomeSignature} from './WelcomeSignature'
 import './WelcomeScreen.css'
+import './WelcomeScreenRefresh.css'
 
 function getFrameworkLabel(framework?: string): string {
     if (framework === 'bootstrap-5') return 'B';
@@ -167,42 +169,49 @@ export default function WelcomeScreen(): JSX.Element {
             </div>
 
             <div className="welcome-content">
-                <div className="welcome-header">
-                    <div className="logo-container">
-                        <img src={appLogo} alt="Amagon logo" className="logo-icon" width={40} height={40}/>
-                        <div className="welcome-logo">Amagon</div>
+                <header className="welcome-header">
+                    <div className="welcome-brand">
+                        <div className="welcome-kicker">LOCAL-FIRST VISUAL HTML EDITOR</div>
+                        <div className="logo-container">
+                            <img src={appLogo} alt="Amagon logo" className="logo-icon" width={40} height={40}/>
+                            <div className="welcome-logo">Amagon</div>
+                        </div>
+                        <div className="welcome-subtitle">
+                            Design visually. <span className="highlight">Own the HTML. Ship anywhere.</span>
+                        </div>
+                        <div className="welcome-proof">
+                            <span>Visual canvas</span><span>Live code</span><span>Portable output</span>
+                        </div>
+                        <div className="welcome-version">{appVersion ? `v${appVersion}` : ''}</div>
                     </div>
-                    <div className="welcome-subtitle">
-                        Visual Website Builder. <span className="highlight">Build websites within minutes.</span>
-                    </div>
-                    <div className="welcome-version">{appVersion ? `v${appVersion}` : ''}</div>
-                </div>
+                    <WelcomeSignature/>
+                </header>
 
                 <div className="welcome-body">
                     <div className="welcome-actions">
-                        <button className="welcome-btn primary-action" onClick={() => setShowNewProject(true)}>
+                        <button type="button" className="welcome-btn primary-action" onClick={() => setShowNewProject(true)}>
                             <div className="btn-icon-wrapper">
                                 <FilePlus size={24}/>
                             </div>
                             <div className="btn-text">
                                 <div className="btn-title">New Project</div>
-                                <div className="btn-desc">Start building from scratch</div>
+                                <div className="btn-desc">Choose a stack and start on canvas</div>
                             </div>
                             <ChevronRight className="btn-arrow" size={20}/>
                         </button>
 
-                        <button className="welcome-btn secondary-action" onClick={handleLoad}>
+                        <button type="button" className="welcome-btn secondary-action" onClick={handleLoad}>
                             <div className="btn-icon-wrapper">
                                 <FolderOpen size={24}/>
                             </div>
                             <div className="btn-text">
                                 <div className="btn-title">Open Project</div>
-                                <div className="btn-desc">Load an existing .json file</div>
+                                <div className="btn-desc">Resume a local Amagon project</div>
                             </div>
                             <ChevronRight className="btn-arrow" size={20}/>
                         </button>
 
-                        <button className="welcome-btn secondary-action" onClick={() => setShowSettings(true)}>
+                        <button type="button" className="welcome-btn utility-action" onClick={() => setShowSettings(true)}>
                             <div className="btn-icon-wrapper">
                                 <Settings size={24}/>
                             </div>
@@ -227,23 +236,26 @@ export default function WelcomeScreen(): JSX.Element {
                             ) : (
                                 recentProjects.map((project) => {
                                     return (
-                                        <div key={project.path} className="recent-item"
-                                             onClick={() => handleOpenRecent(project.path)}>
-                                            <div
-                                                className={`recent-item-icon recent-fw-icon fw-icon-${project.framework ?? 'vanilla'}`}
-                                                title={getFrameworkTitle(project.framework)}
-                                                aria-label={getFrameworkTitle(project.framework)}
-                                            >
-                                                {getFrameworkLabel(project.framework)}
-                                            </div>
-                                            <div className="recent-item-info">
-                                                <div className="recent-name">{project.name}</div>
-                                                <div className="recent-path">{project.path}</div>
-                                            </div>
+                                        <div key={project.path} className="recent-row">
+                                            <button type="button" className="recent-item"
+                                                    onClick={() => handleOpenRecent(project.path)}>
+                                                <div
+                                                    className={`recent-item-icon recent-fw-icon fw-icon-${project.framework ?? 'vanilla'}`}
+                                                    title={getFrameworkTitle(project.framework)}
+                                                    aria-label={getFrameworkTitle(project.framework)}
+                                                >
+                                                    {getFrameworkLabel(project.framework)}
+                                                </div>
+                                                <div className="recent-item-info">
+                                                    <div className="recent-name">{project.name}</div>
+                                                    <div className="recent-path">{project.path}</div>
+                                                </div>
+                                            </button>
                                             <button
+                                                type="button"
                                                 className="recent-item-remove"
                                                 onClick={(e) => handleRemoveRecent(e, project.path)}
-                                                title="Remove from recent projects"
+                                                title={`Remove ${project.name} from recent projects`}
                                             >
                                                 <X size={14}/>
                                             </button>
