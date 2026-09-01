@@ -971,7 +971,7 @@ function uniqueNonEmpty(values: Array<string | undefined>): string[] {
 
 async function fetchOpencodeModels(): Promise<string[]> {
     try {
-        const {client} = await getOpencodeClient();
+        const client = createOpencodeClient({baseUrl: 'http://127.0.0.1:4096'});
         const providers = await client.provider.list();
         const connected = providers.data?.connected || [];
         const models: string[] = [];
