@@ -19,6 +19,7 @@ import {
   getPreviewFontIdForFamily,
 } from "../../utils/googleFontCss";
 import TypographyFontPicker from "./TypographyFontPicker";
+import { getLegacyBrowserFontMutations } from "../../utils/api";
 import "./FontManager.css";
 
 type FilterTab = "all" | "imported" | "system" | "internet";
@@ -56,6 +57,7 @@ export default function FontManager({
   const removeFontStore = useProjectStore((s) => s.removeFont);
   const setSystemFonts = useProjectStore((s) => s.setSystemFonts);
   const showToast = useToastStore((s) => s.showToast);
+  const legacyFontMutations = getLegacyBrowserFontMutations();
 
   const [filter, setFilter] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -259,7 +261,7 @@ export default function FontManager({
 
   const handleImportFile = async () => {
     try {
-      const res = await window.api.fonts.importFile();
+      const res = await legacyFontMutations.importFile();
       if (res.success && res.fonts && res.fonts.length > 0) {
         addFonts(res.fonts);
         showToast(
@@ -277,7 +279,7 @@ export default function FontManager({
   const handleDeleteFont = async (font: FontAsset) => {
     try {
       removeFontStore(font.id);
-      const res = await window.api.fonts.deleteFont({
+      const res = await legacyFontMutations.deleteFont({
         relativePath: font.relativePath,
       });
       if (res.success) {
@@ -297,7 +299,7 @@ export default function FontManager({
 
   const handleImportSystemFont = async (name: string) => {
     try {
-      const res = await window.api.fonts.copySystemFont({
+      const res = await legacyFontMutations.copySystemFont({
         familyName: name,
         filePaths: [],
       });
@@ -337,7 +339,7 @@ export default function FontManager({
     });
 
     try {
-      const res = await window.api.fonts.downloadGoogleFont({
+      const res = await legacyFontMutations.downloadGoogleFont({
         family: meta.family,
         variants: [variant],
       });

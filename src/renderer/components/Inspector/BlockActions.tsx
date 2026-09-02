@@ -3,7 +3,7 @@ import {useProjectStore} from '../../store/projectStore'
 import {createBlock} from '../../store/types'
 import {componentRegistry} from '../../registry/ComponentRegistry'
 import {useToastStore} from '../../store/toastStore'
-import {getApi} from '../../utils/api'
+import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
 import './BlockActions.css'
 import {useMemo, useState} from 'react'
 import SaveCustomBlockDialog from './SaveCustomBlockDialog'
@@ -16,6 +16,7 @@ interface BlockActionsProps {
 
 export default function BlockActions({blockId, blockType}: BlockActionsProps): JSX.Element {
     const api = getApi();
+    const legacyProjectApi = getLegacyBrowserProjectApi();
     const getBlockById = useEditorStore((s) => s.getBlockById);
     const getBlockPath = useEditorStore((s) => s.getBlockPath);
     const addBlock = useEditorStore((s) => s.addBlock);
@@ -214,7 +215,7 @@ export default function BlockActions({blockId, blockType}: BlockActionsProps): J
                                 2
                             );
 
-                            const result = await api.project.save({
+                            const result = await legacyProjectApi.save({
                                 filePath: projectState.filePath || undefined,
                                 content
                             });

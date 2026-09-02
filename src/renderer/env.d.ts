@@ -9,6 +9,14 @@ import type {
     PublishResult,
     ValidationResult
 } from '../publish'
+import type {FontAsset} from './store/types'
+import type {IpcResult} from './utils/api'
+import type {
+    AssetMutationBridge,
+    FontMutationBridge,
+    MediaMutationBridge,
+    ProjectBridge,
+} from '../shared/projects/projectIpcContract'
 
 declare global {
     type CredentialCategory = 'ai' | 'multimedia' | 'publisher'
@@ -36,11 +44,7 @@ declare global {
     }
 
     interface ElectronApi {
-        project: {
-            save: (data: { filePath?: string; content: string }) => Promise<any>
-            saveAs: (data: { content: string }) => Promise<any>
-            load: () => Promise<any>
-            loadFile: (filePath: string) => Promise<any>
+        project: ProjectBridge & {
             exportHtml: (data: { html: string; defaultPath?: string }) => Promise<any>
             exportSite: (data: {
                 files: { path: string; content: string | Uint8Array }[];
@@ -53,20 +57,11 @@ declare global {
                 total: number;
                 path?: string
             }) => void) => () => void
-            getRecent: () => Promise<any>
-            removeRecent: (path: string) => Promise<any>
-            new: (data: { name: string; framework: string; directory?: string }) => Promise<any>
-            getDir: () => Promise<any>
         }
-        assets: {
-            selectImage: () => Promise<any>
-            selectSingleImage: () => Promise<any>
-            selectVideo: () => Promise<any>
+        assets: AssetMutationBridge & {
             list: () => Promise<any>
-            delete: (relativePath: string) => Promise<any>
             readAsset: (assetPath: string) => Promise<any>
             readFileAsBase64: (filePath: string) => Promise<any>
-            import: (srcPath: string) => Promise<any>
         }
         autosave: {
             start: (intervalMs?: number) => Promise<any>
@@ -121,20 +116,13 @@ declare global {
             getModels: () => Promise<any>
             fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) => Promise<any>
         }
-        fonts: {
+        fonts: FontMutationBridge<FontAsset> & {
             listSystem: () => Promise<any>
-            importFile: () => Promise<any>
-            downloadGoogleFont: (args: {
-                family: string;
-                variants: { weight: string; style: string }[]
-            }) => Promise<any>
-            copySystemFont: (args: { familyName: string; filePaths: string[] }) => Promise<any>
             fetchGoogleFontCss: (args: { family: string; weight: string; style: string }) => Promise<any>
             fetchGoogleFontFile: (args: { url: string }) => Promise<any>
-            deleteFont: (args: { relativePath: string }) => Promise<any>
             listProject: () => Promise<any>
         }
-        mediaSearch: {
+        mediaSearch: MediaMutationBridge & {
             getConfig: () => Promise<any>
             setConfig: (config: any) => Promise<any>
             search: (options: {
@@ -143,7 +131,6 @@ declare global {
                 page?: number;
                 type?: 'image' | 'video'
             }) => Promise<any>
-            downloadAndImport: (url: string) => Promise<any>
         }
     }
 

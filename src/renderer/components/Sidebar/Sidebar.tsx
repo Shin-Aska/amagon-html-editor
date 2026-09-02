@@ -10,7 +10,7 @@ import AiAssistant from '../AiAssistant/AiAssistant'
 import {type MouseEvent, useMemo, useRef, useState} from 'react'
 import ContextMenu from '../ContextMenu/ContextMenu'
 import {useToastStore} from '../../store/toastStore'
-import {getApi} from '../../utils/api'
+import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
 import PageModal from '../PageModal/PageModal'
 import {getTemplateByWidgetType, getTemplateWidgetDefinitions} from '../../templates/templateWidgets'
 import {builtInPageTemplates} from '../../templates/pageTemplates'
@@ -102,6 +102,7 @@ function WidgetCategory({
 
 function Sidebar(): JSX.Element {
     const api = getApi();
+    const legacyProjectApi = getLegacyBrowserProjectApi();
     const categories = componentRegistry.getCategories();
     const userBlocks = useProjectStore((s) => s.userBlocks);
     const removeUserBlock = useProjectStore((s) => s.removeUserBlock);
@@ -834,7 +835,7 @@ function Sidebar(): JSX.Element {
                                             2
                                         );
 
-                                        const result = await api.project.save({
+                                        const result = await legacyProjectApi.save({
                                             filePath: projectState.filePath || undefined,
                                             content
                                         });

@@ -9,6 +9,7 @@ import {
     getPreviewFontIdForFamily,
 } from '../../utils/googleFontCss';
 import './GoogleFontBrowser.css';
+import {getLegacyBrowserFontMutations} from '../../utils/api';
 
 const CATEGORIES = ['All', 'sans-serif', 'serif', 'display', 'handwriting', 'monospace'];
 const RESULTS_PER_PAGE = 8;
@@ -24,6 +25,7 @@ export default function GoogleFontBrowser(): JSX.Element {
     const projectFonts = useProjectStore((s) => s.fonts);
     const addFonts = useProjectStore((s) => s.addFonts);
     const showToast = useToastStore((s) => s.showToast);
+    const legacyFontMutations = getLegacyBrowserFontMutations();
 
     // Filter fonts
     const filteredFonts = useMemo(() => {
@@ -128,7 +130,7 @@ export default function GoogleFontBrowser(): JSX.Element {
                 selectedVariants.has(`${v.weight}-${v.style}`)
             );
 
-            const res = await window.api.fonts.downloadGoogleFont({
+            const res = await legacyFontMutations.downloadGoogleFont({
                 family: selectedFont.family,
                 variants: variantsToDownload,
             });

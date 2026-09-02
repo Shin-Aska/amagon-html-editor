@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {getApi} from '../../utils/api'
+import {getLegacyBrowserProjectApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
@@ -37,7 +37,7 @@ export default function NewProjectWizard({onClose}: NewProjectWizardProps): JSX.
     const setProject = useProjectStore((s) => s.setProject);
     const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
     const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
-    const api = getApi();
+    const legacyProjectApi = getLegacyBrowserProjectApi();
 
     const handleCreate = async () => {
         if (!projectName.trim()) {
@@ -49,7 +49,7 @@ export default function NewProjectWizard({onClose}: NewProjectWizardProps): JSX.
         setError(null);
 
         try {
-            const result = await api.project.new({
+            const result = await legacyProjectApi.new({
                 name: projectName.trim(),
                 framework
             });

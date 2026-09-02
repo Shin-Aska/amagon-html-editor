@@ -1,7 +1,7 @@
 import {useEffect, useState} from 'react'
 import {ChevronRight, Clock, FilePlus, FolderOpen, Settings, X} from 'lucide-react'
 import appLogo from '../../../../assets/app.png'
-import {getApi} from '../../utils/api'
+import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
@@ -25,6 +25,7 @@ function getFrameworkTitle(framework?: string): string {
 
 export default function WelcomeScreen(): JSX.Element {
     const api = getApi();
+    const legacyProjectApi = getLegacyBrowserProjectApi();
     const setProject = useProjectStore((s) => s.setProject);
     const setCustomCss = useEditorStore((s) => s.setCustomCss);
     const markSaved = useEditorStore((s) => s.markSaved);
@@ -88,7 +89,7 @@ export default function WelcomeScreen(): JSX.Element {
 
     useEffect(() => {
         async function loadRecent() {
-            const result = await api.project.getRecent();
+            const result = await legacyProjectApi.getRecent();
             if (result.success && result.projects) {
                 setRecentProjects(normalizeRecentProjects(result.projects))
             }
@@ -109,7 +110,7 @@ export default function WelcomeScreen(): JSX.Element {
     }, []);
 
     const handleLoad = async () => {
-        const result = await api.project.load();
+        const result = await legacyProjectApi.load();
         if (result.success && result.content) {
             setProject(result.content as any, result.filePath);
             const data = result.content as any;
@@ -126,7 +127,7 @@ export default function WelcomeScreen(): JSX.Element {
     };
 
     const handleOpenRecent = async (path: string) => {
-        const result = await api.project.loadFile(path);
+        const result = await legacyProjectApi.loadFile(path);
         if (result.success && result.content) {
             setProject(result.content as any, result.filePath);
             const data = result.content as any;
@@ -147,7 +148,7 @@ export default function WelcomeScreen(): JSX.Element {
 
     const handleRemoveRecent = async (e: React.MouseEvent, projectPath: string) => {
         e.stopPropagation();
-        const result = await api.project.removeRecent(projectPath);
+        const result = await legacyProjectApi.removeRecent(projectPath);
         if (result.success && result.projects) {
             setRecentProjects(normalizeRecentProjects(result.projects))
         } else {

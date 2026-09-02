@@ -33,7 +33,7 @@ import {
     ZoomIn,
     ZoomOut
 } from 'lucide-react'
-import {getApi} from '../../utils/api'
+import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
@@ -79,6 +79,7 @@ export default function Toolbar({
                                     onOpenKeyboardShortcuts
                                 }: ToolbarProps): JSX.Element {
     const api = getApi();
+    const legacyProjectApi = getLegacyBrowserProjectApi();
 
     const showToast = useToastStore((s) => s.showToast);
 
@@ -204,7 +205,7 @@ export default function Toolbar({
                 projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
             }
 
-            const result = await api.project.save({
+            const result = await legacyProjectApi.save({
                 filePath: projectState.filePath || undefined,
                 content
             });
@@ -229,7 +230,7 @@ export default function Toolbar({
     };
 
     const handleLoad = async (): Promise<void> => {
-        const result = await api.project.load();
+        const result = await legacyProjectApi.load();
         if (result.success && result.content) {
             setProject(result.content as any, result.filePath);
             const data = result.content as any;

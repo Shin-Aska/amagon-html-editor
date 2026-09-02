@@ -5,17 +5,19 @@
 import packageJson from '../../../package.json'
 import {createDefaultTheme, type FontAsset} from '../store/types'
 import {createWelcomeBlocks} from '../../shared/welcomeBlocks'
+import type {ProjectProgress, RecentProjectId} from '../../shared/projects/projectIpcContract'
 
 export interface IpcResult {
     success: boolean
     canceled?: boolean
     error?: string
+    code?: 'UNSUPPORTED_IN_BROWSER' | 'PATH_AUTHORITY_FORBIDDEN' | 'PROJECT_SESSION_REQUIRED'
     filePath?: string
     filePaths?: string[]
     content?: unknown
     data?: string
     mimeType?: string
-    projects?: Array<{ path: string; name: string }>
+    projects?: Array<{ id?: string; path: string; name: string; framework?: string; displayPath?: string }>
     assets?: { name: string; path: string; relativePath: string; type?: 'image' | 'video' }[]
     directory?: string | null
     previewPath?: string
@@ -54,9 +56,16 @@ function upsertMockAssets(newAssets: MockAsset[]): void {
     saveMockAssets(Array.from(byPath.values()))
 }
 
-const mockApi: ElectronApi = {
+const mockApi = {
     project: {
         save: async (data: { filePath?: string; content: string }): Promise<IpcResult> => {
+            if (data.filePath && /^(?:[a-z]:[\\/]|[/\\]{2}|\/)/iu.test(data.filePath)) {
+                return {
+                    success: false,
+                    code: 'PATH_AUTHORITY_FORBIDDEN',
+                    error: 'Ordinary Save cannot choose a destination path',
+                }
+            }
             try {
                 const key = data.filePath || 'untitled-project.json';
                 localStorage.setItem(`project:${key}`, data.content);
@@ -95,6 +104,14 @@ const mockApi: ElectronApi = {
                             resolve({success: false, canceled: true});
                             return
                         }
+                        if (!file.name.toLowerCase().endsWith('.json')) {
+                            resolve({
+                                success: false,
+                                code: 'UNSUPPORTED_IN_BROWSER',
+                                error: 'Browser mode supports legacy JSON projects only',
+                            })
+                            return
+                        }
                         const text = await file.text();
                         resolve({
                             success: true,
@@ -114,6 +131,12 @@ const mockApi: ElectronApi = {
             // In browser mode, we can't load arbitrary files by path
             return {success: false, error: 'Not supported in browser mode'}
         },
+
+        openRecent: async (_recentId: RecentProjectId): Promise<IpcResult> => ({
+            success: false,
+            code: 'UNSUPPORTED_IN_BROWSER',
+            error: 'Browser mode cannot reopen a project by filesystem identity',
+        }),
 
         exportHtml: async (data: { html: string; defaultPath?: string }): Promise<IpcResult> => {
             try {
@@ -256,6 +279,12 @@ const mockApi: ElectronApi = {
 
         getDir: async (): Promise<IpcResult> => {
             return {success: true, directory: null}
+        },
+
+        close: async (): Promise<IpcResult> => ({ success: true }),
+
+        onProgress: (_callback: (progress: ProjectProgress) => void) => {
+            return () => undefined
         }
     },
 
@@ -845,11 +874,69 @@ const mockApi: ElectronApi = {
     }
 };
 
+type LegacyBrowserProjectApi = Pick<typeof mockApi.project,
+    'save' | 'saveAs' | 'load' | 'loadFile' | 'getRecent' | 'removeRecent' | 'new'>
+type LegacyBrowserAssetMutations = Pick<typeof mockApi.assets,
+    'selectImage' | 'selectSingleImage' | 'selectVideo' | 'delete'>
+type LegacyBrowserFontMutations = Pick<typeof mockApi.fonts,
+    'importFile' | 'downloadGoogleFont' | 'copySystemFont' | 'deleteFont'>
+type LegacyBrowserMediaMutation = Pick<typeof mockApi.mediaSearch, 'downloadAndImport'>
+
+const sessionRequired = (): IpcResult => ({
+    success: false,
+    code: 'PROJECT_SESSION_REQUIRED',
+    error: 'This Electron action requires the project session controller',
+})
+
+const unavailableProjectApi: LegacyBrowserProjectApi = {
+    save: async () => sessionRequired(),
+    saveAs: async () => sessionRequired(),
+    load: async () => sessionRequired(),
+    loadFile: async () => sessionRequired(),
+    getRecent: async () => sessionRequired(),
+    removeRecent: async () => sessionRequired(),
+    new: async () => sessionRequired(),
+}
+
+const unavailableAssetMutations: LegacyBrowserAssetMutations = {
+    selectImage: async () => sessionRequired(),
+    selectSingleImage: async () => sessionRequired(),
+    selectVideo: async () => sessionRequired(),
+    delete: async () => sessionRequired(),
+}
+
+const unavailableFontMutations: LegacyBrowserFontMutations = {
+    importFile: async () => ({ ...sessionRequired(), fonts: [] }),
+    downloadGoogleFont: async () => ({ ...sessionRequired(), fonts: [] }),
+    copySystemFont: async () => ({ ...sessionRequired(), fonts: [] }),
+    deleteFont: async () => sessionRequired(),
+}
+
+const unavailableMediaMutation: LegacyBrowserMediaMutation = {
+    downloadAndImport: async () => sessionRequired(),
+}
+
+export function getLegacyBrowserProjectApi(): LegacyBrowserProjectApi {
+    return window.api ? unavailableProjectApi : mockApi.project
+}
+
+export function getLegacyBrowserAssetMutations(): LegacyBrowserAssetMutations {
+    return window.api ? unavailableAssetMutations : mockApi.assets
+}
+
+export function getLegacyBrowserFontMutations(): LegacyBrowserFontMutations {
+    return window.api ? unavailableFontMutations : mockApi.fonts
+}
+
+export function getLegacyBrowserMediaMutation(): LegacyBrowserMediaMutation {
+    return window.api ? unavailableMediaMutation : mockApi.mediaSearch
+}
+
 // Export the API — in Electron mode, window.api will be set by the preload script.
 // In browser mode, we use this mock.
 let didWarnMissingElectronApi = false;
 
-export function getApi(): ElectronApi {
+export function getApi(): ElectronApi | typeof mockApi {
     if (window.api) {
         return window.api
     }

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import {createPortal} from 'react-dom'
-import {getApi} from '../../utils/api'
+import {getApi, getLegacyBrowserAssetMutations, getLegacyBrowserMediaMutation} from '../../utils/api'
 import MediaSearchPanel, {type MediaSearchResult} from './MediaSearchPanel'
 import './AssetManager.css'
 import {Play} from 'lucide-react'
@@ -28,6 +28,8 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
     const [downloading, setDownloading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const api = getApi();
+    const legacyAssetMutations = getLegacyBrowserAssetMutations();
+    const legacyMediaMutation = getLegacyBrowserMediaMutation();
 
     const refreshAssets = useCallback(async () => {
         setLoading(true);
@@ -50,7 +52,9 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
     const handleAddMedia = async (type: 'image' | 'video') => {
         setLoading(true);
         try {
-            const result = type === 'image' ? await api.assets.selectImage() : await api.assets.selectVideo();
+            const result = type === 'image'
+                ? await legacyAssetMutations.selectImage()
+                : await legacyAssetMutations.selectVideo();
             if (result.success && (result.filePaths || result.filePath)) {
                 await refreshAssets()
             }
@@ -66,7 +70,7 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
         if (!confirm(`Delete "${asset.name}"? This cannot be undone.`)) return;
 
         try {
-            const result = await api.assets.delete(asset.relativePath);
+            const result = await legacyAssetMutations.delete(asset.relativePath);
             if (result.success) {
                 setAssets(prev => prev.filter(a => a.path !== asset.path));
                 if (selectedAsset === asset.path) setSelectedAsset(null)
@@ -93,7 +97,7 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
 
         for (const result of results) {
             try {
-                const downloadResult = await api.mediaSearch.downloadAndImport(result.url);
+                const downloadResult = await legacyMediaMutation.downloadAndImport(result.url);
                 if (downloadResult.success && downloadResult.path) {
                     importedUrls.push(downloadResult.path)
                 }

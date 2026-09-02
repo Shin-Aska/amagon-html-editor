@@ -29,7 +29,7 @@ import type {Block} from './store/types'
 import {createBlock} from './store/types'
 import {buildDefaultBlockProps, componentRegistry} from './registry/ComponentRegistry'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
-import {getApi} from './utils/api'
+import {getApi, getLegacyBrowserProjectApi} from './utils/api'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
 import WelcomeTourDialog from './components/Tutorial/WelcomeTourDialog'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
@@ -65,6 +65,7 @@ const DialogLoader = () => (
 
 function App(): JSX.Element {
     const api = getApi();
+    const legacyProjectApi = getLegacyBrowserProjectApi();
 
     const showToast = useToastStore((s) => s.showToast);
 
@@ -246,7 +247,7 @@ function App(): JSX.Element {
         const filePath = projectState.filePath;
 
         try {
-            const result = await api.project.save({filePath: filePath || undefined, content});
+            const result = await legacyProjectApi.save({filePath: filePath || undefined, content});
             if (result.success && result.filePath) {
                 useProjectStore.getState().setFilePath(result.filePath);
                 markSaved();
@@ -289,7 +290,7 @@ function App(): JSX.Element {
         }
 
         try {
-            const result = await api.project.saveAs({content});
+            const result = await legacyProjectApi.saveAs({content});
             if (result.success && result.filePath) {
                 useProjectStore.getState().setFilePath(result.filePath);
                 markSaved();
@@ -305,7 +306,7 @@ function App(): JSX.Element {
     }, [api, ensureBackendReadyAndFlushEdits]);
 
     const handleLoad = useCallback(async () => {
-        const result = await api.project.load();
+        const result = await legacyProjectApi.load();
         if (result.success && result.content) {
             useProjectStore.getState().setProject(result.content as any, result.filePath);
             const data = result.content as any;

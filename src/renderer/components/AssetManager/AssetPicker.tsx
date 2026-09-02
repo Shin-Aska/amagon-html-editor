@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import {getApi} from '../../utils/api'
+import {getApi, getLegacyBrowserMediaMutation} from '../../utils/api'
 import type {Asset} from './AssetManager'
 import MediaSearchPanel, {type MediaSearchResult} from './MediaSearchPanel'
 import './AssetManager.css'
@@ -22,6 +22,7 @@ export default function AssetPicker({mode, onSelect, onCancel, initialSelection 
     const [activeTab, setActiveTab] = useState<'project' | 'web'>('project');
     const [downloading, setDownloading] = useState(false);
     const api = getApi();
+    const legacyMediaMutation = getLegacyBrowserMediaMutation();
 
     const refreshAssets = useCallback(async () => {
         setLoading(true);
@@ -50,7 +51,7 @@ export default function AssetPicker({mode, onSelect, onCancel, initialSelection 
 
         for (const result of results) {
             try {
-                const downloadResult = await api.mediaSearch.downloadAndImport(result.url);
+                const downloadResult = await legacyMediaMutation.downloadAndImport(result.url);
                 if (downloadResult.success && downloadResult.path) {
                     importedUrls.push(downloadResult.path)
                 }
