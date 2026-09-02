@@ -7,6 +7,14 @@ import type {
     ProjectBridge,
     ProjectSaveRequest,
     ProjectSessionResult,
+    ProjectSessionId,
+    RendererGeneration,
+    WorkspaceGeneration,
+} from './projectIpcContract'
+import {
+    parseProjectSessionId,
+    parseRendererGeneration,
+    parseWorkspaceGeneration,
 } from './projectIpcContract'
 import type {FontAsset} from '../../renderer/store/types'
 
@@ -17,6 +25,7 @@ describe('project IPC contract', () => {
         type BridgeHasLoadFile = 'loadFile' extends keyof ProjectBridge ? true : false
         type RawStringIsSessionId = string extends ProjectSaveRequest['expectedSessionId'] ? true : false
         type RawNumberIsRendererGeneration = number extends ProjectSaveRequest['rendererGeneration'] ? true : false
+        type RawNumberIsWorkspaceGeneration = number extends WorkspaceGeneration ? true : false
         type RawStringIsRecentId = string extends Parameters<ProjectBridge['openRecent']>[0] ? true : false
 
         // When: their authority-bearing keys are inspected by TypeScript
@@ -24,6 +33,7 @@ describe('project IPC contract', () => {
         const bridgeHasLoadFile: BridgeHasLoadFile = false
         const rawStringIsSessionId: RawStringIsSessionId = false
         const rawNumberIsRendererGeneration: RawNumberIsRendererGeneration = false
+        const rawNumberIsWorkspaceGeneration: RawNumberIsWorkspaceGeneration = false
         const rawStringIsRecentId: RawStringIsRecentId = false
 
         // Then: neither a destination path nor path-based open exists
@@ -31,10 +41,34 @@ describe('project IPC contract', () => {
         expect(bridgeHasLoadFile).toBe(false)
         expect(rawStringIsSessionId).toBe(false)
         expect(rawNumberIsRendererGeneration).toBe(false)
+        expect(rawNumberIsWorkspaceGeneration).toBe(false)
         expect(rawStringIsRecentId).toBe(false)
+        expectTypeOf<string>().not.toMatchTypeOf<ProjectSessionId>()
+        expectTypeOf<number>().not.toMatchTypeOf<RendererGeneration>()
+        expectTypeOf<number>().not.toMatchTypeOf<WorkspaceGeneration>()
         expectTypeOf<ProjectSaveRequest>().toHaveProperty('expectedSessionId')
         expectTypeOf<ProjectSaveRequest>().toHaveProperty('rendererGeneration')
         expectTypeOf<ProjectSaveRequest>().toHaveProperty('snapshot')
+    })
+
+    it('parses only canonical session identities and generations', () => {
+        // Given: main-authored opaque identity and nonnegative safe generations
+        const sessionValue = 'session_A_1234567890'
+
+        // When: values cross the trusted renderer contract boundary
+        const sessionId = parseProjectSessionId(sessionValue)
+        const rendererGeneration = parseRendererGeneration(7)
+        const workspaceGeneration = parseWorkspaceGeneration(11)
+
+        // Then: valid values are branded and malformed authority is rejected
+        expect(sessionId).toBe(sessionValue)
+        expect(rendererGeneration).toBe(7)
+        expect(workspaceGeneration).toBe(11)
+        expect(() => parseProjectSessionId('short')).toThrow()
+        expect(() => parseProjectSessionId('session with spaces')).toThrow()
+        expect(() => parseRendererGeneration(-1)).toThrow()
+        expect(() => parseRendererGeneration(1.5)).toThrow()
+        expect(() => parseWorkspaceGeneration(Number.MAX_SAFE_INTEGER + 1)).toThrow()
     })
 
     it('binds every asset mutation request to an expected session', () => {

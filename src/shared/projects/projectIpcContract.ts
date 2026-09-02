@@ -1,14 +1,32 @@
+import { z } from 'zod'
 import type { LegacyProjectDocument, ProjectDocumentV1 } from './projectDocumentSchema'
 
-declare const projectSessionIdBrand: unique symbol
 declare const recentProjectIdBrand: unique symbol
-declare const rendererGenerationBrand: unique symbol
-declare const workspaceGenerationBrand: unique symbol
 
-export type ProjectSessionId = string & { readonly [projectSessionIdBrand]: 'ProjectSessionId' }
+export const ProjectSessionIdSchema = z.string()
+    .min(16)
+    .max(128)
+    .regex(/^[A-Za-z0-9_-]+$/u)
+    .brand<'ProjectSessionId'>()
+export const RendererGenerationSchema = z.number()
+    .int()
+    .nonnegative()
+    .max(Number.MAX_SAFE_INTEGER)
+    .brand<'RendererGeneration'>()
+export const WorkspaceGenerationSchema = z.number()
+    .int()
+    .nonnegative()
+    .max(Number.MAX_SAFE_INTEGER)
+    .brand<'WorkspaceGeneration'>()
+
+export type ProjectSessionId = z.infer<typeof ProjectSessionIdSchema>
 export type RecentProjectId = string & { readonly [recentProjectIdBrand]: 'RecentProjectId' }
-export type RendererGeneration = number & { readonly [rendererGenerationBrand]: 'RendererGeneration' }
-export type WorkspaceGeneration = number & { readonly [workspaceGenerationBrand]: 'WorkspaceGeneration' }
+export type RendererGeneration = z.infer<typeof RendererGenerationSchema>
+export type WorkspaceGeneration = z.infer<typeof WorkspaceGenerationSchema>
+
+export const parseProjectSessionId = (value: unknown): ProjectSessionId => ProjectSessionIdSchema.parse(value)
+export const parseRendererGeneration = (value: unknown): RendererGeneration => RendererGenerationSchema.parse(value)
+export const parseWorkspaceGeneration = (value: unknown): WorkspaceGeneration => WorkspaceGenerationSchema.parse(value)
 export type DurableProjectData = ProjectDocumentV1 | LegacyProjectDocument
 export type ProjectSessionKind = 'amg' | 'legacy-json'
 export type DirtyTransitionChoice = 'save' | 'discard' | 'cancel'
