@@ -10,6 +10,7 @@ const RAW_HTML_INNER_URL = 'app-media://project/inner.png';
 describe('exportEngine', () => {
     it('consolidates app-media assets into assets/ and rewrites HTML refs to ./assets/...', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -59,6 +60,7 @@ describe('exportEngine', () => {
 
     it('rewrites asset references inside raw-html block content', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -98,6 +100,7 @@ describe('exportEngine', () => {
 
     it('strips editor-only classes from exported HTML', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -135,6 +138,7 @@ describe('exportEngine', () => {
 
     it('rewrites internal multi-page links to correct .html files', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -186,6 +190,7 @@ describe('exportEngine', () => {
 
     it('supports includeJs=false (omits framework scripts but keeps CSS)', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'bootstrap-5',
@@ -217,6 +222,7 @@ describe('exportEngine', () => {
 
     it('exports project fonts into assets/fonts and emits @font-face with relative src URLs', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -270,6 +276,7 @@ describe('exportEngine', () => {
 
     it('skips Google Fonts CDN links for self-hosted font families but keeps missing families', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -331,6 +338,7 @@ describe('exportEngine', () => {
 
     it('exports projects with no fonts without adding Google Fonts links', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -366,6 +374,7 @@ describe('exportEngine', () => {
 
     it('tailwind export includes only tailwind resources', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'tailwind',
@@ -398,6 +407,7 @@ describe('exportEngine', () => {
 
     it('tailwind export renders tailwind-native markup for framework-sensitive blocks', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'tailwind',
@@ -445,6 +455,7 @@ describe('exportEngine', () => {
 
     it('rewrites navbar brandImage app-media assets in pages-based navbars', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'bootstrap-5',
@@ -501,6 +512,7 @@ describe('exportEngine', () => {
 
     it('preserves navbar font-size for child anchors in tailwind export', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'tailwind',
@@ -551,6 +563,7 @@ describe('exportEngine', () => {
 
     it('minifies HTML when minify=true', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -581,6 +594,7 @@ describe('exportEngine', () => {
 
     it('single-page inline export can inline assets as data URLs', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -616,6 +630,7 @@ describe('exportEngine', () => {
 
     it('outputs parseable HTML and contains no editor artifacts', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',
@@ -655,6 +670,7 @@ describe('exportEngine', () => {
 
     it('includes entrance animation CSS before user custom CSS', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Test',
                 framework: 'vanilla',

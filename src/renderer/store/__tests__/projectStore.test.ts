@@ -4,6 +4,7 @@ import {createBlock, createDefaultTheme} from '../types'
 
 // Initial state for resetting store between tests
 const initialProjectState = {
+    customCss: '',
     settings: {
         name: 'Untitled Project',
         framework: 'bootstrap-5' as const,
@@ -155,8 +156,33 @@ describe('projectStore', () => {
             expect(data.userBlocks).toEqual([])
         });
 
+        it('round-trips top-level customCss independently from nested legacy theme CSS', () => {
+            // Given
+            const baseProject = store.getProjectData();
+            const {themes: _themes, ...settingsWithoutVariants} = baseProject.projectSettings;
+            const project = {
+                ...baseProject,
+                customCss: '.top-level { color: red; }',
+                projectSettings: {
+                    ...settingsWithoutVariants,
+                    theme: {
+                        ...settingsWithoutVariants.theme,
+                        customCss: '.nested-legacy { color: blue; }'
+                    }
+                }
+            };
+
+            // When
+            store.setProject(project);
+            const roundTrip = store.getProjectData();
+
+            // Then
+            expect(roundTrip.customCss).toBe('.top-level { color: red; }')
+        });
+
         it('imports project data', () => {
             const importData = {
+                customCss: '',
                 projectSettings: {
                     name: 'Imported',
                     framework: 'bootstrap-5' as const,
@@ -185,6 +211,7 @@ describe('projectStore', () => {
 
         it('creates default page when importing empty pages', () => {
             const importData = {
+                customCss: '',
                 projectSettings: {
                     name: 'Empty',
                     framework: 'vanilla' as const,
@@ -212,6 +239,7 @@ describe('projectStore', () => {
             expect(get().isProjectLoaded).toBe(false);
 
             const importData = {
+                customCss: '',
                 projectSettings: {
                     name: 'Test',
                     framework: 'bootstrap-5' as const,

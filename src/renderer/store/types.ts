@@ -805,6 +805,7 @@ export interface PublisherConfig {
 }
 
 export interface ProjectData {
+    customCss: string
     projectSettings: ProjectSettings
     pages: Page[]
     folders?: PageFolder[]
