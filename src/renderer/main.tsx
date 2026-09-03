@@ -5,11 +5,23 @@ import './styles/global.css'
 import {registerBlocks} from './registry/registerBlocks'
 import {useAppSettingsStore} from './store/appSettingsStore'
 
-registerBlocks();
-useAppSettingsStore.getState().loadSettings();
+const shouldEnableReactDevTools =
+    import.meta.env.DEV && import.meta.env.VITE_DISABLE_REACT_DEVTOOLS !== '1'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-        <App/>
-    </React.StrictMode>
-);
+const reactDevToolsReady = shouldEnableReactDevTools
+    ? Promise.allSettled([
+        import('react-grab'),
+        import('react-scan').then(({scan}) => scan())
+    ])
+    : Promise.resolve()
+
+void reactDevToolsReady.then(() => {
+    registerBlocks();
+    useAppSettingsStore.getState().loadSettings();
+
+    ReactDOM.createRoot(document.getElementById('root')!).render(
+        <React.StrictMode>
+            <App/>
+        </React.StrictMode>
+    );
+});
