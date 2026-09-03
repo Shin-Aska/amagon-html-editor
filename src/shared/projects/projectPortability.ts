@@ -1,8 +1,9 @@
 import type { Block, ProjectData, ProjectTheme } from "../../renderer/store/types";
 import { AssetReferenceError, buildRuntimeAssetUrl, decodeDurableAssetReference, encodeDurableAssetReference, parseRuntimeAssetUrl } from "./assetReference";
-import type { ProjectDocumentV1 } from "./projectDocumentSchema";
+import type { LegacyProjectDocument, ProjectDocumentV1 } from "./projectDocumentSchema";
+import { ProjectSessionIdSchema } from "./projectIpcContract";
 
-export type ProjectPortabilityMode = "bundle-durable" | "bundle-runtime" | "conversion-durable" | "legacy-durable" | "legacy-runtime";
+export type ProjectPortabilityMode = "bundle-durable" | "bundle-runtime" | "bundle-stored" | "conversion-durable" | "legacy-durable" | "legacy-runtime" | "legacy-stored";
 
 export type ProjectPortabilityOffenderCode = "blob" | "credential" | "external-local" | "invalid-reference" | "missing-asset" | "session-identity" | "stale-session" | "system-font" | "unexpected-reference-form";
 
@@ -24,10 +25,10 @@ export type ProjectPortabilityScan = {
   readonly referencedAssetPaths: readonly string[];
 };
 
-export type ProjectPortabilityResult =
+export type ProjectPortabilityResult<Project extends PortabilityProject = PortabilityProject> =
   | ({
       readonly ok: true;
-      readonly project: ProjectData;
+      readonly project: Project;
     } & ProjectPortabilityScan)
   | ({ readonly ok: false } & ProjectPortabilityScan);
 
@@ -39,7 +40,7 @@ type ScanState = {
   readonly referencedAssets: Set<string>;
 };
 
-type PortabilityProject = ProjectData | ProjectDocumentV1;
+export type PortabilityProject = ProjectData | ProjectDocumentV1 | LegacyProjectDocument;
 type PortabilityBlock = Block | ProjectDocumentV1["pages"][number]["blocks"][number];
 type PortabilityTheme = ProjectTheme | ProjectDocumentV1["projectSettings"]["theme"];
 
@@ -77,7 +78,9 @@ const transformReference = (value: string, location: string, state: ScanState): 
     return value;
   }
   if (isExternalLocalReference(value)) {
-    const legacyMode = state.options.mode === "legacy-durable" || state.options.mode === "legacy-runtime";
+    const legacyMode = state.options.mode === "legacy-durable"
+      || state.options.mode === "legacy-runtime"
+      || state.options.mode === "legacy-stored";
     if (!legacyMode || !state.approvedExternal.has(value)) addOffender(state, "external-local", location, value);
     return value;
   }
@@ -85,6 +88,10 @@ const transformReference = (value: string, location: string, state: ScanState): 
   if (value.toLowerCase().startsWith(RUNTIME_PREFIX)) {
     if (!value.startsWith(RUNTIME_PREFIX)) {
       addOffender(state, "invalid-reference", location, value);
+      return value;
+    }
+    if (state.options.mode.endsWith("-stored")) {
+      addOffender(state, "unexpected-reference-form", location, value);
       return value;
     }
     const legacyReference = value.slice(RUNTIME_PREFIX.length);
@@ -135,6 +142,9 @@ const transformDurableReference = (value: string, location: string, state: ScanS
   try {
     const assetPath = decodeDurableAssetReference(value);
     const canonical = encodeDurableAssetReference(assetPath);
+    if (state.options.mode.endsWith("-stored") && canonical !== value) {
+      addOffender(state, "invalid-reference", location, value);
+    }
     recordAsset(assetPath, location, state);
     if (state.options.mode === "bundle-runtime" || state.options.mode === "legacy-runtime") {
       return buildRuntimeAssetUrl(state.options.sessionId, canonical);
@@ -193,8 +203,12 @@ const transformTheme = (theme: PortabilityTheme, location: string, state: ScanSt
 };
 
 const scanForbiddenPersistence = (value: unknown, location: string, state: ScanState): void => {
+  const persistenceMode = state.options.mode.endsWith("-durable") || state.options.mode.endsWith("-stored");
   if (typeof value === "string") {
-    if (state.options.mode.endsWith("-durable") && value.includes(state.options.sessionId)) addOffender(state, "session-identity", location);
+    if (
+      persistenceMode
+      && (value.includes(state.options.sessionId) || ProjectSessionIdSchema.safeParse(value).success)
+    ) addOffender(state, "session-identity", location);
     return;
   }
   if (Array.isArray(value)) {
@@ -205,7 +219,10 @@ const scanForbiddenPersistence = (value: unknown, location: string, state: ScanS
   for (const key of Object.keys(value).sort()) {
     const childLocation = propertyLocation(location, key);
     if (SECRET_KEY.test(key)) addOffender(state, "credential", childLocation);
-    if (state.options.mode.endsWith("-durable") && key.includes(state.options.sessionId)) addOffender(state, "session-identity", childLocation);
+    if (
+      persistenceMode
+      && (key.includes(state.options.sessionId) || ProjectSessionIdSchema.safeParse(key).success)
+    ) addOffender(state, "session-identity", childLocation);
     scanForbiddenPersistence(value[key], childLocation, state);
   }
 };
@@ -246,7 +263,10 @@ const scanClone = (clone: PortabilityProject, options: ProjectPortabilityOptions
   return { offenders, referencedAssetPaths };
 };
 
-const runPortability = (project: ProjectData, options: ProjectPortabilityOptions): ProjectPortabilityResult => {
+const runPortability = <Project extends PortabilityProject>(
+  project: Project,
+  options: ProjectPortabilityOptions,
+): ProjectPortabilityResult<Project> => {
   const clone = structuredClone(project);
   const scan = scanClone(clone, options);
   return scan.offenders.length === 0 ? { ok: true, project: clone, ...scan } : { ok: false, ...scan };

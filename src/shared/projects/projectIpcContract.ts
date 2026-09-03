@@ -1,11 +1,8 @@
 import { z } from 'zod'
 import type { LegacyProjectDocument, ProjectDocumentV1 } from './projectDocumentSchema'
 
-declare const recentProjectIdBrand: unique symbol
-
 export const ProjectSessionIdSchema = z.string()
-    .min(16)
-    .max(128)
+    .length(32)
     .regex(/^[A-Za-z0-9_-]+$/u)
     .brand<'ProjectSessionId'>()
 export const RendererGenerationSchema = z.number()
@@ -18,13 +15,15 @@ export const WorkspaceGenerationSchema = z.number()
     .nonnegative()
     .max(Number.MAX_SAFE_INTEGER)
     .brand<'WorkspaceGeneration'>()
+export const RecentProjectIdSchema = z.string().uuid().brand<'RecentProjectId'>()
 
 export type ProjectSessionId = z.infer<typeof ProjectSessionIdSchema>
-export type RecentProjectId = string & { readonly [recentProjectIdBrand]: 'RecentProjectId' }
+export type RecentProjectId = z.infer<typeof RecentProjectIdSchema>
 export type RendererGeneration = z.infer<typeof RendererGenerationSchema>
 export type WorkspaceGeneration = z.infer<typeof WorkspaceGenerationSchema>
 
 export const parseProjectSessionId = (value: unknown): ProjectSessionId => ProjectSessionIdSchema.parse(value)
+export const parseRecentProjectId = (value: unknown): RecentProjectId => RecentProjectIdSchema.parse(value)
 export const parseRendererGeneration = (value: unknown): RendererGeneration => RendererGenerationSchema.parse(value)
 export const parseWorkspaceGeneration = (value: unknown): WorkspaceGeneration => WorkspaceGenerationSchema.parse(value)
 export type DurableProjectData = ProjectDocumentV1 | LegacyProjectDocument

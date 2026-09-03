@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { ProjectSessionIdSchema } from "../../shared/projects/projectIpcContract";
 import {
   buildRuntimeAssetUrl,
   encodeDurableAssetReference,
@@ -14,6 +15,21 @@ import {
 } from "./projectSession";
 
 describe("project session ownership", () => {
+  it("issues identities accepted by the canonical IPC contract", () => {
+    // Given: the main-process session identity issuer.
+    const session = ProjectSession.createAmg({
+      sourcePath: "C:/projects/demo.amg",
+      workspacePath: "C:/user/amg-workspaces/session-one",
+    });
+
+    // When: its identity crosses the canonical contract boundary.
+    const parsed = ProjectSessionIdSchema.safeParse(session.id);
+
+    // Then: it is exactly one valid 24-byte base64url token.
+    expect(parsed.success).toBe(true);
+    expect(session.id).toHaveLength(32);
+  });
+
   it("serializes mutations in FIFO order", async () => {
     // Given: an active AMG session and a deterministically held first mutation.
     const session = ProjectSession.createAmg({

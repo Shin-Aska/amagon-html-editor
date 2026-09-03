@@ -33,7 +33,6 @@ import {
 } from "./mediaSearchService";
 import { isEncryptionSecure } from "./cryptoHelpers";
 import { buildAppMenu } from "./menu";
-import { createWelcomeBlocks } from "../shared/welcomeBlocks";
 import "../publish/providers/index";
 import {
   type ExportedFile,
@@ -57,6 +56,10 @@ import {
   resolveSensitiveValues,
   saveCredentialRecord,
 } from "./credentialCatalog";
+import { createProjectService } from "./projects/projectService";
+import { inspectProjectMetadata } from "./projects/projectServiceFiles";
+import { createRecentProjectsStore } from "./projects/recentProjects";
+import { registerProjectIpc } from "./projects/registerProjectIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -71,8 +74,6 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 let currentProjectDir: string | null = null;
 let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
-
-const MAX_RECENT = 10;
 
 // ---------------------------------------------------------------------------
 // MIME type helper
@@ -125,65 +126,6 @@ function isPathSafe(requestedPath: string, allowedBase: string): boolean {
   const resolved = path.resolve(requestedPath);
   const base = path.resolve(allowedBase);
   return resolved.startsWith(base + path.sep) || resolved === base;
-}
-
-// ---------------------------------------------------------------------------
-// Recent projects (persisted via simple JSON in userData)
-// ---------------------------------------------------------------------------
-
-async function getRecentProjectsPath(): Promise<string> {
-  return path.join(app.getPath("userData"), "recent-projects.json");
-}
-
-async function loadRecentProjects(): Promise<string[]> {
-  try {
-    const filePath = await getRecentProjectsPath();
-    const data = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function addRecentProject(projectPath: string): Promise<void> {
-  const recents = await loadRecentProjects();
-  const filtered = recents.filter((p) => p !== projectPath);
-  filtered.unshift(projectPath);
-  if (filtered.length > MAX_RECENT) filtered.length = MAX_RECENT;
-  const filePath = await getRecentProjectsPath();
-  await fs.writeFile(filePath, JSON.stringify(filtered), "utf-8");
-}
-
-async function removeRecentProject(projectPath: string): Promise<string[]> {
-  const recents = await loadRecentProjects();
-  const filtered = recents.filter((p) => p !== projectPath);
-  const filePath = await getRecentProjectsPath();
-  await fs.writeFile(filePath, JSON.stringify(filtered), "utf-8");
-  return filtered;
-}
-
-async function resolveRecentProjects(
-  projectPaths: string[],
-): Promise<Array<{ path: string; name: string; framework?: string }>> {
-  const projects = [];
-  for (const projectPath of projectPaths) {
-    if (!projectPath || !existsSync(projectPath)) continue;
-
-    try {
-      const content = await fs.readFile(projectPath, "utf-8");
-      const data = JSON.parse(content);
-      const name = data.projectSettings?.name || "Untitled Project";
-      const framework = data.projectSettings?.framework || "vanilla";
-      projects.push({ path: projectPath, name, framework });
-    } catch {
-      // If we can't read/parse the file, still show it with a filename fallback.
-      const name =
-        path.basename(projectPath, path.extname(projectPath)) || "Untitled";
-      projects.push({ path: projectPath, name, framework: undefined });
-    }
-  }
-
-  return projects;
 }
 
 // ---------------------------------------------------------------------------
@@ -1214,164 +1156,6 @@ function registerIpcHandlers(): void {
     }
   });
 
-  // ── 8.2  Project Save ────────────────────────────────────────────────────
-
-  ipcMain.handle(
-    "project:save",
-    async (_, data: { filePath?: string; content: string }) => {
-      try {
-        let targetPath = data.filePath;
-
-        // If the renderer passes a relative path (e.g. "project.json"), resolve it
-        // against the current project directory (when available). Otherwise treat
-        // it as an unsaved project and show the Save dialog.
-        if (targetPath && !path.isAbsolute(targetPath)) {
-          if (currentProjectDir) {
-            targetPath = path.join(currentProjectDir, targetPath);
-          } else {
-            targetPath = undefined;
-          }
-        }
-
-        // If no path or untitled, show Save As dialog
-        if (!targetPath || targetPath === "untitled-project.json") {
-          const { canceled, filePath } = await dialog.showSaveDialog(
-            mainWindow!,
-            {
-              title: "Save Project",
-              defaultPath: path.join(app.getPath("documents"), "project.json"),
-              filters: [{ name: "Amagon Project", extensions: ["json"] }],
-            },
-          );
-          if (canceled || !filePath) return { success: false, canceled: true };
-          targetPath = filePath;
-        }
-
-        // Ensure the parent directory exists
-        await fs.mkdir(path.dirname(targetPath), { recursive: true });
-        await fs.writeFile(targetPath, data.content, "utf-8");
-
-        // Update current project dir
-        currentProjectDir = path.dirname(targetPath);
-        await addRecentProject(targetPath);
-
-        // Ensure assets/ subfolder exists
-        const assetsDir = path.join(currentProjectDir, "assets");
-        await fs.mkdir(assetsDir, { recursive: true });
-
-        return { success: true, filePath: targetPath };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
-    },
-  );
-
-  // ── Save As (always shows dialog) ─────────────────────────────────────
-
-  ipcMain.handle("project:saveAs", async (_, data: { content: string }) => {
-    try {
-      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow!, {
-        title: "Save Project As",
-        defaultPath: path.join(app.getPath("documents"), "project.json"),
-        filters: [{ name: "Amagon Project", extensions: ["json"] }],
-      });
-      if (canceled || !filePath) return { success: false, canceled: true };
-
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, data.content, "utf-8");
-
-      currentProjectDir = path.dirname(filePath);
-      await addRecentProject(filePath);
-
-      const assetsDir = path.join(currentProjectDir, "assets");
-      await fs.mkdir(assetsDir, { recursive: true });
-
-      return { success: true, filePath };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  // ── 8.3  Project Load ────────────────────────────────────────────────────
-
-  ipcMain.handle("project:load", async () => {
-    try {
-      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-        title: "Open Project",
-        filters: [{ name: "Amagon Project", extensions: ["json"] }],
-        properties: ["openFile"],
-      });
-
-      if (canceled || filePaths.length === 0) {
-        return { success: false, canceled: true };
-      }
-
-      const filePath = filePaths[0];
-      const raw = await fs.readFile(filePath, "utf-8");
-      const content = JSON.parse(raw);
-
-      // Basic schema validation
-      if (!content.projectSettings || !content.pages) {
-        return {
-          success: false,
-          error:
-            "Invalid project file: missing projectSettings or pages. Make sure you selected a valid .json project file.",
-        };
-      }
-
-      currentProjectDir = path.dirname(filePath);
-      await addRecentProject(filePath);
-      startAutoSave();
-
-      return { success: true, filePath, content };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  // ── Load specific file path (for recent projects) ─────────────────────
-
-  ipcMain.handle("project:loadFile", async (_, filePath: string) => {
-    try {
-      const raw = await fs.readFile(filePath, "utf-8");
-      const content = JSON.parse(raw);
-
-      if (!content.projectSettings || !content.pages) {
-        return { success: false, error: "Invalid project file format." };
-      }
-
-      currentProjectDir = path.dirname(filePath);
-      await addRecentProject(filePath);
-      startAutoSave();
-
-      return { success: true, filePath, content };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  // ── Recent projects list ──────────────────────────────────────────────
-
-  ipcMain.handle("project:getRecent", async () => {
-    try {
-      const recents = await loadRecentProjects();
-      const projects = await resolveRecentProjects(recents);
-      return { success: true, projects };
-    } catch (error: any) {
-      return { success: false, error: error.message, projects: [] };
-    }
-  });
-
-  ipcMain.handle("project:removeRecent", async (_, projectPath: string) => {
-    try {
-      const updated = await removeRecentProject(projectPath);
-      const projects = await resolveRecentProjects(updated);
-      return { success: true, projects };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
   // ── Export HTML ────────────────────────────────────────────────────────
 
   ipcMain.handle(
@@ -1934,111 +1718,6 @@ function registerIpcHandlers(): void {
     }
   });
 
-  // ── 8.5  New Project ──────────────────────────────────────────────────
-
-  ipcMain.handle(
-    "project:new",
-    async (
-      _,
-      data: { name: string; framework: string; directory?: string },
-    ) => {
-      try {
-        let projectDir = data.directory;
-
-        if (!projectDir) {
-          const { canceled, filePaths } = await dialog.showOpenDialog(
-            mainWindow!,
-            {
-              title: "Choose Project Location",
-              properties: ["openDirectory", "createDirectory"],
-            },
-          );
-          if (canceled || filePaths.length === 0) {
-            return { success: false, canceled: true };
-          }
-          projectDir = path.join(
-            filePaths[0],
-            data.name.replace(/\s+/g, "-").toLowerCase(),
-          );
-        }
-
-        // Create directory structure
-        await fs.mkdir(projectDir, { recursive: true });
-        await fs.mkdir(path.join(projectDir, "assets"), { recursive: true });
-
-        // Create initial project.json
-        const projectData = {
-          projectSettings: {
-            name: data.name,
-            framework: data.framework,
-            theme: {
-              name: "Default",
-              colors: {
-                primary: "#1e66f5",
-                secondary: "#6c757d",
-                accent: "#7c3aed",
-                background: "#ffffff",
-                surface: "#f8f9fa",
-                text: "#212529",
-                textMuted: "#6c757d",
-                border: "#dee2e6",
-                success: "#198754",
-                warning: "#ffc107",
-                danger: "#dc3545",
-              },
-              typography: {
-                fontFamily:
-                  'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-                headingFontFamily: "inherit",
-                baseFontSize: "16px",
-                lineHeight: "1.6",
-                headingLineHeight: "1.2",
-              },
-              spacing: {
-                baseUnit: "8px",
-                scale: [0.25, 0.5, 1, 1.5, 2, 3, 4, 6, 8],
-              },
-              borders: { radius: "6px", width: "1px", color: "#dee2e6" },
-              customCss: "",
-            },
-            globalStyles: {},
-          },
-          pages: [
-            {
-              id: `page_${Date.now().toString(36)}`,
-              title: "Home",
-              slug: "index",
-              tags: ["nav"],
-              blocks: createWelcomeBlocks(data.name),
-              meta: {
-                charset: "UTF-8",
-                viewport: "width=device-width, initial-scale=1.0",
-                description: "",
-              },
-            },
-          ],
-          folders: [],
-          userBlocks: [],
-        };
-
-        const filePath = path.join(projectDir, "project.json");
-        await fs.writeFile(
-          filePath,
-          JSON.stringify(projectData, null, 2),
-          "utf-8",
-        );
-
-        currentProjectDir = projectDir;
-        await addRecentProject(filePath);
-        startAutoSave();
-
-        return { success: true, filePath, content: projectData };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
-    },
-  );
-
   // ── Auto-save configuration ───────────────────────────────────────────
 
   ipcMain.handle("autosave:start", (_, intervalMs?: number) => {
@@ -2049,12 +1728,6 @@ function registerIpcHandlers(): void {
   ipcMain.handle("autosave:stop", () => {
     stopAutoSave();
     return { success: true };
-  });
-
-  // ── Get current project directory ─────────────────────────────────────
-
-  ipcMain.handle("project:getDir", () => {
-    return { success: true, directory: currentProjectDir };
   });
 
   // ── Copy asset into project (for drag-in from external) ───────────────
@@ -2525,6 +2198,52 @@ function registerIpcHandlers(): void {
       return { success: false, error: error.message };
     }
   });
+
+  const projectService = createProjectService({
+    userDataPath: app.getPath("userData"),
+    documentsPath: app.getPath("documents"),
+    dialogs: {
+      showSave: async (request) => {
+        const options = {
+          title: request.title,
+          defaultPath: request.defaultPath,
+          filters: request.filters.map((filter) => ({
+            name: filter.name,
+            extensions: [...filter.extensions],
+          })),
+        };
+        return mainWindow === null
+          ? dialog.showSaveDialog(options)
+          : dialog.showSaveDialog(mainWindow, options);
+      },
+      showOpen: async (request) => {
+        const options = {
+          title: request.title,
+          filters: request.filters.map((filter) => ({
+            name: filter.name,
+            extensions: [...filter.extensions],
+          })),
+          properties: ["openFile" as const],
+        };
+        return mainWindow === null
+          ? dialog.showOpenDialog(options)
+          : dialog.showOpenDialog(mainWindow, options);
+      },
+    },
+    recents: createRecentProjectsStore({
+      storagePath: path.join(app.getPath("userData"), "recent-projects.json"),
+      inspect: inspectProjectMetadata,
+    }),
+    onDirectoryChange: (directory) => {
+      currentProjectDir = directory;
+    },
+  });
+  registerProjectIpc({
+    handle: (channel, handler) => {
+      ipcMain.handle(channel, (event, argument) => handler(event, argument));
+    },
+    removeHandler: (channel) => ipcMain.removeHandler(channel),
+  }, projectService);
 }
 
 // ---------------------------------------------------------------------------

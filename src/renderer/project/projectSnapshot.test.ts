@@ -10,8 +10,8 @@ import {
   type BuildProjectSnapshotInput,
 } from "./projectSnapshot";
 
-const SESSION_A = parseProjectSessionId("session_A_1234567890");
-const SESSION_B = parseProjectSessionId("session_B_0987654321");
+const SESSION_A = parseProjectSessionId("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+const SESSION_B = parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
 const ASSET_PATH = "assets/nested/hero image.png";
 const DURABLE_REFERENCE = "assets/nested/hero%20image.png";
 

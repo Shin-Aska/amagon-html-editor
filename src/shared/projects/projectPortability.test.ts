@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectData } from "../../renderer/store/types";
 import { PROJECT_SCHEMA_VERSION } from "./amgContract";
-import { parseProjectDocumentV1 } from "./projectDocumentSchema";
+import { parseProjectSessionId } from "./projectIpcContract";
+import { parseLegacyProjectDocument, parseProjectDocumentV1 } from "./projectDocumentSchema";
 import {
   scanProjectPortability,
   transformProjectPortability,
 } from "./projectPortability";
 
-const SESSION_A = "session_A_123456";
-const SESSION_B = "session_B_654321";
+const SESSION_A = parseProjectSessionId("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+const SESSION_B = parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
 
 const createProject = (): ProjectData => ({
   customCss: `.top { background: url("app-media://project-asset/${SESSION_A}/assets/top.png"); }`,
@@ -456,6 +457,213 @@ describe("project portability", () => {
     expect(scan.offenders).toEqual([]);
     expect(scan.referencedAssetPaths).toContain("assets/image.png");
     expect(document).toEqual(original);
+  });
+
+  it("scans the readonly parsed legacy document shape without an assertion seam", () => {
+    // Given
+    const document = parseLegacyProjectDocument(createProject());
+
+    // When
+    const scan = scanProjectPortability(document, {
+      mode: "legacy-durable",
+      sessionId: SESSION_A,
+      availableAssetPaths: [
+        "assets/bg.png",
+        "assets/body.png",
+        "assets/fonts/fixture.woff2",
+        "assets/image.png",
+        "assets/large.png",
+        "assets/mask.svg",
+        "assets/poster.png",
+        "assets/small.png",
+        "assets/top.png",
+      ],
+    });
+
+    // Then
+    expect(scan.offenders).toEqual([]);
+    expect(scan.referencedAssetPaths).toContain("assets/image.png");
+  });
+
+  it("transforms parsed v1 and legacy documents while preserving their readonly input shapes", () => {
+    // Given
+    const v1 = parseProjectDocumentV1({ projectSchemaVersion: PROJECT_SCHEMA_VERSION, ...createProject() });
+    const legacy = parseLegacyProjectDocument(createProject());
+    const v1Original = structuredClone(v1);
+    const legacyOriginal = structuredClone(legacy);
+    const availableAssetPaths = [
+      "assets/bg.png",
+      "assets/body.png",
+      "assets/fonts/fixture.woff2",
+      "assets/image.png",
+      "assets/large.png",
+      "assets/mask.svg",
+      "assets/poster.png",
+      "assets/small.png",
+      "assets/top.png",
+    ];
+
+    // When
+    const transformedV1 = transformProjectPortability(v1, {
+      mode: "bundle-durable",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const transformedLegacy = transformProjectPortability(legacy, {
+      mode: "legacy-durable",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+
+    // Then
+    expect(transformedV1.ok).toBe(true);
+    expect(transformedLegacy.ok).toBe(true);
+    expect(JSON.stringify(transformedV1)).not.toContain(SESSION_A);
+    expect(JSON.stringify(transformedLegacy)).not.toContain(SESSION_A);
+    expect(v1).toEqual(v1Original);
+    expect(legacy).toEqual(legacyOriginal);
+  });
+
+  it("validates canonical stored bundle and legacy forms without accepting runtime identity", () => {
+    // Given
+    const availableAssetPaths = [
+      "assets/bg.png",
+      "assets/body.png",
+      "assets/fonts/fixture.woff2",
+      "assets/image.png",
+      "assets/large.png",
+      "assets/mask.svg",
+      "assets/poster.png",
+      "assets/small.png",
+      "assets/top.png",
+    ];
+    const durable = transformProjectPortability(createProject(), {
+      mode: "bundle-durable",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    expect(durable.ok).toBe(true);
+    if (!durable.ok) return;
+    const legacyExternal = structuredClone(durable.project);
+    const legacyBlock = legacyExternal.pages[0]?.blocks[0];
+    if (legacyBlock) legacyBlock.props = { src: "C:\\legacy\\photo.png" };
+    const nonCanonical = structuredClone(durable.project);
+    const nonCanonicalBlock = nonCanonical.pages[0]?.blocks[0];
+    if (nonCanonicalBlock) nonCanonicalBlock.props = { src: "assets/image%2Epng" };
+    const withStoredReference = (reference: string): ProjectData => {
+      const project = structuredClone(durable.project);
+      const block = project.pages[0]?.blocks[0];
+      if (block) block.props = { src: reference };
+      return project;
+    };
+
+    // When
+    const bundleStored = scanProjectPortability(durable.project, {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const runtimeRejected = scanProjectPortability(createProject(), {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const legacyStored = scanProjectPortability(legacyExternal, {
+      mode: "legacy-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+      approvedExternalReferences: ["C:\\legacy\\photo.png"],
+    });
+    const nonCanonicalStored = scanProjectPortability(nonCanonical, {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const rejectedReferences = [
+      ["blob:temporary", "blob"],
+      ["file:///C:/legacy/photo.png", "external-local"],
+      ["C:\\legacy\\photo.png", "external-local"],
+      ["app-media://absolute/C:/legacy/photo.png", "external-local"],
+      [`app-media://project-asset/${SESSION_B}/assets/image.png`, "unexpected-reference-form"],
+      ["assets/missing.png", "missing-asset"],
+    ] as const;
+    const rejectedScans = rejectedReferences.map(([reference, code]) => ({
+      code,
+      scan: scanProjectPortability(
+        withStoredReference(reference),
+        { mode: "bundle-stored", sessionId: SESSION_A, availableAssetPaths },
+      ),
+    }));
+    const allowedNetwork = ["https://example.test/image.png", "data:image/png;base64,AAAA"].map((reference) => (
+      scanProjectPortability(withStoredReference(reference), {
+        mode: "bundle-stored",
+        sessionId: SESSION_A,
+        availableAssetPaths,
+      })
+    ));
+    const secret = structuredClone(durable.project);
+    secret.publisherConfig = { providerId: "fixture", encryptedCredentials: "forbidden" };
+    const secretStored = scanProjectPortability(secret, {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const identityStored = scanProjectPortability(withStoredReference(SESSION_A), {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const foreignIdentityStored = scanProjectPortability(withStoredReference(SESSION_B), {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const foreignKey = structuredClone(durable.project);
+    const foreignKeyBlock = foreignKey.pages[0]?.blocks[0];
+    if (foreignKeyBlock) foreignKeyBlock.props = { [SESSION_B]: "safe" };
+    const foreignKeyStored = scanProjectPortability(foreignKey, {
+      mode: "legacy-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const hashStored = scanProjectPortability(withStoredReference("a".repeat(64)), {
+      mode: "bundle-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const proseStored = scanProjectPortability(withStoredReference(`foreign token ${SESSION_B} in prose`), {
+      mode: "legacy-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+    const unapprovedLegacy = scanProjectPortability(legacyExternal, {
+      mode: "legacy-stored",
+      sessionId: SESSION_A,
+      availableAssetPaths,
+    });
+
+    // Then
+    expect(bundleStored.offenders).toEqual([]);
+    expect(runtimeRejected.offenders).toContainEqual(expect.objectContaining({
+      code: "unexpected-reference-form",
+    }));
+    expect(legacyStored.offenders).toEqual([]);
+    expect(nonCanonicalStored.offenders).toContainEqual(expect.objectContaining({
+      code: "invalid-reference",
+      reference: "assets/image%2Epng",
+    }));
+    rejectedScans.forEach(({ code, scan }) => {
+      expect(scan.offenders).toContainEqual(expect.objectContaining({ code }));
+    });
+    allowedNetwork.forEach((scan) => expect(scan.offenders).toEqual([]));
+    expect(secretStored.offenders).toContainEqual(expect.objectContaining({ code: "credential" }));
+    expect(identityStored.offenders).toContainEqual(expect.objectContaining({ code: "session-identity" }));
+    expect(foreignIdentityStored.offenders).toContainEqual(expect.objectContaining({ code: "session-identity" }));
+    expect(foreignKeyStored.offenders).toContainEqual(expect.objectContaining({ code: "session-identity" }));
+    expect(hashStored.offenders).toEqual([]);
+    expect(proseStored.offenders).toEqual([]);
+    expect(unapprovedLegacy.offenders).toContainEqual(expect.objectContaining({ code: "external-local" }));
+    expect(JSON.stringify(durable.project)).not.toContain(SESSION_A);
   });
 
   it("rejects an app-media URL with an unrecognized authority at a stable location", () => {

@@ -27,8 +27,8 @@ const deferred = <T>(): Deferred<T> => {
   return { promise, resolve: resolvePromise };
 };
 
-const SESSION_A = parseProjectSessionId("session_A_1234567890");
-const SESSION_B = parseProjectSessionId("session_B_0987654321");
+const SESSION_A = parseProjectSessionId("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+const SESSION_B = parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
 const renderer = (value: number): RendererGeneration => parseRendererGeneration(value);
 const workspace = (value: number): WorkspaceGeneration => parseWorkspaceGeneration(value);
 

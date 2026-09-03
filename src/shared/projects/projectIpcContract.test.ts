@@ -13,6 +13,7 @@ import type {
 } from './projectIpcContract'
 import {
     parseProjectSessionId,
+    parseRecentProjectId,
     parseRendererGeneration,
     parseWorkspaceGeneration,
 } from './projectIpcContract'
@@ -53,7 +54,7 @@ describe('project IPC contract', () => {
 
     it('parses only canonical session identities and generations', () => {
         // Given: main-authored opaque identity and nonnegative safe generations
-        const sessionValue = 'session_A_1234567890'
+        const sessionValue = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 
         // When: values cross the trusted renderer contract boundary
         const sessionId = parseProjectSessionId(sessionValue)
@@ -65,10 +66,28 @@ describe('project IPC contract', () => {
         expect(rendererGeneration).toBe(7)
         expect(workspaceGeneration).toBe(11)
         expect(() => parseProjectSessionId('short')).toThrow()
+        expect(() => parseProjectSessionId('A'.repeat(31))).toThrow()
+        expect(() => parseProjectSessionId('A'.repeat(33))).toThrow()
         expect(() => parseProjectSessionId('session with spaces')).toThrow()
+        expect(() => parseProjectSessionId(`${'A'.repeat(31)}+`)).toThrow()
+        expect(() => parseProjectSessionId(`${'A'.repeat(31)}/`)).toThrow()
+        expect(() => parseProjectSessionId(`${'A'.repeat(31)}=`)).toThrow()
         expect(() => parseRendererGeneration(-1)).toThrow()
         expect(() => parseRendererGeneration(1.5)).toThrow()
         expect(() => parseWorkspaceGeneration(Number.MAX_SAFE_INTEGER + 1)).toThrow()
+    })
+
+    it('parses recent authority only from canonical UUIDs', () => {
+        // Given: one main-owned UUID and renderer-controlled path-like input
+        const ownedId = '00000000-0000-4000-8000-000000000001'
+
+        // When: values cross the recent-project IPC boundary
+        const parsed = parseRecentProjectId(ownedId)
+
+        // Then: the UUID is branded and path authority is rejected
+        expect(parsed).toBe(ownedId)
+        expect(() => parseRecentProjectId('C:/projects/forged.json')).toThrow()
+        expectTypeOf<string>().not.toMatchTypeOf<typeof parsed>()
     })
 
     it('binds every asset mutation request to an expected session', () => {
