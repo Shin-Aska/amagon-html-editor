@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
-import type { FileEntry, ZipReader } from "@zip.js/zip.js";
 import {
   AMG_FIXED_LIMITS,
   AMG_MANIFEST_PATH,
@@ -16,6 +15,7 @@ import { ArchivePathError, createArchivePathIndex } from "./archivePath";
 import { preflightAmgArchive } from "./amgArchivePreflight";
 import { AmgArchiveReaderError } from "./amgArchiveReaderError";
 import { openValidatedZip, readEntryBounded, writeEntryVerified } from "./amgArchiveZip";
+import type { ArchiveEntryDataSource } from "./amgArchiveZip";
 import type { OwnedWorkspace } from "./projectWorkspace";
 import { createOwnedWorkspaceCandidate, ProjectWorkspaceError } from "./projectWorkspace";
 
@@ -33,8 +33,7 @@ export type AmgArchiveMetadata = {
 };
 
 type ValidatedContents = {
-  readonly reader: ZipReader<FileHandle>;
-  readonly entries: ReadonlyMap<string, FileEntry>;
+  readonly entries: ReadonlyMap<string, ArchiveEntryDataSource>;
   readonly manifest: AmgManifestV1;
   readonly project: ProjectDocumentV1;
 };
@@ -60,13 +59,13 @@ function parseJson(bytes: Uint8Array, filename: string): unknown {
   }
 }
 
-function requireEntry(entries: ReadonlyMap<string, FileEntry>, filename: string): FileEntry {
+function requireEntry(entries: ReadonlyMap<string, ArchiveEntryDataSource>, filename: string): ArchiveEntryDataSource {
   const entry = entries.get(filename);
   if (entry === undefined) throw new AmgArchiveReaderError("invalid-archive", `${filename} is missing`);
   return entry;
 }
 
-function verifyManifestIndex(manifest: AmgManifestV1, entries: ReadonlyMap<string, FileEntry>): void {
+function verifyManifestIndex(manifest: AmgManifestV1, entries: ReadonlyMap<string, ArchiveEntryDataSource>): void {
   createArchivePathIndex([AMG_MANIFEST_PATH, ...manifest.entries.map((entry) => entry.path)]);
   if (entries.size !== manifest.entries.length + 1) {
     throw new AmgArchiveReaderError("invalid-archive", "archive has missing or undeclared entries");
@@ -121,7 +120,6 @@ async function validateContents(archive: FileHandle): Promise<ValidatedContents>
     verifyPortability(project, manifest);
     return { ...opened, manifest, project };
   } catch (error) {
-    await opened.reader.close();
     if (
       error instanceof AmgArchiveReaderError ||
       error instanceof AmgContractError ||
@@ -162,8 +160,6 @@ export async function extractAmgArchive(request: {
       throw error;
     }
     throw new AmgArchiveReaderError("integrity", "payload extraction failed", error);
-  } finally {
-    await contents.reader.close();
   }
 }
 
@@ -171,12 +167,8 @@ export async function inspectAmgArchiveMetadata(request: {
   readonly archive: FileHandle;
 }): Promise<AmgArchiveMetadata> {
   const contents = await validateContents(request.archive);
-  try {
-    return {
-      name: contents.project.projectSettings.name,
-      framework: contents.project.projectSettings.framework,
-    };
-  } finally {
-    await contents.reader.close();
-  }
+  return {
+    name: contents.project.projectSettings.name,
+    framework: contents.project.projectSettings.framework,
+  };
 }

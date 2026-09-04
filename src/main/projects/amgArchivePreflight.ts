@@ -1,6 +1,8 @@
-import type { FileHandle } from "node:fs/promises";
 import { AMG_FIXED_LIMITS } from "../../shared/projects/amgContract";
-import { parseCentralDirectory } from "./amgArchiveCentralDirectory";
+import {
+  centralDirectoryRecordLength,
+  parseCentralDirectoryRecord,
+} from "./amgArchiveCentralDirectory";
 import { AmgArchiveReaderError } from "./amgArchiveReaderError";
 
 const EOCD = 0x06054b50;
@@ -26,26 +28,66 @@ export type ArchivePreflight = {
   readonly entries: readonly PreflightEntry[];
 };
 
+export type ArchiveReadHandle = {
+  read(
+    buffer: Uint8Array,
+    offset: number,
+    length: number,
+    position: number,
+  ): Promise<{ readonly bytesRead: number }>;
+};
+
+export type ArchivePreflightFileHandle = ArchiveReadHandle & {
+  stat(): Promise<{ readonly size: number; isFile(): boolean }>;
+};
+
 const invalid = (message: string): never => {
   throw new AmgArchiveReaderError("invalid-archive", message);
 };
 
-async function readExactly(
-  archive: FileHandle,
+export async function readExactly(
+  archive: ArchiveReadHandle,
   position: number,
   length: number,
 ): Promise<Uint8Array> {
   if (!Number.isSafeInteger(position) || !Number.isSafeInteger(length) || position < 0 || length < 0) {
     invalid("archive requested an unsafe positional range");
   }
+  if (length > AMG_FIXED_LIMITS.streamChunkBytes) {
+    throw new AmgArchiveReaderError("limit-exceeded", "archive read exceeds the stream chunk limit");
+  }
   const bytes = new Uint8Array(length);
   let read = 0;
   while (read < length) {
-    const result = await archive.read(bytes, read, length - read, position + read);
+    const requestBytes = Math.min(AMG_FIXED_LIMITS.streamChunkBytes, length - read);
+    const result = await archive.read(bytes, read, requestBytes, position + read);
     if (result.bytesRead === 0) invalid("archive ended inside a ZIP record");
     read += result.bytesRead;
   }
   return bytes;
+}
+
+async function readCentralDirectory(
+  archive: ArchiveReadHandle,
+  directory: { readonly offset: number; readonly size: number; readonly count: number },
+): Promise<readonly PreflightEntry[]> {
+  const end = directory.offset + directory.size;
+  const entries: PreflightEntry[] = [];
+  let position = directory.offset;
+  while (position < end) {
+    const fixed = await readExactly(archive, position, 46);
+    const recordLength = centralDirectoryRecordLength(fixed);
+    if (position + recordLength > end) invalid("central directory record exceeds its range");
+    const record = recordLength === fixed.byteLength
+      ? fixed
+      : await readExactly(archive, position, recordLength);
+    entries.push(parseCentralDirectoryRecord(record));
+    position += recordLength;
+  }
+  if (position !== end || entries.length !== directory.count) {
+    invalid("central directory entry count disagrees");
+  }
+  return entries;
 }
 
 function safeUint64(view: DataView, offset: number): number {
@@ -68,7 +110,7 @@ function findEocd(tail: Uint8Array, tailOffset: number): number {
 }
 
 async function readDirectoryLocation(
-  archive: FileHandle,
+  archive: ArchiveReadHandle,
   fileSize: number,
 ): Promise<{ readonly offset: number; readonly size: number; readonly count: number }> {
   const tailSize = Math.min(fileSize, MAX_TAIL);
@@ -161,7 +203,7 @@ function decodeFilename(bytes: Uint8Array): string {
 }
 
 async function verifyLocal(
-  archive: FileHandle,
+  archive: ArchiveReadHandle,
   entry: PreflightEntry,
   directoryOffset: number,
 ): Promise<PreflightEntry> {
@@ -200,7 +242,7 @@ async function verifyLocal(
   return { ...entry, dataOffset, dataEnd };
 }
 
-export async function preflightAmgArchive(archive: FileHandle): Promise<ArchivePreflight> {
+export async function preflightAmgArchive(archive: ArchivePreflightFileHandle): Promise<ArchivePreflight> {
   const stats = await archive.stat();
   const fileSize = stats.size;
   if (!stats.isFile() || !Number.isSafeInteger(fileSize) || fileSize < 0) {
@@ -217,8 +259,7 @@ export async function preflightAmgArchive(archive: FileHandle): Promise<ArchiveP
   ) {
     invalid("central directory is outside the archive");
   }
-  const centralBytes = await readExactly(archive, directory.offset, directory.size);
-  const central = parseCentralDirectory(centralBytes, directory.count);
+  const central = await readCentralDirectory(archive, directory);
   const entries: PreflightEntry[] = [];
   for (const entry of central) entries.push(await verifyLocal(archive, entry, directory.offset));
   const sorted = [...entries].sort((left, right) => left.localOffset - right.localOffset);

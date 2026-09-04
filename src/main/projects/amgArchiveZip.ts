@@ -1,26 +1,35 @@
 import { createHash } from "node:crypto";
 import { mkdir, open } from "node:fs/promises";
 import path from "node:path";
-import {
-  Reader,
-  ZipReader,
-} from "@zip.js/zip.js";
-import type { Entry, FileEntry } from "@zip.js/zip.js";
+import { Reader } from "@zip.js/zip.js";
 import type { FileHandle } from "node:fs/promises";
 import { AMG_FIXED_LIMITS } from "../../shared/projects/amgContract";
 import {
-  ArchivePathError,
-  canonicalizeArchivePath,
   createArchivePathIndex,
   resolveArchivePath,
 } from "./archivePath";
-import type { ArchivePreflight } from "./amgArchivePreflight";
+import type { ArchivePreflight, PreflightEntry } from "./amgArchivePreflight";
 import { AmgArchiveReaderError } from "./amgArchiveReaderError";
 
-class FileHandleReader extends Reader<FileHandle> {
-  readonly handle: FileHandle;
+export type ArchiveFileReader = {
+  read(
+    buffer: Uint8Array,
+    offset: number,
+    length: number,
+    position: number,
+  ): Promise<{ readonly bytesRead: number }>;
+};
 
-  constructor(handle: FileHandle, size: number) {
+export type ArchiveEntryDataSource = {
+  readonly uncompressedSize: number;
+  readonly compressionMethod: number;
+  getData(writer: WritableStream<Uint8Array>): Promise<unknown>;
+};
+
+export class FileHandleReader extends Reader<ArchiveFileReader> {
+  readonly handle: ArchiveFileReader;
+
+  constructor(handle: ArchiveFileReader, size: number) {
     super(handle);
     this.handle = handle;
     this.size = size;
@@ -30,11 +39,15 @@ class FileHandleReader extends Reader<FileHandle> {
     if (!Number.isSafeInteger(index) || !Number.isSafeInteger(length) || index < 0 || length < 0) {
       throw new AmgArchiveReaderError("invalid-archive", "zip.js requested an invalid byte range");
     }
+    if (length > AMG_FIXED_LIMITS.streamChunkBytes) {
+      throw new AmgArchiveReaderError("limit-exceeded", "zip.js requested an oversized byte range");
+    }
     const boundedLength = Math.min(length, Math.max(0, this.size - index));
     const bytes = new Uint8Array(boundedLength);
     let read = 0;
     while (read < boundedLength) {
-      const result = await this.handle.read(bytes, read, boundedLength - read, index + read);
+      const requestBytes = Math.min(AMG_FIXED_LIMITS.streamChunkBytes, boundedLength - read);
+      const result = await this.handle.read(bytes, read, requestBytes, index + read);
       if (result.bytesRead === 0) {
         throw new AmgArchiveReaderError("invalid-archive", "archive ended during positional read");
       }
@@ -45,71 +58,70 @@ class FileHandleReader extends Reader<FileHandle> {
 }
 
 export type OpenedAmgZip = {
-  readonly reader: ZipReader<FileHandle>;
-  readonly entries: ReadonlyMap<string, FileEntry>;
+  readonly entries: ReadonlyMap<string, ArchiveEntryDataSource>;
 };
 
-function validateEntry(entry: Entry): asserts entry is FileEntry {
-  if (entry.directory || entry.symlink) {
-    throw new AmgArchiveReaderError("unsupported-feature", "directory and link entries are forbidden");
-  }
-  if (entry.encrypted || entry.diskNumberStart !== 0) {
-    throw new AmgArchiveReaderError("unsupported-feature", "encrypted and split entries are forbidden");
-  }
-  if (entry.compressionMethod !== 0 && entry.compressionMethod !== 8) {
-    throw new AmgArchiveReaderError("unsupported-feature", "compression method is forbidden");
-  }
-  if (entry.filename !== canonicalizeArchivePath(entry.filename)) {
-    throw new AmgArchiveReaderError("unsafe-entry", "entry path is not canonical");
-  }
+function readEntryStream(archive: ArchiveFileReader, entry: PreflightEntry): ReadableStream<Uint8Array> {
+  let position = 0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const remaining = entry.compressedSize - position;
+      if (remaining === 0) {
+        controller.close();
+        return;
+      }
+      const bytes = new Uint8Array(Math.min(remaining, AMG_FIXED_LIMITS.streamChunkBytes));
+      const result = await archive.read(bytes, 0, bytes.byteLength, entry.dataOffset + position);
+      if (result.bytesRead <= 0 || result.bytesRead > bytes.byteLength) {
+        controller.error(new AmgArchiveReaderError("invalid-archive", "archive ended during entry read"));
+        return;
+      }
+      position += result.bytesRead;
+      controller.enqueue(bytes.subarray(0, result.bytesRead));
+    },
+  });
+}
+
+function createEntryDataSource(archive: ArchiveFileReader, entry: PreflightEntry): ArchiveEntryDataSource {
+  return {
+    uncompressedSize: entry.uncompressedSize,
+    compressionMethod: entry.compressionMethod,
+    async getData(writer) {
+      const source = readEntryStream(archive, entry);
+      const decompressed = entry.compressionMethod === 8
+        ? source
+          .pipeThrough(new TransformStream<Uint8Array, ArrayBuffer>({
+            transform(chunk, controller) {
+              controller.enqueue(new Uint8Array(chunk).buffer);
+            },
+          }))
+          .pipeThrough(new DecompressionStream("deflate-raw"))
+        : source;
+      await decompressed
+        .pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            for (let offset = 0; offset < chunk.byteLength; offset += AMG_FIXED_LIMITS.streamChunkBytes) {
+              controller.enqueue(chunk.slice(offset, offset + AMG_FIXED_LIMITS.streamChunkBytes));
+            }
+          },
+        }))
+        .pipeTo(writer);
+    },
+  };
 }
 
 export async function openValidatedZip(
   archive: FileHandle,
   preflight: ArchivePreflight,
 ): Promise<OpenedAmgZip> {
-  const reader = new ZipReader(new FileHandleReader(archive, preflight.fileSize), {
-    strictness: "strict",
-    filenameValidation: "strict",
-    checkOverlappingEntry: true,
-  });
-  const listed: FileEntry[] = [];
-  try {
-    for await (const entry of reader.getEntriesGenerator({
-      strictness: "strict",
-      filenameValidation: "strict",
-    })) {
-      if (listed.length >= AMG_FIXED_LIMITS.totalZipEntries) {
-        throw new AmgArchiveReaderError("limit-exceeded", "entry count limit exceeded");
-      }
-      validateEntry(entry);
-      const structural = preflight.entries[listed.length];
-      if (
-        structural === undefined ||
-        structural.filename !== entry.filename ||
-        structural.localOffset !== entry.offset ||
-        structural.compressedSize !== entry.compressedSize ||
-        structural.uncompressedSize !== entry.uncompressedSize ||
-        structural.compressionMethod !== entry.compressionMethod
-      ) {
-        throw new AmgArchiveReaderError("invalid-archive", "zip.js metadata disagrees with positional preflight");
-      }
-      listed.push(entry);
-    }
-    if (listed.length !== preflight.entries.length) {
-      throw new AmgArchiveReaderError("invalid-archive", "zip.js entry count disagrees with positional preflight");
-    }
-    createArchivePathIndex(listed.map((entry) => entry.filename));
-    return { reader, entries: new Map(listed.map((entry) => [entry.filename, entry])) };
-  } catch (error) {
-    await reader.close();
-    if (error instanceof AmgArchiveReaderError || error instanceof ArchivePathError) throw error;
-    throw new AmgArchiveReaderError("invalid-archive", "zip.js rejected the archive", error);
-  }
+  createArchivePathIndex(preflight.entries.map((entry) => entry.filename));
+  return {
+    entries: new Map(preflight.entries.map((entry) => [entry.filename, createEntryDataSource(archive, entry)])),
+  };
 }
 
 export async function readEntryBounded(
-  entry: FileEntry,
+  entry: ArchiveEntryDataSource,
   maximumBytes: number,
 ): Promise<Uint8Array> {
   if (entry.uncompressedSize > maximumBytes) {
@@ -119,6 +131,9 @@ export async function readEntryBounded(
   let actual = 0;
   const writable = new WritableStream<Uint8Array>({
     write(chunk) {
+      if (chunk.byteLength > AMG_FIXED_LIMITS.streamChunkBytes) {
+        throw new AmgArchiveReaderError("limit-exceeded", "entry stream chunk exceeds the limit");
+      }
       actual += chunk.byteLength;
       if (actual > maximumBytes) {
         throw new AmgArchiveReaderError("limit-exceeded", "entry output exceeds its limit");
@@ -126,7 +141,7 @@ export async function readEntryBounded(
       chunks.push(chunk.slice());
     },
   });
-  await entry.getData(writable, { checkOverlappingEntry: true, strictness: "strict" });
+  await entry.getData(writable);
   const output = new Uint8Array(actual);
   let offset = 0;
   for (const chunk of chunks) {
@@ -137,7 +152,7 @@ export async function readEntryBounded(
 }
 
 export async function writeEntryVerified(
-  entry: FileEntry,
+  entry: ArchiveEntryDataSource,
   workspacePath: string,
   expected: { readonly path: string; readonly bytes: number; readonly sha256: string },
   remainingBudget: number,
@@ -154,6 +169,9 @@ export async function writeEntryVerified(
   try {
     const writable = new WritableStream<Uint8Array>({
       async write(chunk) {
+        if (chunk.byteLength > AMG_FIXED_LIMITS.streamChunkBytes) {
+          throw new AmgArchiveReaderError("limit-exceeded", "payload stream chunk exceeds the limit");
+        }
         actual += chunk.byteLength;
         if (actual > expected.bytes || actual > remainingBudget) {
           throw new AmgArchiveReaderError("limit-exceeded", "payload output exceeds declared size");
@@ -170,7 +188,7 @@ export async function writeEntryVerified(
         position += chunk.byteLength;
       },
     });
-    await entry.getData(writable, { checkOverlappingEntry: true, strictness: "strict" });
+    await entry.getData(writable);
     await output.sync();
   } finally {
     await output.close();

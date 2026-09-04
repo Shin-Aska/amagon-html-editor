@@ -51,18 +51,14 @@ async function inspectArchive(archivePath: string): Promise<{
   try {
     const preflight = await preflightAmgArchive(archive);
     const zip = await openValidatedZip(archive, preflight);
-    try {
-      const manifest = zip.entries.get("manifest.json");
-      if (manifest === undefined) throw new TypeError("manifest missing");
-      const manifestText = decoder.decode(await readEntryBounded(manifest, AMG_FIXED_LIMITS.manifestJsonBytes));
-      return {
-        paths: preflight.entries.map((entry) => entry.filename),
-        methods: preflight.entries.map((entry) => entry.compressionMethod),
-        manifestText,
-      };
-    } finally {
-      await zip.reader.close();
-    }
+    const manifest = zip.entries.get("manifest.json");
+    if (manifest === undefined) throw new TypeError("manifest missing");
+    const manifestText = decoder.decode(await readEntryBounded(manifest, AMG_FIXED_LIMITS.manifestJsonBytes));
+    return {
+      paths: preflight.entries.map((entry) => entry.filename),
+      methods: preflight.entries.map((entry) => entry.compressionMethod),
+      manifestText,
+    };
   } finally {
     await archive.close();
   }
