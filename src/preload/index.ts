@@ -13,6 +13,8 @@ import type {
     SessionRequest,
     MutationResult,
     AssetInfo,
+    MediaDownloadId,
+    MediaSearchResult,
 } from '../shared/projects/projectIpcContract'
 import type {LifecycleRequest, LifecycleResult} from '../main/projects/projectLifecycle'
 
@@ -100,14 +102,12 @@ const api = {
         delete: (data: SessionRequest & { readonly relativePath: string }): Promise<MutationResult<null>> =>
             ipcRenderer.invoke('assets:delete', data),
 
-        readAsset: (assetPath: string) =>
-            ipcRenderer.invoke('assets:readAsset', assetPath),
+        readAsset: (reference: string) =>
+            ipcRenderer.invoke('assets:readAsset', reference),
 
-        readFileAsBase64: (filePath: string) =>
-            ipcRenderer.invoke('assets:readFileAsBase64', filePath),
+        readFileAsBase64: (reference: string) =>
+            ipcRenderer.invoke('assets:readFileAsBase64', reference),
 
-        import: (data: SessionRequest & { readonly srcPath: string }): Promise<MutationResult<AssetInfo>> =>
-            ipcRenderer.invoke('assets:import', data)
     },
 
     autosave: {
@@ -233,7 +233,6 @@ const api = {
 
         copySystemFont: (args: SessionRequest & {
             readonly familyName: string
-            readonly filePaths: readonly string[]
         }): Promise<MutationResult<readonly FontAsset[]>> =>
             ipcRenderer.invoke('fonts:copySystemFont', args),
 
@@ -257,10 +256,13 @@ const api = {
 
         setConfig: (config: any) => ipcRenderer.invoke('mediaSearch:setConfig', config),
 
-        search: (options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }) =>
+        search: (options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }): Promise<{
+            readonly results: readonly MediaSearchResult[]
+            readonly error?: string
+        }> =>
             ipcRenderer.invoke('mediaSearch:search', options),
 
-        downloadAndImport: (data: SessionRequest & { readonly url: string }): Promise<MutationResult<AssetInfo>> =>
+        downloadAndImport: (data: SessionRequest & { readonly downloadId: MediaDownloadId }): Promise<MutationResult<AssetInfo>> =>
             ipcRenderer.invoke('mediaSearch:downloadAndImport', data)
     }
 };

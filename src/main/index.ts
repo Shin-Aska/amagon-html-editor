@@ -4,8 +4,7 @@ import * as path from "path";
 import * as fs from "fs/promises";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
-import * as os from "os";
-import { exec, execFile } from "child_process";
+import { execFile } from "child_process";
 import { createHash, randomUUID } from "crypto";
 import { getFonts } from "font-list";
 import {
@@ -22,15 +21,6 @@ import {
   saveConfig as aiSaveConfig,
 } from "./aiService";
 import { CLI_BINARY_NAMES, detectCliProvider } from "./cliHelpers";
-import {
-  downloadAndImportMedia,
-  loadConfig as mediaSearchLoadConfig,
-  maskApiKey as maskMediaApiKey,
-  MASKED_KEY_PREFIX as MEDIA_MASKED_PREFIX,
-  type MediaSearchConfig,
-  saveConfig as mediaSearchSaveConfig,
-  searchMedia,
-} from "./mediaSearchService";
 import { isEncryptionSecure } from "./cryptoHelpers";
 import { buildAppMenu } from "./menu";
 import "../publish/providers/index";
@@ -64,13 +54,12 @@ import { ProjectSessionRegistry } from "./projects/projectSession";
 import { APP_MEDIA_SCHEME, createProjectMediaHandler } from "./projects/projectMediaProtocol";
 import { cleanupStaleOwnedWorkspaces } from "./projects/projectWorkspace";
 import { createLifecycleController, focusSecondInstance, type LifecycleController, type LifecycleResult } from "./projects/projectLifecycle";
-import { buildRuntimeAssetUrl, canonicalizePortablePath } from "../shared/projects/assetReference";
-import { type AssetInfo, type ProjectSessionId } from "../shared/projects/projectIpcContract";
-import { copyFilesAtomically, inventoryWithHashes, runFileCopyMutation, runProjectMutation } from "./projects/projectMutation";
-import { canceledMutation, runMutationBoundary } from "./projects/projectMutationBoundary";
-import { createProjectTransferRegistry, runCancellableTransferBatch } from "./projects/projectTransferRegistry";
+import { buildRuntimeAssetUrl } from "../shared/projects/assetReference";
+import { createProjectTransferRegistry } from "./projects/projectTransferRegistry";
 import { initializeProjectStartup } from "./projects/projectStartup";
-import type { FontAsset } from "../renderer/store/types";
+import { registerProjectResourceIpc } from "./projects/registerProjectResourceIpc";
+import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
+import { resolveSystemFontPath as resolveMainSystemFontPath } from "./systemFontResolver";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -568,7 +557,8 @@ function registerIpcHandlers(): void {
 
   // ── Font Management ───────────────────────────────────────────────────
 
-  ipcMain.handle("fonts:listSystem", async () => {
+  ipcMain.handle("fonts:listSystem", async (event) => {
+    assertTrustedMainFrame(event, mainWindow);
     try {
       const fonts = await getFonts();
       return { success: true, fonts };
@@ -577,171 +567,10 @@ function registerIpcHandlers(): void {
     }
   });
 
-  async function resolveSystemFontPath(
-    familyName: string,
-  ): Promise<string | null> {
-    const platform = process.platform;
-
-    const execPromise = (cmd: string): Promise<string> =>
-      new Promise((resolve, reject) => {
-        exec(
-          cmd,
-          { maxBuffer: 10 * 1024 * 1024, timeout: 15000 },
-          (err, stdout) => {
-            if (err) reject(err);
-            else resolve(stdout);
-          },
-        );
-      });
-
-    if (platform === "linux") {
-      try {
-        const stdout = await execPromise(
-          `fc-list -f "%{family[0]}|%{file}\\n"`,
-        );
-        const lines = stdout.split("\n");
-        for (const line of lines) {
-          const pipeIdx = line.indexOf("|");
-          if (pipeIdx === -1) continue;
-          const family = line.slice(0, pipeIdx).trim();
-          const filePath = line.slice(pipeIdx + 1).trim();
-          if (
-            family.toLowerCase() === familyName.toLowerCase() &&
-            existsSync(filePath)
-          ) {
-            return filePath;
-          }
-        }
-      } catch {}
-    }
-
-    if (platform === "darwin") {
-      const dirs = [
-        "/System/Library/Fonts",
-        "/Library/Fonts",
-        path.join(os.homedir(), "Library/Fonts"),
-      ];
-      const exts = ["ttf", "otf", "ttc", "woff", "woff2"];
-      for (const dir of dirs) {
-        if (!existsSync(dir)) continue;
-        try {
-          const stdout = await execPromise(
-            `find "${dir}" -maxdepth 2 -type f \\( ${exts.map((e) => `-iname "*.${e}"`).join(" -o ")} \\) 2>/dev/null`,
-          );
-          const candidates = stdout
-            .split("\n")
-            .map((p) => p.trim())
-            .filter(Boolean);
-          for (const candidate of candidates) {
-            const base = path.basename(candidate, path.extname(candidate));
-            if (
-              base
-                .toLowerCase()
-                .replace(/\s+/g, "")
-                .includes(familyName.toLowerCase().replace(/\s+/g, ""))
-            ) {
-              return candidate;
-            }
-          }
-        } catch {}
-      }
-    }
-
-    if (platform === "win32") {
-      const windir = process.env.WINDIR || "C:\\Windows";
-      const fontDir = path.join(windir, "Fonts");
-
-      try {
-        const regQuery = `reg query "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts" /s 2>nul`;
-        const stdout = await execPromise(regQuery);
-        const regLines = stdout.split("\r\n").map((l) => l.trim()).filter(Boolean);
-
-        for (const line of regLines) {
-          const regMatch = line.match(/^\s+(.+?)\s+REG_SZ\s+(.+)$/i);
-          if (!regMatch) continue;
-
-          const regName = regMatch[1].trim();
-          const regFile = regMatch[2].trim();
-
-          const cleanRegName = regName
-            .replace(/\s*\([^)]+\)\s*$/i, "")
-            .trim();
-
-          const targetClean = familyName.toLowerCase().replace(/\s+/g, "");
-          const regClean = cleanRegName.toLowerCase().replace(/\s+/g, "");
-
-          if (regClean === targetClean || regClean.includes(targetClean)) {
-            const candidate = path.join(fontDir, regFile);
-            if (existsSync(candidate)) return candidate;
-          }
-        }
-      } catch {}
-
-      const dirs = [
-        fontDir,
-        path.join(
-          process.env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local"),
-          "Microsoft",
-          "Windows",
-          "Fonts",
-        ),
-      ];
-      const exts = [".ttf", ".otf", ".ttc", ".woff", ".woff2"];
-      for (const dir of dirs) {
-        if (!existsSync(dir)) continue;
-        try {
-          const entries = await fs.readdir(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            if (!entry.isFile()) continue;
-            const ext = path.extname(entry.name).toLowerCase();
-            if (!exts.includes(ext)) continue;
-            const base = path.basename(entry.name, ext);
-            if (
-              base
-                .toLowerCase()
-                .replace(/\s+/g, "")
-                .includes(familyName.toLowerCase().replace(/\s+/g, ""))
-            ) {
-              return path.join(dir, entry.name);
-            }
-          }
-        } catch {}
-      }
-    }
-
-    return null;
-  }
-
-  ipcMain.handle("fonts:importFile", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (!mainWindow) throw new Error("Main window not available");
-      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-        title: "Import Font Files",
-        filters: [
-          { name: "Font Files", extensions: ["ttf", "otf", "woff", "woff2"] },
-        ],
-        properties: ["openFile", "multiSelections"],
-      });
-
-      if (canceled || filePaths.length === 0) {
-        return canceledMutation(projectSessions, expectedSessionId);
-      }
-      const mutation = mutationContext(expectedSessionId);
-      return runFileCopyMutation(
-        mutation.context,
-        mutation.workspacePath,
-        "assets/fonts",
-        filePaths,
-        (files) => files.map((file) => importedFont(file, path.basename(file.fileName, path.extname(file.fileName)), "imported")),
-      );
-    },
-  ));
-
   ipcMain.handle(
     "fonts:fetchGoogleFontCss",
-    async (_, args: { family: string; weight: string; style: string }) => {
+    async (event, args: { family: string; weight: string; style: string }) => {
+      assertTrustedMainFrame(event, mainWindow);
       if (!args?.family || typeof args.family !== "string") {
         return { success: false, error: "family required", css: "" };
       }
@@ -774,7 +603,8 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle(
     "fonts:fetchGoogleFontFile",
-    async (_, args: { url: string }) => {
+    async (event, args: { url: string }) => {
+      assertTrustedMainFrame(event, mainWindow);
       if (!args?.url || typeof args.url !== "string") {
         return { success: false, error: "url required", dataUri: "" };
       }
@@ -803,52 +633,9 @@ function registerIpcHandlers(): void {
   );
 
   ipcMain.handle(
-    "fonts:deleteFont",
-    async (_, args: { relativePath: string }) => {
-      if (!currentProjectDir)
-        return { success: false, error: "No project directory set" };
-      if (!args?.relativePath)
-        return { success: false, error: "relativePath required" };
-
-      try {
-        const rel = String(args.relativePath)
-          .replace(/^[/\\]+/, "")
-          .replace(/\\/g, "/");
-
-        // Security: block path traversal
-        const targetPath = path.join(currentProjectDir, rel);
-        if (!isPathSafe(targetPath, currentProjectDir)) {
-          return {
-            success: false,
-            error: "Forbidden: path traversal detected",
-          };
-        }
-
-        // Extra guard: must be inside assets/fonts/
-        const fontsDir = path.join(currentProjectDir, "assets", "fonts");
-        if (!isPathSafe(targetPath, fontsDir)) {
-          return {
-            success: false,
-            error: "Forbidden: can only delete files from assets/fonts/",
-          };
-        }
-
-        if (!existsSync(targetPath)) {
-          // Already gone — treat as success so the store can clean up
-          return { success: true };
-        }
-
-        await fs.unlink(targetPath);
-        return { success: true };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
-    },
-  );
-
-  ipcMain.handle(
     "fonts:checkFileExists",
-    async (_, args: { relativePath: string }) => {
+    async (event, args: { relativePath: string }) => {
+      assertTrustedMainFrame(event, mainWindow);
       if (!currentProjectDir) return { exists: false };
       if (!args?.relativePath) return { exists: false };
 
@@ -863,7 +650,8 @@ function registerIpcHandlers(): void {
     },
   );
 
-  ipcMain.handle("fonts:listProject", async () => {
+  ipcMain.handle("fonts:listProject", async (event) => {
+    assertTrustedMainFrame(event, mainWindow);
     if (!currentProjectDir) return { success: true, fonts: [] };
 
     try {
@@ -1051,124 +839,10 @@ function registerIpcHandlers(): void {
     }
   });
 
-  // ── 8.4  Asset Management ─────────────────────────────────────────────
-
-  ipcMain.handle("assets:selectImage", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (!mainWindow) throw new Error("Main window not available");
-      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-        title: "Select Image(s)",
-        filters: [
-          {
-            name: "Images",
-            extensions: [
-              "jpg",
-              "jpeg",
-              "png",
-              "gif",
-              "webp",
-              "svg",
-              "bmp",
-              "ico",
-              "avif",
-              "apng",
-              "tif",
-              "tiff",
-            ],
-          },
-        ],
-        properties: ["openFile", "multiSelections"],
-      });
-
-      if (canceled || filePaths.length === 0) {
-        return canceledMutation(projectSessions, expectedSessionId);
-      }
-      const mutation = mutationContext(expectedSessionId);
-      return runFileCopyMutation(
-        mutation.context,
-        mutation.workspacePath,
-        "assets",
-        filePaths,
-        (files) => files.map((file) => importedAsset(expectedSessionId, file, "image")),
-      );
-    },
-  ));
-
-  ipcMain.handle("assets:selectSingleImage", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (!mainWindow) throw new Error("Main window not available");
-      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-        title: "Select Image",
-        filters: [
-          {
-            name: "Images",
-            extensions: [
-              "jpg",
-              "jpeg",
-              "png",
-              "gif",
-              "webp",
-              "svg",
-              "bmp",
-              "ico",
-              "avif",
-              "apng",
-              "tif",
-              "tiff",
-            ],
-          },
-        ],
-        properties: ["openFile"],
-      });
-
-      if (canceled || filePaths.length === 0) {
-        return canceledMutation(projectSessions, expectedSessionId);
-      }
-      const sourcePath = filePaths[0];
-      if (sourcePath === undefined) throw new TypeError("selected image path is missing");
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => {
-        const files = await copyFilesAtomically(mutation.workspacePath, "assets", [sourcePath]);
-        const file = files[0];
-        if (file === undefined) throw new TypeError("image import produced no file");
-        return importedAsset(expectedSessionId, file, "image");
-      });
-    },
-  ));
-
-  ipcMain.handle("assets:selectVideo", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (!mainWindow) throw new Error("Main window not available");
-      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
-        title: "Select Video",
-        filters: [
-          {
-            name: "Videos",
-            extensions: ["mp4", "webm", "ogv", "ogg", "mov", "m4v"],
-          },
-        ],
-        properties: ["openFile"],
-      });
-
-      if (canceled || filePaths.length === 0) {
-        return canceledMutation(projectSessions, expectedSessionId);
-      }
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => (
-        await copyFilesAtomically(mutation.workspacePath, "assets", filePaths)
-      ).map((file) => importedAsset(expectedSessionId, file, "video")));
-    },
-  ));
-
   // ── List project assets ───────────────────────────────────────────────
 
-  ipcMain.handle("assets:list", async () => {
+  ipcMain.handle("assets:list", async (event) => {
+    assertTrustedMainFrame(event, mainWindow);
     try {
       const workspacePath = projectSessions.active.workspacePath;
       const sessionId = projectSessions.active.id;
@@ -1222,66 +896,19 @@ function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle("assets:readFileAsBase64", async (_, assetPath: string) => {
+  ipcMain.handle("assets:readFileAsBase64", async (event, reference: string) => {
+    assertTrustedMainFrame(event, mainWindow);
     try {
-      const input = String(assetPath || "");
+      const input = String(reference || "");
       if (!input) return { success: false, error: "No file path provided" };
 
       const maxBytes = 5 * 1024 * 1024;
 
       if (/^https?:\/\//i.test(input)) {
-        return await new Promise((resolve) => {
-          const request = net.request(input);
-          request.on("response", (response) => {
-            const chunks: Buffer[] = [];
-            let total = 0;
-
-            const contentTypeHeader = response.headers["content-type"];
-            const mimeFromHeader = Array.isArray(contentTypeHeader)
-              ? contentTypeHeader[0]
-              : (contentTypeHeader as string | undefined);
-
-            response.on("data", (chunk) => {
-              const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-              total += buf.length;
-              if (total > maxBytes) {
-                resolve({
-                  success: false,
-                  error: `File is too large (${(total / (1024 * 1024)).toFixed(1)}MB). Max 5MB for base64 embedding.`,
-                });
-                try {
-                  request.abort();
-                } catch {
-                  // ignore
-                }
-                return;
-              }
-              chunks.push(buf);
-            });
-
-            response.on("end", () => {
-              const data = Buffer.concat(chunks);
-              const mimeType = (
-                mimeFromHeader || "application/octet-stream"
-              ).split(";")[0];
-              resolve({
-                success: true,
-                data: `data:${mimeType};base64,${data.toString("base64")}`,
-                mimeType,
-              });
-            });
-
-            response.on("error", (err) => {
-              resolve({ success: false, error: err.message });
-            });
-          });
-
-          request.on("error", (err) => {
-            resolve({ success: false, error: err.message });
-          });
-
-          request.end();
-        });
+        return {
+          success: false,
+          error: "Remote URLs cannot be read through the local project asset bridge",
+        };
       }
 
       if (input.startsWith("blob:")) {
@@ -1318,34 +945,13 @@ function registerIpcHandlers(): void {
     }
   });
 
-  // ── Delete an asset ───────────────────────────────────────────────────
-
-  ipcMain.handle("assets:delete", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (typeof request !== "object" || request === null || !("relativePath" in request) || typeof request.relativePath !== "string") {
-        throw new TypeError("relativePath is required");
-      }
-      const relativePath = canonicalizePortablePath(request.relativePath);
-      if (!relativePath.startsWith("assets/")) throw new TypeError("only project assets can be deleted");
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => {
-        const fullPath = path.join(mutation.workspacePath, ...relativePath.split("/"));
-        const backupPath = `${fullPath}.amagon-delete-${randomUUID()}`;
-        await fs.rename(fullPath, backupPath);
-        await fs.rm(backupPath);
-        return null;
-      });
-    },
-  ));
-
   // ── Read asset as base64 (for preview / export) ───────────────────────
 
-  ipcMain.handle("assets:readAsset", async (_, assetPath: string) => {
+  ipcMain.handle("assets:readAsset", async (event, reference: string) => {
+    assertTrustedMainFrame(event, mainWindow);
     try {
       if (projectService === null) return { success: false, error: "Project service unavailable" };
-      const readable = await projectService.resolveAssetRead(assetPath);
+      const readable = await projectService.resolveAssetRead(reference);
       try {
         const stats = await fs.stat(readable.filePath);
         if (stats.size > 5 * 1024 * 1024) return { success: false, error: "File exceeds the 5MB base64 limit" };
@@ -1371,26 +977,6 @@ function registerIpcHandlers(): void {
     stopAutoSave();
     return { success: true };
   });
-
-  // ── Copy asset into project (for drag-in from external) ───────────────
-
-  ipcMain.handle("assets:import", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (typeof request !== "object" || request === null || !("srcPath" in request) || typeof request.srcPath !== "string") {
-        throw new TypeError("srcPath is required");
-      }
-      const sourcePath = request.srcPath;
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => {
-        const files = await copyFilesAtomically(mutation.workspacePath, "assets", [sourcePath]);
-        const file = files[0];
-        if (file === undefined) throw new TypeError("asset import produced no file");
-        return importedAsset(expectedSessionId, file);
-      });
-    },
-  ));
 
   // ── App Settings ───────────────────────────────────────────────────────
 
@@ -1751,212 +1337,6 @@ function registerIpcHandlers(): void {
     },
   );
 
-  // ── Media Search ───────────────────────────────────────────────────────
-
-  ipcMain.handle("mediaSearch:getConfig", async () => {
-    try {
-      const config = await mediaSearchLoadConfig();
-      return {
-        success: true,
-        config: {
-          ...config,
-          apiKey: maskMediaApiKey(config.apiKey),
-        },
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle(
-    "mediaSearch:setConfig",
-    async (_, config: Partial<MediaSearchConfig>) => {
-      try {
-        const configToSave = { ...config };
-        // If the renderer sent back a masked key, the user didn't change it
-        if (
-          configToSave.apiKey &&
-          configToSave.apiKey.startsWith(MEDIA_MASKED_PREFIX)
-        ) {
-          delete configToSave.apiKey;
-        }
-        const saved = await mediaSearchSaveConfig(configToSave);
-        return {
-          success: true,
-          config: {
-            ...saved,
-            apiKey: maskMediaApiKey(saved.apiKey),
-          },
-        };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
-    },
-  );
-
-  ipcMain.handle(
-    "mediaSearch:search",
-    async (
-      _,
-      options: {
-        query: string;
-        perPage?: number;
-        page?: number;
-        type?: "image" | "video";
-      },
-    ) => {
-      try {
-        const config = await mediaSearchLoadConfig();
-        return await searchMedia(options, config);
-      } catch (error: any) {
-        return { results: [], error: error.message };
-      }
-    },
-  );
-
-  ipcMain.handle("mediaSearch:downloadAndImport", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (typeof request !== "object" || request === null || !("url" in request) || typeof request.url !== "string") {
-        throw new TypeError("url is required");
-      }
-      const mediaUrl = request.url;
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => {
-        const downloaded = await projectTransfers.run(expectedSessionId, (signal) => (
-          downloadAndImportMedia(mediaUrl, mutation.workspacePath, undefined, { signal })
-        ));
-        if (!downloaded.success || downloaded.relativePath === undefined) {
-          throw new Error(downloaded.error ?? "media download failed");
-        }
-        const fileName = path.basename(downloaded.relativePath);
-        return importedAsset(expectedSessionId, { fileName, relativePath: downloaded.relativePath });
-      });
-    },
-  ));
-
-  ipcMain.removeHandler("fonts:copySystemFont");
-  ipcMain.handle("fonts:copySystemFont", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (
-        typeof request !== "object" || request === null
-        || !("familyName" in request) || typeof request.familyName !== "string"
-        || !("filePaths" in request) || !Array.isArray(request.filePaths)
-        || !request.filePaths.every((item) => typeof item === "string")
-      ) throw new TypeError("valid familyName and filePaths are required");
-      const mutation = mutationContext(expectedSessionId);
-      const familyName = request.familyName;
-      const requestedPaths: readonly string[] = request.filePaths;
-      return await runProjectMutation(mutation.context, async () => {
-        let sourcePaths = requestedPaths.filter((item) => item.length > 0);
-        if (sourcePaths.length === 0) {
-          const resolved = await resolveSystemFontPath(familyName);
-          if (resolved !== null) sourcePaths = [resolved];
-        }
-        if (sourcePaths.length === 0) {
-          return [{
-            id: `font_${randomUUID()}`,
-            name: familyName,
-            fileName: "",
-            relativePath: "",
-            format: "ttf",
-            weight: "400",
-            style: "normal",
-            source: "system",
-          } satisfies FontAsset];
-        }
-        const files = await copyFilesAtomically(mutation.workspacePath, "assets/fonts", sourcePaths);
-        return files.map((file) => importedFont(file, familyName, "system"));
-      });
-    },
-  ));
-
-  ipcMain.handle("fonts:downloadGoogleFont", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (
-        typeof request !== "object" || request === null
-        || !("family" in request) || typeof request.family !== "string"
-        || !("variants" in request) || !Array.isArray(request.variants)
-      ) throw new TypeError("valid family and variants are required");
-      const variants = request.variants.map((variant) => {
-        if (
-          typeof variant !== "object" || variant === null
-          || !("weight" in variant) || typeof variant.weight !== "string"
-          || !("style" in variant) || typeof variant.style !== "string"
-        ) throw new TypeError("font variant is invalid");
-        return { weight: variant.weight, style: variant.style };
-      });
-      const family = request.family.trim();
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => projectTransfers.run(expectedSessionId, async (signal) => {
-        const completed: string[] = [];
-        try {
-          return await runCancellableTransferBatch(signal, variants, async (variant) => {
-            const style = variant.style.toLowerCase() === "italic" ? "italic" : "normal";
-            const weight = variant.weight.match(/\d{3}/u)?.[0] ?? "400";
-            const encodedFamily = encodeURIComponent(family).replace(/%20/gu, "+");
-            const slug = family.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "") || "font";
-            const css = await fetchGoogleFontsText(
-              `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${style === "italic" ? "1" : "0"},${weight}&display=swap`,
-              { headers: { "User-Agent": "Mozilla/5.0" }, signal },
-            );
-            const sourceUrl = css.match(/src:\s*url\(([^)]+)\)/iu)?.[1]?.trim().replace(/^['"]|['"]$/gu, "");
-            if (sourceUrl === undefined || !sourceUrl.startsWith("https://fonts.gstatic.com/")) {
-              throw new TypeError("Google Fonts returned an invalid font URL");
-            }
-            const downloaded = await downloadAndImportMedia(
-              sourceUrl,
-              mutation.workspacePath,
-              `${slug}-${weight}-${style}`,
-              {
-                signal,
-                maxBytes: GOOGLE_FONTS_MAX_RESPONSE_BYTES,
-                relativeDirectory: "assets/fonts",
-              },
-            );
-            if (!downloaded.success || downloaded.relativePath === undefined) {
-              throw new Error(downloaded.error ?? "Google Font download failed");
-            }
-            completed.push(downloaded.relativePath);
-            return importedFont({ fileName: path.basename(downloaded.relativePath), relativePath: downloaded.relativePath }, family, "google-fonts", weight, style);
-          });
-        } catch (error) {
-          await Promise.all(completed.map((relativePath) => fs.rm(
-            path.join(mutation.workspacePath, ...relativePath.split("/")),
-            { force: true },
-          )));
-          throw error;
-        }
-      }));
-    },
-  ));
-
-  ipcMain.removeHandler("fonts:deleteFont");
-  ipcMain.handle("fonts:deleteFont", async (_, request: unknown) => runMutationBoundary(
-    projectSessions,
-    request,
-    async (expectedSessionId) => {
-      if (typeof request !== "object" || request === null || !("relativePath" in request) || typeof request.relativePath !== "string") {
-        throw new TypeError("relativePath is required");
-      }
-      const relativePath = canonicalizePortablePath(request.relativePath);
-      if (!relativePath.startsWith("assets/fonts/")) throw new TypeError("only project fonts can be deleted");
-      const mutation = mutationContext(expectedSessionId);
-      return await runProjectMutation(mutation.context, async () => {
-        const target = path.join(mutation.workspacePath, ...relativePath.split("/"));
-        const backup = `${target}.amagon-delete-${randomUUID()}`;
-        await fs.rename(target, backup);
-        await fs.rm(backup);
-        return null;
-      });
-    },
-  ));
-
   projectService = createProjectService({
     userDataPath: app.getPath("userData"),
     documentsPath: app.getPath("documents"),
@@ -2007,63 +1387,19 @@ function registerIpcHandlers(): void {
     },
     removeHandler: (channel) => ipcMain.removeHandler(channel),
   }, projectService);
+  registerProjectResourceIpc({
+    sessions: projectSessions,
+    transfers: projectTransfers,
+    projectFiles,
+    getMainWindow: () => mainWindow,
+    resolveSystemFontPath: resolveMainSystemFontPath,
+    fetchGoogleFontsText: (url, options) => fetchGoogleFontsText(url, options),
+    googleFontsMaxBytes: GOOGLE_FONTS_MAX_RESPONSE_BYTES,
+  });
   ipcMain.handle("project:finish-lifecycle-close", (_event, result: LifecycleResult) => (
     lifecycleController?.finish(result) ?? false
   ));
 }
-
-const requireWorkspacePath = (): string => {
-  const workspacePath = projectSessions.active.workspacePath;
-  if (workspacePath === null) throw new TypeError("no project workspace is active");
-  return workspacePath;
-};
-
-const mutationContext = (expectedSessionId: ProjectSessionId) => {
-  const workspacePath = requireWorkspacePath();
-  return {
-    workspacePath,
-    context: {
-      sessions: projectSessions,
-      expectedSessionId,
-      listInventory: async () => inventoryWithHashes(
-        workspacePath,
-        await projectFiles.listAssetPaths(workspacePath),
-      ),
-    },
-  };
-};
-
-const importedAsset = (
-  sessionId: ProjectSessionId,
-  file: { readonly fileName: string; readonly relativePath: string },
-  type?: "image" | "video",
-): AssetInfo => ({
-  name: file.fileName,
-  path: buildRuntimeAssetUrl(sessionId, file.relativePath),
-  relativePath: file.relativePath,
-  ...(type === undefined ? {} : { type }),
-});
-
-const importedFont = (
-  file: { readonly fileName: string; readonly relativePath: string },
-  name: string,
-  source: FontAsset["source"],
-  weight = "400",
-  style = "normal",
-): FontAsset => {
-  const extension = path.extname(file.fileName).slice(1).toLowerCase();
-  const format = extension === "otf" || extension === "woff" || extension === "woff2" ? extension : "ttf";
-  return {
-    id: `font_${randomUUID()}`,
-    name,
-    fileName: file.fileName,
-    relativePath: file.relativePath,
-    format,
-    weight,
-    style,
-    source,
-  };
-};
 
 // ---------------------------------------------------------------------------
 // App lifecycle

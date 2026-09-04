@@ -267,12 +267,11 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     selectSingleImage: () => runMutation((expectedSessionId) => dependencies.assets.selectSingleImage({ expectedSessionId })),
     selectVideos: () => runMutation((expectedSessionId) => dependencies.assets.selectVideo({ expectedSessionId })),
     deleteAsset: (relativePath) => runMutation((expectedSessionId) => dependencies.assets.delete({ expectedSessionId, relativePath })),
-    importAsset: (srcPath) => runMutation((expectedSessionId) => dependencies.assets.import({ expectedSessionId, srcPath })),
     importFonts: () => runMutation((expectedSessionId) => dependencies.fonts.importFile({ expectedSessionId })),
-    copySystemFont: (familyName, filePaths) => runMutation((expectedSessionId) => dependencies.fonts.copySystemFont({ expectedSessionId, familyName, filePaths })),
+    copySystemFont: (familyName) => runMutation((expectedSessionId) => dependencies.fonts.copySystemFont({ expectedSessionId, familyName })),
     downloadGoogleFont: (family, variants) => runMutation((expectedSessionId) => dependencies.fonts.downloadGoogleFont({ expectedSessionId, family, variants })),
     deleteFont: (relativePath) => runMutation((expectedSessionId) => dependencies.fonts.deleteFont({ expectedSessionId, relativePath })),
-    downloadMedia: (url) => runMutation((expectedSessionId) => dependencies.mediaSearch.downloadAndImport({ expectedSessionId, url })),
+    downloadMedia: (downloadId) => runMutation((expectedSessionId) => dependencies.mediaSearch.downloadAndImport({ expectedSessionId, downloadId })),
     dispose: () => { unsubscribeEdits(); unsubscribeProgress(); listeners.clear(); },
   };
 };

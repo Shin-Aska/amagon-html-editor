@@ -58,7 +58,7 @@ const setup = (choice: "save" | "discard" | "cancel" = "cancel") => {
     },
     assets: {
       listPaths: vi.fn(async () => []), selectImage, selectSingleImage: vi.fn(),
-      selectVideo: vi.fn(), delete: vi.fn(), import: vi.fn(),
+      selectVideo: vi.fn(), delete: vi.fn(),
     },
     fonts: { importFile: vi.fn(), downloadGoogleFont: vi.fn(), copySystemFont: vi.fn(), deleteFont: vi.fn() },
     mediaSearch: { downloadAndImport: vi.fn() },

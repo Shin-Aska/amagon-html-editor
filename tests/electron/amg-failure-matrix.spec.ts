@@ -192,17 +192,13 @@ const listen = async (server: Server): Promise<number> => new Promise((resolve, 
   });
 });
 
-test("download quota and close cancellation leave no partial files", async () => {
-  // Given: a local server with declared-oversize and never-ending streamed responses.
-  const server = createServer((request, response) => {
-    if (request.url === "/quota.png") {
-      response.writeHead(200, { "content-type": "image/png", "content-length": 262_144_001 });
-      response.end();
-      return;
-    }
-    response.writeHead(200, { "content-type": "video/mp4" });
-    const interval = setInterval(() => response.write(Buffer.alloc(64 * 1024)), 10);
-    response.on("close", () => clearInterval(interval));
+test("forged media download authority cannot reach loopback or create partial files", async () => {
+  // Given: a loopback listener and no main-issued provider capability.
+  let requests = 0;
+  const server = createServer((_request, response) => {
+    requests += 1;
+    response.writeHead(200, { "content-type": "image/png" });
+    response.end(new Uint8Array([1, 2, 3]));
   });
   const port = await listen(server);
   const root = await mkdtemp(path.join(os.tmpdir(), "amagon-e2e-download-"));
@@ -211,16 +207,14 @@ test("download quota and close cancellation leave no partial files", async () =>
     await createProjectThroughUi({ harness, filePath: path.join(root, "downloads.amg"), name: "Downloads" });
     const session = await currentSession(harness.page);
 
-    // When: the production downloader rejects quota and a streamed request is closed mid-flight.
-    const quota = await harness.page.evaluate(({ expectedSessionId, url }) => (
-      window.api.mediaSearch.downloadAndImport({ expectedSessionId, url })
-    ), { expectedSessionId: session.sessionId, url: `http://127.0.0.1:${port}/quota.png` });
-    expect(quota.success).toBe(false);
-    expect(quota.changed).toBe(false);
-    const streamed = harness.page.evaluate(({ expectedSessionId, url }) => (
-      window.api.mediaSearch.downloadAndImport({ expectedSessionId, url })
-    ), { expectedSessionId: session.sessionId, url: `http://127.0.0.1:${port}/stream.mp4` });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // When: a forged token is paired with a renderer-supplied loopback URL.
+    const denied = await harness.page.evaluate(({ expectedSessionId, url }) => Reflect.apply(
+      window.api.mediaSearch.downloadAndImport,
+      window.api.mediaSearch,
+      [{ expectedSessionId, downloadId: "A".repeat(43), url }],
+    ), { expectedSessionId: session.sessionId, url: `http://127.0.0.1:${port}/media.png` });
+    expect(denied.success).toBe(false);
+    expect(denied.changed).toBe(false);
     const closed = await harness.page.evaluate((value) => window.api.project.close({
       expectedSessionId: value.sessionId,
       rendererGeneration: value.committedRendererGeneration,
@@ -228,9 +222,9 @@ test("download quota and close cancellation leave no partial files", async () =>
       dirtyChoice: "discard",
     }), session);
     expect(closed.success).toBe(true);
-    expect((await streamed).success).toBe(false);
 
-    // Then: cancellation drains and removes every owned partial file.
+    // Then: no network request occurs and no partial file is allocated.
+    expect(requests).toBe(0);
     const workspaceRoot = path.join(root, "profile", "amg-workspaces");
     const remaining = await readdir(workspaceRoot, { recursive: true }).catch(() => []);
     expect(remaining.some((entry) => entry.includes(".amagon-partial-"))).toBe(false);
@@ -265,10 +259,13 @@ test("close waits for an active app-media read lease and cleans after cancellati
   try {
     await createProjectThroughUi({ harness, filePath: target, name: "Read Lease" });
     const session = await currentSession(harness.page);
-    const imported = await harness.page.evaluate(({ expectedSessionId, srcPath }) => (
-      window.api.assets.import({ expectedSessionId, srcPath })
-    ), { expectedSessionId: session.sessionId, srcPath: mediaPath });
-    if (!imported.success) throw new TypeError("media import failed");
+    await queueNativeDialogs(harness.app, { opens: [[mediaPath]] });
+    const importedBatch = await harness.page.evaluate(
+      (expectedSessionId) => window.api.assets.selectVideo({ expectedSessionId }),
+      session.sessionId,
+    );
+    if (!importedBatch.success || importedBatch.value[0] === undefined) throw new TypeError("media import failed");
+    const imported = importedBatch.value[0];
 
     // When: close begins after one stream chunk while the renderer deliberately holds the reader.
     const observed = await harness.page.evaluate(async ({ active, mediaUrl }) => {
@@ -300,7 +297,7 @@ test("close waits for an active app-media read lease and cleans after cancellati
       audio.load();
       audio.remove();
       return { deferredWhileHeld, close: await close };
-    }, { active: session, mediaUrl: imported.value.path });
+    }, { active: session, mediaUrl: imported.path });
 
     // Then: the read lease defers close until cancellation and cleanup removes the session workspace.
     expect(observed.deferredWhileHeld).toBe(true);

@@ -97,7 +97,7 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
 
         for (const result of results) {
             try {
-                const downloadResult = await projectCommands.downloadMedia(result.url);
+                const downloadResult = await projectCommands.downloadMedia(result.downloadId);
                 if (downloadResult.ok) {
                     importedUrls.push(downloadResult.value.path)
                 }

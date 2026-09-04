@@ -63,8 +63,8 @@ declare global {
         }
         assets: AssetMutationBridge & {
             list: () => Promise<any>
-            readAsset: (assetPath: string) => Promise<any>
-            readFileAsBase64: (filePath: string) => Promise<any>
+            readAsset: (reference: string) => Promise<any>
+            readFileAsBase64: (reference: string) => Promise<any>
         }
         autosave: {
             start: (intervalMs?: number) => Promise<any>

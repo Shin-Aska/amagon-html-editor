@@ -51,7 +51,7 @@ export default function AssetPicker({mode, onSelect, onCancel, initialSelection 
 
         for (const result of results) {
             try {
-                const downloadResult = await projectCommands.downloadMedia(result.url);
+                const downloadResult = await projectCommands.downloadMedia(result.downloadId);
                 if (downloadResult.ok) {
                     importedUrls.push(downloadResult.value.path)
                 }

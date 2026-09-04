@@ -16,14 +16,20 @@ export const WorkspaceGenerationSchema = z.number()
     .max(Number.MAX_SAFE_INTEGER)
     .brand<'WorkspaceGeneration'>()
 export const RecentProjectIdSchema = z.string().uuid().brand<'RecentProjectId'>()
+export const MediaDownloadIdSchema = z.string()
+    .length(43)
+    .regex(/^[A-Za-z0-9_-]+$/u)
+    .brand<'MediaDownloadId'>()
 
 export type ProjectSessionId = z.infer<typeof ProjectSessionIdSchema>
 export type RecentProjectId = z.infer<typeof RecentProjectIdSchema>
+export type MediaDownloadId = z.infer<typeof MediaDownloadIdSchema>
 export type RendererGeneration = z.infer<typeof RendererGenerationSchema>
 export type WorkspaceGeneration = z.infer<typeof WorkspaceGenerationSchema>
 
 export const parseProjectSessionId = (value: unknown): ProjectSessionId => ProjectSessionIdSchema.parse(value)
 export const parseRecentProjectId = (value: unknown): RecentProjectId => RecentProjectIdSchema.parse(value)
+export const parseMediaDownloadId = (value: unknown): MediaDownloadId => MediaDownloadIdSchema.parse(value)
 export const parseRendererGeneration = (value: unknown): RendererGeneration => RendererGenerationSchema.parse(value)
 export const parseWorkspaceGeneration = (value: unknown): WorkspaceGeneration => WorkspaceGenerationSchema.parse(value)
 export type DurableProjectData = ProjectDocumentV1 | LegacyProjectDocument
@@ -201,12 +207,21 @@ export type AssetInfo = {
     readonly type?: 'image' | 'video'
 }
 
+export type MediaSearchResult = {
+    readonly id: string
+    readonly downloadId: MediaDownloadId
+    readonly thumbUrl: string
+    readonly previewUrl: string
+    readonly alt: string
+    readonly photographer?: string
+    readonly sourceUrl?: string
+}
+
 export interface AssetMutationBridge {
     readonly selectImage: (request: SessionRequest) => Promise<MutationResult<readonly AssetInfo[]>>
     readonly selectSingleImage: (request: SessionRequest) => Promise<MutationResult<AssetInfo>>
     readonly selectVideo: (request: SessionRequest) => Promise<MutationResult<readonly AssetInfo[]>>
     readonly delete: (request: SessionRequest & { readonly relativePath: string }) => Promise<MutationResult<null>>
-    readonly import: (request: SessionRequest & { readonly srcPath: string }) => Promise<MutationResult<AssetInfo>>
 }
 
 export interface FontMutationBridge<TFont> {
@@ -217,11 +232,10 @@ export interface FontMutationBridge<TFont> {
     }) => Promise<MutationResult<readonly TFont[]>>
     readonly copySystemFont: (request: SessionRequest & {
         readonly familyName: string
-        readonly filePaths: readonly string[]
     }) => Promise<MutationResult<readonly TFont[]>>
     readonly deleteFont: (request: SessionRequest & { readonly relativePath: string }) => Promise<MutationResult<null>>
 }
 
 export interface MediaMutationBridge {
-    readonly downloadAndImport: (request: SessionRequest & { readonly url: string }) => Promise<MutationResult<AssetInfo>>
+    readonly downloadAndImport: (request: SessionRequest & { readonly downloadId: MediaDownloadId }) => Promise<MutationResult<AssetInfo>>
 }

@@ -1,14 +1,15 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parseMediaDownloadId, type MediaDownloadId } from "../../../../shared/projects/projectIpcContract";
 import AssetPicker from "../AssetPicker";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const commands = vi.hoisted(() => ({
-  downloadMedia: vi.fn(async (url: string) => ({
+  downloadMedia: vi.fn(async (downloadId: MediaDownloadId) => ({
     ok: true,
-    value: { name: "remote.png", path: `runtime:${url}`, relativePath: "images/remote.png", type: "image" },
+    value: { name: "remote.png", path: `runtime:${downloadId}`, relativePath: "images/remote.png", type: "image" },
   })),
 }));
 const api = vi.hoisted(() => ({ assets: { list: vi.fn(async () => ({ success: true, assets: [] })) } }));
@@ -18,8 +19,8 @@ vi.mock("../../../utils/api", () => ({
   getApi: () => api,
 }));
 vi.mock("../MediaSearchPanel", () => ({
-  default: ({ onSelect }: { readonly onSelect: (items: readonly { readonly url: string }[]) => void }) => (
-    <button onClick={() => onSelect([{ url: "https://example.test/remote.png" }])}>Choose web media</button>
+  default: ({ onSelect }: { readonly onSelect: (items: readonly { readonly downloadId: MediaDownloadId }[]) => void }) => (
+    <button onClick={() => onSelect([{ downloadId: parseMediaDownloadId("A".repeat(43)) }])}>Choose web media</button>
   ),
 }));
 
@@ -51,6 +52,6 @@ describe("AssetPicker project session", () => {
 
     await act(async () => choose?.click());
 
-    expect(commands.downloadMedia).toHaveBeenCalledWith("https://example.test/remote.png");
+    expect(commands.downloadMedia).toHaveBeenCalledWith(parseMediaDownloadId("A".repeat(43)));
   });
 });

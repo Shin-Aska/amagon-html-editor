@@ -5,6 +5,7 @@ import type {
   FontMutationBridge,
   MediaMutationBridge,
   MutationResult,
+  MediaDownloadId,
   ProjectBridge,
   ProjectOperation,
   ProjectProgress,
@@ -74,12 +75,11 @@ export interface ProjectCommands {
   readonly selectSingleImage: () => Promise<ProjectCommandResult<AssetInfo>>;
   readonly selectVideos: () => Promise<ProjectCommandResult<readonly AssetInfo[]>>;
   readonly deleteAsset: (relativePath: string) => Promise<ProjectCommandResult<null>>;
-  readonly importAsset: (srcPath: string) => Promise<ProjectCommandResult<AssetInfo>>;
   readonly importFonts: () => Promise<ProjectCommandResult<readonly FontAsset[]>>;
-  readonly copySystemFont: (familyName: string, filePaths: readonly string[]) => Promise<ProjectCommandResult<readonly FontAsset[]>>;
+  readonly copySystemFont: (familyName: string) => Promise<ProjectCommandResult<readonly FontAsset[]>>;
   readonly downloadGoogleFont: (family: string, variants: readonly { readonly weight: string; readonly style: string }[]) => Promise<ProjectCommandResult<readonly FontAsset[]>>;
   readonly deleteFont: (relativePath: string) => Promise<ProjectCommandResult<null>>;
-  readonly downloadMedia: (url: string) => Promise<ProjectCommandResult<AssetInfo>>;
+  readonly downloadMedia: (downloadId: MediaDownloadId) => Promise<ProjectCommandResult<AssetInfo>>;
   readonly dispose: () => void;
 }
 

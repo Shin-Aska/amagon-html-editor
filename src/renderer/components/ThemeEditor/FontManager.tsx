@@ -296,7 +296,7 @@ export default function FontManager({
 
   const handleImportSystemFont = async (name: string) => {
     try {
-      const res = await projectCommands.copySystemFont(name, []);
+      const res = await projectCommands.copySystemFont(name);
       if (res.ok && res.value.length > 0) {
         const hasPhysicalFile = res.value.some((f) => f.relativePath);
         addFonts([...res.value]);

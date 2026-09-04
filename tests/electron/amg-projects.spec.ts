@@ -99,10 +99,14 @@ test.describe.serial("AMG desktop project format", () => {
       const firstOpen = await harness.page.evaluate((id) => window.api.project.openRecent(id), recentId);
       expect(firstOpen.success).toBe(true);
       if (!firstOpen.success) throw new TypeError("first recent open failed");
-      const imported = await harness.page.evaluate(
-        ({ expectedSessionId, srcPath }) => window.api.assets.import({ expectedSessionId, srcPath }),
-        { expectedSessionId: firstOpen.session.sessionId, srcPath: audioPath },
+      await queueNativeDialogs(harness.app, { opens: [[audioPath]] });
+      const importedBatch = await harness.page.evaluate(
+        (expectedSessionId) => window.api.assets.selectVideo({ expectedSessionId }),
+        firstOpen.session.sessionId,
       );
+      const imported = importedBatch.success && importedBatch.value[0] !== undefined
+        ? { ...importedBatch, value: importedBatch.value[0] }
+        : importedBatch;
       expect(imported.success && imported.changed).toBe(true);
       if (!imported.success) throw new TypeError("media import failed");
       const saved = await harness.page.evaluate(
@@ -216,9 +220,10 @@ test.describe.serial("AMG desktop project format", () => {
       );
       expect(rejected.success).toBe(false);
       if (!rejected.success && !rejected.canceled) expect(rejected.error.code).toBe("PROJECT_NOT_PORTABLE");
+      await queueNativeDialogs(harness.app, { opens: [[externalPath]] });
       const imported = await harness.page.evaluate(
-        ({ expectedSessionId, srcPath }) => window.api.assets.import({ expectedSessionId, srcPath }),
-        { expectedSessionId: opened.session.sessionId, srcPath: externalPath },
+        (expectedSessionId) => window.api.assets.selectSingleImage({ expectedSessionId }),
+        opened.session.sessionId,
       );
       expect(imported.success).toBe(true);
       if (!imported.success) throw new TypeError("legacy asset import failed");

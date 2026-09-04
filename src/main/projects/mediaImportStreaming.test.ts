@@ -12,7 +12,8 @@ vi.mock("electron", () => ({
   safeStorage: { isEncryptionAvailable: () => false },
 }));
 
-import { downloadAndImportMedia } from "../mediaSearchService";
+import { downloadAndImportMedia } from "../mediaDownload";
+import { createSafeMediaFetcher } from "./safeMediaNetwork";
 import { buildRuntimeAssetUrl } from "../../shared/projects/assetReference";
 import { createProjectSaveCoordinator } from "../../renderer/project/projectSaveCoordinator";
 import { buildProjectSnapshot } from "../../renderer/project/projectSnapshot";
@@ -26,6 +27,10 @@ import { createProjectTransferRegistry, runCancellableTransferBatch } from "./pr
 import { createRecentProjectsStore } from "./recentProjects";
 
 const roots: string[] = [];
+const testMediaFetch = createSafeMediaFetcher({
+  fetchPinned: (url, _addresses, signal) => fetchMock(url, { signal }),
+  lookup: async () => [{ address: "8.8.8.8", family: 4 }],
+});
 afterEach(async () => {
   fetchMock.mockReset();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -76,7 +81,7 @@ describe("media import streaming", () => {
     const arrayBuffer = vi.spyOn(response, "arrayBuffer");
     fetchMock.mockResolvedValue(response);
 
-    const result = await downloadAndImportMedia("https://media.example/video", root, "clip", { maxBytes: 32 });
+    const result = await downloadAndImportMedia({ url: "https://media.example/video", projectDir: root, filename: "clip", maxBytes: 32, fetcher: testMediaFetch });
 
     expect(result).toMatchObject({ success: true, relativePath: "assets/clip.mp4" });
     expect(await readFile(path.join(root, "assets", "clip.mp4"), "utf8")).toBe("first-second");
@@ -95,7 +100,7 @@ describe("media import streaming", () => {
     });
     fetchMock.mockResolvedValue(new Response(body, { status: 200, headers: { "content-type": "image/png" } }));
 
-    const result = await downloadAndImportMedia("https://media.example/image", root, "oversize", { maxBytes: 10 });
+    const result = await downloadAndImportMedia({ url: "https://media.example/image", projectDir: root, filename: "oversize", maxBytes: 10, fetcher: testMediaFetch });
 
     expect(result.success).toBe(false);
     expect(await readdir(path.join(root, "assets"))).toEqual([]);
@@ -107,7 +112,7 @@ describe("media import streaming", () => {
     controller.abort();
     fetchMock.mockRejectedValue(new DOMException("canceled", "AbortError"));
 
-    const result = await downloadAndImportMedia("https://media.example/image", root, "canceled", { signal: controller.signal });
+    const result = await downloadAndImportMedia({ url: "https://media.example/image", projectDir: root, filename: "canceled", signal: controller.signal, fetcher: testMediaFetch });
 
     expect(result.success).toBe(false);
     await expect(readdir(path.join(root, "assets"))).rejects.toMatchObject({ code: "ENOENT" });
@@ -126,7 +131,7 @@ describe("media import streaming", () => {
     });
     fetchMock.mockResolvedValue(new Response(body, { status: 200, headers: { "content-type": "image/png" } }));
 
-    const result = await downloadAndImportMedia("https://media.example/image", root, "mid-cancel", { signal: abort.signal });
+    const result = await downloadAndImportMedia({ url: "https://media.example/image", projectDir: root, filename: "mid-cancel", signal: abort.signal, fetcher: testMediaFetch });
 
     expect(result.success).toBe(false);
     expect(await readdir(path.join(root, "assets"))).toEqual([]);
@@ -151,7 +156,7 @@ describe("media import streaming", () => {
 
     const running = harness.sessions.runMutation(created.session.sessionId, () => harness.transfers.run(
       created.session.sessionId,
-      (signal) => downloadAndImportMedia("https://media.example/blocked", workspace, "blocked", { signal }),
+      (signal) => downloadAndImportMedia({ url: "https://media.example/blocked", projectDir: workspace, filename: "blocked", signal, fetcher: testMediaFetch }),
     ));
     while (harness.transfers.activeCount(created.session.sessionId) === 0) await Promise.resolve();
     const closing = harness.service.close({
@@ -226,7 +231,7 @@ describe("media import streaming", () => {
     const mutation = await runMutationBoundary(harness.sessions, { expectedSessionId: created.session.sessionId }, async (expectedSessionId) => (
       runProjectMutation({ sessions: harness.sessions, expectedSessionId, listInventory }, async () => {
         const downloaded = await harness.transfers.run(expectedSessionId, (signal) => (
-          downloadAndImportMedia("https://media.example/persist", workspace, "persist", { signal })
+          downloadAndImportMedia({ url: "https://media.example/persist", projectDir: workspace, filename: "persist", signal, fetcher: testMediaFetch })
         ));
         if (!downloaded.success || downloaded.relativePath === undefined) throw new Error("download failed");
         return downloaded.relativePath;

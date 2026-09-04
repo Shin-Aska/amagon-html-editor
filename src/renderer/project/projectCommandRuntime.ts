@@ -122,7 +122,6 @@ const unavailableAssets: AssetCommands = {
   selectSingleImage: async (request) => missingMutation<AssetInfo>(request),
   selectVideo: async (request) => missingMutation<readonly AssetInfo[]>(request),
   delete: async (request) => missingMutation<null>(request),
-  import: async (request) => missingMutation<AssetInfo>(request),
 };
 
 const unavailableFonts: FontMutationBridge<FontAsset> = {
@@ -146,7 +145,6 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
       selectSingleImage: electron?.assets.selectSingleImage ?? unavailableAssets.selectSingleImage,
       selectVideo: electron?.assets.selectVideo ?? unavailableAssets.selectVideo,
       delete: electron?.assets.delete ?? unavailableAssets.delete,
-      import: electron?.assets.import ?? unavailableAssets.import,
     },
     fonts: {
       importFile: electron?.fonts.importFile ?? unavailableFonts.importFile,

@@ -202,7 +202,11 @@ describe('project API boundaries', () => {
             getLegacyBrowserProjectApi().save({ filePath: 'C:\\outside\\project.json', content: '{}' }),
             getLegacyBrowserAssetMutations().selectImage(),
             getLegacyBrowserFontMutations().importFile(),
-            getLegacyBrowserMediaMutation().downloadAndImport('https://example.invalid/image.png'),
+            Reflect.apply(
+                getLegacyBrowserMediaMutation().downloadAndImport,
+                undefined,
+                [{ expectedSessionId: 'forged-session', downloadId: 'forged-download' }],
+            ),
         ])
 
         // Then: every call fails explicitly without inventing session identity or filesystem authority

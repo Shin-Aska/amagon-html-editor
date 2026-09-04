@@ -101,7 +101,6 @@ const harness = (initial = project()): Harness => {
       selectSingleImage: vi.fn(),
       selectVideo: vi.fn(),
       delete: vi.fn(),
-      import: vi.fn(),
     },
     fonts: {
       importFile: vi.fn(),
@@ -318,7 +317,7 @@ describe("project commands", () => {
     const commands = createProjectCommands({
       project: bridge,
       assets: {
-        listPaths: async () => [], selectImage: vi.fn(), selectSingleImage: vi.fn(), selectVideo: vi.fn(), delete: vi.fn(), import: vi.fn(),
+        listPaths: async () => [], selectImage: vi.fn(), selectSingleImage: vi.fn(), selectVideo: vi.fn(), delete: vi.fn(),
       },
       fonts: { importFile: vi.fn(), downloadGoogleFont: vi.fn(), copySystemFont: vi.fn(), deleteFont: vi.fn() },
       mediaSearch: { downloadAndImport: vi.fn() },

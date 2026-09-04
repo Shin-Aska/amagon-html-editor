@@ -13,6 +13,7 @@ import type {
 } from './projectIpcContract'
 import {
     parseProjectSessionId,
+    parseMediaDownloadId,
     parseRecentProjectId,
     parseRendererGeneration,
     parseWorkspaceGeneration,
@@ -94,7 +95,6 @@ describe('project IPC contract', () => {
         // Given: every mutating asset bridge operation
         type SelectRequest = Parameters<AssetMutationBridge['selectImage']>[0]
         type DeleteRequest = Parameters<AssetMutationBridge['delete']>[0]
-        type ImportRequest = Parameters<AssetMutationBridge['import']>[0]
         type FontImportRequest = Parameters<FontMutationBridge<unknown>['importFile']>[0]
         type FontDownloadRequest = Parameters<FontMutationBridge<unknown>['downloadGoogleFont']>[0]
         type FontCopyRequest = Parameters<FontMutationBridge<unknown>['copySystemFont']>[0]
@@ -105,7 +105,6 @@ describe('project IPC contract', () => {
         const keys = [
             'expectedSessionId' satisfies keyof SelectRequest,
             'expectedSessionId' satisfies keyof DeleteRequest,
-            'expectedSessionId' satisfies keyof ImportRequest,
             'expectedSessionId' satisfies keyof FontImportRequest,
             'expectedSessionId' satisfies keyof FontDownloadRequest,
             'expectedSessionId' satisfies keyof FontCopyRequest,
@@ -114,7 +113,29 @@ describe('project IPC contract', () => {
         ]
 
         // Then: all mutation entry points require the session binding
-        expect(keys).toEqual(Array.from({ length: 8 }, () => 'expectedSessionId'))
+        expect(keys).toEqual(Array.from({ length: 7 }, () => 'expectedSessionId'))
+    })
+
+    it('removes renderer path authority and brands opaque media downloads', () => {
+        // Given: renderer-visible mutation bridge request types.
+        type AssetHasRawImport = 'import' extends keyof AssetMutationBridge ? true : false
+        type FontCopyRequest = Parameters<FontMutationBridge<unknown>['copySystemFont']>[0]
+        type FontCopyHasPaths = 'filePaths' extends keyof FontCopyRequest ? true : false
+        type MediaRequest = Parameters<MediaMutationBridge['downloadAndImport']>[0]
+        type MediaHasUrl = 'url' extends keyof MediaRequest ? true : false
+
+        // When: TypeScript inspects their authority-bearing fields.
+        const assetHasRawImport: AssetHasRawImport = false
+        const fontCopyHasPaths: FontCopyHasPaths = false
+        const mediaHasUrl: MediaHasUrl = false
+        const downloadId = parseMediaDownloadId('A'.repeat(43))
+
+        // Then: only main-issued opaque authority remains.
+        expect(assetHasRawImport).toBe(false)
+        expect(fontCopyHasPaths).toBe(false)
+        expect(mediaHasUrl).toBe(false)
+        expect(downloadId).toBe('A'.repeat(43))
+        expect(() => parseMediaDownloadId('https://provider.example/media')).toThrow()
     })
 
     it('distinguishes retained side effects from proven unchanged failures', () => {

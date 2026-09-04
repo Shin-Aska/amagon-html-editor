@@ -5,7 +5,7 @@
 import packageJson from '../../../package.json'
 import {createDefaultTheme, type FontAsset} from '../store/types'
 import {createWelcomeBlocks} from '../../shared/welcomeBlocks'
-import type {ProjectProgress, RecentProjectId} from '../../shared/projects/projectIpcContract'
+import type {MediaDownloadId, ProjectProgress, RecentProjectId, ProjectSessionId} from '../../shared/projects/projectIpcContract'
 
 export interface IpcResult {
     success: boolean
@@ -443,9 +443,9 @@ const mockApi = {
             }
         },
 
-        readAsset: async (assetPath: string): Promise<IpcResult> => {
+        readAsset: async (reference: string): Promise<IpcResult> => {
             try {
-                const response = await fetch(assetPath);
+                const response = await fetch(reference);
                 const blob = await response.blob();
                 const reader = new FileReader();
 
@@ -462,10 +462,6 @@ const mockApi = {
             } catch (error) {
                 return {success: false, error: String(error)}
             }
-        },
-
-        import: async (_srcPath: string): Promise<IpcResult> => {
-            return {success: false, error: 'Not supported in browser mode'}
         }
     },
 
@@ -506,7 +502,7 @@ const mockApi = {
             console.log('[Mock API] downloadGoogleFont (mocked)');
             return {success: false, error: 'Not supported in browser mode', fonts: []}
         },
-        copySystemFont: async (_args: { familyName: string; filePaths: string[] }): Promise<IpcResult & {
+        copySystemFont: async (_args: { familyName: string }): Promise<IpcResult & {
             fonts: FontAsset[]
         }> => {
             console.log('[Mock API] copySystemFont (mocked)');
@@ -865,7 +861,10 @@ const mockApi = {
             }
         },
 
-        downloadAndImport: async (_url: string): Promise<any> => {
+        downloadAndImport: async (_request: {
+            expectedSessionId: ProjectSessionId
+            downloadId: MediaDownloadId
+        }): Promise<any> => {
             return {
                 success: false,
                 error: 'Download and import is only available in Electron mode.'
