@@ -70,7 +70,7 @@ export type ProjectSaveCoordinatorOptions = {
   readonly committedRendererGeneration: RendererGeneration;
   readonly workspaceGeneration: WorkspaceGeneration;
   readonly committedWorkspaceGeneration: WorkspaceGeneration;
-  readonly createSnapshot: () => ProjectSnapshotResult;
+  readonly createSnapshot: (kind: CoordinatorSaveKind) => ProjectSnapshotResult;
   readonly executeSave: (invocation: CoordinatorSaveInvocation) => Promise<CoordinatorSaveResponse>;
 };
 
@@ -119,7 +119,7 @@ export const createProjectSaveCoordinator = (
 
   const runSave = async (kind: CoordinatorSaveKind): Promise<CoordinatorSaveResult> => {
     const rendererGeneration = internal.renderer;
-    const built = options.createSnapshot();
+    const built = options.createSnapshot(kind);
     if (!built.ok) {
       return {
         success: false,

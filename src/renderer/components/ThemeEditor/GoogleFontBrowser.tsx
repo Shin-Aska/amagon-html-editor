@@ -9,7 +9,7 @@ import {
     getPreviewFontIdForFamily,
 } from '../../utils/googleFontCss';
 import './GoogleFontBrowser.css';
-import {getLegacyBrowserFontMutations} from '../../utils/api';
+import {projectCommands} from '../../project/projectCommands';
 
 const CATEGORIES = ['All', 'sans-serif', 'serif', 'display', 'handwriting', 'monospace'];
 const RESULTS_PER_PAGE = 8;
@@ -25,7 +25,6 @@ export default function GoogleFontBrowser(): JSX.Element {
     const projectFonts = useProjectStore((s) => s.fonts);
     const addFonts = useProjectStore((s) => s.addFonts);
     const showToast = useToastStore((s) => s.showToast);
-    const legacyFontMutations = getLegacyBrowserFontMutations();
 
     // Filter fonts
     const filteredFonts = useMemo(() => {
@@ -130,17 +129,14 @@ export default function GoogleFontBrowser(): JSX.Element {
                 selectedVariants.has(`${v.weight}-${v.style}`)
             );
 
-            const res = await legacyFontMutations.downloadGoogleFont({
-                family: selectedFont.family,
-                variants: variantsToDownload,
-            });
+            const res = await projectCommands.downloadGoogleFont(selectedFont.family, variantsToDownload);
 
-            if (res.success && res.fonts) {
-                addFonts(res.fonts);
+            if (res.ok) {
+                addFonts([...res.value]);
                 showToast(`Successfully downloaded ${selectedFont.family}`, 'success');
                 setSelectedFont(null);
             } else {
-                showToast(res.errors?.[0] || 'Failed to download font', 'error');
+                showToast(res.message.detail, 'error');
             }
         } catch (err) {
             showToast('Error communicating with Google Fonts downloader', 'error');

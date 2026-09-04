@@ -10,7 +10,7 @@ import AiAssistant from '../AiAssistant/AiAssistant'
 import {type MouseEvent, useMemo, useRef, useState} from 'react'
 import ContextMenu from '../ContextMenu/ContextMenu'
 import {useToastStore} from '../../store/toastStore'
-import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
+import {projectCommands} from '../../project/projectCommands'
 import PageModal from '../PageModal/PageModal'
 import {getTemplateByWidgetType, getTemplateWidgetDefinitions} from '../../templates/templateWidgets'
 import {builtInPageTemplates} from '../../templates/pageTemplates'
@@ -101,8 +101,6 @@ function WidgetCategory({
 }
 
 function Sidebar(): JSX.Element {
-    const api = getApi();
-    const legacyProjectApi = getLegacyBrowserProjectApi();
     const categories = componentRegistry.getCategories();
     const userBlocks = useProjectStore((s) => s.userBlocks);
     const removeUserBlock = useProjectStore((s) => s.removeUserBlock);
@@ -808,45 +806,7 @@ function Sidebar(): JSX.Element {
                                 removeUserBlock(id);
                                 showToast(`Removed custom block: ${contextMenu.widget.label}`, 'success')
 
-                                ;(async () => {
-                                    try {
-                                        const editorState = useEditorStore.getState();
-                                        const projectState = useProjectStore.getState();
-                                        const pageId = projectState.currentPageId;
-                                        if (!projectState.filePath) return;
-
-                                        const updatedPages = projectState.pages.map((p) =>
-                                            pageId && p.id === pageId ? {...p, blocks: editorState.getFullBlocks()} : p
-                                        );
-
-                                        if (pageId) {
-                                            projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
-                                        }
-
-                                        const content = JSON.stringify(
-                                            {
-                                                projectSettings: projectState.settings,
-                                                pages: updatedPages,
-                                                folders: projectState.folders,
-                                                userBlocks: projectState.userBlocks,
-                                                customCss: editorState.customCss
-                                            },
-                                            null,
-                                            2
-                                        );
-
-                                        const result = await legacyProjectApi.save({
-                                            filePath: projectState.filePath || undefined,
-                                            content
-                                        });
-
-                                        if (result.success && result.filePath && result.filePath !== projectState.filePath) {
-                                            projectState.setFilePath(result.filePath)
-                                        }
-                                    } catch {
-                                        // ignore background persistence errors
-                                    }
-                                })()
+                                void projectCommands.save()
                             }
                         }
                     ]}

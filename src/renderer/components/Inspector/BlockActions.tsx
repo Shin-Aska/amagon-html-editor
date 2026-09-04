@@ -3,7 +3,7 @@ import {useProjectStore} from '../../store/projectStore'
 import {createBlock} from '../../store/types'
 import {componentRegistry} from '../../registry/ComponentRegistry'
 import {useToastStore} from '../../store/toastStore'
-import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
+import {projectCommands} from '../../project/projectCommands'
 import './BlockActions.css'
 import {useMemo, useState} from 'react'
 import SaveCustomBlockDialog from './SaveCustomBlockDialog'
@@ -15,8 +15,6 @@ interface BlockActionsProps {
 }
 
 export default function BlockActions({blockId, blockType}: BlockActionsProps): JSX.Element {
-    const api = getApi();
-    const legacyProjectApi = getLegacyBrowserProjectApi();
     const getBlockById = useEditorStore((s) => s.getBlockById);
     const getBlockPath = useEditorStore((s) => s.getBlockPath);
     const addBlock = useEditorStore((s) => s.addBlock);
@@ -189,44 +187,7 @@ export default function BlockActions({blockId, blockType}: BlockActionsProps): J
                     setShowSaveCustomBlock(false);
                     showToast(`Saved custom block: ${label}`, 'success')
 
-                    ;(async () => {
-                        try {
-                            const editorState = useEditorStore.getState();
-                            const projectState = useProjectStore.getState();
-                            const pageId = projectState.currentPageId;
-                            if (!projectState.filePath) return;
-
-                            const pages = projectState.pages.map((p) =>
-                                pageId && p.id === pageId ? {...p, blocks: editorState.getFullBlocks()} : p
-                            );
-
-                            if (pageId) {
-                                projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
-                            }
-
-                            const content = JSON.stringify(
-                                {
-                                    projectSettings: projectState.settings,
-                                    pages,
-                                    userBlocks: projectState.userBlocks,
-                                    customCss: editorState.customCss
-                                },
-                                null,
-                                2
-                            );
-
-                            const result = await legacyProjectApi.save({
-                                filePath: projectState.filePath || undefined,
-                                content
-                            });
-
-                            if (result.success && result.filePath && result.filePath !== projectState.filePath) {
-                                projectState.setFilePath(result.filePath)
-                            }
-                        } catch {
-                            // ignore background persistence errors
-                        }
-                    })()
+                    void projectCommands.save()
                 }}
             />
 

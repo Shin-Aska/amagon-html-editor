@@ -62,6 +62,31 @@ const success = (
 });
 
 describe("project save coordinator", () => {
+  it("passes the canonical save kind to snapshot creation for persistence-mode routing", async () => {
+    // Given
+    const snapshotKinds: string[] = [];
+    const coordinator = createProjectSaveCoordinator({
+      sessionId: SESSION_A,
+      rendererGeneration: renderer(1),
+      committedRendererGeneration: renderer(0),
+      workspaceGeneration: workspace(0),
+      committedWorkspaceGeneration: workspace(0),
+      createSnapshot: (kind) => {
+        snapshotKinds.push(kind);
+        return { ok: true, project: snapshot, referencedAssetPaths: [] };
+      },
+      executeSave: async (invocation) => success(invocation, 0),
+    });
+
+    // When
+    await coordinator.requestAutosave();
+    await coordinator.requestSave();
+    await coordinator.requestSaveAs();
+
+    // Then
+    expect(snapshotKinds).toEqual(["autosave", "save", "save-as"]);
+  });
+
   it("requires canonical authority types at every coordinator boundary", () => {
     // Given
     type RawSessionIsAccepted = string extends ProjectSaveCoordinatorOptions["sessionId"] ? true : false;

@@ -33,7 +33,8 @@ import {
     ZoomIn,
     ZoomOut
 } from 'lucide-react'
-import {getApi, getLegacyBrowserProjectApi} from '../../utils/api'
+import {getApi} from '../../utils/api'
+import {projectCommands, useProjectCommandState} from '../../project/projectCommands'
 import {useProjectStore} from '../../store/projectStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
@@ -79,13 +80,11 @@ export default function Toolbar({
                                     onOpenKeyboardShortcuts
                                 }: ToolbarProps): JSX.Element {
     const api = getApi();
-    const legacyProjectApi = getLegacyBrowserProjectApi();
+    const projectCommandState = useProjectCommandState();
 
     const showToast = useToastStore((s) => s.showToast);
 
     // Project Store
-    const setProject = useProjectStore((s) => s.setProject);
-    const filePath = useProjectStore((s) => s.filePath);
     const currentPageId = useProjectStore((s) => s.currentPageId);
     const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded);
     const projectName = useProjectStore((s) => s.settings.name);
@@ -103,8 +102,6 @@ export default function Toolbar({
     const zoom = useEditorStore((s) => s.zoom);
     const theme = useEditorStore((s) => s.theme);
     const showLayoutOutlines = useEditorStore((s) => s.showLayoutOutlines);
-    const markSaved = useEditorStore((s) => s.markSaved);
-    const setCustomCss = useEditorStore((s) => s.setCustomCss);
 
     const addBlock = useEditorStore((s) => s.addBlock);
     const removeBlock = useEditorStore((s) => s.removeBlock);
@@ -124,7 +121,6 @@ export default function Toolbar({
     const [showExport, setShowExport] = useState(false);
     const [editingName, setEditingName] = useState(false);
     const [tempName, setTempName] = useState(projectName);
-    const [isSaving, setIsSaving] = useState(false);
     const [showLayoutMenu, setShowLayoutMenu] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [editingZoom, setEditingZoom] = useState(false);
@@ -150,9 +146,9 @@ export default function Toolbar({
     // Auto-save listener
     useEffect(() => {
         return api.autosave.onTick(() => {
-            handleSave(true)
+            void projectCommands.autosave()
         })
-    }, [filePath, currentPageId]);
+    }, [api]);
 
     const ensureBackendReadyAndFlushEdits = async (): Promise<boolean> => {
         const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
@@ -175,75 +171,14 @@ export default function Toolbar({
     };
 
     const handleSave = async (silent = false): Promise<void> => {
-        if (isSaving) return;
-        setIsSaving(true);
-
-        try {
-            const ok = await ensureBackendReadyAndFlushEdits();
-            if (!ok) return;
-
-            const editorState = useEditorStore.getState();
-            const projectState = useProjectStore.getState();
-            const pageId = projectState.currentPageId;
-
-            const baseProjectData = projectState.getProjectData();
-            const pages = projectState.pages.map((p) =>
-                pageId && p.id === pageId ? {...p, blocks: editorState.getFullBlocks()} : p
-            );
-
-            const content = JSON.stringify(
-                {
-                    ...baseProjectData,
-                    pages,
-                    customCss: editorState.customCss
-                },
-                null,
-                2
-            );
-
-            if (pageId) {
-                projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
-            }
-
-            const result = await legacyProjectApi.save({
-                filePath: projectState.filePath || undefined,
-                content
-            });
-
-            if (result.success) {
-                markSaved();
-                if (result.filePath && result.filePath !== projectState.filePath) {
-                    projectState.setFilePath(result.filePath)
-                }
-                if (!silent) {
-                    const shownPath = (result.filePath || projectState.filePath || '').toString();
-                    showToast(shownPath ? `Saved: ${shownPath}` : 'Saved', 'success')
-                }
-            } else if (!result.canceled) {
-                if (!silent) showToast(result.error || 'Save failed', 'error')
-            }
-        } catch (err) {
-            if (!silent) showToast(String(err), 'error')
-        } finally {
-            setIsSaving(false)
-        }
+        const ok = await ensureBackendReadyAndFlushEdits();
+        if (!ok) return;
+        if (silent) await projectCommands.autosave();
+        else await projectCommands.save()
     };
 
     const handleLoad = async (): Promise<void> => {
-        const result = await legacyProjectApi.load();
-        if (result.success && result.content) {
-            setProject(result.content as any, result.filePath);
-            const data = result.content as any;
-            const firstPage = Array.isArray(data.pages) ? data.pages[0] : null;
-            if (firstPage && Array.isArray(firstPage.blocks)) {
-                useEditorStore.getState().loadPageBlocks(firstPage.blocks)
-            }
-            setCustomCss(typeof data.customCss === 'string' ? data.customCss : '');
-            markSaved();
-            showToast('Project loaded', 'success')
-        } else if (!result.canceled) {
-            showToast(result.error || 'Load failed', 'error')
-        }
+        await projectCommands.openProject()
     };
 
     const handleExport = async (): Promise<void> => {
@@ -381,15 +316,17 @@ export default function Toolbar({
 
                     {/* LEFT-CENTER: File & Edit Operations */}
                     <div className="toolbar-section">
-                        <button className="toolbar-btn" onClick={() => setShowNewProject(true)} title="New Project"
+                        <button className="toolbar-btn" onClick={() => setShowNewProject(true)}
+                                disabled={projectCommandState.busy !== null} title="New Project"
                                 aria-label="Create new project">
                             <FilePlus size={16} aria-hidden="true"/>
                         </button>
-                        <button className="toolbar-btn" onClick={handleLoad} title="Open Project (Ctrl+O)"
+                        <button className="toolbar-btn" onClick={handleLoad}
+                                disabled={projectCommandState.busy !== null} title="Open Project (Ctrl+O)"
                                 aria-label="Open existing project">
                             <FolderOpen size={16} aria-hidden="true"/>
                         </button>
-                        <button className="toolbar-btn" onClick={() => handleSave()} disabled={isSaving}
+                        <button className="toolbar-btn" onClick={() => handleSave()} disabled={projectCommandState.busy !== null}
                                 title="Save Project (Ctrl+S)" aria-label="Save project">
                             <Save size={16} aria-hidden="true"/>
                         </button>

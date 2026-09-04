@@ -29,7 +29,8 @@ import type {Block} from './store/types'
 import {createBlock} from './store/types'
 import {buildDefaultBlockProps, componentRegistry} from './registry/ComponentRegistry'
 import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
-import {getApi, getLegacyBrowserProjectApi} from './utils/api'
+import {getApi} from './utils/api'
+import {projectCommands, useProjectCommandState} from './project/projectCommands'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
 import WelcomeTourDialog from './components/Tutorial/WelcomeTourDialog'
 import TutorialOverlay from './components/Tutorial/TutorialOverlay'
@@ -65,7 +66,7 @@ const DialogLoader = () => (
 
 function App(): JSX.Element {
     const api = getApi();
-    const legacyProjectApi = getLegacyBrowserProjectApi();
+    const projectCommandState = useProjectCommandState();
 
     const showToast = useToastStore((s) => s.showToast);
 
@@ -85,8 +86,6 @@ function App(): JSX.Element {
     const blocks = useEditorStore((s) => s.blocks);
     const isTypingCode = useEditorStore((s) => s.isTypingCode);
     const setIsDragging = useEditorStore((s) => s.setIsDragging);
-    const markSaved = useEditorStore((s) => s.markSaved);
-    const setCustomCss = useEditorStore((s) => s.setCustomCss);
     const editorLayout = useEditorStore((s) => s.editorLayout);
     const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
     const userBlocks = useProjectStore((s) => s.userBlocks);
@@ -221,108 +220,18 @@ function App(): JSX.Element {
     const handleSave = useCallback(async () => {
         const ok = await ensureBackendReadyAndFlushEdits();
         if (!ok) return;
-
-        const editorState = useEditorStore.getState();
-        const projectState = useProjectStore.getState();
-        const pageId = projectState.currentPageId;
-
-        const baseProjectData = projectState.getProjectData();
-        const pages = projectState.pages.map((p) =>
-            pageId && p.id === pageId ? {...p, blocks: editorState.getFullBlocks()} : p
-        );
-
-        const content = JSON.stringify(
-            {
-                ...baseProjectData,
-                pages,
-                customCss: editorState.customCss
-            },
-            null,
-            2
-        );
-
-        if (pageId) {
-            projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
-        }
-        const filePath = projectState.filePath;
-
-        try {
-            const result = await legacyProjectApi.save({filePath: filePath || undefined, content});
-            if (result.success && result.filePath) {
-                useProjectStore.getState().setFilePath(result.filePath);
-                markSaved();
-                showToast(`Saved: ${result.filePath}`, 'success');
-                return
-            }
-            if (!result.canceled) {
-                showToast(result.error || 'Save failed', 'error')
-            }
-        } catch (err) {
-            showToast(String(err), 'error')
-        }
-    }, [api, ensureBackendReadyAndFlushEdits]);
+        await projectCommands.save()
+    }, [ensureBackendReadyAndFlushEdits]);
 
     const handleSaveAs = useCallback(async () => {
         const ok = await ensureBackendReadyAndFlushEdits();
         if (!ok) return;
-
-        const editorState = useEditorStore.getState();
-        const projectState = useProjectStore.getState();
-        const pageId = projectState.currentPageId;
-
-        const baseProjectData = projectState.getProjectData();
-        const pages = projectState.pages.map((p) =>
-            pageId && p.id === pageId ? {...p, blocks: editorState.getFullBlocks()} : p
-        );
-
-        const content = JSON.stringify(
-            {
-                ...baseProjectData,
-                pages,
-                customCss: editorState.customCss
-            },
-            null,
-            2
-        );
-
-        if (pageId) {
-            projectState.updatePage(pageId, {blocks: editorState.getFullBlocks()})
-        }
-
-        try {
-            const result = await legacyProjectApi.saveAs({content});
-            if (result.success && result.filePath) {
-                useProjectStore.getState().setFilePath(result.filePath);
-                markSaved();
-                showToast(`Saved: ${result.filePath}`, 'success');
-                return
-            }
-            if (!result.canceled) {
-                showToast(result.error || 'Save failed', 'error')
-            }
-        } catch (err) {
-            showToast(String(err), 'error')
-        }
-    }, [api, ensureBackendReadyAndFlushEdits]);
+        await projectCommands.saveAs()
+    }, [ensureBackendReadyAndFlushEdits]);
 
     const handleLoad = useCallback(async () => {
-        const result = await legacyProjectApi.load();
-        if (result.success && result.content) {
-            useProjectStore.getState().setProject(result.content as any, result.filePath);
-            const data = result.content as any;
-            const firstPage = Array.isArray(data.pages) ? data.pages[0] : null;
-            if (firstPage && Array.isArray(firstPage.blocks)) {
-                useEditorStore.getState().loadPageBlocks(firstPage.blocks)
-            }
-            setCustomCss(typeof data.customCss === 'string' ? data.customCss : '');
-            markSaved();
-            showToast('Project loaded', 'success');
-            return
-        }
-        if (!result.canceled) {
-            showToast(result.error || 'Load failed', 'error')
-        }
-    }, [api]);
+        await projectCommands.openProject()
+    }, []);
 
     const handleExport = useCallback(() => {
         setShowExport(true)
@@ -412,8 +321,7 @@ function App(): JSX.Element {
                     handleLoad();
                     break;
                 case 'close-project': {
-                    useProjectStore.getState().closeProject();
-                    useEditorStore.getState().loadPageBlocks([]);
+                    void projectCommands.close();
                     break
                 }
                 case 'save':
@@ -766,6 +674,29 @@ function App(): JSX.Element {
             {renderEditorContent()}
 
             <Toast/>
+
+            {(projectCommandState.progress?.busy || projectCommandState.message?.tone === 'error') && (
+                <div className="project-command-feedback">
+                    {projectCommandState.progress?.busy && (
+                        <div role="status" aria-live="polite" className="project-command-status">
+                            {projectCommandState.progress.operation}: {projectCommandState.progress.phase}
+                            {projectCommandState.progress.total === undefined
+                                ? ''
+                                : ` ${projectCommandState.progress.completed}/${projectCommandState.progress.total}`}
+                        </div>
+                    )}
+
+                    {projectCommandState.message?.tone === 'error' && (
+                        <div role="alert" className="project-command-error">
+                            <strong>{projectCommandState.message.title}</strong>
+                            <span>{projectCommandState.message.detail}</span>
+                            {projectCommandState.message.locations.length > 0 && (
+                                <ul>{projectCommandState.message.locations.map((location) => <li key={location}>{location}</li>)}</ul>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <WelcomeTourDialog
                 open={showWelcomeTour}

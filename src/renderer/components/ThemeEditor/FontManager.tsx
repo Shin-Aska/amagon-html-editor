@@ -19,7 +19,7 @@ import {
   getPreviewFontIdForFamily,
 } from "../../utils/googleFontCss";
 import TypographyFontPicker from "./TypographyFontPicker";
-import { getLegacyBrowserFontMutations } from "../../utils/api";
+import { projectCommands } from "../../project/projectCommands";
 import "./FontManager.css";
 
 type FilterTab = "all" | "imported" | "system" | "internet";
@@ -57,7 +57,6 @@ export default function FontManager({
   const removeFontStore = useProjectStore((s) => s.removeFont);
   const setSystemFonts = useProjectStore((s) => s.setSystemFonts);
   const showToast = useToastStore((s) => s.showToast);
-  const legacyFontMutations = getLegacyBrowserFontMutations();
 
   const [filter, setFilter] = useState<FilterTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -261,14 +260,14 @@ export default function FontManager({
 
   const handleImportFile = async () => {
     try {
-      const res = await legacyFontMutations.importFile();
-      if (res.success && res.fonts && res.fonts.length > 0) {
-        addFonts(res.fonts);
+      const res = await projectCommands.importFonts();
+      if (res.ok && res.value.length > 0) {
+        addFonts([...res.value]);
         showToast(
-          `Imported ${res.fonts.length} font file${res.fonts.length > 1 ? "s" : ""}`,
+          `Imported ${res.value.length} font file${res.value.length > 1 ? "s" : ""}`,
           "success",
         );
-      } else if (!res.canceled) {
+      } else if (res.ok) {
         showToast("No fonts were imported", "info");
       }
     } catch {
@@ -278,11 +277,9 @@ export default function FontManager({
 
   const handleDeleteFont = async (font: FontAsset) => {
     try {
-      removeFontStore(font.id);
-      const res = await legacyFontMutations.deleteFont({
-        relativePath: font.relativePath,
-      });
-      if (res.success) {
+      const res = await projectCommands.deleteFont(font.relativePath);
+      if (res.ok) {
+        removeFontStore(font.id);
         showToast(`Deleted "${font.name}"`, "success");
       } else {
         showToast("Failed to delete font file", "error");
@@ -299,13 +296,10 @@ export default function FontManager({
 
   const handleImportSystemFont = async (name: string) => {
     try {
-      const res = await legacyFontMutations.copySystemFont({
-        familyName: name,
-        filePaths: [],
-      });
-      if (res.success && res.fonts && res.fonts.length > 0) {
-        const hasPhysicalFile = res.fonts.some((f) => f.relativePath);
-        addFonts(res.fonts);
+      const res = await projectCommands.copySystemFont(name, []);
+      if (res.ok && res.value.length > 0) {
+        const hasPhysicalFile = res.value.some((f) => f.relativePath);
+        addFonts([...res.value]);
         if (hasPhysicalFile) {
           showToast(`Imported system font "${name}"`, "success");
         } else {
@@ -315,7 +309,7 @@ export default function FontManager({
           );
         }
       } else {
-        showToast(res.error || `Failed to import "${name}"`, "error");
+        showToast(res.ok ? `Failed to import "${name}"` : res.message.detail, "error");
       }
     } catch {
       showToast(`Error importing "${name}"`, "error");
@@ -339,15 +333,12 @@ export default function FontManager({
     });
 
     try {
-      const res = await legacyFontMutations.downloadGoogleFont({
-        family: meta.family,
-        variants: [variant],
-      });
-      if (res.success && res.fonts) {
-        addFonts(res.fonts);
+      const res = await projectCommands.downloadGoogleFont(meta.family, [variant]);
+      if (res.ok) {
+        addFonts([...res.value]);
         showToast(`Downloaded "${meta.family}"`, "success");
       } else {
-        showToast(res.errors?.[0] || "Download failed", "error");
+        showToast(res.message.detail, "error");
       }
     } catch {
       showToast("Error downloading font", "error");
