@@ -1,6 +1,7 @@
 import { LegacyProjectDocumentSchema, parseLegacyProjectDocument } from "../../shared/projects/projectDocumentSchema";
 import type { AssetInfo, FontMutationBridge, MutationResult, ProjectBridge, ProjectSession, SessionRequest } from "../../shared/projects/projectIpcContract";
 import { parseProjectSessionId, parseRendererGeneration, parseWorkspaceGeneration } from "../../shared/projects/projectIpcContract";
+import { canonicalizePortablePath } from "../../shared/projects/assetReference";
 import { useEditorStore } from "../store/editorStore";
 import { useProjectStore } from "../store/projectStore";
 import { useToastStore } from "../store/toastStore";
@@ -16,6 +17,20 @@ const missingMutation = <T>(request: SessionRequest): MutationResult<T> => ({
   changed: false,
   error: { code: "INTERNAL", message: "Electron project bridge is unavailable" },
 });
+
+type RuntimeInventoryResult = {
+  readonly success: boolean;
+  readonly assets?: readonly { readonly relativePath: string }[];
+  readonly fonts?: readonly { readonly relativePath: string }[];
+};
+
+export const mergeRuntimeAssetPaths = (
+  assets: RuntimeInventoryResult,
+  fonts: RuntimeInventoryResult,
+): readonly string[] => [...new Set([
+  ...(assets.success ? assets.assets?.map((asset) => canonicalizePortablePath(asset.relativePath)) ?? [] : []),
+  ...(fonts.success ? fonts.fonts?.map((font) => canonicalizePortablePath(font.relativePath)) ?? [] : []),
+])].sort();
 
 type LegacyBrowserProjectFacade = {
   readonly new: (request: { readonly name: string; readonly framework: string }) => Promise<{ readonly success: boolean; readonly content?: unknown; readonly filePath?: string; readonly canceled?: boolean; readonly error?: string }>;
@@ -123,8 +138,9 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
     project: electron?.project ?? createLegacyBrowserProjectBridge(getLegacyBrowserProjectApi()),
     assets: {
       listPaths: async () => {
-        const result = await getApi().assets.list();
-        return result.success ? result.assets?.map((asset) => asset.relativePath) ?? [] : [];
+        const api = getApi();
+        const [assets, fonts] = await Promise.all([api.assets.list(), api.fonts.listProject()]);
+        return mergeRuntimeAssetPaths(assets, fonts);
       },
       selectImage: electron?.assets.selectImage ?? unavailableAssets.selectImage,
       selectSingleImage: electron?.assets.selectSingleImage ?? unavailableAssets.selectSingleImage,

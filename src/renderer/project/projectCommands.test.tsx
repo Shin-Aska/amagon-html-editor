@@ -14,7 +14,7 @@ import {
   createProjectCommands,
   type ProjectCommandDependencies,
 } from "./projectCommands";
-import { createLegacyBrowserProjectBridge } from "./projectCommandRuntime";
+import { createLegacyBrowserProjectBridge, mergeRuntimeAssetPaths } from "./projectCommandRuntime";
 
 const SESSION = parseProjectSessionId("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
@@ -141,6 +141,17 @@ const harness = (initial = project()): Harness => {
 };
 
 describe("project commands", () => {
+  it("merges canonical font paths into the runtime portability inventory", () => {
+    expect(mergeRuntimeAssetPaths(
+      { success: true, assets: [{ relativePath: "assets/hero.png" }] },
+      { success: true, fonts: [{ relativePath: "assets/fonts/body.woff2" }, { relativePath: "assets/hero.png" }] },
+    )).toEqual(["assets/fonts/body.woff2", "assets/hero.png"]);
+    expect(mergeRuntimeAssetPaths(
+      { success: false, assets: [{ relativePath: "assets/ignored.png" }] },
+      { success: false, fonts: [{ relativePath: "assets/fonts/ignored.woff2" }] },
+    )).toEqual([]);
+  });
+
   it("installs a loaded project only after main confirms activation", async () => {
     const test = harness();
 
@@ -181,6 +192,11 @@ describe("project commands", () => {
 
     expect(test.commands.state.dirty).toBe(false);
     expect(test.selectImage).toHaveBeenCalledWith({ expectedSessionId: SESSION });
+    expect(test.save.mock.calls[0]?.[0]).toEqual({
+      expectedSessionId: SESSION,
+      rendererGeneration: 0,
+      snapshot: expect.any(Object),
+    });
   });
 
   it("reports structured portability locations and preserves dirty state", async () => {

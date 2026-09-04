@@ -106,8 +106,16 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
             ? LegacyProjectDocumentSchema.parse(invocation.snapshot)
             : ProjectDocumentV1Schema.parse(invocation.snapshot);
           const result = invocation.kind === "save-as"
-            ? await dependencies.project.saveAs({ ...invocation, snapshot })
-            : await dependencies.project.save({ ...invocation, snapshot });
+            ? await dependencies.project.saveAs({
+                expectedSessionId: invocation.expectedSessionId,
+                rendererGeneration: invocation.rendererGeneration,
+                snapshot,
+              })
+            : await dependencies.project.save({
+                expectedSessionId: invocation.expectedSessionId,
+                rendererGeneration: invocation.rendererGeneration,
+                snapshot,
+              });
           if (!result.success) {
             if (result.canceled) return { success: false, error: { code: "CANCELED" } };
             const detail = operationErrorMessage(result.error).detail;

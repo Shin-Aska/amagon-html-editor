@@ -13,6 +13,7 @@
     "build:web": "tsc -b && vite build",
     "preview": "electron-vite preview",
     "test": "vitest run",
+    "test:e2e:electron": "playwright test --config playwright.electron.config.ts",
     "test:watch": "vitest",
     "generate:fonts": "npx tsx scripts/generate-google-fonts-catalog.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",
@@ -47,6 +48,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/user-event": "^14.6.5",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",

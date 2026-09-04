@@ -11,7 +11,7 @@ import type { AtomicFileHandle, AtomicFileSystem } from "./atomicFile";
 import { preflightAmgArchive } from "./amgArchivePreflight";
 import { extractAmgArchive } from "./amgArchiveReader";
 import { openValidatedZip, readEntryBounded } from "./amgArchiveZip";
-import { TEST_PROJECT } from "./amgArchiveFixtures.test";
+import { TEST_PROJECT } from "./amgArchiveFixtures";
 import {
   AmgArchiveWriterError,
   writeAmgArchive,

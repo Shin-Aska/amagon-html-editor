@@ -18,7 +18,7 @@ import {
 } from "../../shared/projects/projectDocumentSchema";
 import { buildProjectSnapshot } from "../../renderer/project/projectSnapshot";
 import { createDefaultTheme, type ProjectData } from "../../renderer/store/types";
-import { TEST_PROJECT } from "./amgArchiveFixtures.test";
+import { TEST_PROJECT } from "./amgArchiveFixtures";
 import { extractAmgArchive } from "./amgArchiveReader";
 import { writeAmgArchive } from "./amgArchiveWriter";
 import { ProjectSessionRegistry } from "./projectSession";

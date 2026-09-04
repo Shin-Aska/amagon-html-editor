@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 import { parseRecentProjectId } from "../../shared/projects/projectIpcContract";
-import { TEST_PROJECT } from "./amgArchiveFixtures.test";
+import { TEST_PROJECT } from "./amgArchiveFixtures";
 import {
   PROJECT_IPC_CHANNELS,
   registerProjectIpc,

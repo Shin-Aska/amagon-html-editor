@@ -18,7 +18,7 @@ import {
   patchSignatureField,
   patchZip64EntryCount,
   replaceAsciiSameLength,
-} from "./amgArchiveFixtures.test";
+} from "./amgArchiveFixtures";
 
 const roots: string[] = [];
 
