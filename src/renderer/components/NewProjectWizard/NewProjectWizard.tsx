@@ -1,6 +1,5 @@
-import {useState} from 'react'
-import {getLegacyBrowserProjectApi} from '../../utils/api'
-import {useProjectStore} from '../../store/projectStore'
+import {useEffect, useRef, useState} from 'react'
+import {projectCommands} from '../../project/projectCommands'
 import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
 import type {FrameworkChoice} from '../../store/types'
@@ -34,10 +33,49 @@ export default function NewProjectWizard({onClose}: NewProjectWizardProps): JSX.
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const setProject = useProjectStore((s) => s.setProject);
-    const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
     const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
-    const legacyProjectApi = getLegacyBrowserProjectApi();
+    const isElectron = typeof window.api !== 'undefined';
+    const modalRef = useRef<HTMLDivElement>(null);
+    const projectNameInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const previouslyFocused = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        projectNameInputRef.current?.focus();
+
+        return () => {
+            previouslyFocused?.focus();
+        };
+    }, []);
+
+    const handleModalKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Escape') {
+            event.stopPropagation();
+            onClose();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = Array.from(
+            modalRef.current?.querySelectorAll<HTMLElement>(
+                'button:not([disabled]), input:not([disabled])'
+            ) ?? []
+        );
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+
+        if (!firstFocusable || !lastFocusable) return;
+
+        if (event.shiftKey && document.activeElement === firstFocusable) {
+            event.preventDefault();
+            lastFocusable.focus();
+        } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+            event.preventDefault();
+            firstFocusable.focus();
+        }
+    };
 
     const handleCreate = async () => {
         if (!projectName.trim()) {
@@ -49,26 +87,17 @@ export default function NewProjectWizard({onClose}: NewProjectWizardProps): JSX.
         setError(null);
 
         try {
-            const result = await legacyProjectApi.new({
+            const result = await projectCommands.newProject({
                 name: projectName.trim(),
                 framework
             });
-
-            if (result.success && result.content) {
-                const data = result.content as any;
-                setProject(data, result.filePath);
-
-                // Load the first page into the editor
-                if (data.pages && data.pages.length > 0) {
-                    setPageBlocks(data.pages[0].blocks)
+            if (result.ok) {
+                if (!isElectron) {
+                    setEditorLayout(useAppSettingsStore.getState().defaultLayout);
                 }
-
-                const defaultLayout = useAppSettingsStore.getState().defaultLayout;
-                setEditorLayout(defaultLayout);
-
-                onClose()
+                onClose();
             } else if (!result.canceled) {
-                setError(result.error || 'Failed to create project.')
+                setError(result.message.detail);
             }
         } catch (err) {
             setError(String(err))
@@ -79,28 +108,44 @@ export default function NewProjectWizard({onClose}: NewProjectWizardProps): JSX.
 
     return (
         <div className="npw-overlay" onClick={onClose}>
-            <div className="npw-modal" onClick={(e) => e.stopPropagation()}>
+            <div
+                ref={modalRef}
+                className="npw-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="new-project-title"
+                aria-describedby="new-project-format-help"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={handleModalKeyDown}
+            >
                 <div className="npw-header">
-                    <h2>New Project</h2>
-                    <button className="npw-close-btn" onClick={onClose}>&times;</button>
+                    <h2 id="new-project-title">New Project</h2>
+                    <button className="npw-close-btn" onClick={onClose} aria-label="Close new project dialog">&times;</button>
                 </div>
 
                 <div className="npw-content">
                     <div className="npw-form-group">
-                        <label className="npw-label">Project Name</label>
+                        <label className="npw-label" htmlFor="new-project-name">Project Name</label>
                         <input
+                            ref={projectNameInputRef}
+                            id="new-project-name"
                             type="text"
                             className="npw-input"
                             value={projectName}
                             onChange={(e) => setProjectName(e.target.value)}
                             placeholder="e.g. My Portfolio"
-                            autoFocus
+                            aria-describedby="new-project-format-help"
                         />
+                        <span id="new-project-format-help" className="npw-fw-info">
+                            {isElectron
+                                ? 'Creates one portable .amg project file. You will choose where to save it next.'
+                                : 'Browser preview creates a legacy JSON project only.'}
+                        </span>
                     </div>
 
                     <div className="npw-form-group">
                         <label className="npw-label">CSS Framework</label>
-                        <div className="npw-framework-list">
+                        <div className="npw-framework-list" role="radiogroup" aria-label="CSS Framework">
                             {FRAMEWORK_OPTIONS.map((fw) => (
                                 <label
                                     key={fw.id}

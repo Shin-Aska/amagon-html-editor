@@ -103,7 +103,7 @@
     font: inherit;
     transition: transform 120ms ease-out, border-color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out;
 }
-.welcome-btn:hover { transform: none; background: var(--color-bg-primary); border-color: var(--color-border); }
+.welcome-btn:not(:disabled):hover { transform: none; background: var(--color-bg-primary); border-color: var(--color-border); }
 .primary-action {
     margin-inline-start: var(--welcome-action-start);
     border-color: color-mix(in srgb, var(--color-accent) 70%, var(--color-border));
@@ -123,6 +123,12 @@
     background: color-mix(in srgb, var(--color-bg-secondary) 72%, transparent);
 }
 .welcome-btn:active { transform: scale(0.985); }
+.welcome-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: var(--color-bg-secondary);
+    border-color: var(--color-border);
+}
 .welcome-btn:focus-visible, .recent-item:focus-visible, .recent-item-remove:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
@@ -131,13 +137,18 @@
 .welcome-recent { min-width: 0; }
 .recent-row { display: grid; grid-template-columns: minmax(0, 1fr) var(--space-6); align-items: center; }
 .recent-item { width: 100%; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
-.recent-item:hover { background: transparent; }
+.recent-item:not(:disabled):hover { background: transparent; }
+.recent-item:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: var(--color-bg-secondary);
+}
 .recent-row:hover .recent-item-remove, .recent-row:focus-within .recent-item-remove { opacity: 1; }
 
 @media (hover: hover) and (pointer: fine) {
-    .welcome-btn:hover { transform: translateY(-1px) scale(1.01); background: var(--color-bg-hover); border-color: var(--color-accent); }
-    .primary-action:hover { background: color-mix(in srgb, var(--color-accent) 25%, var(--color-bg-primary)); box-shadow: inset 3px 0 0 var(--color-accent), 0 12px 28px color-mix(in srgb, var(--color-accent) 20%, transparent); }
-    .recent-item:hover { background: var(--color-bg-secondary); }
+    .welcome-btn:not(:disabled):hover { transform: translateY(-1px) scale(1.01); background: var(--color-bg-hover); border-color: var(--color-accent); }
+    .primary-action:not(:disabled):hover { background: color-mix(in srgb, var(--color-accent) 25%, var(--color-bg-primary)); box-shadow: inset 3px 0 0 var(--color-accent), 0 12px 28px color-mix(in srgb, var(--color-accent) 20%, transparent); }
+    .recent-item:not(:disabled):hover { background: var(--color-bg-secondary); }
 }
 
 @media (max-width: 980px), (max-height: 720px) {
@@ -149,6 +160,43 @@
     .beacon-page-action { height: var(--space-3); }
     .welcome-body { height: var(--welcome-body-compact-height); }
     .recent-header { padding: var(--space-3) var(--space-4); }
+}
+
+@media (max-width: 640px) {
+    .welcome-screen {
+        padding: var(--space-3);
+        overflow-y: auto;
+    }
+
+    .welcome-content {
+        width: calc(100vw - (var(--space-3) * 2));
+        padding: var(--space-4);
+        gap: var(--space-5);
+    }
+
+    .welcome-header,
+    .welcome-body {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-5);
+    }
+
+    .welcome-body {
+        height: auto;
+    }
+
+    .welcome-actions {
+        gap: var(--space-2);
+    }
+
+    .welcome-btn {
+        width: 100%;
+        min-height: calc(var(--space-8) + var(--space-8));
+        margin-inline-start: 0;
+    }
+
+    .welcome-recent {
+        min-height: calc(var(--welcome-body-compact-height) - var(--space-8));
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

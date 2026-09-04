@@ -114,7 +114,13 @@
 }
 
 .npw-hidden-radio {
-    display: none;
+    position: absolute;
+    opacity: 0;
+}
+
+.npw-framework-card:has(.npw-hidden-radio:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
 }
 
 .npw-fw-icon {
