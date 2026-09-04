@@ -2,6 +2,8 @@ import { expect, type Dialog, type Page } from "@playwright/test";
 import type { AmagonHarness } from "./electronHarness";
 import { queueNativeDialogs } from "./electronHarness";
 
+const projectUiStepTimeoutMs = 15_000;
+
 type ProjectUiRequest = {
   readonly harness: AmagonHarness;
   readonly filePath: string;
@@ -38,7 +40,9 @@ export const settleEditor = async (harness: AmagonHarness): Promise<void> => {
 
 export const createProjectThroughUi = async (request: NewProjectUiRequest): Promise<void> => {
   await queueNativeDialogs(request.harness.app, { saves: [request.filePath] });
-  await request.harness.page.getByRole("button", { name: /New Project/u }).click();
+  const newProject = request.harness.page.getByRole("button", { name: /New Project/u });
+  await expect(newProject).toBeVisible({ timeout: projectUiStepTimeoutMs });
+  await newProject.click({ timeout: projectUiStepTimeoutMs });
   await request.harness.page.getByLabel("Project Name").fill(request.name);
   await request.harness.page.getByRole("button", { name: "Create Project" }).click();
   await settleEditor(request.harness);
