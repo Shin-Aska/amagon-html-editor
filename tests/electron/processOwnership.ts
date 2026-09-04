@@ -97,6 +97,11 @@ export const canTerminateCapturedProcess = (
   profilePath: string,
 ): boolean => isSameCapturedProcess(captured, current) && isExactProfileOwner(current, profilePath);
 
+export const canTerminateCapturedDescendant = (
+  captured: ProcessIdentity,
+  current: ProcessIdentity,
+): boolean => isSameCapturedProcess(captured, current);
+
 export const captureProcessTree = async (
   rootProcessId: number,
   profilePath: string,
@@ -135,23 +140,24 @@ export const terminateCapturedProcessTree = async (
   if (root !== undefined) {
     const currentRoot = current.find((process) => process.pid === root.pid);
     if (currentRoot !== undefined && canTerminateCapturedProcess(root, currentRoot, profilePath)) {
-      await terminateProcessTree(root, profilePath);
+      await terminateProcess(root, true);
       return;
     }
   }
   for (const expected of captured.slice(1)) {
     const candidate = current.find((process) => process.pid === expected.pid);
-    if (candidate !== undefined && canTerminateCapturedProcess(expected, candidate, profilePath)) {
-      await terminateProcessTree(expected, profilePath);
+    if (candidate !== undefined && canTerminateCapturedDescendant(expected, candidate)) {
+      await terminateProcess(expected, false);
     }
   }
 };
 
-const terminateProcessTree = async (captured: ProcessIdentity, profilePath: string): Promise<void> => {
+const terminateProcess = async (captured: ProcessIdentity, includeDescendants: boolean): Promise<void> => {
   const current = (await readProcessIdentities([captured.pid]))[0];
-  if (current === undefined || !canTerminateCapturedProcess(captured, current, profilePath)) return;
+  if (current === undefined || !canTerminateCapturedDescendant(captured, current)) return;
   try {
-    await runWindowsCommand("taskkill.exe", ["/PID", String(captured.pid), "/T", "/F"]);
+    const treeArgument = includeDescendants ? ["/T"] : [];
+    await runWindowsCommand("taskkill.exe", ["/PID", String(captured.pid), ...treeArgument, "/F"]);
   } catch (error) {
     if (!(error instanceof Error)) throw error;
     const remaining = await readLiveCapturedProcesses([captured]);

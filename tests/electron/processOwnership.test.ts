@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canTerminateCapturedDescendant,
   canTerminateCapturedProcess,
   isExactProfileOwner,
   isTrustedMainProcess,
@@ -66,4 +67,21 @@ test("whole-argument quotes identify the trusted main and reject the Playwright 
   assert.equal(isTrustedMainProcess(wrapper, profilePath, token), false);
   assert.equal(isTrustedMainProcess(trustedMain, profilePath, token), true);
   assert.equal(isTrustedMainProcess(trustedMain, profilePath, "different-token"), false);
+});
+
+test("an exact captured descendant remains terminable after the trusted main exits", () => {
+  // Given: a non-Electron subprocess captured while it was descended from the trusted main.
+  const capturedChild: ProcessIdentity = {
+    commandLine: "curl.exe --max-time 30 https://fonts.googleapis.com/css2?family=Rubik",
+    creationTime: "134330131825011440",
+    executablePath: "C:\\Program Files\\Git\\mingw64\\bin\\curl.exe",
+    name: "curl.exe",
+    pid: 50_800,
+  };
+
+  // When: the trusted main has exited but the exact same captured child remains.
+  const canTerminate = canTerminateCapturedDescendant(capturedChild, capturedChild);
+
+  // Then: exact capture identity retains teardown authority without relying on Electron-only arguments.
+  assert.equal(canTerminate, true);
 });
