@@ -71,6 +71,7 @@ export const retireState = async (
   retainedWorkspacePath?: string,
 ): Promise<void> => {
   if (state === null) return;
+  runtime.abortSessionTransfers?.(requireSessionId(state.session));
   await state.session.waitForReadLeases();
   state.session.close();
   if (

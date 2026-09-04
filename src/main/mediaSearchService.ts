@@ -4,6 +4,7 @@
 
 import * as path from 'path'
 import * as fs from 'fs/promises'
+import {randomUUID} from 'node:crypto'
 import {app, net} from 'electron'
 import {decryptApiKey, encryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
 
@@ -363,16 +364,31 @@ export async function searchMedia(
 export async function downloadAndImportMedia(
     url: string,
     projectDir: string,
-    filename?: string
+    filename?: string,
+    options: {
+        readonly signal?: AbortSignal
+        readonly maxBytes?: number
+        readonly relativeDirectory?: 'assets' | 'assets/fonts'
+    } = {}
 ): Promise<{ success: boolean; path?: string; relativePath?: string; error?: string }> {
+    const maxBytes = options.maxBytes ?? 250 * 1024 * 1024
+    let partialPath: string | null = null
+    let partialHandle: Awaited<ReturnType<typeof fs.open>> | null = null
     try {
-        const response = await net.fetch(url);
+        const response = await net.fetch(url, {signal: options.signal});
         if (!response.ok) {
             return {success: false, error: `Download failed: ${response.status}`}
         }
+        if (response.body === null) {
+            return {success: false, error: 'Download returned no body'}
+        }
+        const declaredLength = Number(response.headers.get('content-length'))
+        if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+            await response.body.cancel()
+            return {success: false, error: `Download exceeds the ${maxBytes}-byte project media limit`}
+        }
 
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
-        const buffer = Buffer.from(await response.arrayBuffer());
 
         // Determine extension from content type or URL
         let ext = '.bin';
@@ -383,12 +399,14 @@ export async function downloadAndImportMedia(
         else if (contentType.includes('video/mp4')) ext = '.mp4';
         else if (contentType.includes('video/webm')) ext = '.webm';
         else if (contentType.includes('video/ogg')) ext = '.ogv';
+        else if (contentType.includes('font/woff2') || contentType.includes('application/font-woff2')) ext = '.woff2';
 
         // Generate filename if not provided
-        const baseName = filename || `web-${Date.now()}`;
+        const requestedBaseName = filename || `web-${Date.now()}`;
+        const baseName = path.basename(requestedBaseName).replace(/[^a-zA-Z0-9._-]/gu, '-') || 'web-media';
         let finalName = `${baseName}${ext}`;
 
-        const assetsDir = path.join(projectDir, 'assets');
+        const assetsDir = path.join(projectDir, ...(options.relativeDirectory ?? 'assets').split('/'));
         await fs.mkdir(assetsDir, {recursive: true});
 
         // Handle duplicate names
@@ -400,15 +418,45 @@ export async function downloadAndImportMedia(
             counter++
         }
 
-        await fs.writeFile(destPath, buffer);
-        const relativePath = path.relative(projectDir, destPath);
+        partialPath = `${destPath}.amagon-partial-${randomUUID()}`
+        partialHandle = await fs.open(partialPath, 'wx')
+        const reader = response.body.getReader()
+        const cancelReader = (): void => {
+            void reader.cancel('download canceled')
+        }
+        options.signal?.addEventListener('abort', cancelReader, {once: true})
+        let total = 0
+        try {
+            while (true) {
+                if (options.signal?.aborted) throw new DOMException('Download canceled', 'AbortError')
+                const chunk = await reader.read()
+                if (chunk.done) break
+                total += chunk.value.byteLength
+                if (total > maxBytes) {
+                    await reader.cancel('quota exceeded')
+                    throw new RangeError(`Download exceeds the ${maxBytes}-byte project media limit`)
+                }
+                await partialHandle.write(chunk.value)
+            }
+            if (options.signal?.aborted) throw new DOMException('Download canceled', 'AbortError')
+        } finally {
+            options.signal?.removeEventListener('abort', cancelReader)
+            reader.releaseLock()
+        }
+        await partialHandle.sync()
+        await partialHandle.close()
+        partialHandle = null
+        await fs.rename(partialPath, destPath)
+        partialPath = null
+        const relativePath = path.relative(projectDir, destPath).replace(/\\/gu, '/');
 
         return {
             success: true,
-            path: `app-media://project-asset/${relativePath}`,
             relativePath
         }
-    } catch (err: any) {
-        return {success: false, error: err.message}
+    } catch (err: unknown) {
+        if (partialHandle !== null) await partialHandle.close().catch(() => undefined)
+        if (partialPath !== null) await fs.rm(partialPath, {force: true}).catch(() => undefined)
+        return {success: false, error: err instanceof Error ? err.message : 'Media download failed'}
     }
 }

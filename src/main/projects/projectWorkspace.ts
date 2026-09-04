@@ -3,6 +3,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rm,
   writeFile,
@@ -205,4 +206,28 @@ export async function cleanupOwnedWorkspace(
     }
     throw error;
   }
+}
+
+export async function cleanupStaleOwnedWorkspaces(
+  userDataPath: string,
+): Promise<readonly WorkspaceCleanupResult[]> {
+  const rootPath = path.resolve(userDataPath, WORKSPACE_ROOT_NAME);
+  let entries;
+  try {
+    entries = await readdir(rootPath, { withFileTypes: true });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const results: WorkspaceCleanupResult[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.isSymbolicLink() || !entry.name.startsWith("session-")) continue;
+    results.push(await cleanupOwnedWorkspace({
+      userDataPath,
+      workspacePath: path.join(rootPath, entry.name),
+      activeReadLeases: 0,
+      ownership: "app",
+    }));
+  }
+  return results;
 }

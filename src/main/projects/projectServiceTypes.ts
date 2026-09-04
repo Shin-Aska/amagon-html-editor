@@ -4,6 +4,7 @@ import type {
   ProjectCloseResult,
   ProjectNewRequest,
   ProjectSaveRequest,
+  ProjectSessionId,
   ProjectSessionResult,
   RecentProjectsResult,
   RemoveRecentResult,
@@ -48,6 +49,7 @@ export type ProjectServiceOptions = {
   readonly files?: ProjectServiceFiles;
   readonly sessions?: ProjectSessionRegistry;
   readonly onDirectoryChange?: (directory: string | null) => void;
+  readonly abortSessionTransfers?: (sessionId: ProjectSessionId) => void;
 };
 
 export interface ProjectPersistenceService {
@@ -60,10 +62,15 @@ export interface ProjectPersistenceService {
   readonly close: (request: ProjectCloseRequest) => Promise<ProjectCloseResult>;
   readonly getRecent: () => Promise<RecentProjectsResult>;
   readonly getDirectory: () => Promise<{ readonly success: true; readonly directory: string | null }>;
+  readonly resolveAssetRead: (reference: string) => Promise<{
+    readonly filePath: string;
+    readonly release: () => void;
+  }>;
 }
 
 export type ProjectServiceRuntime = {
   readonly userDataPath: string;
   readonly files: ProjectServiceFiles;
   readonly sessions: ProjectSessionRegistry;
+  readonly abortSessionTransfers?: (sessionId: ProjectSessionId) => void;
 };

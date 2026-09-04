@@ -14,6 +14,7 @@ import type {
     MutationResult,
     AssetInfo,
 } from '../shared/projects/projectIpcContract'
+import type {LifecycleRequest, LifecycleResult} from '../main/projects/projectLifecycle'
 
 const {contextBridge, ipcRenderer} = electron;
 
@@ -71,6 +72,15 @@ const api = {
             ipcRenderer.on('project:progress', handler)
             return () => ipcRenderer.removeListener('project:progress', handler)
         },
+
+        onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => {
+            const handler = (_event: electron.IpcRendererEvent, request: LifecycleRequest) => callback(request)
+            ipcRenderer.on('project:lifecycle-close-request', handler)
+            return () => ipcRenderer.removeListener('project:lifecycle-close-request', handler)
+        },
+
+        finishLifecycleClose: (result: LifecycleResult): Promise<boolean> =>
+            ipcRenderer.invoke('project:finish-lifecycle-close', result),
 
         getDir: () => ipcRenderer.invoke('project:getDir')
     },

@@ -38,6 +38,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   let installing = false;
   let mutating = false;
   let latestSaveSession: ProjectSession | null = null;
+  let runSave: (kind: CoordinatorSaveKind) => Promise<ProjectCommandResult>;
   let availableAssetPaths: readonly string[] = [];
   const getLatestSaveSession = (): ProjectSession | null => latestSaveSession;
 
@@ -135,6 +136,14 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     request: () => ReturnType<ProjectCommandDependencies["project"]["load"]>,
   ): Promise<ProjectCommandResult> => {
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
+    if (state.session !== null && state.dirty) {
+      const choice = dependencies.chooseDirtyTransition?.() ?? "cancel";
+      if (choice === "cancel") return cancel();
+      if (choice === "save") {
+        const saved = await runSave("save");
+        if (!saved.ok) return saved;
+      }
+    }
     publish({ busy: operation, message: null });
     try {
       const result = await request();
@@ -147,9 +156,10 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     }
   };
 
-  const runSave = async (kind: CoordinatorSaveKind): Promise<ProjectCommandResult> => {
+  runSave = async (kind: CoordinatorSaveKind): Promise<ProjectCommandResult> => {
     if (coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
+    if (kind === "autosave" && !coordinator.state.dirty) return { ok: true, value: undefined };
     const operation = kind === "save-as" ? "save-as" : "save";
     latestSaveSession = null;
     publish({ busy: operation, message: null });

@@ -6,7 +6,7 @@ import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import * as os from "os";
 import { exec, execFile } from "child_process";
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { getFonts } from "font-list";
 import {
   buildSystemPrompt,
@@ -56,10 +56,21 @@ import {
   resolveSensitiveValues,
   saveCredentialRecord,
 } from "./credentialCatalog";
-import { createProjectService } from "./projects/projectService";
-import { inspectProjectMetadata } from "./projects/projectServiceFiles";
+import { createProjectService, type ProjectPersistenceService } from "./projects/projectService";
+import { createDefaultProjectServiceFiles, inspectProjectMetadata } from "./projects/projectServiceFiles";
 import { createRecentProjectsStore } from "./projects/recentProjects";
 import { registerProjectIpc } from "./projects/registerProjectIpc";
+import { ProjectSessionRegistry } from "./projects/projectSession";
+import { APP_MEDIA_SCHEME, createProjectMediaHandler } from "./projects/projectMediaProtocol";
+import { cleanupStaleOwnedWorkspaces } from "./projects/projectWorkspace";
+import { createLifecycleController, focusSecondInstance, type LifecycleController, type LifecycleResult } from "./projects/projectLifecycle";
+import { buildRuntimeAssetUrl, canonicalizePortablePath } from "../shared/projects/assetReference";
+import { type AssetInfo, type ProjectSessionId } from "../shared/projects/projectIpcContract";
+import { copyFilesAtomically, inventoryWithHashes, runFileCopyMutation, runProjectMutation } from "./projects/projectMutation";
+import { canceledMutation, runMutationBoundary } from "./projects/projectMutationBoundary";
+import { createProjectTransferRegistry, runCancellableTransferBatch } from "./projects/projectTransferRegistry";
+import { initializeProjectStartup } from "./projects/projectStartup";
+import type { FontAsset } from "../renderer/store/types";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -74,6 +85,17 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 let currentProjectDir: string | null = null;
 let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
+const projectSessions = new ProjectSessionRegistry();
+const projectTransfers = createProjectTransferRegistry();
+const projectFiles = createDefaultProjectServiceFiles();
+let projectService: ProjectPersistenceService | null = null;
+let lifecycleController: LifecycleController | null = null;
+
+const hasSingleInstanceLock = initializeProjectStartup({
+  registerScheme: (scheme, privileges) => protocol.registerSchemesAsPrivileged([{ scheme, privileges }]),
+  requestSingleInstanceLock: () => app.requestSingleInstanceLock(),
+  quit: () => app.quit(),
+});
 
 // ---------------------------------------------------------------------------
 // MIME type helper
@@ -164,6 +186,17 @@ async function createWindow(): Promise<void> {
     mainWindow = null;
     stopAutoSave();
   });
+  lifecycleController = createLifecycleController({
+    createRequestId: randomUUID,
+    send: (request) => mainWindow?.webContents.send("project:lifecycle-close-request", request),
+    closeWindow: () => mainWindow?.close(),
+    quit: () => app.quit(),
+  });
+  mainWindow.on("close", (event) => {
+    if (lifecycleController?.canCloseWindow()) return;
+    event.preventDefault();
+    lifecycleController?.request("window-close");
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +222,7 @@ const GOOGLE_FONTS_MAX_CONCURRENT_REQUESTS = 4;
 const GOOGLE_FONTS_MAX_QUEUED_REQUESTS = 100;
 
 let activeGoogleFontsRequests = 0;
-const queuedGoogleFontsRequests: Array<() => void> = [];
+const queuedGoogleFontsRequests: Array<{ readonly start: () => void }> = [];
 
 function isGoogleFontsUrl(url: string): boolean {
   try {
@@ -205,7 +238,7 @@ function isGoogleFontsUrl(url: string): boolean {
 
 function fetchGoogleFontsWithCurl(
   url: string,
-  options?: { headers?: Record<string, string> },
+  options?: { headers?: Record<string, string>; signal?: AbortSignal },
 ): Promise<Buffer> {
   const curlPath = process.platform === "win32" ? "curl.exe" : "curl";
   const args = [
@@ -230,7 +263,7 @@ function fetchGoogleFontsWithCurl(
     execFile(
       curlPath,
       args,
-      { encoding: "buffer", maxBuffer: 10 * 1024 * 1024, windowsHide: true },
+      { encoding: "buffer", maxBuffer: 10 * 1024 * 1024, windowsHide: true, signal: options?.signal },
       (error, stdout, stderr) => {
         if (error) {
           const details = stderr.toString().trim();
@@ -245,9 +278,12 @@ function fetchGoogleFontsWithCurl(
 
 async function fetchGoogleFontsWithNode(
   url: string,
-  options?: { headers?: Record<string, string> },
+  options?: { headers?: Record<string, string>; signal?: AbortSignal },
 ): Promise<Buffer> {
   const controller = new AbortController();
+  const abortFromCaller = (): void => controller.abort();
+  options?.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  if (options?.signal?.aborted) controller.abort();
   const timeout = setTimeout(
     () => controller.abort(),
     GOOGLE_FONTS_REQUEST_TIMEOUT_MS,
@@ -289,6 +325,7 @@ async function fetchGoogleFontsWithNode(
     }
     return Buffer.concat(chunks);
   } finally {
+    options?.signal?.removeEventListener("abort", abortFromCaller);
     clearTimeout(timeout);
   }
 }
@@ -301,13 +338,13 @@ function isCurlUnavailable(error: unknown): boolean {
 
 async function fetchGoogleFontsBuffer(
   url: string,
-  options?: { headers?: Record<string, string> },
+  options?: { headers?: Record<string, string>; signal?: AbortSignal },
 ): Promise<Buffer> {
   if (!isGoogleFontsUrl(url)) {
     throw new Error("Unexpected font URL origin (blocked)");
   }
 
-  const releaseRequest = await acquireGoogleFontsRequest();
+  const releaseRequest = await acquireGoogleFontsRequest(options?.signal);
   try {
     try {
       return await fetchGoogleFontsWithCurl(url, options);
@@ -322,7 +359,8 @@ async function fetchGoogleFontsBuffer(
   }
 }
 
-async function acquireGoogleFontsRequest(): Promise<() => void> {
+async function acquireGoogleFontsRequest(signal?: AbortSignal): Promise<() => void> {
+  if (signal?.aborted) throw new DOMException("Google Fonts request canceled", "AbortError");
   if (activeGoogleFontsRequests < GOOGLE_FONTS_MAX_CONCURRENT_REQUESTS) {
     activeGoogleFontsRequests++;
     return releaseGoogleFontsRequest;
@@ -331,11 +369,25 @@ async function acquireGoogleFontsRequest(): Promise<() => void> {
     throw new Error("Too many Google Fonts requests in progress");
   }
 
-  return new Promise((resolve) => {
-    queuedGoogleFontsRequests.push(() => {
-      activeGoogleFontsRequests++;
-      resolve(releaseGoogleFontsRequest);
-    });
+  return new Promise((resolve, reject) => {
+    const queued = {
+      start: () => {
+        signal?.removeEventListener("abort", cancel);
+        if (signal?.aborted) {
+          reject(new DOMException("Google Fonts request canceled", "AbortError"));
+          return;
+        }
+        activeGoogleFontsRequests++;
+        resolve(releaseGoogleFontsRequest);
+      },
+    };
+    const cancel = (): void => {
+      const index = queuedGoogleFontsRequests.indexOf(queued);
+      if (index >= 0) queuedGoogleFontsRequests.splice(index, 1);
+      reject(new DOMException("Google Fonts request canceled", "AbortError"));
+    };
+    signal?.addEventListener("abort", cancel, { once: true });
+    queuedGoogleFontsRequests.push(queued);
   });
 }
 
@@ -343,13 +395,13 @@ function releaseGoogleFontsRequest(): void {
   activeGoogleFontsRequests--;
   const nextRequest = queuedGoogleFontsRequests.shift();
   if (nextRequest) {
-    nextRequest();
+    nextRequest.start();
   }
 }
 
 async function fetchGoogleFontsText(
   url: string,
-  options?: { headers?: Record<string, string> },
+  options?: { headers?: Record<string, string>; signal?: AbortSignal },
 ): Promise<string> {
   const buffer = await fetchGoogleFontsBuffer(url, options);
   return buffer.toString("utf-8");
@@ -431,63 +483,10 @@ function registerAppFrameworkProtocol(): void {
 // ---------------------------------------------------------------------------
 
 function registerAppMediaProtocol(): void {
-  protocol.handle("app-media", async (request) => {
-    // URL format: app-media://project-asset/<relative-path>
-    // or         app-media://absolute/<absolute-path>
-    const url = new URL(request.url);
-
-    let filePath: string;
-
-    if (url.hostname === "project-asset") {
-      // Relative to the current project directory
-      if (!currentProjectDir) {
-        return new Response("No project directory set", { status: 400 });
-      }
-      const relativePath = decodeURIComponent(url.pathname).replace(/^\//, "");
-      filePath = path.join(currentProjectDir, relativePath);
-
-      // Security: ensure the resolved path stays inside the project dir
-      if (!isPathSafe(filePath, currentProjectDir)) {
-        return new Response("Forbidden: path traversal detected", {
-          status: 403,
-        });
-      }
-    } else if (url.hostname === "absolute") {
-      // Absolute path (used during development / for images outside project)
-      filePath = decodeURIComponent(url.pathname);
-      // On Windows, pathname starts with / before drive letter; strip it
-      if (process.platform === "win32" && filePath.startsWith("/")) {
-        filePath = filePath.slice(1);
-      }
-    } else {
-      // Legacy / fallback: treat entire URL path as absolute
-      filePath = decodeURIComponent(url.pathname);
-      if (url.hostname) {
-        filePath = path.join(url.hostname, filePath);
-      }
-      if (process.platform !== "win32") {
-        filePath = "/" + filePath;
-      }
-    }
-
-    // Check file exists
-    if (!existsSync(filePath)) {
-      return new Response("File not found", { status: 404 });
-    }
-
-    // Read and serve with correct MIME type
-    try {
-      const data = await fs.readFile(filePath);
-      const mimeType = getMimeType(filePath);
-      return new Response(data, {
-        headers: { "Content-Type": mimeType },
-      });
-    } catch (err: any) {
-      return new Response(`Error reading file: ${err.message}`, {
-        status: 500,
-      });
-    }
-  });
+  protocol.handle(APP_MEDIA_SCHEME, createProjectMediaHandler({
+    sessions: projectSessions,
+    mimeType: getMimeType,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -713,10 +712,11 @@ function registerIpcHandlers(): void {
     return null;
   }
 
-  ipcMain.handle("fonts:importFile", async () => {
-    if (!mainWindow)
-      return { success: false, error: "Main window not available" };
-    try {
+  ipcMain.handle("fonts:importFile", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (!mainWindow) throw new Error("Main window not available");
       const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
         title: "Import Font Files",
         filters: [
@@ -726,270 +726,18 @@ function registerIpcHandlers(): void {
       });
 
       if (canceled || filePaths.length === 0) {
-        return { success: false, canceled: true, fonts: [] };
+        return canceledMutation(projectSessions, expectedSessionId);
       }
-
-      if (!currentProjectDir) {
-        return { success: false, error: "No project directory set" };
-      }
-
-      const fontsDir = path.join(currentProjectDir, "assets", "fonts");
-      await fs.mkdir(fontsDir, { recursive: true });
-
-      const importedFonts: any[] = [];
-      for (const srcPath of filePaths) {
-        const fileName = path.basename(srcPath);
-        let destPath = path.join(fontsDir, fileName);
-        let counter = 1;
-        while (existsSync(destPath)) {
-          const ext = path.extname(fileName);
-          const base = path.basename(fileName, ext);
-          destPath = path.join(fontsDir, `${base}-${counter}${ext}`);
-          counter++;
-        }
-
-        await fs.copyFile(srcPath, destPath);
-
-        const relativePath = path.relative(currentProjectDir, destPath);
-        const ext = path.extname(fileName).slice(1) as
-          | "ttf"
-          | "otf"
-          | "woff"
-          | "woff2";
-
-        importedFonts.push({
-          id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
-          name: path.basename(fileName, path.extname(fileName)),
-          fileName: path.basename(destPath),
-          relativePath,
-          format: ext,
-          weight: "400",
-          style: "normal",
-          source: "imported",
-        });
-      }
-
-      return { success: true, fonts: importedFonts };
-    } catch (error: any) {
-      return { success: false, error: error.message, fonts: [] };
-    }
-  });
-
-  ipcMain.handle(
-    "fonts:copySystemFont",
-    async (_, args: { familyName: string; filePaths: string[] }) => {
-      if (!currentProjectDir)
-        return { success: false, error: "No project directory set", fonts: [] };
-      if (!args?.familyName)
-        return { success: false, error: "familyName required", fonts: [] };
-
-      try {
-        const fontsDir = path.join(currentProjectDir, "assets", "fonts");
-        await fs.mkdir(fontsDir, { recursive: true });
-
-        let srcPaths: string[] = (args.filePaths || []).filter(Boolean);
-        if (srcPaths.length === 0) {
-          const resolved = await resolveSystemFontPath(args.familyName);
-          if (resolved) srcPaths = [resolved];
-        }
-
-        if (srcPaths.length === 0) {
-          // Cannot locate the font file on disk — return a best-effort FontAsset for system stacks
-          // (font won't be physically copied but the name will be available in the picker)
-          const asset: any = {
-            id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
-            name: args.familyName,
-            fileName: "",
-            relativePath: "",
-            format: "ttf" as const,
-            weight: "400",
-            style: "normal",
-            source: "system" as const,
-          };
-          return { success: true, fonts: [asset] };
-        }
-
-        const imported: any[] = [];
-        for (const srcPath of srcPaths) {
-          if (!existsSync(srcPath)) continue;
-
-          const fileName = path.basename(srcPath);
-          let destPath = path.join(fontsDir, fileName);
-          let counter = 1;
-          while (existsSync(destPath)) {
-            const ext = path.extname(fileName);
-            const base = path.basename(fileName, ext);
-            destPath = path.join(fontsDir, `${base}-${counter}${ext}`);
-            counter++;
-          }
-
-          await fs.copyFile(srcPath, destPath);
-          const relativePath = path
-            .relative(currentProjectDir, destPath)
-            .replace(/\\/g, "/");
-          const ext = path.extname(fileName).slice(1) as
-            | "ttf"
-            | "otf"
-            | "woff"
-            | "woff2";
-
-          imported.push({
-            id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
-            name: args.familyName,
-            fileName: path.basename(destPath),
-            relativePath,
-            format: ext || "ttf",
-            weight: "400",
-            style: "normal",
-            source: "system",
-          });
-        }
-
-        return { success: true, fonts: imported };
-      } catch (error: any) {
-        return { success: false, error: error.message, fonts: [] };
-      }
+      const mutation = mutationContext(expectedSessionId);
+      return runFileCopyMutation(
+        mutation.context,
+        mutation.workspacePath,
+        "assets/fonts",
+        filePaths,
+        (files) => files.map((file) => importedFont(file, path.basename(file.fileName, path.extname(file.fileName)), "imported")),
+      );
     },
-  );
-
-  ipcMain.handle(
-    "fonts:downloadGoogleFont",
-    async (
-      _,
-      args: {
-        family: string;
-        variants: Array<{ weight: string; style: string }>;
-      },
-    ) => {
-      if (!currentProjectDir)
-        return { success: false, error: "No project directory set", fonts: [] };
-      if (!args?.family || typeof args.family !== "string") {
-        return { success: false, error: "family required", fonts: [] };
-      }
-
-      try {
-        const fontsDir = path.join(currentProjectDir, "assets", "fonts");
-        await fs.mkdir(fontsDir, { recursive: true });
-
-        if (!isPathSafe(fontsDir, currentProjectDir)) {
-          return {
-            success: false,
-            error: "Forbidden: invalid fonts directory",
-            fonts: [],
-          };
-        }
-
-        const family = args.family.trim();
-        const variants =
-          Array.isArray(args.variants) && args.variants.length > 0
-            ? args.variants
-            : [{ weight: "400", style: "normal" }];
-
-        const downloadedFonts: any[] = [];
-        const errors: string[] = [];
-
-        const encodedFamily = encodeURIComponent(family).replace(/%20/g, "+");
-        const familySlug =
-          family
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "")
-            .replace(/-+/g, "-")
-            .replace(/^-|-$/g, "") || "font";
-
-        const userAgent =
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-
-        for (const variant of variants) {
-          const style =
-            String(variant?.style || "normal").toLowerCase() === "italic"
-              ? "italic"
-              : "normal";
-          const italic = style === "italic" ? "1" : "0";
-          const weightRaw = String(variant?.weight || "400");
-          const weightMatch = weightRaw.match(/\d{3}/);
-          const weight = weightMatch ? weightMatch[0] : "400";
-
-          try {
-            const cssUrl = `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${italic},${weight}&display=swap`;
-            const css = await fetchGoogleFontsText(cssUrl, {
-              headers: { "User-Agent": userAgent },
-            });
-
-            const latinBlock = css.match(
-              /\/\*\s*latin\s*\*\/[\s\S]*?src:\s*url\(([^)]+)\)/i,
-            );
-            const srcMatch = latinBlock || css.match(/src:\s*url\(([^)]+)\)/i);
-            if (!srcMatch?.[1]) {
-              errors.push(
-                `${family} ${weight} ${style}: Could not parse font URL from CSS`,
-              );
-              continue;
-            }
-
-            const woff2Url = srcMatch[1].trim().replace(/^['"]|['"]$/g, "");
-            // Security: only fetch from the expected Google Fonts CDN domain
-            if (!woff2Url.startsWith("https://fonts.gstatic.com/")) {
-              errors.push(
-                `${family} ${weight} ${style}: Unexpected font URL origin (blocked): ${woff2Url.slice(0, 80)}`,
-              );
-              continue;
-            }
-            const buffer = await fetchGoogleFontsBuffer(woff2Url);
-            if (buffer.length === 0) {
-              errors.push(
-                `${family} ${weight} ${style}: Downloaded file is empty`,
-              );
-              continue;
-            }
-
-            const baseName = `${familySlug}-${weight}-${style}`;
-            let fileName = `${baseName}.woff2`;
-            let destPath = path.join(fontsDir, fileName);
-            let counter = 1;
-            while (existsSync(destPath)) {
-              fileName = `${baseName}-${counter}.woff2`;
-              destPath = path.join(fontsDir, fileName);
-              counter++;
-            }
-
-            if (!isPathSafe(destPath, fontsDir)) {
-              errors.push(
-                `${family} ${weight} ${style}: Forbidden destination path`,
-              );
-              continue;
-            }
-
-            await fs.writeFile(destPath, buffer);
-            const relativePath = path
-              .relative(currentProjectDir, destPath)
-              .replace(/\\/g, "/");
-
-            downloadedFonts.push({
-              id: `font_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
-              name: family,
-              fileName,
-              relativePath,
-              format: "woff2",
-              weight,
-              style,
-              source: "google-fonts",
-            });
-          } catch (error: any) {
-            errors.push(`${family} ${weight} ${style}: ${error.message}`);
-          }
-        }
-
-        return {
-          success: downloadedFonts.length > 0,
-          fonts: downloadedFonts,
-          ...(errors.length ? { errors } : {}),
-        };
-      } catch (error: any) {
-        return { success: false, error: error.message, fonts: [] };
-      }
-    },
-  );
+  ));
 
   ipcMain.handle(
     "fonts:fetchGoogleFontCss",
@@ -1305,8 +1053,11 @@ function registerIpcHandlers(): void {
 
   // ── 8.4  Asset Management ─────────────────────────────────────────────
 
-  ipcMain.handle("assets:selectImage", async () => {
-    try {
+  ipcMain.handle("assets:selectImage", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (!mainWindow) throw new Error("Main window not available");
       const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
         title: "Select Image(s)",
         filters: [
@@ -1332,50 +1083,24 @@ function registerIpcHandlers(): void {
       });
 
       if (canceled || filePaths.length === 0) {
-        return { success: false, canceled: true };
+        return canceledMutation(projectSessions, expectedSessionId);
       }
+      const mutation = mutationContext(expectedSessionId);
+      return runFileCopyMutation(
+        mutation.context,
+        mutation.workspacePath,
+        "assets",
+        filePaths,
+        (files) => files.map((file) => importedAsset(expectedSessionId, file, "image")),
+      );
+    },
+  ));
 
-      // If we have a project directory, copy assets into project assets/ folder
-      const resultPaths: string[] = [];
-
-      if (currentProjectDir) {
-        const assetsDir = path.join(currentProjectDir, "assets");
-        await fs.mkdir(assetsDir, { recursive: true });
-
-        for (const srcPath of filePaths) {
-          const filename = path.basename(srcPath);
-          let destPath = path.join(assetsDir, filename);
-
-          // Handle duplicates by appending a counter
-          let counter = 1;
-          while (existsSync(destPath)) {
-            const ext = path.extname(filename);
-            const base = path.basename(filename, ext);
-            destPath = path.join(assetsDir, `${base}-${counter}${ext}`);
-            counter++;
-          }
-
-          await fs.copyFile(srcPath, destPath);
-
-          // Return an app-media URL that references the project asset
-          const relativePath = path.relative(currentProjectDir, destPath);
-          resultPaths.push(`app-media://project-asset/${relativePath}`);
-        }
-      } else {
-        // No project yet — return absolute app-media paths
-        for (const srcPath of filePaths) {
-          resultPaths.push(`app-media://absolute/${srcPath}`);
-        }
-      }
-
-      return { success: true, filePaths: resultPaths };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle("assets:selectSingleImage", async () => {
-    try {
+  ipcMain.handle("assets:selectSingleImage", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (!mainWindow) throw new Error("Main window not available");
       const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
         title: "Select Image",
         filters: [
@@ -1401,49 +1126,25 @@ function registerIpcHandlers(): void {
       });
 
       if (canceled || filePaths.length === 0) {
-        return { success: false, canceled: true };
+        return canceledMutation(projectSessions, expectedSessionId);
       }
+      const sourcePath = filePaths[0];
+      if (sourcePath === undefined) throw new TypeError("selected image path is missing");
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => {
+        const files = await copyFilesAtomically(mutation.workspacePath, "assets", [sourcePath]);
+        const file = files[0];
+        if (file === undefined) throw new TypeError("image import produced no file");
+        return importedAsset(expectedSessionId, file, "image");
+      });
+    },
+  ));
 
-      const srcPath = filePaths[0];
-      const fileName = path.basename(srcPath);
-      const mimeType = getMimeType(srcPath);
-
-      if (currentProjectDir) {
-        const assetsDir = path.join(currentProjectDir, "assets");
-        await fs.mkdir(assetsDir, { recursive: true });
-
-        let destPath = path.join(assetsDir, fileName);
-        let counter = 1;
-        while (existsSync(destPath)) {
-          const ext = path.extname(fileName);
-          const base = path.basename(fileName, ext);
-          destPath = path.join(assetsDir, `${base}-${counter}${ext}`);
-          counter++;
-        }
-
-        await fs.copyFile(srcPath, destPath);
-        const relativePath = path.relative(currentProjectDir, destPath);
-        return {
-          success: true,
-          filePath: `app-media://project-asset/${relativePath}`,
-          data: path.basename(destPath),
-          mimeType,
-        };
-      }
-
-      return {
-        success: true,
-        filePath: `app-media://absolute/${srcPath}`,
-        data: fileName,
-        mimeType,
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle("assets:selectVideo", async () => {
-    try {
+  ipcMain.handle("assets:selectVideo", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (!mainWindow) throw new Error("Main window not available");
       const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
         title: "Select Video",
         filters: [
@@ -1456,56 +1157,26 @@ function registerIpcHandlers(): void {
       });
 
       if (canceled || filePaths.length === 0) {
-        return { success: false, canceled: true };
+        return canceledMutation(projectSessions, expectedSessionId);
       }
-
-      const srcPath = filePaths[0];
-      const fileName = path.basename(srcPath);
-      const mimeType = getMimeType(srcPath);
-
-      if (currentProjectDir) {
-        const assetsDir = path.join(currentProjectDir, "assets");
-        await fs.mkdir(assetsDir, { recursive: true });
-
-        let destPath = path.join(assetsDir, fileName);
-        let counter = 1;
-        while (existsSync(destPath)) {
-          const ext = path.extname(fileName);
-          const base = path.basename(fileName, ext);
-          destPath = path.join(assetsDir, `${base}-${counter}${ext}`);
-          counter++;
-        }
-
-        await fs.copyFile(srcPath, destPath);
-        const relativePath = path.relative(currentProjectDir, destPath);
-        return {
-          success: true,
-          filePath: `app-media://project-asset/${relativePath}`,
-          data: path.basename(destPath),
-          mimeType,
-        };
-      }
-
-      return {
-        success: true,
-        filePath: `app-media://absolute/${srcPath}`,
-        data: fileName,
-        mimeType,
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => (
+        await copyFilesAtomically(mutation.workspacePath, "assets", filePaths)
+      ).map((file) => importedAsset(expectedSessionId, file, "video")));
+    },
+  ));
 
   // ── List project assets ───────────────────────────────────────────────
 
   ipcMain.handle("assets:list", async () => {
     try {
-      if (!currentProjectDir) {
+      const workspacePath = projectSessions.active.workspacePath;
+      const sessionId = projectSessions.active.id;
+      if (workspacePath === null || sessionId === null) {
         return { success: true, assets: [] };
       }
 
-      const assetsDir = path.join(currentProjectDir, "assets");
+      const assetsDir = path.join(workspacePath, "assets");
       if (!existsSync(assetsDir)) {
         return { success: true, assets: [] };
       }
@@ -1539,7 +1210,7 @@ function registerIpcHandlers(): void {
           const relativePath = `assets/${e.name}`;
           return {
             name: e.name,
-            path: `app-media://project-asset/${relativePath}`,
+            path: buildRuntimeAssetUrl(sessionId, relativePath),
             relativePath,
             type,
           };
@@ -1621,38 +1292,27 @@ function registerIpcHandlers(): void {
         };
       }
 
-      let filePath: string;
-
-      if (input.startsWith("app-media://project-asset/")) {
-        if (!currentProjectDir) {
-          return { success: false, error: "No project directory" };
+      if (projectService === null) return { success: false, error: "Project service unavailable" };
+      const readable = await projectService.resolveAssetRead(input);
+      try {
+        const stats = await fs.stat(readable.filePath);
+        const sizeMB = stats.size / (1024 * 1024);
+        if (stats.size > maxBytes) {
+          return {
+            success: false,
+            error: `File is too large (${sizeMB.toFixed(1)}MB). Max 5MB for base64 embedding.`,
+          };
         }
-        const rel = input.replace("app-media://project-asset/", "");
-        filePath = path.join(currentProjectDir, decodeURIComponent(rel));
-      } else if (input.startsWith("app-media://absolute/")) {
-        filePath = decodeURIComponent(
-          input.replace("app-media://absolute/", ""),
-        );
-      } else {
-        filePath = input;
-      }
-
-      const data = await fs.readFile(filePath);
-      const sizeMB = data.byteLength / (1024 * 1024);
-      if (data.byteLength > maxBytes) {
+        const data = await fs.readFile(readable.filePath);
+        const mime = getMimeType(readable.filePath);
         return {
-          success: false,
-          error: `File is too large (${sizeMB.toFixed(1)}MB). Max 5MB for base64 embedding.`,
+          success: true,
+          data: `data:${mime};base64,${data.toString("base64")}`,
+          mimeType: mime,
         };
+      } finally {
+        readable.release();
       }
-
-      const mime = getMimeType(filePath);
-      const base64 = data.toString("base64");
-      return {
-        success: true,
-        data: `data:${mime};base64,${base64}`,
-        mimeType: mime,
-      };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -1660,61 +1320,43 @@ function registerIpcHandlers(): void {
 
   // ── Delete an asset ───────────────────────────────────────────────────
 
-  ipcMain.handle("assets:delete", async (_, relativePath: string) => {
-    try {
-      if (!currentProjectDir) {
-        return { success: false, error: "No project directory set" };
+  ipcMain.handle("assets:delete", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (typeof request !== "object" || request === null || !("relativePath" in request) || typeof request.relativePath !== "string") {
+        throw new TypeError("relativePath is required");
       }
-
-      const fullPath = path.join(currentProjectDir, relativePath);
-
-      // Security check
-      if (!isPathSafe(fullPath, currentProjectDir)) {
-        return { success: false, error: "Path traversal detected" };
-      }
-
-      if (!existsSync(fullPath)) {
-        return { success: false, error: "File not found" };
-      }
-
-      await fs.unlink(fullPath);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+      const relativePath = canonicalizePortablePath(request.relativePath);
+      if (!relativePath.startsWith("assets/")) throw new TypeError("only project assets can be deleted");
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => {
+        const fullPath = path.join(mutation.workspacePath, ...relativePath.split("/"));
+        const backupPath = `${fullPath}.amagon-delete-${randomUUID()}`;
+        await fs.rename(fullPath, backupPath);
+        await fs.rm(backupPath);
+        return null;
+      });
+    },
+  ));
 
   // ── Read asset as base64 (for preview / export) ───────────────────────
 
   ipcMain.handle("assets:readAsset", async (_, assetPath: string) => {
     try {
-      let filePath: string;
-
-      if (assetPath.startsWith("app-media://project-asset/")) {
-        if (!currentProjectDir) {
-          return { success: false, error: "No project directory" };
-        }
-        const rel = assetPath.replace("app-media://project-asset/", "");
-        filePath = path.join(currentProjectDir, decodeURIComponent(rel));
-      } else if (assetPath.startsWith("app-media://absolute/")) {
-        filePath = decodeURIComponent(
-          assetPath.replace("app-media://absolute/", ""),
-        );
-      } else {
-        filePath = assetPath;
+      if (projectService === null) return { success: false, error: "Project service unavailable" };
+      const readable = await projectService.resolveAssetRead(assetPath);
+      try {
+        const stats = await fs.stat(readable.filePath);
+        if (stats.size > 5 * 1024 * 1024) return { success: false, error: "File exceeds the 5MB base64 limit" };
+        const data = await fs.readFile(readable.filePath);
+        const mime = getMimeType(readable.filePath);
+        return { success: true, data: `data:${mime};base64,${data.toString("base64")}`, mimeType: mime };
+      } finally {
+        readable.release();
       }
-
-      const data = await fs.readFile(filePath);
-      const mime = getMimeType(filePath);
-      const base64 = data.toString("base64");
-
-      return {
-        success: true,
-        data: `data:${mime};base64,${base64}`,
-        mimeType: mime,
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "asset read failed" };
     }
   });
 
@@ -1732,38 +1374,23 @@ function registerIpcHandlers(): void {
 
   // ── Copy asset into project (for drag-in from external) ───────────────
 
-  ipcMain.handle("assets:import", async (_, srcPath: string) => {
-    try {
-      if (!currentProjectDir) {
-        return { success: false, error: "No project directory" };
+  ipcMain.handle("assets:import", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (typeof request !== "object" || request === null || !("srcPath" in request) || typeof request.srcPath !== "string") {
+        throw new TypeError("srcPath is required");
       }
-
-      const assetsDir = path.join(currentProjectDir, "assets");
-      await fs.mkdir(assetsDir, { recursive: true });
-
-      const filename = path.basename(srcPath);
-      let destPath = path.join(assetsDir, filename);
-
-      let counter = 1;
-      while (existsSync(destPath)) {
-        const ext = path.extname(filename);
-        const base = path.basename(filename, ext);
-        destPath = path.join(assetsDir, `${base}-${counter}${ext}`);
-        counter++;
-      }
-
-      await fs.copyFile(srcPath, destPath);
-      const relativePath = path.relative(currentProjectDir, destPath);
-
-      return {
-        success: true,
-        path: `app-media://project-asset/${relativePath}`,
-        relativePath,
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+      const sourcePath = request.srcPath;
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => {
+        const files = await copyFilesAtomically(mutation.workspacePath, "assets", [sourcePath]);
+        const file = files[0];
+        if (file === undefined) throw new TypeError("asset import produced no file");
+        return importedAsset(expectedSessionId, file);
+      });
+    },
+  ));
 
   // ── App Settings ───────────────────────────────────────────────────────
 
@@ -2187,19 +1814,150 @@ function registerIpcHandlers(): void {
     },
   );
 
-  ipcMain.handle("mediaSearch:downloadAndImport", async (_, url: string) => {
-    try {
-      if (!currentProjectDir) {
-        return { success: false, error: "No project directory" };
+  ipcMain.handle("mediaSearch:downloadAndImport", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (typeof request !== "object" || request === null || !("url" in request) || typeof request.url !== "string") {
+        throw new TypeError("url is required");
       }
+      const mediaUrl = request.url;
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => {
+        const downloaded = await projectTransfers.run(expectedSessionId, (signal) => (
+          downloadAndImportMedia(mediaUrl, mutation.workspacePath, undefined, { signal })
+        ));
+        if (!downloaded.success || downloaded.relativePath === undefined) {
+          throw new Error(downloaded.error ?? "media download failed");
+        }
+        const fileName = path.basename(downloaded.relativePath);
+        return importedAsset(expectedSessionId, { fileName, relativePath: downloaded.relativePath });
+      });
+    },
+  ));
 
-      return await downloadAndImportMedia(url, currentProjectDir);
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
+  ipcMain.removeHandler("fonts:copySystemFont");
+  ipcMain.handle("fonts:copySystemFont", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (
+        typeof request !== "object" || request === null
+        || !("familyName" in request) || typeof request.familyName !== "string"
+        || !("filePaths" in request) || !Array.isArray(request.filePaths)
+        || !request.filePaths.every((item) => typeof item === "string")
+      ) throw new TypeError("valid familyName and filePaths are required");
+      const mutation = mutationContext(expectedSessionId);
+      const familyName = request.familyName;
+      const requestedPaths: readonly string[] = request.filePaths;
+      return await runProjectMutation(mutation.context, async () => {
+        let sourcePaths = requestedPaths.filter((item) => item.length > 0);
+        if (sourcePaths.length === 0) {
+          const resolved = await resolveSystemFontPath(familyName);
+          if (resolved !== null) sourcePaths = [resolved];
+        }
+        if (sourcePaths.length === 0) {
+          return [{
+            id: `font_${randomUUID()}`,
+            name: familyName,
+            fileName: "",
+            relativePath: "",
+            format: "ttf",
+            weight: "400",
+            style: "normal",
+            source: "system",
+          } satisfies FontAsset];
+        }
+        const files = await copyFilesAtomically(mutation.workspacePath, "assets/fonts", sourcePaths);
+        return files.map((file) => importedFont(file, familyName, "system"));
+      });
+    },
+  ));
 
-  const projectService = createProjectService({
+  ipcMain.handle("fonts:downloadGoogleFont", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (
+        typeof request !== "object" || request === null
+        || !("family" in request) || typeof request.family !== "string"
+        || !("variants" in request) || !Array.isArray(request.variants)
+      ) throw new TypeError("valid family and variants are required");
+      const variants = request.variants.map((variant) => {
+        if (
+          typeof variant !== "object" || variant === null
+          || !("weight" in variant) || typeof variant.weight !== "string"
+          || !("style" in variant) || typeof variant.style !== "string"
+        ) throw new TypeError("font variant is invalid");
+        return { weight: variant.weight, style: variant.style };
+      });
+      const family = request.family.trim();
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => projectTransfers.run(expectedSessionId, async (signal) => {
+        const completed: string[] = [];
+        try {
+          return await runCancellableTransferBatch(signal, variants, async (variant) => {
+            const style = variant.style.toLowerCase() === "italic" ? "italic" : "normal";
+            const weight = variant.weight.match(/\d{3}/u)?.[0] ?? "400";
+            const encodedFamily = encodeURIComponent(family).replace(/%20/gu, "+");
+            const slug = family.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "") || "font";
+            const css = await fetchGoogleFontsText(
+              `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${style === "italic" ? "1" : "0"},${weight}&display=swap`,
+              { headers: { "User-Agent": "Mozilla/5.0" }, signal },
+            );
+            const sourceUrl = css.match(/src:\s*url\(([^)]+)\)/iu)?.[1]?.trim().replace(/^['"]|['"]$/gu, "");
+            if (sourceUrl === undefined || !sourceUrl.startsWith("https://fonts.gstatic.com/")) {
+              throw new TypeError("Google Fonts returned an invalid font URL");
+            }
+            const downloaded = await downloadAndImportMedia(
+              sourceUrl,
+              mutation.workspacePath,
+              `${slug}-${weight}-${style}`,
+              {
+                signal,
+                maxBytes: GOOGLE_FONTS_MAX_RESPONSE_BYTES,
+                relativeDirectory: "assets/fonts",
+              },
+            );
+            if (!downloaded.success || downloaded.relativePath === undefined) {
+              throw new Error(downloaded.error ?? "Google Font download failed");
+            }
+            completed.push(downloaded.relativePath);
+            return importedFont({ fileName: path.basename(downloaded.relativePath), relativePath: downloaded.relativePath }, family, "google-fonts", weight, style);
+          });
+        } catch (error) {
+          await Promise.all(completed.map((relativePath) => fs.rm(
+            path.join(mutation.workspacePath, ...relativePath.split("/")),
+            { force: true },
+          )));
+          throw error;
+        }
+      }));
+    },
+  ));
+
+  ipcMain.removeHandler("fonts:deleteFont");
+  ipcMain.handle("fonts:deleteFont", async (_, request: unknown) => runMutationBoundary(
+    projectSessions,
+    request,
+    async (expectedSessionId) => {
+      if (typeof request !== "object" || request === null || !("relativePath" in request) || typeof request.relativePath !== "string") {
+        throw new TypeError("relativePath is required");
+      }
+      const relativePath = canonicalizePortablePath(request.relativePath);
+      if (!relativePath.startsWith("assets/fonts/")) throw new TypeError("only project fonts can be deleted");
+      const mutation = mutationContext(expectedSessionId);
+      return await runProjectMutation(mutation.context, async () => {
+        const target = path.join(mutation.workspacePath, ...relativePath.split("/"));
+        const backup = `${target}.amagon-delete-${randomUUID()}`;
+        await fs.rename(target, backup);
+        await fs.rm(backup);
+        return null;
+      });
+    },
+  ));
+
+  projectService = createProjectService({
     userDataPath: app.getPath("userData"),
     documentsPath: app.getPath("documents"),
     dialogs: {
@@ -2234,8 +1992,13 @@ function registerIpcHandlers(): void {
       storagePath: path.join(app.getPath("userData"), "recent-projects.json"),
       inspect: inspectProjectMetadata,
     }),
+    sessions: projectSessions,
+    files: projectFiles,
+    abortSessionTransfers: (sessionId) => projectTransfers.abortSession(sessionId),
     onDirectoryChange: (directory) => {
       currentProjectDir = directory;
+      if (directory === null) stopAutoSave();
+      else startAutoSave();
     },
   });
   registerProjectIpc({
@@ -2244,13 +2007,74 @@ function registerIpcHandlers(): void {
     },
     removeHandler: (channel) => ipcMain.removeHandler(channel),
   }, projectService);
+  ipcMain.handle("project:finish-lifecycle-close", (_event, result: LifecycleResult) => (
+    lifecycleController?.finish(result) ?? false
+  ));
 }
+
+const requireWorkspacePath = (): string => {
+  const workspacePath = projectSessions.active.workspacePath;
+  if (workspacePath === null) throw new TypeError("no project workspace is active");
+  return workspacePath;
+};
+
+const mutationContext = (expectedSessionId: ProjectSessionId) => {
+  const workspacePath = requireWorkspacePath();
+  return {
+    workspacePath,
+    context: {
+      sessions: projectSessions,
+      expectedSessionId,
+      listInventory: async () => inventoryWithHashes(
+        workspacePath,
+        await projectFiles.listAssetPaths(workspacePath),
+      ),
+    },
+  };
+};
+
+const importedAsset = (
+  sessionId: ProjectSessionId,
+  file: { readonly fileName: string; readonly relativePath: string },
+  type?: "image" | "video",
+): AssetInfo => ({
+  name: file.fileName,
+  path: buildRuntimeAssetUrl(sessionId, file.relativePath),
+  relativePath: file.relativePath,
+  ...(type === undefined ? {} : { type }),
+});
+
+const importedFont = (
+  file: { readonly fileName: string; readonly relativePath: string },
+  name: string,
+  source: FontAsset["source"],
+  weight = "400",
+  style = "normal",
+): FontAsset => {
+  const extension = path.extname(file.fileName).slice(1).toLowerCase();
+  const format = extension === "otf" || extension === "woff" || extension === "woff2" ? extension : "ttf";
+  return {
+    id: `font_${randomUUID()}`,
+    name,
+    fileName: file.fileName,
+    relativePath: file.relativePath,
+    format,
+    weight,
+    style,
+    source,
+  };
+};
 
 // ---------------------------------------------------------------------------
 // App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(async () => {
+if (hasSingleInstanceLock) app.on("second-instance", () => {
+  focusSecondInstance(mainWindow);
+});
+
+if (hasSingleInstanceLock) app.whenReady().then(async () => {
+  await cleanupStaleOwnedWorkspaces(app.getPath("userData"));
   registerAppFrameworkProtocol();
   registerAppMediaProtocol();
   registerIpcHandlers();
@@ -2266,6 +2090,14 @@ app.whenReady().then(async () => {
       createWindow();
     }
   });
+});
+
+app.on("before-quit", (event) => {
+  const controller = lifecycleController;
+  if (!hasSingleInstanceLock || controller === null || controller.canQuit()) return;
+  if (mainWindow === null) return;
+  event.preventDefault();
+  controller.request("quit");
 });
 
 app.on("window-all-closed", () => {

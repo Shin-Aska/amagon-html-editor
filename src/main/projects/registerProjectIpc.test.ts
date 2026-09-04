@@ -32,6 +32,7 @@ const service = {
   close: async () => ({ success: false, canceled: true } as const),
   getRecent: async () => ({ success: true, projects: [] } as const),
   getDirectory: async () => ({ success: true, directory: null } as const),
+  resolveAssetRead: async () => ({ filePath: "", release: () => undefined }),
 };
 
 describe("project IPC registration", () => {

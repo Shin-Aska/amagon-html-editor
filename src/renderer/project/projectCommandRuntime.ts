@@ -119,7 +119,7 @@ const unavailableFonts: FontMutationBridge<FontAsset> = {
 
 export const createRuntimeProjectCommands = (): ProjectCommands => {
   const electron = window.api;
-  return createProjectCommands({
+  const commands = createProjectCommands({
     project: electron?.project ?? createLegacyBrowserProjectBridge(getLegacyBrowserProjectApi()),
     assets: {
       listPaths: async () => {
@@ -170,4 +170,11 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
     ),
     chooseDirtyTransition: () => window.confirm("Save changes before closing?") ? "save" : window.confirm("Discard unsaved changes?") ? "discard" : "cancel",
   });
+  electron?.project.onLifecycleCloseRequest((request) => {
+    void commands.close().then((result) => electron.project.finishLifecycleClose({
+      ...request,
+      proceed: result.ok,
+    }));
+  });
+  return commands;
 };

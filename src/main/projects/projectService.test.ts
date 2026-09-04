@@ -654,7 +654,7 @@ describe("project persistence service", () => {
     expect(saved.session.committedWorkspaceGeneration).toBe(1);
   });
 
-  it("rejects queued work after its session is replaced without a second write", async () => {
+  it("drains queued work before replacing the active session", async () => {
     // Given: one save inside archive IO and a second save queued behind it.
     const harness = createHarness();
     harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\old.amg" });
@@ -683,18 +683,18 @@ describe("project persistence service", () => {
       snapshot: old.session.data,
     });
 
-    // When: a validated archive replaces the active session before the queue advances.
+    // When: a validated archive waits for both queued saves before replacing the session.
     harness.archives.set("C:\\projects\\replacement.amg", structuredClone(TEST_PROJECT));
     harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\replacement.amg"] });
-    const replacement = await harness.service.openProject();
+    const replacing = harness.service.openProject();
     release.resolve();
-    const [firstResult, queuedResult] = await Promise.all([inFlight, queued]);
+    const [replacement, firstResult, queuedResult] = await Promise.all([replacing, inFlight, queued]);
 
-    // Then: the queued operation observes stale authority and never reaches archive IO.
+    // Then: both saves complete in FIFO order before the replacement becomes active.
     expect(replacement.success).toBe(true);
-    expect(firstResult.success).toBe(false);
-    expect(queuedResult).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
-    expect(writes).toBe(1);
+    expect(firstResult.success).toBe(true);
+    expect(queuedResult.success).toBe(true);
+    expect(writes).toBe(2);
   });
 
   it("revalidates a queued renderer generation before a second archive write", async () => {

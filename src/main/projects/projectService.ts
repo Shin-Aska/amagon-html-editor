@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   parseRecentProjectId,
   parseRendererGeneration,
@@ -50,6 +51,7 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
       userDataPath: options.userDataPath,
       files: options.files ?? createDefaultProjectServiceFiles(),
       sessions: options.sessions ?? new ProjectSessionRegistry(),
+      ...(options.abortSessionTransfers === undefined ? {} : { abortSessionTransfers: options.abortSessionTransfers }),
     };
   }
 
@@ -86,7 +88,15 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
 
   private async finishActivation(next: ActiveProjectState, retainedWorkspacePath?: string): Promise<ProjectSessionResult> {
     await this.options.recents.add(next.session.sourcePath ?? "");
-    const previous = this.activate(next);
+    const previous = this.active;
+    if (previous === null) {
+      this.activate(next);
+    } else {
+      this.runtime.abortSessionTransfers?.(requireSessionId(previous.session));
+      await this.runtime.sessions.runMutation(requireSessionId(previous.session), () => {
+        this.activate(next);
+      });
+    }
     await retireState(previous, this.runtime, retainedWorkspacePath);
     return sessionSuccess(next);
   }
@@ -179,6 +189,7 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
     );
     if (targetPath === null) return { success: false, canceled: true };
     try {
+      this.runtime.abortSessionTransfers?.(requireSessionId(active.session));
       const committed = await saveActiveProjectAs(active, this.runtime, request, targetPath);
       try {
         await this.options.recents.add(targetPath);
@@ -196,6 +207,9 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
 
   async close(request: ProjectCloseRequest): Promise<ProjectCloseResult> {
     if (request.dirtyChoice === "cancel") return { success: false, canceled: true };
+    if (this.active?.session.id === request.expectedSessionId) {
+      this.runtime.abortSessionTransfers?.(request.expectedSessionId);
+    }
     if (request.dirtyChoice === "save") {
       const saved = await this.save(request);
       if (!saved.success) return saved;
@@ -244,6 +258,29 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
 
   async getDirectory(): Promise<{ readonly success: true; readonly directory: string | null }> {
     return { success: true, directory: this.active?.session.workspacePath ?? null };
+  }
+
+  async resolveAssetRead(reference: string): Promise<{ readonly filePath: string; readonly release: () => void }> {
+    const active = this.requireActive();
+    if (reference.startsWith("app-media://")) {
+      const resolved = await this.runtime.sessions.resolveRuntimeAsset(reference);
+      return { filePath: resolved.filePath, release: resolved.lease.release };
+    }
+    if (active.session.kind !== "legacy-json" || !active.approvedExternalReferences.includes(reference)) {
+      throw new ProjectServiceTargetError("project data cannot authorize this local file read");
+    }
+    let filePath: string;
+    if (reference.toLowerCase().startsWith("file:")) {
+      filePath = fileURLToPath(reference);
+    } else if (reference.toLowerCase().startsWith("app-media://absolute/")) {
+      filePath = decodeURIComponent(reference.slice("app-media://absolute/".length));
+    } else if (path.isAbsolute(reference)) {
+      filePath = reference;
+    } else {
+      throw new ProjectServiceTargetError("approved legacy reference is not an absolute local path");
+    }
+    const lease = active.session.acquireReadLease(requireSessionId(active.session));
+    return { filePath, release: lease.release };
   }
 }
 

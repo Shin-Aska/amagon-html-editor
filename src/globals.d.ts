@@ -9,6 +9,7 @@ import type {
     ProjectBridge,
 } from './shared/projects/projectIpcContract'
 import type {IpcResult} from './renderer/utils/api'
+import type {LifecycleRequest, LifecycleResult} from './main/projects/projectLifecycle'
 
 export {}
 
@@ -31,6 +32,8 @@ declare global {
                 total: number,
                 path?: string
             }) => void) => () => void,
+            onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => () => void
+            finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
         assets: AssetMutationBridge & {
             list: () => Promise<IpcResult>

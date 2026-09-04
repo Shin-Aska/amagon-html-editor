@@ -17,6 +17,7 @@ import type {
     MediaMutationBridge,
     ProjectBridge,
 } from '../shared/projects/projectIpcContract'
+import type {LifecycleRequest, LifecycleResult} from '../main/projects/projectLifecycle'
 
 declare global {
     type CredentialCategory = 'ai' | 'multimedia' | 'publisher'
@@ -57,6 +58,8 @@ declare global {
                 total: number;
                 path?: string
             }) => void) => () => void
+            onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => () => void
+            finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
         assets: AssetMutationBridge & {
             list: () => Promise<any>

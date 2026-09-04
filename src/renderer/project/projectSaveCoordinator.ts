@@ -119,7 +119,16 @@ export const createProjectSaveCoordinator = (
 
   const runSave = async (kind: CoordinatorSaveKind): Promise<CoordinatorSaveResult> => {
     const rendererGeneration = internal.renderer;
-    const built = options.createSnapshot(kind);
+    let built: ProjectSnapshotResult;
+    try {
+      built = options.createSnapshot(kind);
+    } catch (error) {
+      return {
+        success: false,
+        code: "execution-failed",
+        message: error instanceof Error ? error.message : "Snapshot creation failed",
+      };
+    }
     if (!built.ok) {
       return {
         success: false,
