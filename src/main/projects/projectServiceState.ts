@@ -37,12 +37,12 @@ export const closedSuccess = (state: ActiveProjectState): ProjectClosedSuccess =
   return { success: true, ...success };
 };
 
-export const collectApprovedExternalReferences = async (
+export const validateLegacyProject = async (
   state: ActiveProjectState,
   runtime: ProjectServiceRuntime,
-): Promise<readonly string[]> => {
+): Promise<void> => {
   const workspacePath = state.session.workspacePath;
-  if (workspacePath === null) return [];
+  if (workspacePath === null) return;
   const scan = scanProjectPortability(state.data, {
     mode: "legacy-durable",
     sessionId: requireSessionId(state.session),
@@ -62,7 +62,6 @@ export const collectApprovedExternalReferences = async (
     approvedExternalReferences: approved,
   });
   if (stored.offenders.length > 0) throw new ProjectServicePortabilityError(stored.offenders);
-  return approved;
 };
 
 export const retireState = async (

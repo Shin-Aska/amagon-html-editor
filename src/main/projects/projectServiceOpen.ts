@@ -1,7 +1,7 @@
 import path from "node:path";
 import { ProjectSession } from "./projectSession";
 import { validateStoredProject } from "./projectServiceSave";
-import { collectApprovedExternalReferences } from "./projectServiceState";
+import { validateLegacyProject } from "./projectServiceState";
 import type { ActiveProjectState, ProjectServiceRuntime } from "./projectServiceTypes";
 
 export const stageAmgProject = async (
@@ -33,5 +33,6 @@ export const stageLegacyProject = async (
     data,
     approvedExternalReferences: [],
   };
-  return { ...state, approvedExternalReferences: await collectApprovedExternalReferences(state, runtime) };
+  await validateLegacyProject(state, runtime);
+  return state;
 };

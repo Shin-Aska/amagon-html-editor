@@ -11,7 +11,7 @@ import type {
 import { scanProjectPortability } from "../../shared/projects/projectPortability";
 import { ProjectSession } from "./projectSession";
 import { ProjectServicePortabilityError } from "./projectServiceErrors";
-import { requireSessionId, sessionSuccess } from "./projectServiceState";
+import { requireSessionId, sessionSuccess, validateLegacyProject } from "./projectServiceState";
 import type { ActiveProjectState, ProjectServiceRuntime } from "./projectServiceTypes";
 import { rollbackProjectTarget, type ProjectTargetTransaction } from "./projectTargetTransaction";
 
@@ -74,7 +74,7 @@ export const persistActiveProject = async (
     return { state: next, result: sessionSuccess(next) };
   }
   const project = parseLegacyProjectDocument(request.snapshot);
-  await validateStoredProject(state, runtime, project, "legacy-stored");
+  await validateLegacyProject({ ...state, data: project }, runtime);
   await runtime.files.writeLegacy(state.session.sourcePath ?? "", project);
   state.session.commitGenerations(expectedSessionId, {
     rendererGeneration: request.rendererGeneration,

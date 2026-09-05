@@ -997,8 +997,8 @@ function escapeAttrValue(value: string): string {
 
 function createDefaultAssetResolver(): (url: string) => Promise<ResolvedAsset | null> {
     return async (url: string) => {
-        // Prefer Electron IPC bridge if this is an app-media URL
-        if (url.startsWith('app-media://')) {
+        // Route local references through the main-owned authorization boundary.
+        if (/^(?:app-media:|file:|[a-z]:[\\/]|\\\\|\/)/iu.test(url)) {
             const api = getApi();
             const result = await api.assets.readAsset(url);
             if (!result.success || !result.data) return null;
