@@ -6,51 +6,25 @@ import { fileURLToPath } from "url";
 import { execFile } from "child_process";
 import { randomUUID } from "crypto";
 import { getFonts } from "font-list";
-import {
-  buildSystemPrompt,
-  chat as aiChat,
-  fetchAvailableModels,
-  fetchModelsForProvider,
-  loadApiKeyForProvider,
-  loadConfig as aiLoadConfig,
-  maskApiKey,
-  MASKED_KEY_PREFIX,
-  PROVIDER_MODELS,
-  saveConfig as aiSaveConfig,
-} from "./aiService";
+import { buildSystemPrompt, chat as aiChat, fetchAvailableModels, fetchModelsForProvider, loadApiKeyForProvider, loadConfig as aiLoadConfig, maskApiKey, MASKED_KEY_PREFIX, PROVIDER_MODELS, saveConfig as aiSaveConfig } from "./aiService";
 import { CLI_BINARY_NAMES, detectCliProvider } from "./cliHelpers";
 import { isEncryptionSecure } from "./cryptoHelpers";
 import { buildAppMenu } from "./menu";
 import "../publish/providers/index";
-import {
-  getAllPublishers,
-  getPublisher,
-} from "../publish";
-import {
-  deletePublishCredentials,
-  loadPublishCredentials,
-  savePublishCredentials,
-} from "./publishCredentials";
-import {
-  deleteCredentialRecord,
-  getCredentialDefinitions,
-  getCredentialValues,
-  listCredentialRecords,
-  resolveSensitiveValues,
-  saveCredentialRecord,
-} from "./credentialCatalog";
+import { getAllPublishers, getPublisher } from "../publish";
+import { deletePublishCredentials, loadPublishCredentials, savePublishCredentials } from "./publishCredentials";
+import { deleteCredentialRecord, getCredentialDefinitions, getCredentialValues, listCredentialRecords, resolveSensitiveValues, saveCredentialRecord } from "./credentialCatalog";
 import { createProjectService, type ProjectPersistenceService } from "./projects/projectService";
 import { createDefaultProjectServiceFiles, inspectProjectMetadata } from "./projects/projectServiceFiles";
 import { createRecentProjectsStore } from "./projects/recentProjects";
 import { registerProjectIpc } from "./projects/registerProjectIpc";
 import { ProjectSessionRegistry } from "./projects/projectSession";
 import { cleanupStaleOwnedWorkspaces } from "./projects/projectWorkspace";
-import { focusSecondInstance, type LifecycleResult } from "./projects/projectLifecycle";
+import { focusSecondInstance } from "./projects/projectLifecycle";
 import { buildRuntimeAssetUrl } from "../shared/projects/assetReference";
 import { createProjectTransferRegistry } from "./projects/projectTransferRegistry";
 import { initializeProjectStartup } from "./projects/projectStartup";
 import { registerProjectResourceIpc } from "./projects/registerProjectResourceIpc";
-import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 import { resolveSystemFontPath as resolveMainSystemFontPath } from "./systemFontResolver";
 import { getMimeType, isPathSafe } from "./mainFileHelpers";
 import { createGoogleFontsService } from "./googleFontsTransport";

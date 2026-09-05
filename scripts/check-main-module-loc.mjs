@@ -29,8 +29,21 @@ const resolveRelativeImport = (fromFile, specifier) => {
 
 const importsFor = (file) => {
   const source = fs.readFileSync(file, "utf8");
-  return ts.preProcessFile(source, true, true).importedFiles
-    .map(({ fileName }) => fileName)
+  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const specifiers = sourceFile.statements.flatMap((statement) => {
+    if (ts.isImportDeclaration(statement)) {
+      if (statement.importClause?.isTypeOnly) return [];
+      return ts.isStringLiteral(statement.moduleSpecifier) ? [statement.moduleSpecifier.text] : [];
+    }
+    if (ts.isExportDeclaration(statement)) {
+      if (statement.isTypeOnly) return [];
+      return statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
+        ? [statement.moduleSpecifier.text]
+        : [];
+    }
+    return [];
+  });
+  return specifiers
     .filter((specifier) => specifier.startsWith("."))
     .map((specifier) => resolveRelativeImport(file, specifier))
     .filter((candidate) => candidate !== undefined);

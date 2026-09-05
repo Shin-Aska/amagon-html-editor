@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { loadCharacterizedEntrypoint } from "./indexCharacterizationHarness";
 
+const state = await loadCharacterizedEntrypoint();
+
 const LEGACY_CHANNELS = [
   "menu:setProjectLoaded",
   "fonts:listSystem",
@@ -41,7 +43,6 @@ const LEGACY_CHANNELS = [
 
 describe("main entrypoint registration characterization", () => {
   it("captures import, ready, protocol, IPC, window, and lifecycle order", async () => {
-    const state = await loadCharacterizedEntrypoint();
     expect(state.sequence[0]).toBe("protocol:privileged");
     expect(state.sequence.indexOf("cleanup:stale")).toBeLessThan(state.sequence.indexOf("protocol:app-framework"));
     expect(state.protocols).toEqual(["app-framework", "app-media"]);
