@@ -116,7 +116,7 @@ export const createGoogleFontsService = (
       (error, stdout, stderr) => {
         if (error) {
           const details = stderr.toString().trim();
-          reject(Object.assign(new Error(details || error.message), { code: error.code }));
+          reject(new Error(details || error.message));
           return;
         }
         resolve(stdout);

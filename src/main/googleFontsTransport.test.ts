@@ -47,8 +47,8 @@ describe("Google Fonts transport", () => {
   });
 
   it.each(["ENOENT", "EACCES"])("uses the node curl fallback for %s", async (code) => {
-    const execFile: GoogleFontsDependencies["execFile"] = (_file, _args, _options, callback) => {
-      callback(Object.assign(new Error("missing curl"), { code }), Buffer.alloc(0), Buffer.alloc(0));
+    const execFile: GoogleFontsDependencies["execFile"] = () => {
+      throw Object.assign(new Error("missing curl"), { code });
     };
     const fetchMock = vi.fn(async () => new Response("fallback"));
     const service = createGoogleFontsService(dependencies({ execFile, fetch: fetchMock }), mimeType);
@@ -59,13 +59,13 @@ describe("Google Fonts transport", () => {
     );
   });
 
-  it("does not fall back for a curl transport failure", async () => {
+  it("preserves callback curl failures without falling back", async () => {
     const execFile: GoogleFontsDependencies["execFile"] = (_file, _args, _options, callback) => {
-      callback(Object.assign(new Error("network down"), { code: "ECONNRESET" }), Buffer.alloc(0), Buffer.alloc(0));
+      callback(Object.assign(new Error("missing curl"), { code: "ENOENT" }), Buffer.alloc(0), Buffer.alloc(0));
     };
     const fetchMock = vi.fn(async () => new Response("unused"));
     const service = createGoogleFontsService(dependencies({ execFile, fetch: fetchMock }), mimeType);
-    await expect(service.fetchText("https://fonts.gstatic.com/font.woff2")).rejects.toThrow("network down");
+    await expect(service.fetchText("https://fonts.gstatic.com/font.woff2")).rejects.toThrow("missing curl");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -79,8 +79,8 @@ describe("Google Fonts transport", () => {
   });
 
   it("rejects the node fallback content-length above 10 MB", async () => {
-    const execFile: GoogleFontsDependencies["execFile"] = (_file, _args, _options, callback) => {
-      callback(Object.assign(new Error("missing curl"), { code: "ENOENT" }), Buffer.alloc(0), Buffer.alloc(0));
+    const execFile: GoogleFontsDependencies["execFile"] = () => {
+      throw Object.assign(new Error("missing curl"), { code: "ENOENT" });
     };
     const fetchMock = vi.fn(async () => new Response("x", { headers: { "content-length": String(10 * 1024 * 1024 + 1) } }));
     const service = createGoogleFontsService(dependencies({ execFile, fetch: fetchMock }), mimeType);
