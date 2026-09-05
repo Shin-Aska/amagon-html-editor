@@ -76,7 +76,7 @@ export const closeProjectThroughUi = async (harness: AmagonHarness): Promise<voi
   await harness.app.evaluate(({ BrowserWindow }, pageUrl) => {
     const window = BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL() === pageUrl);
     if (window === undefined) throw new TypeError(`no Electron window found for ${pageUrl}`);
-    window.webContents.send("menu-action", "close-project");
+    window.webContents.send("menu:action", "close-project");
   }, harness.page.url());
   await expect(harness.page.getByRole("button", { name: /New Project/u })).toBeVisible({ timeout: projectUiStepTimeoutMs });
 };
