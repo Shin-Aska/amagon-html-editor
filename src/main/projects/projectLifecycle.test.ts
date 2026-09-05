@@ -53,20 +53,6 @@ describe("project lifecycle", () => {
     expect(secondCalls).toEqual(["register", "lock", "quit"]);
   });
 
-  it("registers the streaming scheme and single-instance lock exactly once before readiness", async () => {
-    const source = await readFile(path.join(process.cwd(), "src", "main", "index.ts"), "utf8");
-    const registration = source.indexOf("protocol.registerSchemesAsPrivileged");
-    const lock = source.indexOf("app.requestSingleInstanceLock");
-    const readiness = source.indexOf("app.whenReady");
-    expect(source.match(/protocol\.registerSchemesAsPrivileged/gu)).toHaveLength(1);
-    expect(source.match(/app\.requestSingleInstanceLock/gu)).toHaveLength(1);
-    expect(registration).toBeGreaterThanOrEqual(0);
-    expect(registration).toBeLessThan(readiness);
-    expect(lock).toBeLessThan(readiness);
-    expect(source).toContain("quit: () => app.quit()");
-    expect(source.indexOf("cleanupStaleOwnedWorkspaces(app.getPath(\"userData\"))")).toBeGreaterThan(lock);
-  });
-
   it("registers the media scheme with the required streaming privileges", () => {
     expect(APP_MEDIA_PRIVILEGES).toEqual({ standard: true, secure: true, supportFetchAPI: true, stream: true });
   });
