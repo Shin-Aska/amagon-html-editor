@@ -51,7 +51,6 @@ import { createDefaultProjectServiceFiles, inspectProjectMetadata } from "./proj
 import { createRecentProjectsStore } from "./projects/recentProjects";
 import { registerProjectIpc } from "./projects/registerProjectIpc";
 import { ProjectSessionRegistry } from "./projects/projectSession";
-import { APP_MEDIA_SCHEME, createProjectMediaHandler } from "./projects/projectMediaProtocol";
 import { cleanupStaleOwnedWorkspaces } from "./projects/projectWorkspace";
 import { createLifecycleController, focusSecondInstance, type LifecycleController, type LifecycleResult } from "./projects/projectLifecycle";
 import { buildRuntimeAssetUrl } from "../shared/projects/assetReference";
@@ -62,6 +61,7 @@ import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 import { resolveSystemFontPath as resolveMainSystemFontPath } from "./systemFontResolver";
 import { getMimeType, isPathSafe } from "./mainFileHelpers";
 import { createGoogleFontsService } from "./googleFontsTransport";
+import { registerAppProtocols } from "./registerAppProtocols";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -146,68 +146,6 @@ async function createWindow(): Promise<void> {
     event.preventDefault();
     lifecycleController?.request("window-close");
   });
-}
-
-// ---------------------------------------------------------------------------
-// Local framework asset path
-// ---------------------------------------------------------------------------
-
-function getFrameworksDirectory(): string {
-  // Packaged renderer assets are included inside app.asar under out/renderer.
-  // During development, the public/ folder is used.
-  if (app.isPackaged) {
-    return path.join(app.getAppPath(), "out", "renderer", "frameworks");
-  }
-  return path.join(__dirname, "..", "..", "public", "frameworks");
-}
-
-// ---------------------------------------------------------------------------
-// app-framework:// protocol handler (serves bundled Bootstrap/Tailwind/etc.)
-// ---------------------------------------------------------------------------
-
-function registerAppFrameworkProtocol(): void {
-  const baseDir = getFrameworksDirectory();
-
-  protocol.handle("app-framework", async (request) => {
-    const url = new URL(request.url);
-    // URL format: app-framework://asset/<relative-path>
-    const relativePath = decodeURIComponent(url.pathname).replace(/^\/+/, "");
-    if (!relativePath) {
-      return new Response("Missing asset path", { status: 400 });
-    }
-
-    const filePath = path.join(baseDir, relativePath);
-
-    // Security: keep requests inside the frameworks directory
-    if (!isPathSafe(filePath, baseDir)) {
-      return new Response("Forbidden: path traversal detected", { status: 403 });
-    }
-
-    if (!existsSync(filePath)) {
-      return new Response("File not found", { status: 404 });
-    }
-
-    try {
-      const data = await fs.readFile(filePath);
-      const mimeType = getMimeType(filePath);
-      return new Response(data, {
-        headers: { "Content-Type": mimeType },
-      });
-    } catch (err: any) {
-      return new Response(`Error reading file: ${err.message}`, { status: 500 });
-    }
-  });
-}
-
-// ---------------------------------------------------------------------------
-// app-media:// protocol handler  (Task 8.1)
-// ---------------------------------------------------------------------------
-
-function registerAppMediaProtocol(): void {
-  protocol.handle(APP_MEDIA_SCHEME, createProjectMediaHandler({
-    sessions: projectSessions,
-    mimeType: getMimeType,
-  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -1143,8 +1081,16 @@ if (hasSingleInstanceLock) app.on("second-instance", () => {
 
 if (hasSingleInstanceLock) app.whenReady().then(async () => {
   await cleanupStaleOwnedWorkspaces(app.getPath("userData"));
-  registerAppFrameworkProtocol();
-  registerAppMediaProtocol();
+  registerAppProtocols({
+    isPackaged: app.isPackaged,
+    appPath: app.getAppPath(),
+    moduleDirectory: __dirname,
+    handle: (scheme, handler) => protocol.handle(scheme, handler),
+    exists: existsSync,
+    readFile: fs.readFile,
+    sessions: projectSessions,
+    getMimeType,
+  });
   registerIpcHandlers();
   await createWindow();
 
