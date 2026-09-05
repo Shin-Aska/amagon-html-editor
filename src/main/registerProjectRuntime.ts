@@ -3,12 +3,16 @@ import type { AutosaveController } from "./autosaveController";
 import type { GoogleFontsService } from "./googleFontsTransport";
 import type { LifecycleController, LifecycleResult } from "./projects/projectLifecycle";
 import type { ProjectIpcRegistrar } from "./projects/registerProjectIpc";
+import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 import type { ProjectPersistenceService, ProjectServiceOptions } from "./projects/projectServiceTypes";
 import type { ProjectServiceFiles } from "./projects/projectServiceFiles";
 import type { ProjectSessionRegistry } from "./projects/projectSession";
 import type { ProjectTransferRegistry } from "./projects/projectTransferRegistry";
 import type { RecentProjectInspection, RecentProjectsStore, RecentProjectsStoreOptions } from "./projects/recentProjects";
 import type { ProjectSessionId } from "../shared/projects/projectIpcContract";
+
+type IpcEvent = Parameters<typeof assertTrustedMainFrame>[0];
+type MainWindow = Parameters<typeof assertTrustedMainFrame>[1];
 
 interface SaveOptions {
   readonly title: string;
@@ -38,7 +42,7 @@ interface ProjectResourceRegistration<TWindow> {
   readonly googleFontsMaxBytes: number;
 }
 
-export interface ProjectRuntimeContext<TWindow> {
+export interface ProjectRuntimeContext<TWindow extends MainWindow> {
   readonly userDataPath: string;
   readonly documentsPath: string;
   readonly sessions: ProjectSessionRegistry;
@@ -55,13 +59,17 @@ export interface ProjectRuntimeContext<TWindow> {
   readonly resolveSystemFontPath: (familyName: string) => Promise<string | null>;
   readonly createRecentProjectsStore: (options: RecentProjectsStoreOptions) => RecentProjectsStore;
   readonly createProjectService: (options: ProjectServiceOptions) => ProjectPersistenceService;
-  readonly registerProjectIpc: (registrar: ProjectIpcRegistrar, service: ProjectPersistenceService) => void;
+  readonly registerProjectIpc: (
+    registrar: ProjectIpcRegistrar,
+    service: ProjectPersistenceService,
+    getMainWindow: () => MainWindow,
+  ) => void;
   readonly registerProjectResources: (context: ProjectResourceRegistration<TWindow>) => void;
-  readonly handle: <TArgument>(channel: string, handler: (event: unknown, argument: TArgument) => unknown) => void;
+  readonly handle: <TArgument>(channel: string, handler: (event: IpcEvent, argument: TArgument) => unknown) => void;
   readonly removeHandler: (channel: string) => void;
 }
 
-export const registerProjectRuntime = <TWindow>(
+export const registerProjectRuntime = <TWindow extends MainWindow>(
   context: ProjectRuntimeContext<TWindow>,
 ): ProjectPersistenceService => {
   const service = context.createProjectService({
@@ -99,7 +107,7 @@ export const registerProjectRuntime = <TWindow>(
   context.registerProjectIpc({
     handle: (channel, handler) => context.handle(channel, (event, argument) => handler(event, argument)),
     removeHandler: context.removeHandler,
-  }, service);
+  }, service, context.getMainWindow);
   context.registerProjectResources({
     sessions: context.sessions,
     transfers: context.transfers,
@@ -109,8 +117,9 @@ export const registerProjectRuntime = <TWindow>(
     fetchGoogleFontsText: (url, options) => context.googleFonts.fetchText(url, options),
     googleFontsMaxBytes: context.googleFonts.maxResponseBytes,
   });
-  context.handle<LifecycleResult>("project:finish-lifecycle-close", (_event, result) => (
-    context.getLifecycleController()?.finish(result) ?? false
-  ));
+  context.handle<LifecycleResult>("project:finish-lifecycle-close", (event, result) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    return context.getLifecycleController()?.finish(result) ?? false;
+  });
   return service;
 };

@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { parseRecentProjectId } from "../../shared/projects/projectIpcContract";
 import { TEST_PROJECT } from "./amgArchiveFixtures";
+import type { ProjectPersistenceService } from "./projectServiceTypes";
 import {
   PROJECT_IPC_CHANNELS,
   registerProjectIpc,
@@ -21,6 +22,25 @@ class FakeRegistrar implements ProjectIpcRegistrar {
     this.handlers.delete(channel);
   }
 }
+
+const trustedSurface = () => {
+  const mainFrame = {};
+  const sender = { id: 7, mainFrame };
+  return {
+    window: { webContents: sender },
+    trustedEvent: { sender, senderFrame: mainFrame },
+    childFrameEvent: { sender, senderFrame: {} },
+    foreignEvent: { sender: { id: 8, mainFrame: {} }, senderFrame: {} },
+  };
+};
+
+const registerWithActiveWindow = (
+  registrar: ProjectIpcRegistrar,
+  projectService: ProjectPersistenceService,
+  getMainWindow: () => ReturnType<typeof trustedSurface>["window"] | null,
+): void => {
+  registerProjectIpc(registrar, projectService, getMainWindow);
+};
 
 const service = {
   save: async () => ({ success: false, canceled: true } as const),
@@ -43,7 +63,8 @@ describe("project IPC registration", () => {
     registrar.handle("project:save", async () => "legacy");
 
     // When: the typed project service is registered.
-    registerProjectIpc(registrar, service);
+    const trusted = trustedSurface();
+    registerProjectIpc(registrar, service, () => trusted.window);
 
     // Then: only the explicit contract channels remain.
     expect([...registrar.handlers.keys()].sort()).toEqual([...PROJECT_IPC_CHANNELS].sort());
@@ -54,18 +75,19 @@ describe("project IPC registration", () => {
     // Given: an observing service and the registered save handler.
     const registrar = new FakeRegistrar();
     let saveCalls = 0;
+    const trusted = trustedSurface();
     registerProjectIpc(registrar, {
       ...service,
       save: async () => {
         saveCalls += 1;
         return { success: false, canceled: true } as const;
       },
-    });
+    }, () => trusted.window);
     const handler = registrar.handlers.get("project:save");
     if (handler === undefined) throw new TypeError("save handler missing");
 
     // When: renderer-controlled destination authority is included.
-    const result = await handler({}, {
+    const result = await handler(trusted.trustedEvent, {
       expectedSessionId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       rendererGeneration: 1,
       snapshot: TEST_PROJECT,
@@ -80,19 +102,20 @@ describe("project IPC registration", () => {
   it("parses branded session and generation requests before delegation", async () => {
     // Given: a service that records the canonical save request.
     const registrar = new FakeRegistrar();
+    const trusted = trustedSurface();
     let delegated: unknown;
-    registerProjectIpc(registrar, {
+    registerWithActiveWindow(registrar, {
       ...service,
       save: async (request) => {
         delegated = request;
         return { success: false, canceled: true } as const;
       },
-    });
+    }, () => trusted.window);
     const handler = registrar.handlers.get("project:save");
     if (handler === undefined) throw new TypeError("save handler missing");
 
     // When: a valid content-only save crosses the IPC boundary.
-    const result = await handler({}, {
+    const result = await handler(trusted.trustedEvent, {
       expectedSessionId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       rendererGeneration: 3,
       snapshot: TEST_PROJECT,
@@ -105,5 +128,54 @@ describe("project IPC registration", () => {
       rendererGeneration: 3,
       snapshot: TEST_PROJECT,
     });
+  });
+
+  it("rejects foreign and child-frame persistence requests before service invocation", async () => {
+    // Given: a registered save handler and a dynamic active application window.
+    const registrar = new FakeRegistrar();
+    const trusted = trustedSurface();
+    let saveCalls = 0;
+    registerWithActiveWindow(registrar, {
+      ...service,
+      save: async () => {
+        saveCalls += 1;
+        return { success: false, canceled: true } as const;
+      },
+    }, () => trusted.window);
+    const handler = registrar.handlers.get("project:save");
+    if (handler === undefined) throw new TypeError("save handler missing");
+    const request = {
+      expectedSessionId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      rendererGeneration: 3,
+      snapshot: TEST_PROJECT,
+    };
+
+    // When/Then: a foreign WebContents or a child frame attempts persistence.
+    await expect(handler(trusted.foreignEvent, request)).rejects.toThrow("trusted application window");
+    await expect(handler(trusted.childFrameEvent, request)).rejects.toThrow("trusted main frame");
+    expect(saveCalls).toBe(0);
+  });
+
+  it("rejects missing active-window and frame representations before read delegation", async () => {
+    // Given: a getter that has no active window and a project-directory handler.
+    const registrar = new FakeRegistrar();
+    const trusted = trustedSurface();
+    let directoryCalls = 0;
+    let activeWindow: ReturnType<typeof trustedSurface>["window"] | null = null;
+    registerWithActiveWindow(registrar, {
+      ...service,
+      getDirectory: async () => {
+        directoryCalls += 1;
+        return { success: true, directory: null } as const;
+      },
+    }, () => activeWindow);
+    const handler = registrar.handlers.get("project:getDir");
+    if (handler === undefined) throw new TypeError("directory handler missing");
+
+    // When/Then: the window is absent or the otherwise-matching event has no frame.
+    await expect(handler(trusted.trustedEvent)).rejects.toThrow("trusted application window");
+    activeWindow = trusted.window;
+    await expect(handler({ sender: trusted.trustedEvent.sender, senderFrame: null })).rejects.toThrow("trusted main frame");
+    expect(directoryCalls).toBe(0);
   });
 });

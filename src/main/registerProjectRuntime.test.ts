@@ -9,8 +9,24 @@ import { createProjectTransferRegistry } from "./projects/projectTransferRegistr
 import type { RecentProjectsStore } from "./projects/recentProjects";
 import { registerProjectRuntime, type ProjectRuntimeContext } from "./registerProjectRuntime";
 
-type WindowToken = { readonly id: string };
+type WindowToken = {
+  readonly id: string;
+  readonly webContents: {
+    readonly id: number;
+    readonly mainFrame: object;
+  };
+};
 type TestHandler = (event: unknown, argument: unknown) => unknown;
+
+const windowToken = (id: string): WindowToken => ({
+  id,
+  webContents: { id: 1, mainFrame: {} },
+});
+
+const trustedEvent = (window: WindowToken) => ({
+  sender: window.webContents,
+  senderFrame: window.webContents.mainFrame,
+});
 
 const serviceStub = (): ProjectPersistenceService => ({
   save: vi.fn(),
@@ -147,7 +163,7 @@ describe("project runtime composition", () => {
     const openRequest = { title: "Open", filters: [{ name: "AMG", extensions: ["amg"] }] };
     await current.options().dialogs.showSave(saveRequest);
     await current.options().dialogs.showOpen(openRequest);
-    const window = { id: "main" };
+    const window = windowToken("main");
     current.setWindow(window);
     await current.options().dialogs.showSave(saveRequest);
     await current.options().dialogs.showOpen(openRequest);
@@ -159,7 +175,7 @@ describe("project runtime composition", () => {
   it("null window resource getter remains lazy", () => {
     const current = setup();
     expect(current.resources().getMainWindow()).toBeNull();
-    const window = { id: "later" };
+    const window = windowToken("later");
     current.setWindow(window);
     expect(current.resources().getMainWindow()).toBe(window);
   });
@@ -168,11 +184,34 @@ describe("project runtime composition", () => {
     const current = setup();
     const handler = current.handlers.get("project:finish-lifecycle-close");
     if (handler === undefined) throw new Error("lifecycle handler missing");
+    const window = windowToken("main");
+    current.setWindow(window);
     const result = { requestId: "request", reason: "quit", proceed: true };
-    expect(handler({}, result)).toBe(false);
+    expect(handler(trustedEvent(window), result)).toBe(false);
     const finish = vi.fn(() => true);
     current.setLifecycle({ finish });
-    expect(handler({}, result)).toBe(true);
+    expect(handler(trustedEvent(window), result)).toBe(true);
     expect(finish).toHaveBeenCalledWith(result);
+  });
+
+  it("rejects foreign, child-frame, missing-window, and missing-frame lifecycle completion before finish", () => {
+    // Given: the lifecycle handler and an observing lifecycle controller.
+    const current = setup();
+    const handler = current.handlers.get("project:finish-lifecycle-close");
+    if (handler === undefined) throw new Error("lifecycle handler missing");
+    const window = windowToken("main");
+    current.setWindow(window);
+    const finish = vi.fn(() => true);
+    current.setLifecycle({ finish });
+    const result = { requestId: "request", reason: "quit", proceed: true };
+
+    // When/Then: every untrusted event representation attempts to complete closing.
+    expect(() => handler({ sender: { id: 8, mainFrame: {} }, senderFrame: {} }, result)).toThrow("trusted application window");
+    expect(() => handler({ sender: window.webContents, senderFrame: {} }, result)).toThrow("trusted main frame");
+    current.setWindow(null);
+    expect(() => handler(trustedEvent(window), result)).toThrow("trusted application window");
+    current.setWindow(window);
+    expect(() => handler({ sender: window.webContents, senderFrame: null }, result)).toThrow("trusted main frame");
+    expect(finish).not.toHaveBeenCalled();
   });
 });
