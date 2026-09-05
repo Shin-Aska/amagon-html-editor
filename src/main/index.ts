@@ -66,6 +66,7 @@ import { registerAutosaveIpc } from "./registerAutosaveIpc";
 import { createMainWindowController } from "./mainWindowController";
 import { registerMenuIpc } from "./registerMenuIpc";
 import { registerFontQueryIpc } from "./registerFontQueryIpc";
+import { registerExportIpc } from "./registerExportIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -187,152 +188,25 @@ function registerIpcHandlers(): void {
     isPathSafe,
   });
 
-  // ── Export HTML ────────────────────────────────────────────────────────
-
-  ipcMain.handle(
-    "project:exportHtml",
-    async (_, data: { html: string; defaultPath?: string }) => {
-      try {
-        const { canceled, filePath } = await dialog.showSaveDialog(
-          windowController.getMainWindow()!,
-          {
-            title: "Export HTML",
-            defaultPath: path.join(
-              app.getPath("documents"),
-              data.defaultPath || "index.html",
-            ),
-            filters: [{ name: "HTML Files", extensions: ["html", "htm"] }],
-          },
-        );
-
-        if (canceled || !filePath) return { success: false, canceled: true };
-
-        await fs.writeFile(filePath, data.html, "utf-8");
-        return { success: true, filePath };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
+  registerExportIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
+    getDocumentsPath: () => app.getPath("documents"),
+    showSaveDialog: async (options) => {
+      const mainWindow = windowController.getMainWindow();
+      if (mainWindow === null) throw new Error("Main window is not available");
+      return dialog.showSaveDialog(mainWindow, options);
     },
-  );
-
-  // ── Export Site (multi-file) ───────────────────────────────────────────
-
-  ipcMain.handle(
-    "project:exportSite",
-    async (
-      _,
-      data: {
-        files: { path: string; content: string | Uint8Array }[];
-        defaultDirName?: string;
-        previewFile?: string;
-      },
-    ) => {
-      try {
-        const { canceled, filePaths } = await dialog.showOpenDialog(
-          windowController.getMainWindow()!,
-          {
-            title: "Choose Export Directory",
-            defaultPath: app.getPath("documents"),
-            properties: ["openDirectory", "createDirectory"],
-          },
-        );
-
-        if (canceled || filePaths.length === 0)
-          return { success: false, canceled: true };
-
-        const baseDir = filePaths[0];
-        const dirName = (data.defaultDirName || "").trim();
-        const exportDir = dirName ? path.join(baseDir, dirName) : baseDir;
-
-        await fs.mkdir(exportDir, { recursive: true });
-
-        const total = Array.isArray(data.files) ? data.files.length : 0;
-        let written = 0;
-
-        for (const file of data.files || []) {
-          const rel = String(file.path || "").replace(/^[/\\]+/, "");
-          if (!rel) continue;
-
-          if (path.isAbsolute(rel)) {
-            continue;
-          }
-
-          const normalizedRel = path.normalize(rel);
-          const targetPath = path.join(exportDir, normalizedRel);
-
-          if (!isPathSafe(targetPath, exportDir)) {
-            continue;
-          }
-
-          await fs.mkdir(path.dirname(targetPath), { recursive: true });
-
-          const content: any = (file as any).content;
-          if (typeof content === "string") {
-            await fs.writeFile(targetPath, content, "utf-8");
-          } else if (content && typeof content === "object") {
-            // Handle Uint8Array or Buffer-like
-            if (content.type === "Buffer" && Array.isArray(content.data)) {
-              await fs.writeFile(targetPath, Buffer.from(content.data));
-            } else {
-              await fs.writeFile(
-                targetPath,
-                Buffer.from(content as Uint8Array),
-              );
-            }
-          } else {
-            await fs.writeFile(targetPath, "");
-          }
-
-          written++;
-          const mainWindow = windowController.getMainWindow();
-          if (mainWindow) {
-            mainWindow.webContents.send("project:exportProgress", {
-              written,
-              total,
-              path: normalizedRel,
-            });
-          }
-        }
-
-        const previewRel = (data.previewFile || "index.html").replace(
-          /^[/\\]+/,
-          "",
-        );
-        const previewPath = path.join(exportDir, path.normalize(previewRel));
-        const safePreview = isPathSafe(previewPath, exportDir)
-          ? previewPath
-          : undefined;
-
-        return {
-          success: true,
-          directory: exportDir,
-          previewPath: safePreview,
-        };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
+    showOpenDialog: async (options) => {
+      const mainWindow = windowController.getMainWindow();
+      if (mainWindow === null) throw new Error("Main window is not available");
+      return dialog.showOpenDialog(mainWindow, options);
     },
-  );
-
-  // ── Preview (open exported HTML in default browser) ────────────────────
-
-  ipcMain.handle("project:openInBrowser", async (_, filePath: string) => {
-    try {
-      const target = String(filePath || "");
-      if (!target) return { success: false, error: "No file path provided" };
-
-      const isExternalUrl = /^https?:\/\//i.test(target);
-      if (isExternalUrl) {
-        await shell.openExternal(target);
-        return { success: true };
-      }
-
-      const err = await shell.openPath(target);
-      if (err) return { success: false, error: err };
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
+    writeFile: fs.writeFile,
+    makeDirectory: fs.mkdir,
+    isPathSafe,
+    openExternal: shell.openExternal,
+    openPath: shell.openPath,
   });
 
   // ── List project assets ───────────────────────────────────────────────
