@@ -194,6 +194,7 @@ describe("project commands", () => {
     expect(test.save.mock.calls[0]?.[0]).toEqual({
       expectedSessionId: SESSION,
       rendererGeneration: 0,
+      workspaceGeneration: 1,
       snapshot: expect.any(Object),
     });
   });

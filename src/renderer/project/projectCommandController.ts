@@ -2,11 +2,13 @@ import { z } from "zod";
 import { LegacyProjectDocumentSchema, ProjectDocumentV1Schema } from "../../shared/projects/projectDocumentSchema";
 import {
   parseRendererGeneration,
+  parseWorkspaceGeneration,
   type DirtyTransitionChoice,
   type MutationResult,
   type ProjectOperation,
   type ProjectOperationError,
   type ProjectSession,
+  type ProjectTransitionRequest,
 } from "../../shared/projects/projectIpcContract";
 import type { ProjectData } from "../store/types";
 import { buildProjectSnapshot, materializeProjectSnapshot } from "./projectSnapshot";
@@ -109,11 +111,13 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
             ? await dependencies.project.saveAs({
                 expectedSessionId: invocation.expectedSessionId,
                 rendererGeneration: invocation.rendererGeneration,
+                workspaceGeneration: invocation.workspaceGeneration,
                 snapshot,
               })
             : await dependencies.project.save({
                 expectedSessionId: invocation.expectedSessionId,
                 rendererGeneration: invocation.rendererGeneration,
+                workspaceGeneration: invocation.workspaceGeneration,
                 snapshot,
               });
           if (!result.success) {
@@ -141,20 +145,51 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
 
   const activate = async (
     operation: ProjectOperation,
-    request: () => ReturnType<ProjectCommandDependencies["project"]["load"]>,
+    request: (transition: ProjectTransitionRequest) => ReturnType<ProjectCommandDependencies["project"]["load"]>,
   ): Promise<ProjectCommandResult> => {
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
-    if (state.session !== null && state.dirty) {
-      const choice = dependencies.chooseDirtyTransition?.() ?? "cancel";
-      if (choice === "cancel") return cancel();
-      if (choice === "save") {
-        const saved = await runSave("save");
-        if (!saved.ok) return saved;
+    let transition: ProjectTransitionRequest;
+    if (state.session === null || coordinator === null) {
+      transition = {
+        expectedSessionId: null,
+        rendererGeneration: parseRendererGeneration(0),
+        workspaceGeneration: parseWorkspaceGeneration(0),
+        snapshot: null,
+        dirtyChoice: "discard",
+      };
+    } else {
+      const dirtyChoice = state.dirty ? dependencies.chooseDirtyTransition?.() ?? "cancel" : "discard";
+      if (dirtyChoice === "save") {
+        const built = createSnapshot("save");
+        if (!built.ok) return fail({
+          tone: "error",
+          title: "Project contains non-portable references",
+          detail: "Fix the listed locations before continuing.",
+          locations: built.offenders.map((item) => item.location),
+        });
+        const snapshot = state.session.kind === "legacy-json"
+          ? LegacyProjectDocumentSchema.parse(built.project)
+          : ProjectDocumentV1Schema.parse(built.project);
+        transition = {
+          expectedSessionId: state.session.sessionId,
+          rendererGeneration: coordinator.state.rendererGeneration,
+          workspaceGeneration: coordinator.state.workspaceGeneration,
+          snapshot,
+          dirtyChoice,
+        };
+      } else {
+        transition = {
+          expectedSessionId: state.session.sessionId,
+          rendererGeneration: coordinator.state.rendererGeneration,
+          workspaceGeneration: coordinator.state.workspaceGeneration,
+          snapshot: null,
+          dirtyChoice,
+        };
       }
     }
     publish({ busy: operation, message: null });
     try {
-      const result = await request();
+      const result = await request(transition);
       if (!result.success) return result.canceled ? cancel() : fromError(result.error);
       return await installSession(result.session);
     } catch (error) {
@@ -224,13 +259,30 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     if (coordinator === null || state.session === null) return { ok: true, value: undefined };
     if (state.busy !== null || mutating) return fail({ tone: "info", title: "Project operation in progress", detail: "Wait for the current operation before closing.", locations: [] });
     const dirtyChoice = choice ?? (state.dirty ? dependencies.chooseDirtyTransition?.() ?? "cancel" : "discard");
-    if (dirtyChoice === "cancel") return cancel();
     publish({ busy: "close", message: null });
     try {
-      const built = createSnapshot("save");
-      const rendererSnapshot = built.ok ? built.project : RendererProjectSchema.parse(state.session.data);
-      const snapshot = state.session.kind === "legacy-json" ? LegacyProjectDocumentSchema.parse(rendererSnapshot) : ProjectDocumentV1Schema.parse(rendererSnapshot);
-      const result = await dependencies.project.close({ expectedSessionId: state.session.sessionId, rendererGeneration: coordinator.state.rendererGeneration, snapshot, dirtyChoice });
+      let request: Parameters<ProjectCommandDependencies["project"]["close"]>[0];
+      if (dirtyChoice === "save") {
+        const built = createSnapshot("save");
+        if (!built.ok) return fail({ tone: "error", title: "Project contains non-portable references", detail: "Fix the listed locations before closing.", locations: built.offenders.map((item) => item.location) });
+        const snapshot = state.session.kind === "legacy-json" ? LegacyProjectDocumentSchema.parse(built.project) : ProjectDocumentV1Schema.parse(built.project);
+        request = {
+          expectedSessionId: state.session.sessionId,
+          rendererGeneration: coordinator.state.rendererGeneration,
+          workspaceGeneration: coordinator.state.workspaceGeneration,
+          snapshot,
+          dirtyChoice,
+        };
+      } else {
+        request = {
+          expectedSessionId: state.session.sessionId,
+          rendererGeneration: coordinator.state.rendererGeneration,
+          workspaceGeneration: coordinator.state.workspaceGeneration,
+          snapshot: null,
+          dirtyChoice,
+        };
+      }
+      const result = await dependencies.project.close(request);
       if (!result.success) return result.canceled ? cancel() : fromError(result.error);
       installing = true;
       dependencies.closeProject();
@@ -259,8 +311,8 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     get state() { return state; },
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
     openProject: () => activate("open", dependencies.project.load),
-    openRecent: (recentId) => activate("open-recent", () => dependencies.project.openRecent(recentId)),
-    newProject: (request) => activate("new", () => dependencies.project.new(request)),
+    openRecent: (recentId) => activate("open-recent", (transition) => dependencies.project.openRecent({ ...transition, recentId })),
+    newProject: (request) => activate("new", (transition) => dependencies.project.new({ ...transition, ...request })),
     save: () => runSave("save"), saveAs: () => runSave("save-as"), autosave: () => runSave("autosave"), close,
     getRecent: dependencies.project.getRecent, removeRecent: dependencies.project.removeRecent,
     selectImages: () => runMutation((expectedSessionId) => dependencies.assets.selectImage({ expectedSessionId })),

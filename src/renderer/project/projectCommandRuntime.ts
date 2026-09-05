@@ -72,6 +72,9 @@ export const createLegacyBrowserProjectBridge = (legacy: LegacyBrowserProjectFac
     if (active === null || active.sessionId !== request.expectedSessionId) {
       return { success: false as const, error: { code: "STALE_SESSION" as const, expectedSessionId: request.expectedSessionId, activeSessionId: active?.sessionId } };
     }
+    if (active.committedWorkspaceGeneration !== request.workspaceGeneration) {
+      return { success: false as const, error: { code: "STALE_WORKSPACE_GENERATION" as const, expected: request.workspaceGeneration, actual: active.committedWorkspaceGeneration } };
+    }
     const data = LegacyProjectDocumentSchema.parse(request.snapshot);
     const serialized = JSON.stringify(data, null, 2);
     const result = saveAs
@@ -91,15 +94,42 @@ export const createLegacyBrowserProjectBridge = (legacy: LegacyBrowserProjectFac
     };
     return { success: true as const, session: active };
   };
+  const transition = async (
+    request: Parameters<ProjectBridge["load"]>[0],
+    perform: () => ReturnType<LegacyBrowserProjectFacade["load"]>,
+  ) => {
+    if (active === null) {
+      if (request.expectedSessionId !== null) {
+        return { success: false as const, error: { code: "STALE_SESSION" as const, expectedSessionId: request.expectedSessionId } };
+      }
+    } else {
+      if (request.expectedSessionId !== active.sessionId) {
+        return { success: false as const, error: { code: "STALE_SESSION" as const, expectedSessionId: request.expectedSessionId, activeSessionId: active.sessionId } };
+      }
+      if (request.workspaceGeneration !== active.committedWorkspaceGeneration) {
+        return { success: false as const, error: { code: "STALE_WORKSPACE_GENERATION" as const, expected: request.workspaceGeneration, actual: active.committedWorkspaceGeneration } };
+      }
+      if (request.dirtyChoice === "cancel") return { success: false as const, canceled: true as const };
+      if (request.dirtyChoice === "save") {
+        const saved = await persist(request, false);
+        if (!saved.success) return saved;
+      }
+    }
+    return activate(perform);
+  };
   return {
-    new: (request) => activate(() => legacy.new(request)),
-    load: () => activate(legacy.load),
+    new: (request) => transition(request, () => legacy.new({ name: request.name, framework: request.framework })),
+    load: (request) => transition(request, legacy.load),
     save: (request) => persist(request, false),
     saveAs: (request) => persist(request, true),
     close: async (request) => {
       if (active === null || active.sessionId !== request.expectedSessionId) {
         return { success: false, error: { code: "STALE_SESSION", expectedSessionId: request.expectedSessionId, activeSessionId: active?.sessionId } };
       }
+      if (active.committedWorkspaceGeneration !== request.workspaceGeneration) {
+        return { success: false, error: { code: "STALE_WORKSPACE_GENERATION", expected: request.workspaceGeneration, actual: active.committedWorkspaceGeneration } };
+      }
+      if (request.dirtyChoice === "cancel") return { success: false, canceled: true };
       if (request.dirtyChoice === "save") {
         const saved = await persist(request, false);
         if (!saved.success) return saved;
@@ -108,7 +138,7 @@ export const createLegacyBrowserProjectBridge = (legacy: LegacyBrowserProjectFac
       active = null;
       return { success: true, ...closed };
     },
-    openRecent: async (recentId) => ({ success: false, error: { code: "RECENT_NOT_FOUND", recentId } }),
+    openRecent: async (request) => ({ success: false, error: { code: "RECENT_NOT_FOUND", recentId: request.recentId } }),
     removeRecent: async (recentId) => ({ success: false, error: { code: "RECENT_NOT_FOUND", recentId } }),
     getRecent: async () => ({ success: true, projects: [] }),
     getDir: async () => ({ success: true, directory: null }),

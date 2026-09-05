@@ -90,6 +90,7 @@ describe("project IPC registration", () => {
     const result = await handler(trusted.trustedEvent, {
       expectedSessionId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       rendererGeneration: 1,
+      workspaceGeneration: 0,
       snapshot: TEST_PROJECT,
       filePath: "C:\\forged\\target.amg",
     });
@@ -118,6 +119,7 @@ describe("project IPC registration", () => {
     const result = await handler(trusted.trustedEvent, {
       expectedSessionId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       rendererGeneration: 3,
+      workspaceGeneration: 0,
       snapshot: TEST_PROJECT,
     });
 
@@ -126,8 +128,46 @@ describe("project IPC registration", () => {
     expect(delegated).toMatchObject({
       expectedSessionId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       rendererGeneration: 3,
+      workspaceGeneration: 0,
       snapshot: TEST_PROJECT,
     });
+  });
+
+  it("requires a complete transition context before activation delegation", async () => {
+    const registrar = new FakeRegistrar();
+    const trusted = trustedSurface();
+    let loadCalls = 0;
+    let recentCalls = 0;
+    registerWithActiveWindow(registrar, {
+      ...service,
+      openProject: async () => {
+        loadCalls += 1;
+        return { success: false, canceled: true } as const;
+      },
+      openRecent: async () => {
+        recentCalls += 1;
+        return { success: false, canceled: true } as const;
+      },
+    }, () => trusted.window);
+    const load = registrar.handlers.get("project:load");
+    const openRecent = registrar.handlers.get("project:openRecent");
+    if (load === undefined || openRecent === undefined) throw new TypeError("activation handler missing");
+
+    const malformedLoad = await load(trusted.trustedEvent, {});
+    const forgedRecent = await openRecent(trusted.trustedEvent, "C:\\projects\\forged.amg");
+    const initialLoad = await load(trusted.trustedEvent, {
+      expectedSessionId: null,
+      rendererGeneration: 0,
+      workspaceGeneration: 0,
+      snapshot: null,
+      dirtyChoice: "discard",
+    });
+
+    expect(malformedLoad).toMatchObject({ success: false, error: { code: "PATH_AUTHORITY_FORBIDDEN" } });
+    expect(forgedRecent).toMatchObject({ success: false, error: { code: "PATH_AUTHORITY_FORBIDDEN" } });
+    expect(initialLoad).toEqual({ success: false, canceled: true });
+    expect(loadCalls).toBe(1);
+    expect(recentCalls).toBe(0);
   });
 
   it("rejects foreign and child-frame persistence requests before service invocation", async () => {

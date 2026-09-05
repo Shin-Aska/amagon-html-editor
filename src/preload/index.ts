@@ -4,9 +4,11 @@ import type {
     ProjectCloseRequest,
     ProjectCloseResult,
     ProjectNewRequest,
+    ProjectOpenRecentRequest,
     ProjectProgress,
     ProjectSaveRequest,
     ProjectSessionResult,
+    ProjectTransitionRequest,
     RecentProjectsResult,
     RecentProjectId,
     RemoveRecentResult,
@@ -33,10 +35,11 @@ const api = {
         saveAs: (data: ProjectSaveRequest): Promise<ProjectSessionResult> =>
             ipcRenderer.invoke('project:saveAs', data),
 
-        load: (): Promise<ProjectSessionResult> => ipcRenderer.invoke('project:load'),
+        load: (data: ProjectTransitionRequest): Promise<ProjectSessionResult> =>
+            ipcRenderer.invoke('project:load', data),
 
-        openRecent: (recentId: RecentProjectId): Promise<ProjectSessionResult> =>
-            ipcRenderer.invoke('project:openRecent', recentId),
+        openRecent: (data: ProjectOpenRecentRequest): Promise<ProjectSessionResult> =>
+            ipcRenderer.invoke('project:openRecent', data),
 
         exportHtml: (data: { html: string; defaultPath?: string }) =>
             ipcRenderer.invoke('project:exportHtml', data),

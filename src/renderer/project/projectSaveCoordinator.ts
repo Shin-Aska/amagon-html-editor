@@ -15,6 +15,7 @@ export type CoordinatorSaveInvocation = {
   readonly kind: CoordinatorSaveKind;
   readonly expectedSessionId: ProjectSessionId;
   readonly rendererGeneration: RendererGeneration;
+  readonly workspaceGeneration: WorkspaceGeneration;
   readonly snapshot: PersistedProjectSnapshot;
 };
 
@@ -144,6 +145,7 @@ export const createProjectSaveCoordinator = (
         kind,
         expectedSessionId: options.sessionId,
         rendererGeneration,
+        workspaceGeneration: internal.workspace,
         snapshot: built.project,
       });
     } catch (error) {

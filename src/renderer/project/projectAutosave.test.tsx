@@ -33,9 +33,24 @@ const setup = (choice: "save" | "discard" | "cancel" = "cancel") => {
   let edit: () => void = () => undefined;
   let snapshotError: Error | null = null;
   const save = vi.fn<ProjectBridge["save"]>(async (request) => ({ success: true, session: session(request.rendererGeneration, 1) }));
-  const load = vi.fn(async () => ({ success: true as const, session: session() }));
-  const newProject = vi.fn(async () => ({ success: true as const, session: session() }));
-  const close = vi.fn<ProjectBridge["close"]>(async () => ({ success: true, ...session() }));
+  const transition = async (request: Parameters<ProjectBridge["load"]>[0]) => {
+    if (request.dirtyChoice === "cancel") return { success: false as const, canceled: true as const };
+    if (request.dirtyChoice === "save") {
+      const saved = await save(request);
+      if (!saved.success) return saved;
+    }
+    return { success: true as const, session: session() };
+  };
+  const load = vi.fn<ProjectBridge["load"]>(transition);
+  const newProject = vi.fn<ProjectBridge["new"]>(transition);
+  const close = vi.fn<ProjectBridge["close"]>(async (request) => {
+    if (request.dirtyChoice === "cancel") return { success: false, canceled: true };
+    if (request.dirtyChoice === "save") {
+      const saved = await save(request);
+      if (!saved.success) return saved;
+    }
+    return { success: true, ...session() };
+  });
   const selectImage = vi.fn<() => Promise<MutationResult<readonly AssetInfo[]>>>(async () => ({
     success: true,
     sessionId: SESSION,
@@ -95,7 +110,7 @@ describe("project autosave and dirty transitions", () => {
     test.edit();
     const result = await test.commands.openProject();
     expect(result).toMatchObject({ ok: false, canceled: true });
-    expect(test.load).toHaveBeenCalledTimes(1);
+    expect(test.load).toHaveBeenCalledTimes(2);
     expect(test.commands.state.session?.sessionId).toBe(SESSION);
     expect(test.commands.state.dirty).toBe(true);
   });
@@ -123,7 +138,7 @@ describe("project autosave and dirty transitions", () => {
     failed.edit();
     failed.save.mockResolvedValueOnce({ success: false, error: { code: "INTERNAL", message: "disk full" } });
     expect((await failed.commands.openProject()).ok).toBe(false);
-    expect(failed.load).toHaveBeenCalledTimes(1);
+    expect(failed.load).toHaveBeenCalledTimes(2);
     expect(failed.commands.state.dirty).toBe(true);
   });
 
@@ -132,7 +147,7 @@ describe("project autosave and dirty transitions", () => {
     await canceled.commands.openProject();
     canceled.edit();
     expect(await canceled.commands.close()).toMatchObject({ ok: false, canceled: true });
-    expect(canceled.close).not.toHaveBeenCalled();
+    expect(canceled.close).toHaveBeenCalledTimes(1);
 
     const saved = setup("save");
     await saved.commands.openProject();

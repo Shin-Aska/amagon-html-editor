@@ -9,6 +9,7 @@ export const operationErrorMessage = (error: ProjectOperationError): ProjectComm
     case "PROJECT_NOT_PORTABLE": return { tone: "error", title: "Project contains non-portable references", detail: error.message, locations: error.offenders };
     case "STALE_SESSION": return { tone: "error", title: "Project changed in another operation", detail: "Retry from the currently open project.", locations: [] };
     case "STALE_RENDERER_GENERATION": return { tone: "error", title: "Newer edits are still unsaved", detail: "Retry Save after the current edit finishes.", locations: [] };
+    case "STALE_WORKSPACE_GENERATION": return { tone: "error", title: "Project files changed in another operation", detail: "Retry from the current project file state.", locations: [] };
     case "BUSY": return { tone: "info", title: "Project operation in progress", detail: `Wait for ${error.operation} to finish.`, locations: [] };
     case "RECENT_NOT_FOUND": return { tone: "error", title: "Recent project not found", detail: "Remove the missing entry or open the project manually.", locations: [] };
     case "UNSUPPORTED_IN_BROWSER":

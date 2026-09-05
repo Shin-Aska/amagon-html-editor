@@ -1,5 +1,23 @@
 import { z } from 'zod'
 import type { LegacyProjectDocument, ProjectDocumentV1 } from './projectDocumentSchema'
+import type {
+    ProjectCloseRequest,
+    ProjectNewRequest,
+    ProjectOpenRecentRequest,
+    ProjectSaveRequest,
+    ProjectTransitionRequest,
+} from './projectTransitionContract'
+
+export type {
+    ActiveProjectTransitionRequest,
+    DirtyTransitionChoice,
+    InitialProjectTransitionRequest,
+    ProjectCloseRequest,
+    ProjectNewRequest,
+    ProjectOpenRecentRequest,
+    ProjectSaveRequest,
+    ProjectTransitionRequest,
+} from './projectTransitionContract'
 
 export const ProjectSessionIdSchema = z.string()
     .length(32)
@@ -34,7 +52,6 @@ export const parseRendererGeneration = (value: unknown): RendererGeneration => R
 export const parseWorkspaceGeneration = (value: unknown): WorkspaceGeneration => WorkspaceGenerationSchema.parse(value)
 export type DurableProjectData = ProjectDocumentV1 | LegacyProjectDocument
 export type ProjectSessionKind = 'amg' | 'legacy-json'
-export type DirtyTransitionChoice = 'save' | 'discard' | 'cancel'
 
 export type ProjectArchiveError = {
     readonly code: 'ARCHIVE_INVALID' | 'ARCHIVE_LIMIT_EXCEEDED' | 'ARCHIVE_INTEGRITY_FAILED'
@@ -49,12 +66,16 @@ export type ProjectPortabilityError = {
 
 export type ProjectOperationError = ProjectArchiveError | ProjectPortabilityError | {
     readonly code: 'STALE_SESSION'
-    readonly expectedSessionId: ProjectSessionId
+    readonly expectedSessionId: ProjectSessionId | null
     readonly activeSessionId?: ProjectSessionId
 } | {
     readonly code: 'STALE_RENDERER_GENERATION'
     readonly expected: RendererGeneration
     readonly actual: RendererGeneration
+} | {
+    readonly code: 'STALE_WORKSPACE_GENERATION'
+    readonly expected: WorkspaceGeneration
+    readonly actual: WorkspaceGeneration
 } | {
     readonly code: 'BUSY'
     readonly operation: ProjectOperation
@@ -115,24 +136,6 @@ export type ProjectFailure = {
 export type ProjectSessionResult = ProjectSessionSuccess | ProjectCanceled | ProjectFailure
 export type ProjectCloseResult = ProjectClosedSuccess | ProjectCanceled | ProjectFailure
 
-export type ProjectSaveRequest = {
-    readonly expectedSessionId: ProjectSessionId
-    readonly rendererGeneration: RendererGeneration
-    readonly snapshot: DurableProjectData
-}
-
-export type ProjectCloseRequest = {
-    readonly expectedSessionId: ProjectSessionId
-    readonly rendererGeneration: RendererGeneration
-    readonly snapshot: DurableProjectData
-    readonly dirtyChoice?: DirtyTransitionChoice
-}
-
-export type ProjectNewRequest = {
-    readonly name: string
-    readonly framework: string
-}
-
 export type RecentProject = {
     readonly id: RecentProjectId
     readonly name: string
@@ -154,8 +157,8 @@ export type RemoveRecentResult = {
 export interface ProjectBridge {
     readonly save: (request: ProjectSaveRequest) => Promise<ProjectSessionResult>
     readonly saveAs: (request: ProjectSaveRequest) => Promise<ProjectSessionResult>
-    readonly load: () => Promise<ProjectSessionResult>
-    readonly openRecent: (recentId: RecentProjectId) => Promise<ProjectSessionResult>
+    readonly load: (request: ProjectTransitionRequest) => Promise<ProjectSessionResult>
+    readonly openRecent: (request: ProjectOpenRecentRequest) => Promise<ProjectSessionResult>
     readonly removeRecent: (recentId: RecentProjectId) => Promise<RemoveRecentResult>
     readonly new: (request: ProjectNewRequest) => Promise<ProjectSessionResult>
     readonly close: (request: ProjectCloseRequest) => Promise<ProjectCloseResult>

@@ -3,9 +3,11 @@ import type {
   ProjectCloseRequest,
   ProjectCloseResult,
   ProjectNewRequest,
+  ProjectOpenRecentRequest,
   ProjectSaveRequest,
   ProjectSessionId,
   ProjectSessionResult,
+  ProjectTransitionRequest,
   RecentProjectsResult,
   RemoveRecentResult,
 } from "../../shared/projects/projectIpcContract";
@@ -41,6 +43,10 @@ export type ActiveProjectState = {
   readonly approvedExternalReferences: readonly string[];
 };
 
+export type ActiveProjectStateStore = {
+  current: ActiveProjectState | null;
+};
+
 export type ProjectServiceOptions = {
   readonly userDataPath: string;
   readonly documentsPath: string;
@@ -55,8 +61,8 @@ export type ProjectServiceOptions = {
 export interface ProjectPersistenceService {
   readonly save: (request: ProjectSaveRequest) => Promise<ProjectSessionResult>;
   readonly saveAs: (request: ProjectSaveRequest) => Promise<ProjectSessionResult>;
-  readonly openProject: () => Promise<ProjectSessionResult>;
-  readonly openRecent: (recentId: unknown) => Promise<ProjectSessionResult>;
+  readonly openProject: (request: ProjectTransitionRequest) => Promise<ProjectSessionResult>;
+  readonly openRecent: (request: ProjectOpenRecentRequest) => Promise<ProjectSessionResult>;
   readonly removeRecent: (recentId: unknown) => Promise<RemoveRecentResult>;
   readonly newProject: (request: ProjectNewRequest) => Promise<ProjectSessionResult>;
   readonly close: (request: ProjectCloseRequest) => Promise<ProjectCloseResult>;

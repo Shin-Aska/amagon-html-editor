@@ -18,7 +18,19 @@ import { buildRuntimeAssetUrl } from "../../shared/projects/assetReference";
 import { createProjectSaveCoordinator } from "../../renderer/project/projectSaveCoordinator";
 import { buildProjectSnapshot } from "../../renderer/project/projectSnapshot";
 import { ProjectDocumentV1Schema } from "../../shared/projects/projectDocumentSchema";
-import { parseProjectSessionId } from "../../shared/projects/projectIpcContract";
+import {
+  parseProjectSessionId,
+  parseRendererGeneration,
+  parseWorkspaceGeneration,
+} from "../../shared/projects/projectIpcContract";
+
+const INITIAL_TRANSITION = {
+  expectedSessionId: null,
+  rendererGeneration: parseRendererGeneration(0),
+  workspaceGeneration: parseWorkspaceGeneration(0),
+  snapshot: null,
+  dirtyChoice: "discard" as const,
+};
 import { createDefaultTheme, type ProjectData } from "../../renderer/store/types";
 import { createProjectService, type ProjectDialogPort } from "./projectService";
 import { inventoryWithHashes, runProjectMutation } from "./projectMutation";
@@ -140,7 +152,7 @@ describe("media import streaming", () => {
 
   it("aborts a production-scoped streamed mutation before service close drains it", async () => {
     const harness = await persistenceHarness();
-    const created = await harness.service.newProject({ name: "Cancel transfer", framework: "vanilla" });
+    const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Cancel transfer", framework: "vanilla" });
     if (!created.success) throw new Error("project creation failed");
     const workspace = (await harness.service.getDirectory()).directory;
     if (workspace === null) throw new Error("workspace missing");
@@ -163,7 +175,8 @@ describe("media import streaming", () => {
     const staleClosing = await harness.service.close({
       expectedSessionId: parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"),
       rendererGeneration: created.session.committedRendererGeneration,
-      snapshot: created.session.data,
+      workspaceGeneration: created.session.committedWorkspaceGeneration,
+      snapshot: null,
       dirtyChoice: "discard",
     });
     expect(staleClosing).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
@@ -171,7 +184,8 @@ describe("media import streaming", () => {
     const closing = harness.service.close({
       expectedSessionId: created.session.sessionId,
       rendererGeneration: created.session.committedRendererGeneration,
-      snapshot: created.session.data,
+      workspaceGeneration: created.session.committedWorkspaceGeneration,
+      snapshot: null,
       dirtyChoice: "discard",
     });
 
@@ -183,7 +197,7 @@ describe("media import streaming", () => {
 
   it("keeps the production transfer lease across variants so close prevents the next request", async () => {
     const harness = await persistenceHarness();
-    const created = await harness.service.newProject({ name: "Cancel font batch", framework: "vanilla" });
+    const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Cancel font batch", framework: "vanilla" });
     if (!created.success) throw new Error("project creation failed");
     let releaseFirstVariant: (() => void) | undefined;
     let firstVariantStarted: (() => void) | undefined;
@@ -210,7 +224,8 @@ describe("media import streaming", () => {
     const closing = harness.service.close({
       expectedSessionId: created.session.sessionId,
       rendererGeneration: created.session.committedRendererGeneration,
-      snapshot: created.session.data,
+      workspaceGeneration: created.session.committedWorkspaceGeneration,
+      snapshot: null,
       dirtyChoice: "discard",
     });
     releaseFirstVariant?.();
@@ -223,7 +238,7 @@ describe("media import streaming", () => {
 
   it("streams a media-only mutation through autosave, close, and reopen with a new URL", async () => {
     const harness = await persistenceHarness();
-    const created = await harness.service.newProject({ name: "Persist stream", framework: "vanilla" });
+    const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Persist stream", framework: "vanilla" });
     if (!created.success) throw new Error("project creation failed");
     const workspace = (await harness.service.getDirectory()).directory;
     if (workspace === null) throw new Error("workspace missing");
@@ -275,6 +290,7 @@ describe("media import streaming", () => {
         const saved = await harness.service.save({
           expectedSessionId: invocation.expectedSessionId,
           rendererGeneration: invocation.rendererGeneration,
+          workspaceGeneration: invocation.workspaceGeneration,
           snapshot: ProjectDocumentV1Schema.parse(invocation.snapshot),
         });
         return saved.success ? {
@@ -292,12 +308,13 @@ describe("media import streaming", () => {
     const closed = await harness.service.close({
       expectedSessionId: created.session.sessionId,
       rendererGeneration: coordinator.state.rendererGeneration,
-      snapshot: created.session.data,
+      workspaceGeneration: coordinator.state.workspaceGeneration,
+      snapshot: null,
       dirtyChoice: "discard",
     });
     expect(closed.success).toBe(true);
     harness.opens.push({ canceled: false, filePaths: [harness.targetPath] });
-    const reopened = await harness.service.openProject();
+    const reopened = await harness.service.openProject(INITIAL_TRANSITION);
     if (!reopened.success) throw new Error("reopen failed");
     expect(reopened.session.sessionId).not.toBe(created.session.sessionId);
     await expect(harness.service.resolveAssetRead(oldUrl)).rejects.toThrow("another session");

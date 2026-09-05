@@ -3,6 +3,7 @@ import {
   ProjectSessionIdSchema,
   RecentProjectIdSchema,
   RendererGenerationSchema,
+  WorkspaceGenerationSchema,
   type ProjectFailure,
 } from "../../shared/projects/projectIpcContract";
 import {
@@ -19,14 +20,40 @@ const DurableProjectSchema = z.union([ProjectDocumentV1Schema, LegacyProjectDocu
 const SaveRequestFields = {
   expectedSessionId: ProjectSessionIdSchema,
   rendererGeneration: RendererGenerationSchema,
+  workspaceGeneration: WorkspaceGenerationSchema,
   snapshot: DurableProjectSchema,
 } as const;
 const SaveRequestSchema = z.object(SaveRequestFields).strict().readonly();
-const CloseRequestSchema = z.object({
+const InitialTransitionFields = {
+  expectedSessionId: z.null(),
+  rendererGeneration: RendererGenerationSchema.refine((value) => value === 0),
+  workspaceGeneration: WorkspaceGenerationSchema.refine((value) => value === 0),
+  snapshot: z.null(),
+  dirtyChoice: z.literal("discard"),
+} as const;
+const ActiveSaveTransitionFields = {
   ...SaveRequestFields,
-  dirtyChoice: z.enum(["save", "discard", "cancel"]).optional(),
-}).strict().readonly();
-const NewRequestSchema = z.object({ name: z.string().min(1), framework: z.string().min(1) }).strict().readonly();
+  dirtyChoice: z.literal("save"),
+} as const;
+const ActiveNonSaveTransitionFields = {
+  expectedSessionId: ProjectSessionIdSchema,
+  rendererGeneration: RendererGenerationSchema,
+  workspaceGeneration: WorkspaceGenerationSchema,
+  snapshot: z.null(),
+  dirtyChoice: z.enum(["discard", "cancel"]),
+} as const;
+const transitionSchema = <Fields extends z.ZodRawShape>(extra: Fields) => z.union([
+  z.object({ ...InitialTransitionFields, ...extra }).strict().readonly(),
+  z.object({ ...ActiveSaveTransitionFields, ...extra }).strict().readonly(),
+  z.object({ ...ActiveNonSaveTransitionFields, ...extra }).strict().readonly(),
+]);
+const TransitionRequestSchema = transitionSchema({});
+const CloseRequestSchema = z.union([
+  z.object(ActiveSaveTransitionFields).strict().readonly(),
+  z.object(ActiveNonSaveTransitionFields).strict().readonly(),
+]);
+const NewRequestSchema = transitionSchema({ name: z.string().min(1), framework: z.string().min(1) });
+const OpenRecentRequestSchema = transitionSchema({ recentId: RecentProjectIdSchema });
 
 export const PROJECT_IPC_CHANNELS = [
   "project:save",
@@ -78,8 +105,8 @@ export const registerProjectIpc = (
   REMOVED_PROJECT_CHANNELS.forEach((channel) => registrar.removeHandler(channel));
   registrar.handle("project:save", parsed(getMainWindow, (input) => service.save(SaveRequestSchema.parse(input))));
   registrar.handle("project:saveAs", parsed(getMainWindow, (input) => service.saveAs(SaveRequestSchema.parse(input))));
-  registrar.handle("project:load", parsed(getMainWindow, () => service.openProject()));
-  registrar.handle("project:openRecent", parsed(getMainWindow, (input) => service.openRecent(RecentProjectIdSchema.parse(input))));
+  registrar.handle("project:load", parsed(getMainWindow, (input) => service.openProject(TransitionRequestSchema.parse(input))));
+  registrar.handle("project:openRecent", parsed(getMainWindow, (input) => service.openRecent(OpenRecentRequestSchema.parse(input))));
   registrar.handle("project:removeRecent", parsed(getMainWindow, (input) => service.removeRecent(RecentProjectIdSchema.parse(input))));
   registrar.handle("project:new", parsed(getMainWindow, (input) => service.newProject(NewRequestSchema.parse(input))));
   registrar.handle("project:close", parsed(getMainWindow, (input) => service.close(CloseRequestSchema.parse(input))));

@@ -3,7 +3,11 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ProjectSessionIdSchema } from "../../shared/projects/projectIpcContract";
+import {
+  parseRendererGeneration,
+  parseWorkspaceGeneration,
+  ProjectSessionIdSchema,
+} from "../../shared/projects/projectIpcContract";
 import {
   buildRuntimeAssetUrl,
   encodeDurableAssetReference,
@@ -168,6 +172,32 @@ describe("project session ownership", () => {
     expect(staleSession).toThrow(SessionStateError);
     expect(staleGeneration).toThrow(SessionStateError);
     expect(session.generations.committedRenderer).toBe(0);
+  });
+
+  it("validates transition identity and both live generations", () => {
+    const session = ProjectSession.createAmg({
+      sourcePath: "C:/projects/demo.amg",
+      workspacePath: "C:/user/amg-workspaces/session-one",
+    });
+    session.updateRendererGeneration(session.id, 2);
+    session.recordWorkspaceMutation(session.id);
+    const sessionId = ProjectSessionIdSchema.parse(session.id);
+
+    expect(() => session.assertTransition(
+      sessionId,
+      parseRendererGeneration(2),
+      parseWorkspaceGeneration(1),
+    )).not.toThrow();
+    expect(() => session.assertTransition(
+      sessionId,
+      parseRendererGeneration(1),
+      parseWorkspaceGeneration(1),
+    )).toThrow(SessionStateError);
+    expect(() => session.assertTransition(
+      sessionId,
+      parseRendererGeneration(2),
+      parseWorkspaceGeneration(0),
+    )).toThrow(SessionStateError);
   });
 
   it("leases a canonical asset only for the matching active session", async () => {

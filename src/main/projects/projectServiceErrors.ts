@@ -5,6 +5,7 @@ import {
   type ProjectOperationError,
   type ProjectSessionId,
   type RendererGeneration,
+  type WorkspaceGeneration,
 } from "../../shared/projects/projectIpcContract";
 import type { ProjectPortabilityOffender } from "../../shared/projects/projectPortability";
 import { AmgArchiveReaderError } from "./amgArchiveReader";
@@ -36,10 +37,12 @@ export class ProjectServiceTargetError extends Error {
 }
 
 export type ProjectErrorContext = {
-  readonly expectedSessionId?: ProjectSessionId;
+  readonly expectedSessionId?: ProjectSessionId | null;
   readonly activeSessionId?: ProjectSessionId;
   readonly expectedRendererGeneration?: RendererGeneration;
   readonly actualRendererGeneration?: RendererGeneration;
+  readonly expectedWorkspaceGeneration?: WorkspaceGeneration;
+  readonly actualWorkspaceGeneration?: WorkspaceGeneration;
 };
 
 const archiveError = (error: AmgArchiveReaderError): ProjectOperationError => {
@@ -66,12 +69,12 @@ export const mapProjectOperationError = (
   if (error instanceof SessionStateError) {
     if (
       (error.code === "stale-session" || error.code === "inactive")
-      && context.expectedSessionId !== undefined
+      && "expectedSessionId" in context
       && context.activeSessionId !== context.expectedSessionId
     ) {
       return {
         code: "STALE_SESSION",
-        expectedSessionId: context.expectedSessionId,
+        expectedSessionId: context.expectedSessionId ?? null,
         ...(context.activeSessionId === undefined ? {} : { activeSessionId: context.activeSessionId }),
       };
     }
@@ -84,6 +87,17 @@ export const mapProjectOperationError = (
         code: "STALE_RENDERER_GENERATION",
         expected: context.expectedRendererGeneration,
         actual: context.actualRendererGeneration,
+      };
+    }
+    if (
+      error.code === "workspace-generation"
+      && context.expectedWorkspaceGeneration !== undefined
+      && context.actualWorkspaceGeneration !== undefined
+    ) {
+      return {
+        code: "STALE_WORKSPACE_GENERATION",
+        expected: context.expectedWorkspaceGeneration,
+        actual: context.actualWorkspaceGeneration,
       };
     }
     return { code: "INTERNAL", message: error.message };

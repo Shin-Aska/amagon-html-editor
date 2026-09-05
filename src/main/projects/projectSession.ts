@@ -3,6 +3,11 @@ import {
   parseRuntimeAssetUrl,
   type ParsedRuntimeAssetUrl,
 } from "../../shared/projects/assetReference";
+import type {
+  ProjectSessionId,
+  RendererGeneration,
+  WorkspaceGeneration,
+} from "../../shared/projects/projectIpcContract";
 import { resolveExistingArchiveFile } from "./archivePath";
 
 export type ProjectSessionKind = "none" | "legacy-json" | "amg";
@@ -13,7 +18,7 @@ export class SessionStateError extends Error {
   readonly name = "SessionStateError";
 
   constructor(
-    readonly code: "no-session" | "stale-session" | "inactive" | "generation",
+    readonly code: "no-session" | "stale-session" | "inactive" | "generation" | "workspace-generation",
     message: string,
   ) {
     super(message);
@@ -107,6 +112,26 @@ export class ProjectSession {
 
   get activeReadLeaseCount(): number {
     return this.readLeaseCount;
+  }
+
+  assertTransition(
+    expectedSessionId: ProjectSessionId,
+    rendererGeneration: RendererGeneration,
+    workspaceGeneration: WorkspaceGeneration,
+  ): void {
+    this.assertActive(expectedSessionId);
+    if (rendererGeneration < this.rendererGeneration) {
+      throw new SessionStateError(
+        "generation",
+        "renderer generation is stale",
+      );
+    }
+    if (workspaceGeneration !== this.workspaceGeneration) {
+      throw new SessionStateError(
+        "workspace-generation",
+        "workspace generation is stale",
+      );
+    }
   }
 
   runMutation<T>(
