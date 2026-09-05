@@ -6,6 +6,10 @@ import type {
   ValidationResult,
 } from "../publish";
 import type { PublisherExtension } from "../publish/types/PublisherExtension";
+import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
+
+type IpcEvent = Parameters<typeof assertTrustedMainFrame>[0];
+type MainWindow = Parameters<typeof assertTrustedMainFrame>[1];
 
 interface PublishRequest {
   readonly providerId: string;
@@ -18,12 +22,13 @@ interface SaveCredentialsRequest {
   readonly credentials: PublishCredentials;
 }
 
-interface PublishEvent {
-  readonly sender: { readonly send: (channel: string, progress: PublishProgress) => void };
-}
+type PublishEvent = IpcEvent & {
+  readonly sender: IpcEvent["sender"] & { readonly send: (channel: string, progress: PublishProgress) => void };
+};
 
 export interface PublishIpcContext {
   readonly handle: <TArgument>(channel: string, handler: (event: PublishEvent, argument: TArgument) => unknown) => void;
+  readonly getMainWindow: () => MainWindow;
   readonly getAllPublishers: () => PublisherExtension[];
   readonly getPublisher: (providerId: string) => PublisherExtension | undefined;
   readonly loadCredentials: (providerId: string) => Promise<PublishCredentials>;
@@ -67,14 +72,18 @@ export const registerPublishIpc = (context: PublishIpcContext): void => {
     return publisher;
   };
 
-  context.handle<never>("publish:getProviders", () => context.getAllPublishers().map((publisher) => ({
-    id: publisher.meta.id,
-    displayName: publisher.meta.displayName,
-    description: publisher.meta.description,
-    credentialFields: publisher.credentialFields.map((field) => ({ ...field })),
-  })));
+  context.handle<never>("publish:getProviders", (event) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    return context.getAllPublishers().map((publisher) => ({
+      id: publisher.meta.id,
+      displayName: publisher.meta.displayName,
+      description: publisher.meta.description,
+      credentialFields: publisher.credentialFields.map((field) => ({ ...field })),
+    }));
+  });
 
-  context.handle<string>("publish:getCredentials", async (_event, providerId) => {
+  context.handle<string>("publish:getCredentials", async (event, providerId) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       return await loadMaskedCredentials(providerId);
     } catch {
@@ -82,7 +91,8 @@ export const registerPublishIpc = (context: PublishIpcContext): void => {
     }
   });
 
-  context.handle<SaveCredentialsRequest>("publish:saveCredentials", async (_event, data) => {
+  context.handle<SaveCredentialsRequest>("publish:saveCredentials", async (event, data) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       getPublisherOrThrow(data.providerId);
       await context.saveCredentials(data.providerId, data.credentials);
@@ -92,7 +102,8 @@ export const registerPublishIpc = (context: PublishIpcContext): void => {
     }
   });
 
-  context.handle<string>("publish:deleteCredentials", async (_event, providerId) => {
+  context.handle<string>("publish:deleteCredentials", async (event, providerId) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       getPublisherOrThrow(providerId);
       await context.deleteCredentials(providerId);
@@ -102,7 +113,8 @@ export const registerPublishIpc = (context: PublishIpcContext): void => {
     }
   });
 
-  context.handle<PublishRequest>("publish:validate", async (_event, data): Promise<ValidationResult> => {
+  context.handle<PublishRequest>("publish:validate", async (event, data): Promise<ValidationResult> => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     const publisher = context.getPublisher(data.providerId);
     if (publisher === undefined) {
       return {
@@ -116,6 +128,7 @@ export const registerPublishIpc = (context: PublishIpcContext): void => {
   });
 
   context.handle<PublishRequest>("publish:publish", async (event, data): Promise<PublishResult> => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     const publisher = context.getPublisher(data.providerId);
     if (publisher === undefined) {
       return { success: false, error: `Unknown publish provider: ${data.providerId}`, warnings: [] };

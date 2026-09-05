@@ -1,16 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
+import { createTrustedIpcTestFixture } from "./__tests__/trustedIpcTestFixture";
 import { registerCredentialIpc, type CredentialIpcContext } from "./registerCredentialIpc";
 
 type TestHandler = (event: unknown, argument: unknown) => unknown;
+type TestContext = CredentialIpcContext & { readonly getMainWindow: () => ReturnType<typeof createTrustedIpcTestFixture>["mainWindow"] | null };
+const ipc = createTrustedIpcTestFixture();
 
-const setup = (overrides: Partial<CredentialIpcContext> = {}) => {
+const setup = (overrides: Partial<TestContext> = {}) => {
   const handlers = new Map<string, TestHandler>();
   const saveCredential = vi.fn(async () => undefined);
   const deleteCredential = vi.fn(async () => undefined);
-  const context: CredentialIpcContext = {
+  const context: TestContext = {
     handle: (channel, handler) => {
       handlers.set(channel, (event, argument) => Reflect.apply(handler, undefined, [event, argument]));
     },
+    getMainWindow: () => ipc.mainWindow,
     listCredentials: vi.fn(async () => []),
     getDefinitions: vi.fn(() => []),
     getValues: vi.fn(async () => ({ apiKey: "masked" })),
@@ -23,13 +27,42 @@ const setup = (overrides: Partial<CredentialIpcContext> = {}) => {
   return { handlers, saveCredential, deleteCredential };
 };
 
-const invoke = (handlers: ReadonlyMap<string, TestHandler>, channel: string, argument?: unknown): unknown => {
+const invoke = (handlers: ReadonlyMap<string, TestHandler>, channel: string, argument?: unknown, event: unknown = ipc.trustedEvent): unknown => {
   const handler = handlers.get(channel);
   if (handler === undefined) throw new Error(`missing handler: ${channel}`);
-  return handler({}, argument);
+  return handler(event, argument);
 };
 
 describe("credential catalog IPC registration", () => {
+  it("rejects foreign, child-frame, missing-frame, and missing-window requests before credential sinks", async () => {
+    const sink = vi.fn();
+    const argumentsByChannel = new Map<string, unknown>([
+      ["app:getCredentialValues", "ai:openai"],
+      ["app:saveCredential", { id: "ai:openai", values: { apiKey: "secret" } }],
+      ["app:deleteCredential", "ai:openai"],
+    ]);
+    for (const [event, getMainWindow] of [
+      [ipc.foreignEvent, () => ipc.mainWindow],
+      [ipc.childFrameEvent, () => ipc.mainWindow],
+      [ipc.missingFrameEvent, () => ipc.mainWindow],
+      [ipc.trustedEvent, () => null],
+    ] as const) {
+      const { handlers } = setup({
+        getMainWindow,
+        listCredentials: async () => { sink(); return []; },
+        getDefinitions: () => { sink(); return []; },
+        getValues: async () => { sink(); return {}; },
+        saveCredential: async () => { sink(); },
+        deleteCredential: async () => { sink(); },
+        isEncryptionSecure: () => { sink(); return true; },
+      });
+      for (const [channel, handler] of handlers) {
+        await expect(Promise.resolve().then(() => handler(event, argumentsByChannel.get(channel)))).rejects.toThrow("trusted");
+      }
+    }
+    expect(sink).not.toHaveBeenCalled();
+  });
+
   it("preserves handler order", () => {
     const { handlers } = setup();
     expect([...handlers.keys()]).toEqual([

@@ -1,6 +1,9 @@
 import * as path from "path";
+import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 
-type Handler = (event: unknown, argument?: unknown) => unknown;
+type IpcEvent = Parameters<typeof assertTrustedMainFrame>[0];
+type MainWindow = Exclude<Parameters<typeof assertTrustedMainFrame>[1], null>;
+type Handler = (event: IpcEvent, argument?: unknown) => unknown;
 
 interface SaveDialogOptions {
   readonly title: string;
@@ -14,9 +17,9 @@ interface OpenDialogOptions {
   readonly properties: ("openDirectory" | "createDirectory")[];
 }
 
-interface ProgressWindow {
-  readonly webContents: { readonly send: (channel: string, payload: unknown) => void };
-}
+type ProgressWindow = MainWindow & {
+  readonly webContents: MainWindow["webContents"] & { readonly send: (channel: string, payload: unknown) => void };
+};
 
 export interface ExportIpcContext {
   readonly handle: (channel: string, handler: Handler) => void;
@@ -46,7 +49,8 @@ const binaryContent = (content: object): Uint8Array => {
 };
 
 export const registerExportIpc = (context: ExportIpcContext): void => {
-  context.handle("project:exportHtml", async (_event, argument) => {
+  context.handle("project:exportHtml", async (event, argument) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       const result = await context.showSaveDialog({
         title: "Export HTML",
@@ -61,7 +65,8 @@ export const registerExportIpc = (context: ExportIpcContext): void => {
     }
   });
 
-  context.handle("project:exportSite", async (_event, argument) => {
+  context.handle("project:exportSite", async (event, argument) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       const result = await context.showOpenDialog({
         title: "Choose Export Directory",
@@ -112,7 +117,8 @@ export const registerExportIpc = (context: ExportIpcContext): void => {
     }
   });
 
-  context.handle("project:openInBrowser", async (_event, argument) => {
+  context.handle("project:openInBrowser", async (event, argument) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       const target = String(argument || "");
       if (!target) return { success: false, error: "No file path provided" };

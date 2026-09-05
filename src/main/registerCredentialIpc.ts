@@ -1,5 +1,9 @@
 import type { PublishCredentials } from "../publish";
 import type { CredentialDefinition, CredentialRecord } from "./credentialCatalog";
+import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
+
+type IpcEvent = Parameters<typeof assertTrustedMainFrame>[0];
+type MainWindow = Parameters<typeof assertTrustedMainFrame>[1];
 
 interface SaveCredentialRequest {
   readonly id: string;
@@ -7,7 +11,8 @@ interface SaveCredentialRequest {
 }
 
 export interface CredentialIpcContext {
-  readonly handle: <TArgument>(channel: string, handler: (event: unknown, argument: TArgument) => unknown) => void;
+  readonly handle: <TArgument>(channel: string, handler: (event: IpcEvent, argument: TArgument) => unknown) => void;
+  readonly getMainWindow: () => MainWindow;
   readonly listCredentials: () => Promise<CredentialRecord[]>;
   readonly getDefinitions: () => CredentialDefinition[];
   readonly getValues: (id: string) => Promise<PublishCredentials>;
@@ -19,7 +24,8 @@ export interface CredentialIpcContext {
 const errorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error);
 
 export const registerCredentialIpc = (context: CredentialIpcContext): void => {
-  context.handle<never>("app:getCredentials", async () => {
+  context.handle<never>("app:getCredentials", async (event) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       return {
         success: true,
@@ -32,7 +38,8 @@ export const registerCredentialIpc = (context: CredentialIpcContext): void => {
     }
   });
 
-  context.handle<never>("app:getCredentialDefinitions", async () => {
+  context.handle<never>("app:getCredentialDefinitions", async (event) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       return { success: true, definitions: context.getDefinitions() };
     } catch (error) {
@@ -40,7 +47,8 @@ export const registerCredentialIpc = (context: CredentialIpcContext): void => {
     }
   });
 
-  context.handle<string>("app:getCredentialValues", async (_event, id) => {
+  context.handle<string>("app:getCredentialValues", async (event, id) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       return { success: true, values: await context.getValues(id) };
     } catch (error) {
@@ -48,7 +56,8 @@ export const registerCredentialIpc = (context: CredentialIpcContext): void => {
     }
   });
 
-  context.handle<SaveCredentialRequest>("app:saveCredential", async (_event, data) => {
+  context.handle<SaveCredentialRequest>("app:saveCredential", async (event, data) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       await context.saveCredential(data.id, data.values);
       return { success: true };
@@ -57,7 +66,8 @@ export const registerCredentialIpc = (context: CredentialIpcContext): void => {
     }
   });
 
-  context.handle<string>("app:deleteCredential", async (_event, id) => {
+  context.handle<string>("app:deleteCredential", async (event, id) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       await context.deleteCredential(id);
       return { success: true };

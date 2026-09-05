@@ -69,9 +69,7 @@ const googleFonts = createGoogleFontsService({
   exists: existsSync,
   mkdir: async (directory) => fs.mkdir(directory, { recursive: true }),
   writeFile: async (filePath, data) => fs.writeFile(filePath, data),
-  execFile: (file, args, options, callback) => {
-    execFile(file, [...args], options, callback);
-  },
+  execFile: (file, args, options, callback) => execFile(file, [...args], options, callback),
   fetch,
 }, getMimeType);
 
@@ -155,10 +153,11 @@ function registerIpcHandlers(): void {
 
   // ── Auto-save configuration ───────────────────────────────────────────
 
-  registerAutosaveIpc(ipcMain, autosave);
+  registerAutosaveIpc(ipcMain, autosave, windowController.getMainWindow);
 
   registerSettingsIpc({
     handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
     getVersion: () => app.getVersion(),
     getUserDataPath: () => app.getPath("userData"),
     readFile: fs.readFile,
@@ -168,6 +167,7 @@ function registerIpcHandlers(): void {
 
   registerCredentialIpc({
     handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
     listCredentials: listCredentialRecords,
     getDefinitions: getCredentialDefinitions,
     getValues: getCredentialValues,
@@ -178,6 +178,7 @@ function registerIpcHandlers(): void {
 
   registerPublishIpc({
     handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
     getAllPublishers,
     getPublisher,
     loadCredentials: loadPublishCredentials,
@@ -189,6 +190,7 @@ function registerIpcHandlers(): void {
 
   registerAiIpc({
     handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
     buildSystemPrompt,
     chat: aiChat,
     cliBinaryNames: CLI_BINARY_NAMES,
@@ -217,9 +219,7 @@ function registerIpcHandlers(): void {
     googleFonts,
     getMainWindow: windowController.getMainWindow,
     getLifecycleController: windowController.getLifecycleController,
-    setCurrentProjectDirectory: (directory) => {
-      currentProjectDir = directory;
-    },
+    setCurrentProjectDirectory: (directory) => { currentProjectDir = directory; },
     showSaveDialog: (mainWindow, options) => mainWindow === null
       ? dialog.showSaveDialog(options)
       : dialog.showSaveDialog(mainWindow, options),

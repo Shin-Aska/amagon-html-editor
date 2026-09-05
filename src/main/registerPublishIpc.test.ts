@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PublishCredentials, PublisherExtensionVersion } from "../publish";
 import type { PublisherExtension } from "../publish/types/PublisherExtension";
+import { createTrustedIpcTestFixture } from "./__tests__/trustedIpcTestFixture";
 import { registerPublishIpc, type PublishIpcContext } from "./registerPublishIpc";
 
-type TestHandler = (event: { sender: { send: (channel: string, payload: unknown) => void } }, argument: unknown) => unknown;
+type TestHandler = (event: unknown, argument: unknown) => unknown;
+type TestContext = PublishIpcContext & { readonly getMainWindow: () => ReturnType<typeof createTrustedIpcTestFixture>["mainWindow"] | null };
 
 const createPublisher = (): PublisherExtension => ({
   apiVersion: "1.0" satisfies PublisherExtensionVersion,
@@ -16,16 +18,19 @@ const createPublisher = (): PublisherExtension => ({
   publish: vi.fn(async () => ({ success: true, url: "https://example.test/site", warnings: [] })),
 });
 
-const setup = (overrides: Partial<PublishIpcContext> = {}) => {
+const setup = (overrides: Partial<TestContext> = {}) => {
   const handlers = new Map<string, TestHandler>();
   const publisher = createPublisher();
   const saveCredentials = vi.fn(async () => undefined);
   const deleteCredentials = vi.fn(async () => undefined);
   const resolveSensitiveValues = vi.fn((_fields, stored: PublishCredentials, incoming: PublishCredentials) => ({ ...stored, ...incoming }));
-  const context: PublishIpcContext = {
+  const send = vi.fn();
+  const ipc = createTrustedIpcTestFixture(send);
+  const context: TestContext = {
     handle: (channel, handler) => {
       handlers.set(channel, (event, argument) => Reflect.apply(handler, undefined, [event, argument]));
     },
+    getMainWindow: () => ipc.mainWindow,
     getAllPublishers: () => [publisher],
     getPublisher: (providerId) => providerId === "test" ? publisher : undefined,
     loadCredentials: vi.fn(async () => ({ token: "secret", site: "my-site" })),
@@ -36,17 +41,46 @@ const setup = (overrides: Partial<PublishIpcContext> = {}) => {
     ...overrides,
   };
   registerPublishIpc(context);
-  const send = vi.fn();
-  return { handlers, publisher, saveCredentials, deleteCredentials, resolveSensitiveValues, event: { sender: { send } }, send };
+  return { handlers, publisher, saveCredentials, deleteCredentials, resolveSensitiveValues, ipc, send };
 };
 
-const invoke = (current: ReturnType<typeof setup>, channel: string, argument?: unknown): unknown => {
+const invoke = (current: ReturnType<typeof setup>, channel: string, argument?: unknown, event: unknown = current.ipc.trustedEvent): unknown => {
   const handler = current.handlers.get(channel);
   if (handler === undefined) throw new Error(`missing handler: ${channel}`);
-  return handler(current.event, argument);
+  return handler(event, argument);
 };
 
 describe("publish IPC registration", () => {
+  it("rejects foreign, child-frame, missing-frame, and missing-window requests before publish sinks", async () => {
+    const sink = vi.fn();
+    const argumentsByChannel = new Map<string, unknown>([
+      ["publish:getCredentials", "test"],
+      ["publish:saveCredentials", { providerId: "test", credentials: {} }],
+      ["publish:deleteCredentials", "test"],
+      ["publish:validate", { providerId: "test", files: [] }],
+      ["publish:publish", { providerId: "test", files: [] }],
+    ]);
+    for (const state of ["foreign", "child", "missing-frame", "missing-window"] as const) {
+      const windowOverride = state === "missing-window" ? { getMainWindow: () => null } : {};
+      const current = setup({
+        ...windowOverride,
+        getAllPublishers: () => { sink(); return []; },
+        getPublisher: () => { sink(); return undefined; },
+        loadCredentials: async () => { sink(); return {}; },
+        saveCredentials: async () => { sink(); },
+        deleteCredentials: async () => { sink(); },
+      });
+      const event = state === "foreign" ? current.ipc.foreignEvent
+        : state === "child" ? current.ipc.childFrameEvent
+          : state === "missing-frame" ? current.ipc.missingFrameEvent
+            : current.ipc.trustedEvent;
+      for (const [channel, handler] of current.handlers) {
+        await expect(Promise.resolve().then(() => handler(event, argumentsByChannel.get(channel)))).rejects.toThrow("trusted");
+      }
+    }
+    expect(sink).not.toHaveBeenCalled();
+  });
+
   it("clones provider metadata and credential fields", () => {
     const current = setup();
     const result = invoke(current, "publish:getProviders");

@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AiConfig, AiProvider } from "./aiService";
+import { createTrustedIpcTestFixture } from "./__tests__/trustedIpcTestFixture";
 import { registerAiIpc, type AiIpcContext } from "./registerAiIpc";
 
 type TestHandler = (event: unknown, argument: unknown) => unknown;
+type TestContext = AiIpcContext & { readonly getMainWindow: () => ReturnType<typeof createTrustedIpcTestFixture>["mainWindow"] | null };
+const ipc = createTrustedIpcTestFixture();
 
 const modelCatalog = (suffix = "model"): Record<AiProvider, string[]> => ({
   openai: [`openai-${suffix}`],
@@ -23,17 +26,18 @@ const defaultConfig = (): AiConfig => ({
   ollamaUrl: "http://localhost:11434",
 });
 
-const setup = (overrides: Partial<AiIpcContext> = {}) => {
+const setup = (overrides: Partial<TestContext> = {}) => {
   const handlers = new Map<string, TestHandler>();
   const chat = vi.fn(async () => ({ content: "reply" }));
   const detectCliProvider = vi.fn(async () => ({ available: false }));
   const saveConfig = vi.fn(async (config: Partial<AiConfig>) => ({ ...defaultConfig(), ...config }));
   const loadApiKeyForProvider = vi.fn(async () => "stored-key");
   const fetchModelsForProvider = vi.fn(async () => ["remote-model"]);
-  const context: AiIpcContext = {
+  const context: TestContext = {
     handle: (channel, handler) => {
       handlers.set(channel, (event, argument) => Reflect.apply(handler, undefined, [event, argument]));
     },
+    getMainWindow: () => ipc.mainWindow,
     buildSystemPrompt: () => "generated system",
     chat,
     cliBinaryNames: { "codex-cli": "codex", "github-cli": "copilot", "junie-cli": "junie" },
@@ -53,13 +57,42 @@ const setup = (overrides: Partial<AiIpcContext> = {}) => {
   return { handlers, chat, detectCliProvider, saveConfig, loadApiKeyForProvider, fetchModelsForProvider };
 };
 
-const invoke = (handlers: ReadonlyMap<string, TestHandler>, channel: string, argument?: unknown): unknown => {
+const invoke = (handlers: ReadonlyMap<string, TestHandler>, channel: string, argument?: unknown, event: unknown = ipc.trustedEvent): unknown => {
   const handler = handlers.get(channel);
   if (handler === undefined) throw new Error(`missing handler: ${channel}`);
-  return handler({}, argument);
+  return handler(event, argument);
 };
 
 describe("AI IPC registration", () => {
+  it("rejects foreign, child-frame, missing-frame, and missing-window requests before AI sinks", async () => {
+    const sink = vi.fn();
+    const argumentsByChannel = new Map<string, unknown>([
+      ["ai:chat", { messages: [] }],
+      ["ai:setConfig", { provider: "openai" }],
+      ["ai:fetchModelsForProvider", { provider: "openai", apiKey: "direct" }],
+    ]);
+    for (const [event, getMainWindow] of [
+      [ipc.foreignEvent, () => ipc.mainWindow],
+      [ipc.childFrameEvent, () => ipc.mainWindow],
+      [ipc.missingFrameEvent, () => ipc.mainWindow],
+      [ipc.trustedEvent, () => null],
+    ] as const) {
+      const { handlers } = setup({
+        getMainWindow,
+        chat: async () => { sink(); return { content: "blocked" }; },
+        detectCliProvider: async () => { sink(); return { available: false }; },
+        loadConfig: async () => { sink(); return defaultConfig(); },
+        saveConfig: async () => { sink(); return defaultConfig(); },
+        fetchAvailableModels: async () => { sink(); return modelCatalog(); },
+        fetchModelsForProvider: async () => { sink(); return []; },
+      });
+      for (const [channel, handler] of handlers) {
+        await expect(Promise.resolve().then(() => handler(event, argumentsByChannel.get(channel)))).rejects.toThrow("trusted");
+      }
+    }
+    expect(sink).not.toHaveBeenCalled();
+  });
+
   it("chats without changing messages when no registry is supplied", async () => {
     const current = setup();
     const messages = [{ role: "user" as const, content: "hello" }];

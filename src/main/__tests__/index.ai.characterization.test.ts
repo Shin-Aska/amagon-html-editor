@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { handlerFor, loadCharacterizedEntrypoint } from "./indexCharacterizationHarness";
+import { handlerFor, loadCharacterizedEntrypoint, trustedEvent } from "./indexCharacterizationHarness";
 
 const state = await loadCharacterizedEntrypoint();
 
 describe("AI IPC characterization", () => {
   it("preserves chat failure shape for invalid input", async () => {
-    const result = await handlerFor("ai:chat")({}, { messages: undefined });
+    const result = await handlerFor("ai:chat")(trustedEvent(), { messages: undefined });
     expect(result).toEqual(expect.objectContaining({ success: false }));
   });
 

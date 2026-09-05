@@ -1,11 +1,15 @@
 import * as path from "path";
+import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 
 export type JsonValue = string | number | boolean | null | JsonObject | readonly JsonValue[];
 export type JsonObject = { readonly [key: string]: JsonValue };
-type Handler = (event?: unknown, argument?: JsonObject) => unknown;
+type IpcEvent = Parameters<typeof assertTrustedMainFrame>[0];
+type MainWindow = Parameters<typeof assertTrustedMainFrame>[1];
+type Handler = (event: IpcEvent, argument?: JsonObject) => unknown;
 
 export interface SettingsIpcContext {
   readonly handle: (channel: string, handler: Handler) => void;
+  readonly getMainWindow: () => MainWindow;
   readonly getVersion: () => string;
   readonly getUserDataPath: () => string;
   readonly readFile: (filePath: string, encoding: "utf-8") => Promise<string>;
@@ -20,9 +24,13 @@ const parseObject = (raw: string): JsonObject => JSON.parse(raw);
 const errorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error);
 
 export const registerSettingsIpc = (context: SettingsIpcContext): void => {
-  context.handle("app:getVersion", () => ({ success: true, version: context.getVersion() }));
+  context.handle("app:getVersion", (event) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    return { success: true, version: context.getVersion() };
+  });
 
-  context.handle("app:getSettings", async () => {
+  context.handle("app:getSettings", async (event) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       const settings = parseObject(await context.readFile(settingsPath(context), "utf-8"));
       return { success: true, settings };
@@ -31,7 +39,8 @@ export const registerSettingsIpc = (context: SettingsIpcContext): void => {
     }
   });
 
-  context.handle("app:saveSettings", async (_event, patch = {}) => {
+  context.handle("app:saveSettings", async (event, patch = {}) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
     try {
       const filePath = settingsPath(context);
       let existing: JsonObject;
@@ -48,5 +57,8 @@ export const registerSettingsIpc = (context: SettingsIpcContext): void => {
     }
   });
 
-  context.handle("app:isEncryptionSecure", () => ({ secure: context.isEncryptionSecure() }));
+  context.handle("app:isEncryptionSecure", (event) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    return { secure: context.isEncryptionSecure() };
+  });
 };

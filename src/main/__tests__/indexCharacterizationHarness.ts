@@ -134,3 +134,9 @@ export const handlerFor = (channel: string): CapturedHandler => {
 };
 
 export const untrustedEvent = () => ({ sender: { id: 404, mainFrame: {} }, senderFrame: {} });
+
+export const trustedEvent = () => {
+  const window = state.windows[0];
+  if (window === undefined) throw new Error("main entrypoint did not create a window");
+  return { sender: window.webContents, senderFrame: window.webContents.mainFrame };
+};

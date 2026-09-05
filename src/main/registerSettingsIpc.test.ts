@@ -1,14 +1,18 @@
 import * as path from "path";
 import { describe, expect, it, vi } from "vitest";
+import { createTrustedIpcTestFixture } from "./__tests__/trustedIpcTestFixture";
 import { registerSettingsIpc, type JsonObject, type SettingsIpcContext } from "./registerSettingsIpc";
 
 type Handler = Parameters<SettingsIpcContext["handle"]>[1];
+type TestContext = SettingsIpcContext & { readonly getMainWindow: () => ReturnType<typeof createTrustedIpcTestFixture>["mainWindow"] | null };
+const ipc = createTrustedIpcTestFixture();
 
-const setup = (overrides: Partial<SettingsIpcContext> = {}) => {
+const setup = (overrides: Partial<TestContext> = {}) => {
   const handlers = new Map<string, Handler>();
   const writes: [string, string, "utf-8"][] = [];
-  const context: SettingsIpcContext = {
+  const context: TestContext = {
     handle: (channel, handler) => handlers.set(channel, handler),
+    getMainWindow: () => ipc.mainWindow,
     getVersion: () => "1.9.0-test",
     getUserDataPath: () => path.join("C:", "user-data"),
     readFile: vi.fn(async () => "{}"),
@@ -20,13 +24,48 @@ const setup = (overrides: Partial<SettingsIpcContext> = {}) => {
   return { handlers, writes };
 };
 
-const invoke = (handlers: ReadonlyMap<string, Handler>, channel: string, argument?: JsonObject): unknown => {
+const invoke = (handlers: ReadonlyMap<string, Handler>, channel: string, argument?: JsonObject, event: Parameters<Handler>[0] = ipc.trustedEvent): unknown => {
   const handler = handlers.get(channel);
   if (handler === undefined) throw new Error(`missing handler: ${channel}`);
-  return handler({}, argument);
+  return handler(event, argument);
 };
 
 describe("settings IPC registration", () => {
+  it.each([
+    ["a foreign WebContents", ipc.foreignEvent],
+    ["a same-WebContents child frame", ipc.childFrameEvent],
+    ["a missing sender frame", ipc.missingFrameEvent],
+  ])("rejects every handler from %s before settings sinks run", async (_label, event) => {
+    const sink = vi.fn();
+    const { handlers } = setup({
+      getVersion: () => { sink(); return "blocked"; },
+      readFile: async () => { sink(); return "{}"; },
+      writeFile: async () => { sink(); },
+      isEncryptionSecure: () => { sink(); return true; },
+    });
+    for (const [channel, handler] of handlers) {
+      const argument = channel === "app:saveSettings" ? { theme: "dark" } : undefined;
+      await expect(Promise.resolve().then(() => handler(event, argument))).rejects.toThrow("trusted");
+    }
+    expect(sink).not.toHaveBeenCalled();
+  });
+
+  it("rejects every handler when the current main window is missing", async () => {
+    const sink = vi.fn();
+    const { handlers } = setup({
+      getMainWindow: () => null,
+      getVersion: () => { sink(); return "blocked"; },
+      readFile: async () => { sink(); return "{}"; },
+      writeFile: async () => { sink(); },
+      isEncryptionSecure: () => { sink(); return true; },
+    });
+    for (const [channel, handler] of handlers) {
+      const argument = channel === "app:saveSettings" ? { theme: "dark" } : undefined;
+      await expect(Promise.resolve().then(() => handler(ipc.trustedEvent, argument))).rejects.toThrow("trusted application window");
+    }
+    expect(sink).not.toHaveBeenCalled();
+  });
+
   it("returns version and encryption security metadata", () => {
     const { handlers } = setup();
     expect(invoke(handlers, "app:getVersion")).toEqual({ success: true, version: "1.9.0-test" });
