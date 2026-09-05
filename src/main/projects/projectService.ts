@@ -78,6 +78,10 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
     return this.active;
   }
 
+  private preflightPersistence(request: Pick<ProjectSaveRequest, "expectedSessionId">): Promise<void> {
+    return this.runtime.sessions.runMutation(request.expectedSessionId, () => undefined);
+  }
+
   private activate(next: ActiveProjectState): ActiveProjectState | null {
     const previous = this.active;
     this.runtime.sessions.activate(next.session);
@@ -178,6 +182,11 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
   }
 
   async saveAs(request: ProjectSaveRequest): Promise<ProjectSessionResult> {
+    try {
+      await this.preflightPersistence(request);
+    } catch (error) {
+      return this.failure(error, this.context(request));
+    }
     const active = this.active;
     if (active === null) return this.failure(new ProjectServiceTargetError("no project session is active"));
     const defaultName = `${path.basename(active.session.sourcePath ?? "project", path.extname(active.session.sourcePath ?? ""))}.amg`;
@@ -193,11 +202,13 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
       const committed = await saveActiveProjectAs(active, this.runtime, request, targetPath);
       try {
         await this.options.recents.add(targetPath);
+        await this.runtime.sessions.runMutation(request.expectedSessionId, () => {
+          this.activate(committed.next);
+        });
       } catch (error) {
         await retireState(committed.next, this.runtime, committed.retainedWorkspacePath);
         throw error;
       }
-      this.activate(committed.next);
       await retireState(committed.previous, this.runtime, committed.retainedWorkspacePath);
       return committed.result;
     } catch (error) {
@@ -207,6 +218,11 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
 
   async close(request: ProjectCloseRequest): Promise<ProjectCloseResult> {
     if (request.dirtyChoice === "cancel") return { success: false, canceled: true };
+    try {
+      await this.preflightPersistence(request);
+    } catch (error) {
+      return this.failure(error, this.context(request));
+    }
     if (this.active?.session.id === request.expectedSessionId) {
       this.runtime.abortSessionTransfers?.(request.expectedSessionId);
     }

@@ -21,7 +21,7 @@ import { createDefaultTheme, type ProjectData } from "../../renderer/store/types
 import { TEST_PROJECT } from "./amgArchiveFixtures";
 import { extractAmgArchive } from "./amgArchiveReader";
 import { writeAmgArchive } from "./amgArchiveWriter";
-import { ProjectSessionRegistry } from "./projectSession";
+import { ProjectSession, ProjectSessionRegistry } from "./projectSession";
 import { createOwnedWorkspace } from "./projectWorkspace";
 import { createRecentProjectsStore } from "./recentProjects";
 import {
@@ -35,6 +35,11 @@ const RECENT_ID = "00000000-0000-4000-8000-000000000001";
 type Deferred<T> = {
   readonly promise: Promise<T>;
   readonly resolve: (value: T) => void;
+};
+
+type RecentPersistGate = {
+  readonly entered: Deferred<void>;
+  readonly release: Deferred<void>;
 };
 
 const deferred = <T>(): Deferred<T> => {
@@ -104,6 +109,7 @@ type Harness = {
   readonly defaultWriter: ProjectServiceFiles["writeAmg"];
   readonly setWriter: (writer: ProjectServiceFiles["writeAmg"]) => void;
   readonly setRecentFailure: (fail: boolean) => void;
+  readonly setRecentPersistGate: (gate: RecentPersistGate | null) => void;
 };
 
 const createHarness = (): Harness => {
@@ -179,11 +185,18 @@ const createHarness = (): Harness => {
   };
   const recentPaths: string[] = [];
   let failRecentPersist = false;
+  let recentPersistGate: RecentPersistGate | null = null;
   const recents = createRecentProjectsStore({
     storagePath: "C:\\user\\recent-projects.json",
     createId: () => RECENT_ID,
     persist: async (_storagePath, content) => {
       if (failRecentPersist) throw new TestFault("recent commit failed");
+      const gate = recentPersistGate;
+      if (gate !== null) {
+        recentPersistGate = null;
+        gate.entered.resolve();
+        await gate.release.promise;
+      }
       calls.push("recent-commit");
       const parsed: unknown = JSON.parse(content);
       if (typeof parsed === "object" && parsed !== null) {
@@ -222,6 +235,7 @@ const createHarness = (): Harness => {
     defaultWriter,
     setWriter: (writer) => { writeAmg = writer; },
     setRecentFailure: (fail) => { failRecentPersist = fail; },
+    setRecentPersistGate: (gate) => { recentPersistGate = gate; },
   };
 };
 
@@ -312,6 +326,178 @@ describe("project persistence service", () => {
     const persisted = JSON.stringify(harness.archives.get("C:\\projects\\copy.amg"));
     expect(persisted).not.toContain(opened.session.sessionId);
     expect(persisted).not.toContain(duplicated.session.sessionId);
+  });
+
+  it("rejects a stale save before it writes or advances the active session", async () => {
+    // Given: an active replacement project and a stale prior identity.
+    const harness = createHarness();
+    harness.dialogs.saves.push(
+      { canceled: false, filePath: "C:\\projects\\first.amg" },
+      { canceled: false, filePath: "C:\\projects\\active.amg" },
+    );
+    const first = await harness.service.newProject({ name: "First", framework: "vanilla" });
+    const active = await harness.service.newProject({ name: "Active", framework: "vanilla" });
+    if (!first.success || !active.success) throw new TestFault("project creation failed");
+    const callsBefore = [...harness.calls];
+    const archiveBefore = structuredClone(harness.archives.get(active.session.displayPath));
+    const staleSnapshot = {
+      ...active.session.data,
+      projectSettings: { ...active.session.data.projectSettings, name: "Stale save" },
+    };
+
+    // When: the stale renderer attempts Save.
+    const saved = await harness.service.save({
+      expectedSessionId: first.session.sessionId,
+      rendererGeneration: parseRendererGeneration(1),
+      snapshot: staleSnapshot,
+    });
+
+    // Then: no archive, generation, or active-session state changes.
+    expect(saved).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
+    expect(harness.calls).toEqual(callsBefore);
+    expect(harness.archives.get(active.session.displayPath)).toEqual(archiveBefore);
+    expect(harness.sessions.active.id).toBe(active.session.sessionId);
+    expect(harness.sessions.active.generations).toEqual({ renderer: 0, committedRenderer: 0, workspace: 0, committedWorkspace: 0 });
+  });
+
+  it("rejects a stale Save As before it opens a dialog or creates a bundle", async () => {
+    // Given: an active replacement project and a queued Save As target for its predecessor.
+    const harness = createHarness();
+    harness.dialogs.saves.push(
+      { canceled: false, filePath: "C:\\projects\\first.amg" },
+      { canceled: false, filePath: "C:\\projects\\active.amg" },
+      { canceled: false, filePath: "C:\\projects\\stale-copy.amg" },
+    );
+    const first = await harness.service.newProject({ name: "First", framework: "vanilla" });
+    const active = await harness.service.newProject({ name: "Active", framework: "vanilla" });
+    if (!first.success || !active.success) throw new TestFault("project creation failed");
+    const callsBefore = [...harness.calls];
+    const requestsBefore = [...harness.dialogs.requests];
+    const workspacePathsBefore = [...harness.workspaceAssets.keys()];
+
+    // When: the stale renderer requests Save As.
+    const saved = await harness.service.saveAs({
+      expectedSessionId: first.session.sessionId,
+      rendererGeneration: parseRendererGeneration(1),
+      snapshot: active.session.data,
+    });
+
+    // Then: the stale request gains no target and changes no persistence state.
+    expect(saved).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
+    expect(harness.calls).toEqual(callsBefore);
+    expect(harness.dialogs.requests).toEqual(requestsBefore);
+    expect([...harness.workspaceAssets.keys()]).toEqual(workspacePathsBefore);
+    expect(harness.sessions.active.id).toBe(active.session.sessionId);
+    expect(harness.sessions.active.generations).toEqual({ renderer: 0, committedRenderer: 0, workspace: 0, committedWorkspace: 0 });
+  });
+
+  it("rejects a stale close with save before it persists the active project", async () => {
+    // Given: an active replacement project and a stale prior identity.
+    const harness = createHarness();
+    harness.dialogs.saves.push(
+      { canceled: false, filePath: "C:\\projects\\first.amg" },
+      { canceled: false, filePath: "C:\\projects\\active.amg" },
+    );
+    const first = await harness.service.newProject({ name: "First", framework: "vanilla" });
+    const active = await harness.service.newProject({ name: "Active", framework: "vanilla" });
+    if (!first.success || !active.success) throw new TestFault("project creation failed");
+    const callsBefore = [...harness.calls];
+    const archiveBefore = structuredClone(harness.archives.get(active.session.displayPath));
+    const staleSnapshot = {
+      ...active.session.data,
+      projectSettings: { ...active.session.data.projectSettings, name: "Stale close" },
+    };
+
+    // When: the stale renderer asks to save and close.
+    const closed = await harness.service.close({
+      expectedSessionId: first.session.sessionId,
+      rendererGeneration: parseRendererGeneration(1),
+      snapshot: staleSnapshot,
+      dirtyChoice: "save",
+    });
+
+    // Then: the active project stays open and unchanged.
+    expect(closed).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
+    expect(harness.calls).toEqual(callsBefore);
+    expect(harness.archives.get(active.session.displayPath)).toEqual(archiveBefore);
+    expect(harness.sessions.active.id).toBe(active.session.sessionId);
+    expect(harness.sessions.active.generations).toEqual({ renderer: 0, committedRenderer: 0, workspace: 0, committedWorkspace: 0 });
+  });
+
+  it("preserves stale discard and cancel responses while a current close succeeds", async () => {
+    // Given: an active replacement project and a stale prior identity.
+    const harness = createHarness();
+    harness.dialogs.saves.push(
+      { canceled: false, filePath: "C:\\projects\\first.amg" },
+      { canceled: false, filePath: "C:\\projects\\active.amg" },
+    );
+    const first = await harness.service.newProject({ name: "First", framework: "vanilla" });
+    const active = await harness.service.newProject({ name: "Active", framework: "vanilla" });
+    if (!first.success || !active.success) throw new TestFault("project creation failed");
+
+    // When: stale discard and cancel requests precede a current discard close.
+    const staleDiscard = await harness.service.close({
+      expectedSessionId: first.session.sessionId,
+      rendererGeneration: parseRendererGeneration(0),
+      snapshot: first.session.data,
+      dirtyChoice: "discard",
+    });
+    const staleCancel = await harness.service.close({
+      expectedSessionId: first.session.sessionId,
+      rendererGeneration: parseRendererGeneration(0),
+      snapshot: first.session.data,
+      dirtyChoice: "cancel",
+    });
+    const currentClose = await harness.service.close({
+      expectedSessionId: active.session.sessionId,
+      rendererGeneration: parseRendererGeneration(0),
+      snapshot: active.session.data,
+      dirtyChoice: "discard",
+    });
+
+    // Then: stale mutation is rejected, cancellation remains canceled, and current close works.
+    expect(staleDiscard).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
+    expect(staleCancel).toEqual({ success: false, canceled: true });
+    expect(currentClose).toMatchObject({ success: true, sessionId: active.session.sessionId });
+    expect((await harness.service.getDirectory()).directory).toBeNull();
+  });
+
+  it("does not let a committed Save As overwrite a session that changes while recents persist", async () => {
+    // Given: a Save As paused after its archive commit and a replacement session.
+    const harness = createHarness();
+    harness.dialogs.saves.push(
+      { canceled: false, filePath: "C:\\projects\\active.amg" },
+      { canceled: false, filePath: "C:\\projects\\copy.amg" },
+    );
+    const active = await harness.service.newProject({ name: "Active", framework: "vanilla" });
+    if (!active.success) throw new TestFault("project creation failed");
+    const replacement = ProjectSession.createAmg({
+      sourcePath: "C:\\projects\\replacement.amg",
+      workspacePath: "C:\\owned\\replacement",
+    });
+    if (replacement.id === null) throw new TestFault("replacement session has no identity");
+    const gate: RecentPersistGate = { entered: deferred<void>(), release: deferred<void>() };
+    harness.setRecentPersistGate(gate);
+
+    // When: the registry changes sessions while Save As waits to persist recents.
+    const saveAs = harness.service.saveAs({
+      expectedSessionId: active.session.sessionId,
+      rendererGeneration: parseRendererGeneration(1),
+      snapshot: active.session.data,
+    });
+    await gate.entered.promise;
+    harness.sessions.activate(replacement);
+    Reflect.set(harness.service, "active", {
+      session: replacement,
+      data: active.session.data,
+      approvedExternalReferences: [],
+    });
+    gate.release.resolve();
+    const result = await saveAs;
+
+    // Then: Save As reports stale session and cannot replace the newer session.
+    expect(result).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
+    expect(harness.sessions.active.id).toBe(replacement.id);
   });
 
   it.each([

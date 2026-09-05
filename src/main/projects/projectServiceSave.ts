@@ -45,7 +45,7 @@ export const saveActiveProject = async (
   runtime: ProjectServiceRuntime,
   request: ProjectSaveRequest,
 ): Promise<{ readonly state: ActiveProjectState; readonly result: ProjectSessionResult }> => {
-  const expectedSessionId = requireSessionId(state.session);
+  const expectedSessionId = request.expectedSessionId;
   return runtime.sessions.runMutation(expectedSessionId, async () => {
     state.session.updateRendererGeneration(expectedSessionId, request.rendererGeneration);
     const workspacePath = requireWorkspace(state);
@@ -89,7 +89,7 @@ export const saveActiveProjectAs = async (
   request: ProjectSaveRequest,
   targetPath: string,
 ): Promise<SaveAsCommit> => {
-  const expectedSessionId = requireSessionId(state.session);
+  const expectedSessionId = request.expectedSessionId;
   return runtime.sessions.runMutation(expectedSessionId, async () => {
     state.session.updateRendererGeneration(expectedSessionId, request.rendererGeneration);
     const project = parseProjectDocumentV1(request.snapshot);
