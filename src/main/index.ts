@@ -64,6 +64,7 @@ import { registerAppProtocols } from "./registerAppProtocols";
 import { createAutosaveController } from "./autosaveController";
 import { registerAutosaveIpc } from "./registerAutosaveIpc";
 import { createMainWindowController } from "./mainWindowController";
+import { registerMenuIpc } from "./registerMenuIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -165,12 +166,11 @@ function getPublisherOrThrow(providerId: string) {
 function registerIpcHandlers(): void {
   // ── Menu State ─────────────────────────────────────────────────────────
 
-  ipcMain.handle("menu:setProjectLoaded", (_, isLoaded: boolean) => {
-    const mainWindow = windowController.getMainWindow();
-    if (mainWindow) {
-      const menu = buildAppMenu(mainWindow, isLoaded);
-      Menu.setApplicationMenu(menu);
-    }
+  registerMenuIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
+    buildMenu: buildAppMenu,
+    setApplicationMenu: (menu) => Menu.setApplicationMenu(menu),
   });
 
   // ── Font Management ───────────────────────────────────────────────────
