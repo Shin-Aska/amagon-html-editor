@@ -68,6 +68,7 @@ import { registerMenuIpc } from "./registerMenuIpc";
 import { registerFontQueryIpc } from "./registerFontQueryIpc";
 import { registerExportIpc } from "./registerExportIpc";
 import { registerAssetReadIpc } from "./registerAssetReadIpc";
+import { registerSettingsIpc } from "./registerSettingsIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -227,45 +228,13 @@ function registerIpcHandlers(): void {
 
   registerAutosaveIpc(ipcMain, autosave);
 
-  // ── App Settings ───────────────────────────────────────────────────────
-
-  ipcMain.handle("app:getVersion", () => {
-    return { success: true, version: app.getVersion() };
-  });
-
-  ipcMain.handle("app:getSettings", async () => {
-    try {
-      const filePath = path.join(app.getPath("userData"), "app-settings.json");
-      const raw = await fs.readFile(filePath, "utf-8");
-      const settings = JSON.parse(raw);
-      return { success: true, settings };
-    } catch {
-      return { success: true, settings: null };
-    }
-  });
-
-  ipcMain.handle("app:saveSettings", async (_, patch: any) => {
-    try {
-      const filePath = path.join(app.getPath("userData"), "app-settings.json");
-      let existing = {};
-      try {
-        const raw = await fs.readFile(filePath, "utf-8");
-        existing = JSON.parse(raw);
-      } catch {
-        // file doesn't exist yet, ignore
-      }
-      const updated = { ...existing, ...patch };
-      await fs.writeFile(filePath, JSON.stringify(updated, null, 2), "utf-8");
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  // ── Encryption status ────────────────────────────────────────────────
-
-  ipcMain.handle("app:isEncryptionSecure", () => {
-    return { secure: isEncryptionSecure() };
+  registerSettingsIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getVersion: () => app.getVersion(),
+    getUserDataPath: () => app.getPath("userData"),
+    readFile: fs.readFile,
+    writeFile: fs.writeFile,
+    isEncryptionSecure,
   });
 
   // ── Credential Manager ──────────────────────────────────────────────
