@@ -5,10 +5,12 @@ import { ProjectServiceTargetError } from "./projectServiceErrors";
 import { createInitialProjectDocument } from "./projectServiceFiles";
 import { stageAmgProject, stageLegacyProject } from "./projectServiceOpen";
 import type { ActiveProjectState, ProjectServiceRuntime } from "./projectServiceTypes";
+import { rollbackProjectTarget, type ProjectTargetTransaction } from "./projectTargetTransaction";
 
 export type StagedProject = {
   readonly state: ActiveProjectState;
   readonly retainedWorkspacePath?: string;
+  readonly targetTransaction?: ProjectTargetTransaction;
 };
 
 export const stageNewProject = async (
@@ -18,6 +20,10 @@ export const stageNewProject = async (
 ): Promise<StagedProject> => {
   const project = createInitialProjectDocument(request.name, request.framework);
   const workspace = await runtime.files.createWorkspace(runtime.userDataPath, project);
+  const targetTransaction = await runtime.files.beginTargetTransaction(targetPath).catch(async (error: unknown) => {
+    await runtime.files.cleanupWorkspace(runtime.userDataPath, workspace.path);
+    throw error;
+  });
   try {
     await runtime.files.writeAmg({ targetPath, workspacePath: workspace.path, project });
     return {
@@ -26,10 +32,12 @@ export const stageNewProject = async (
         data: project,
         approvedExternalReferences: [],
       },
+      targetTransaction,
     };
   } catch (error) {
-    await runtime.files.cleanupWorkspace(runtime.userDataPath, workspace.path);
-    throw error;
+    return rollbackProjectTarget(targetTransaction, error, [() => (
+      runtime.files.cleanupWorkspace(runtime.userDataPath, workspace.path)
+    )]);
   }
 };
 

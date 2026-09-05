@@ -87,6 +87,10 @@ const createHarness = () => {
     writeLegacy: async () => {
       counters.writes += 1;
     },
+    beginTargetTransaction: async () => ({
+      commit: async () => undefined,
+      rollback: async () => undefined,
+    }),
     createWorkspace: async () => {
       counters.workspaces += 1;
       workspace += 1;

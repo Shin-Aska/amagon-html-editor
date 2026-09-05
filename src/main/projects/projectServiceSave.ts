@@ -13,6 +13,7 @@ import { ProjectSession } from "./projectSession";
 import { ProjectServicePortabilityError } from "./projectServiceErrors";
 import { requireSessionId, sessionSuccess } from "./projectServiceState";
 import type { ActiveProjectState, ProjectServiceRuntime } from "./projectServiceTypes";
+import { rollbackProjectTarget, type ProjectTargetTransaction } from "./projectTargetTransaction";
 
 const requireWorkspace = (state: ActiveProjectState): string => {
   if (state.session.workspacePath === null) {
@@ -88,6 +89,7 @@ export type SaveAsCommit = {
   readonly next: ActiveProjectState;
   readonly retainedWorkspacePath?: string;
   readonly result: ProjectSessionResult;
+  readonly targetTransaction: ProjectTargetTransaction;
 };
 
 export const saveActiveProjectAs = async (
@@ -98,7 +100,6 @@ export const saveActiveProjectAs = async (
 ): Promise<SaveAsCommit> => {
   const expectedSessionId = request.expectedSessionId;
   state.session.assertTransition(expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
-  state.session.updateRendererGeneration(expectedSessionId, request.rendererGeneration);
   const project = parseProjectDocumentV1(request.snapshot);
   const referencedAssets = await validateStoredProject(state, runtime, project, "bundle-stored");
   const sourceWorkspacePath = requireWorkspace(state);
@@ -109,13 +110,20 @@ export const saveActiveProjectAs = async (
       })
     : undefined;
   const workspacePath = candidate?.path ?? sourceWorkspacePath;
-  try {
-    await runtime.files.writeAmg({ targetPath, workspacePath, project });
-  } catch (error) {
+  const targetTransaction = await runtime.files.beginTargetTransaction(targetPath).catch(async (error: unknown) => {
     if (candidate !== undefined) {
       await runtime.files.cleanupWorkspace(runtime.userDataPath, candidate.path);
     }
     throw error;
+  });
+  try {
+    await runtime.files.writeAmg({ targetPath, workspacePath, project });
+  } catch (error) {
+    return rollbackProjectTarget(targetTransaction, error, [async () => {
+      if (candidate !== undefined) {
+        await runtime.files.cleanupWorkspace(runtime.userDataPath, candidate.path);
+      }
+    }]);
   }
   const nextSession = ProjectSession.createAmg({ sourcePath: targetPath, workspacePath });
   const nextSessionId = requireSessionId(nextSession);
@@ -134,5 +142,6 @@ export const saveActiveProjectAs = async (
     next,
     ...(candidate === undefined ? { retainedWorkspacePath: workspacePath } : {}),
     result: sessionSuccess(next),
+    targetTransaction,
   };
 };

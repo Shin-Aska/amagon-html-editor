@@ -23,6 +23,10 @@ import {
   createOwnedWorkspaceCandidate,
   type OwnedWorkspace,
 } from "./projectWorkspace";
+import {
+  beginProjectTargetTransaction,
+  type ProjectTargetTransaction,
+} from "./projectTargetTransaction";
 
 export type CreateWorkspaceCopy = {
   readonly sourceWorkspacePath: string;
@@ -40,6 +44,7 @@ export interface ProjectServiceFiles {
   readonly readLegacy: (filePath: string) => Promise<LegacyProjectDocument>;
   readonly writeAmg: (request: WriteAmgRequest) => Promise<void>;
   readonly writeLegacy: (filePath: string, project: LegacyProjectDocument) => Promise<void>;
+  readonly beginTargetTransaction: (targetPath: string) => Promise<ProjectTargetTransaction>;
   readonly createWorkspace: (
     userDataPath: string,
     project: ProjectDocumentV1,
@@ -137,6 +142,7 @@ export const createDefaultProjectServiceFiles = (): ProjectServiceFiles => ({
   readLegacy: readLegacyJsonProject,
   writeAmg: writeAmgArchive,
   writeLegacy: saveLegacyJsonProject,
+  beginTargetTransaction: beginProjectTargetTransaction,
   createWorkspace,
   listAssetPaths,
   cleanupWorkspace: async (userDataPath, workspacePath) => {

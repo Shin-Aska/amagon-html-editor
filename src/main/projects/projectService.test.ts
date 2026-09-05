@@ -186,6 +186,10 @@ const createHarness = (): Harness => {
       calls.push(`write-legacy:${filePath}`);
       legacy.set(filePath, project);
     },
+    beginTargetTransaction: async () => ({
+      commit: async () => undefined,
+      rollback: async () => undefined,
+    }),
     createWorkspace: async (_userDataPath, project, copy) => {
       const workspacePath = `C:\\owned\\candidate-${workspaceIndex += 1}`;
       calls.push(`create-workspace:${workspacePath}:${copy?.sourceWorkspacePath ?? "new"}`);

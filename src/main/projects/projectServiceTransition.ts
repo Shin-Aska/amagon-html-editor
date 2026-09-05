@@ -1,33 +1,18 @@
 import path from "node:path";
 import {
-  parseRendererGeneration,
-  parseWorkspaceGeneration,
-  type ActiveProjectTransitionRequest,
-  type ProjectCloseRequest,
-  type ProjectCloseResult,
-  type ProjectFailure,
-  type ProjectNewRequest,
-  type ProjectOpenRecentRequest,
-  type ProjectSaveRequest,
-  type ProjectSessionResult,
-  type ProjectTransitionRequest,
+  parseRendererGeneration, parseWorkspaceGeneration,
+  type ActiveProjectTransitionRequest, type ProjectCloseRequest, type ProjectCloseResult,
+  type ProjectFailure, type ProjectNewRequest, type ProjectOpenRecentRequest,
+  type ProjectSaveRequest, type ProjectSessionResult, type ProjectTransitionRequest,
 } from "../../shared/projects/projectIpcContract";
 import { chooseAmgTarget, OPEN_PROJECT_FILTERS, projectSlug } from "./projectServiceDialogs";
 import { mapProjectOperationError, ProjectServiceTargetError, type ProjectErrorContext } from "./projectServiceErrors";
 import { persistActiveProject, saveActiveProjectAs } from "./projectServiceSave";
 import { requireSessionId, retireState, sessionSuccess, closedSuccess } from "./projectServiceState";
 import { ProjectSession, SessionStateError } from "./projectSession";
-import {
-  stageNewProject,
-  stageProjectPath,
-  type StagedProject,
-} from "./projectServiceTransitionStage";
-import type {
-  ActiveProjectState,
-  ActiveProjectStateStore,
-  ProjectServiceOptions,
-  ProjectServiceRuntime,
-} from "./projectServiceTypes";
+import { stageNewProject, stageProjectPath, type StagedProject } from "./projectServiceTransitionStage";
+import { commitProjectTargetReplacement } from "./projectTargetReplacement";
+import type { ActiveProjectState, ActiveProjectStateStore, ProjectServiceOptions, ProjectServiceRuntime } from "./projectServiceTypes";
 
 export class ProjectServiceTransition {
   private tail: Promise<void> = Promise.resolve();
@@ -88,9 +73,9 @@ export class ProjectServiceTransition {
   }
 
   private activate(next: ActiveProjectState): void {
+    this.options.onDirectoryChange?.(next.session.workspacePath);
     this.runtime.sessions.activate(next.session);
     this.active.current = next;
-    this.options.onDirectoryChange?.(next.session.workspacePath);
   }
 
   private async persistTransition(
@@ -127,11 +112,25 @@ export class ProjectServiceTransition {
     stage: () => Promise<StagedProject>,
   ): Promise<ProjectSessionResult> {
     const staged = await stage();
+    const previous = this.active.current;
+    if (staged.targetTransaction !== undefined) {
+      await commitProjectTargetReplacement({
+        active: this.active, next: staged.state, previous,
+        prepare: async () => {
+          this.authorize(request);
+          await this.options.recents.add(staged.state.session.sourcePath ?? "");
+          this.authorize(request);
+        },
+        retainedWorkspacePath: staged.retainedWorkspacePath, runtime: this.runtime,
+        targetTransaction: staged.targetTransaction,
+        onDirectoryChange: this.options.onDirectoryChange,
+      });
+      return sessionSuccess(staged.state);
+    }
     try {
       this.authorize(request);
       await this.options.recents.add(staged.state.session.sourcePath ?? "");
       this.authorize(request);
-      const previous = this.active.current;
       this.activate(staged.state);
       await retireState(previous, this.runtime, staged.retainedWorkspacePath);
       return sessionSuccess(staged.state);
@@ -210,17 +209,18 @@ export class ProjectServiceTransition {
           if (current === null) throw new SessionStateError("stale-session", "active project disappeared");
           current.session.assertTransition(request.expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
           const committed = await saveActiveProjectAs(current, this.runtime, request, targetPath);
-          try {
-            current.session.assertTransition(request.expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
-            await this.options.recents.add(targetPath);
-            current.session.assertTransition(request.expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
-            this.activate(committed.next);
-            await retireState(committed.previous, this.runtime, committed.retainedWorkspacePath);
-            return committed.result;
-          } catch (error) {
-            await retireState(committed.next, this.runtime, committed.retainedWorkspacePath);
-            throw error;
-          }
+          await commitProjectTargetReplacement({
+            active: this.active, next: committed.next, previous: committed.previous,
+            prepare: async () => {
+              current.session.assertTransition(request.expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
+              await this.options.recents.add(targetPath);
+              current.session.assertTransition(request.expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
+            },
+            retainedWorkspacePath: committed.retainedWorkspacePath, runtime: this.runtime,
+            targetTransaction: committed.targetTransaction,
+            onDirectoryChange: this.options.onDirectoryChange,
+          });
+          return committed.result;
         });
       } catch (error) {
         return this.failure(error, request);
