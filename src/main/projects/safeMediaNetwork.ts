@@ -40,7 +40,8 @@ for (const [address, prefix] of [
 for (const [address, prefix] of [
   ["::", 3], ["4000::", 2], ["8000::", 1],
   ["::", 128], ["::1", 128], ["::ffff:0:0", 96], ["64:ff9b:1::", 48],
-  ["100::", 64], ["2001:2::", 48], ["2001:db8::", 32], ["fc00::", 7],
+  ["100::", 64], ["2001::", 23],
+  ["2001:db8::", 32], ["2002::", 16], ["2620:4f:8000::", 48], ["3fff::", 20], ["fc00::", 7],
   ["fe80::", 10], ["ff00::", 8],
 ] satisfies readonly (readonly [string, number])[]) addBlockedSubnet(address, prefix, "ipv6");
 

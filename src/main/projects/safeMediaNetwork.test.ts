@@ -16,6 +16,19 @@ describe("safe media network", () => {
     ["link-local IPv6", "fe80::1"],
     ["documentation IPv6", "2001:db8::1"],
     ["multicast IPv6", "ff02::1"],
+    ["IPv4-mapped IPv6 loopback", "::ffff:127.0.0.1"],
+    ["IPv4-compatible IPv6 loopback", "::127.0.0.1"],
+    ["NAT64 well-known prefix", "64:ff9b::c0a8:1"],
+    ["NAT64 local-use prefix", "64:ff9b:1::c0a8:1"],
+    ["discard-only IPv6", "100::1"],
+    ["Teredo IPv6", "2001:0000::1"],
+    ["IETF special-purpose IPv6", "2001:0001::4"],
+    ["benchmarking IPv6", "2001:0002::1"],
+    ["ORCHID IPv6", "2001:0010::1"],
+    ["ORCHIDv2 IPv6", "2001:0020::1"],
+    ["documentation IPv6 alternate range", "3fff::1"],
+    ["6to4 IPv6", "2002::1"],
+    ["AS112 service IPv6", "2620:4f:8000::1"],
   ])("blocks %s DNS destinations before fetch", async (_name, address) => {
     // Given: an HTTPS provider hostname resolving to a non-public address.
     const fetch = vi.fn();
@@ -26,6 +39,25 @@ describe("safe media network", () => {
 
     // When/Then: policy rejects before a request is sent.
     await expect(safeFetch("https://provider.example/media", signal)).rejects.toThrow("public network");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["bracketed IPv4-mapped loopback", "https://[::ffff:127.0.0.1]/media"],
+    ["expanded Teredo IPv6", "https://[2001:0000:0000:0000:0000:0000:0000:0001]/media"],
+    ["uppercase ORCHID IPv6", "https://[2001:0010::ABCD]/media"],
+    ["ORCHIDv2 IPv6", "https://[2001:0020::1]/media"],
+    ["compressed 6to4 IPv6", "https://[2002::1]/media"],
+    ["AS112 service IPv6", "https://[2620:4f:8000::1]/media"],
+  ])("blocks %s literals before DNS or fetch", async (_name, url) => {
+    // Given: a provider URL whose literal IPv6 host belongs to a non-public range.
+    const fetch = vi.fn();
+    const lookup = vi.fn();
+    const safeFetch = createSafeMediaFetcher({ fetchPinned: fetch, lookup });
+
+    // When/Then: literal parsing reaches the same policy boundary before any network action.
+    await expect(safeFetch(url, signal)).rejects.toThrow("public network");
+    expect(lookup).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
 
