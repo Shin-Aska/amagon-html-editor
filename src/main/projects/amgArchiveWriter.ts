@@ -14,7 +14,7 @@ import {
   parseAmgManifest,
   type AmgManifestEntryV1,
 } from "../../shared/projects/amgContract";
-import type { ProjectDocumentV1 } from "../../shared/projects/projectDocumentSchema";
+import { parseProjectDocumentV1, type ProjectDocumentV1 } from "../../shared/projects/projectDocumentSchema";
 import { ArchivePathError, canonicalizeArchivePath, createArchivePathIndex } from "./archivePath";
 import { AtomicWriteError, atomicWriteFile, type AtomicFileSystem } from "./atomicFile";
 
@@ -244,7 +244,7 @@ async function* archiveSource(options: WriteAmgArchiveOptions, projectBytes: Uin
 export async function writeAmgArchive(options: WriteAmgArchiveOptions): Promise<void> {
   const limits: WriterLimits = { ...AMG_FIXED_LIMITS, ...options.limits };
   if (limits.streamChunkBytes < 1 || limits.queuedStreamBytes < limits.streamChunkBytes * 2) capacity("stream limits are invalid");
-  const projectBytes = encoder.encode(JSON.stringify(options.project));
+  const projectBytes = encoder.encode(JSON.stringify(parseProjectDocumentV1(options.project)));
   if (projectBytes.byteLength > limits.projectJsonBytes) capacity("project.json exceeds its limit");
   const inventory = await inventoryAssets(options.workspacePath, limits, options.assetLstat ?? nodeAssetLstat);
   if (inventory.length + 1 > limits.payloadEntries || inventory.length + 2 > limits.totalZipEntries) capacity("entry count exceeds its limit");

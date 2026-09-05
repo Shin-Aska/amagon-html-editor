@@ -2,6 +2,7 @@ import type { Block, ProjectData, ProjectTheme } from "../../renderer/store/type
 import { AssetReferenceError, buildRuntimeAssetUrl, decodeDurableAssetReference, encodeDurableAssetReference, isRelativePathTraversalReference, parseRuntimeAssetUrl } from "./assetReference";
 import type { LegacyProjectDocument, ProjectDocumentV1 } from "./projectDocumentSchema";
 import { ProjectSessionIdSchema } from "./projectIpcContract";
+import { isSensitiveProjectKey } from "./projectSensitiveKey";
 
 export type ProjectPortabilityMode = "bundle-durable" | "bundle-runtime" | "bundle-stored" | "conversion-durable" | "legacy-durable" | "legacy-runtime" | "legacy-stored";
 
@@ -48,7 +49,6 @@ const CSS_URL = /(url\(\s*)(["']?)([^"')]*?)(\2\s*\))/giu;
 const HTML_ATTRIBUTE = /(\b(?:src|href|poster)\s*=\s*)(["'])(.*?)\2/giu;
 const HTML_SRCSET = /(\bsrcset\s*=\s*)(["'])(.*?)\2/giu;
 const HTML_UNQUOTED = /(\b(src|href|poster|srcset)\s*=\s*)([^\s"'=<>`]+)/giu;
-const SECRET_KEY = /^(?:encryptedCredentials|credentials?|password|secret|api[-_]?key|private[-_]?key|token)$/iu;
 const DRIVE_PATH = /^[A-Za-z]:[\\/]/u,
   RUNTIME_PREFIX = "app-media://project-asset/";
 
@@ -219,7 +219,7 @@ const scanForbiddenPersistence = (value: unknown, location: string, state: ScanS
   if (!isRecord(value)) return;
   for (const key of Object.keys(value).sort()) {
     const childLocation = propertyLocation(location, key);
-    if (SECRET_KEY.test(key)) addOffender(state, "credential", childLocation);
+    if (isSensitiveProjectKey(key)) addOffender(state, "credential", childLocation);
     if (
       persistenceMode
       && (key.includes(state.options.sessionId) || ProjectSessionIdSchema.safeParse(key).success)

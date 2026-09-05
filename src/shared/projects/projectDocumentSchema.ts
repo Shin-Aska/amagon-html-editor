@@ -4,6 +4,7 @@ import {
     AmgContractError,
     PROJECT_SCHEMA_VERSION,
 } from './amgContract'
+import {isSensitiveProjectKey} from './projectSensitiveKey'
 
 const StringMapSchema = z.record(z.string(), z.string()).readonly()
 const UnknownMapSchema = z.record(z.string(), z.unknown()).readonly()
@@ -170,10 +171,12 @@ const isRecord = (input: unknown): input is Readonly<Record<string, unknown>> =>
     typeof input === 'object' && input !== null && !Array.isArray(input)
 )
 
-const hasCredentials = (input: unknown): boolean => {
+const hasSensitiveProjectKey = (input: unknown): boolean => {
+    if (Array.isArray(input)) return input.some(hasSensitiveProjectKey)
     if (!isRecord(input)) return false
-    const publisherConfig = input['publisherConfig']
-    return isRecord(publisherConfig) && 'encryptedCredentials' in publisherConfig
+    return Object.entries(input).some(([key, value]) => (
+        isSensitiveProjectKey(key) || hasSensitiveProjectKey(value)
+    ))
 }
 
 const rejectUnsupportedVersion = (input: unknown): void => {
@@ -188,7 +191,7 @@ const rejectUnsupportedVersion = (input: unknown): void => {
 
 export function parseProjectDocumentV1(input: unknown): ProjectDocumentV1 {
     rejectUnsupportedVersion(input)
-    if (hasCredentials(input)) {
+    if (hasSensitiveProjectKey(input)) {
         throw new AmgContractError(
             AMG_ERROR_CODES.CREDENTIALS_FORBIDDEN,
             'publisher credentials must not be stored in a project document',
@@ -207,7 +210,7 @@ export function parseProjectDocumentV1(input: unknown): ProjectDocumentV1 {
 
 export function parseLegacyProjectDocument(input: unknown): LegacyProjectDocument {
     rejectUnsupportedVersion(input)
-    if (hasCredentials(input)) {
+    if (hasSensitiveProjectKey(input)) {
         throw new AmgContractError(
             AMG_ERROR_CODES.CREDENTIALS_FORBIDDEN,
             'publisher credentials must not be stored in a project document',
