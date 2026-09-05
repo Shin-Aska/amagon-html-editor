@@ -62,6 +62,8 @@ import { resolveSystemFontPath as resolveMainSystemFontPath } from "./systemFont
 import { getMimeType, isPathSafe } from "./mainFileHelpers";
 import { createGoogleFontsService } from "./googleFontsTransport";
 import { registerAppProtocols } from "./registerAppProtocols";
+import { createAutosaveController } from "./autosaveController";
+import { registerAutosaveIpc } from "./registerAutosaveIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -75,7 +77,6 @@ const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 let currentProjectDir: string | null = null;
-let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
 const projectSessions = new ProjectSessionRegistry();
 const projectTransfers = createProjectTransferRegistry();
 const projectFiles = createDefaultProjectServiceFiles();
@@ -98,6 +99,11 @@ const googleFonts = createGoogleFontsService({
   },
   fetch,
 }, getMimeType);
+
+const autosave = createAutosaveController({
+  getMainWindow: () => mainWindow,
+  getCurrentProjectDir: () => currentProjectDir,
+});
 
 // ---------------------------------------------------------------------------
 // Window creation
@@ -133,7 +139,7 @@ async function createWindow(): Promise<void> {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
-    stopAutoSave();
+    autosave.stop();
   });
   lifecycleController = createLifecycleController({
     createRequestId: randomUUID,
@@ -146,26 +152,6 @@ async function createWindow(): Promise<void> {
     event.preventDefault();
     lifecycleController?.request("window-close");
   });
-}
-
-// ---------------------------------------------------------------------------
-// Auto-save  (Task 8.2 sub-feature)
-// ---------------------------------------------------------------------------
-
-function startAutoSave(intervalMs: number = 60_000): void {
-  stopAutoSave();
-  autoSaveTimer = setInterval(() => {
-    if (mainWindow && currentProjectDir) {
-      mainWindow.webContents.send("auto-save-tick");
-    }
-  }, intervalMs);
-}
-
-function stopAutoSave(): void {
-  if (autoSaveTimer) {
-    clearInterval(autoSaveTimer);
-    autoSaveTimer = null;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -638,15 +624,7 @@ function registerIpcHandlers(): void {
 
   // ── Auto-save configuration ───────────────────────────────────────────
 
-  ipcMain.handle("autosave:start", (_, intervalMs?: number) => {
-    startAutoSave(intervalMs || 60_000);
-    return { success: true };
-  });
-
-  ipcMain.handle("autosave:stop", () => {
-    stopAutoSave();
-    return { success: true };
-  });
+  registerAutosaveIpc(ipcMain, autosave);
 
   // ── App Settings ───────────────────────────────────────────────────────
 
@@ -1047,8 +1025,8 @@ function registerIpcHandlers(): void {
     abortSessionTransfers: (sessionId) => projectTransfers.abortSession(sessionId),
     onDirectoryChange: (directory) => {
       currentProjectDir = directory;
-      if (directory === null) stopAutoSave();
-      else startAutoSave();
+      if (directory === null) autosave.stop();
+      else autosave.start();
     },
   });
   registerProjectIpc({
@@ -1115,7 +1093,7 @@ app.on("before-quit", (event) => {
 });
 
 app.on("window-all-closed", () => {
-  stopAutoSave();
+  autosave.stop();
   if (process.platform !== "darwin") {
     app.quit();
   }
