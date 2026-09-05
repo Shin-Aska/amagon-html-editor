@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { TEST_PROJECT } from "../../src/main/projects/amgArchiveFixtures";
 import { inspectAmgArchive } from "./archiveAssertions";
 import { capture, launchAmagon, queueNativeDialogs, stopAmagon } from "./electronHarness";
-import { materializeCurrentSession, openProjectThroughUi, saveProjectAsThroughBridge, settleEditor } from "./projectUi";
+import { closeProjectThroughBridge, materializeCurrentSession, openProjectThroughUi, saveProjectAsThroughBridge, settleEditor } from "./projectUi";
 
 test("visible legacy open converts to AMG and mixed recents survive relaunch", async () => {
   // Given: a portable legacy JSON document and an isolated persistent profile.
@@ -44,9 +44,11 @@ test("visible legacy open converts to AMG and mixed recents survive relaunch", a
       },
     );
     expect(converted.success).toBe(true);
+    if (!converted.success) throw new TypeError("legacy conversion failed");
     await expect.poll(async () => readFile(convertedPath).then((bytes) => bytes.byteLength).catch(() => 0))
       .toBeGreaterThan(0);
-    await settleEditor(first);
+    const closed = await closeProjectThroughBridge(first.page, converted.session, "discard");
+    expect(closed.success).toBe(true);
 
     // Then: the visible editor is backed by a valid converted archive.
     await inspectAmgArchive(convertedPath, "archive-visible-conversion.json");

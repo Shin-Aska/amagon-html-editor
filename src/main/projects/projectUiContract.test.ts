@@ -1,23 +1,41 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { BrowserWindow, type MenuItemConstructorOptions } from "electron";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildAppMenu } from "../menu";
 
-const menuChannelPattern = /webContents\.send\(["']([^"']+)["']/u;
+const electronMock = vi.hoisted(() => {
+  const templates: MenuItemConstructorOptions[][] = [];
+  return { sent: vi.fn(), templates };
+});
 
-const readMenuChannel = (source: string): string => {
-  const match = menuChannelPattern.exec(source);
-  if (match?.[1] === undefined) throw new TypeError("menu action channel is missing");
-  return match[1];
-};
+vi.mock("electron", () => ({
+  BrowserWindow: class {
+    readonly webContents = { send: electronMock.sent };
+    isDestroyed(): boolean { return false; }
+  },
+  Menu: {
+    buildFromTemplate: (template: MenuItemConstructorOptions[]) => {
+      electronMock.templates.push(template);
+      return {};
+    },
+  },
+}));
 
-describe("Electron project UI harness", () => {
-  it("closeProjectThroughUi uses the production menu action channel", async () => {
-    const [helperSource, productionSource] = await Promise.all([
-      readFile(path.resolve(process.cwd(), "tests", "electron", "projectUi.ts"), "utf8"),
-      readFile(path.resolve(process.cwd(), "src", "main", "menu.ts"), "utf8"),
-    ]);
+describe("Electron project menu", () => {
+  beforeEach(() => {
+    electronMock.sent.mockReset();
+    electronMock.templates.length = 0;
+  });
 
-    expect(readMenuChannel(helperSource)).toBe(readMenuChannel(productionSource));
-    expect(helperSource).not.toContain('"menu-action"');
+  it("dispatches Close Project through the renderer menu channel", () => {
+    buildAppMenu(new BrowserWindow(), true);
+    const template = electronMock.templates[0];
+    const fileMenu = template?.find((item) => item.label === "File");
+    if (!Array.isArray(fileMenu?.submenu)) throw new TypeError("File menu is missing");
+    const closeProject = fileMenu.submenu.find((item) => item.label === "Close Project");
+    if (closeProject?.click === undefined) throw new TypeError("Close Project action is missing");
+
+    Reflect.apply(closeProject.click, closeProject, []);
+
+    expect(electronMock.sent).toHaveBeenCalledWith("menu:action", "close-project");
   });
 });

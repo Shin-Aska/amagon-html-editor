@@ -72,16 +72,15 @@ test("Save As rematerializes identity and serialization rejects stale cross-sess
     if (!recents.success) throw new TypeError("recents failed");
     const copyRecent = recents.projects.find((recent) => recent.displayPath === copy);
     if (copyRecent === undefined) throw new TypeError("Save As recent missing");
-    const race = await harness.page.evaluate(async ({ save, openRecent }) => Promise.all([
-      window.api.project.save(save),
-      window.api.project.openRecent(openRecent),
-    ]), {
+    const race = await harness.page.evaluate(async ({ save, openRecent }) => {
+      const opening = window.api.project.openRecent(openRecent);
+      return Promise.all([window.api.project.save(save), opening]);
+    }, {
       save: saveRequest(savedAs.session, savedAs.session.committedRendererGeneration + 2, savedAs.session.data),
       openRecent: openRecentRequest(copyRecent.id, savedAs.session),
     });
     expect(race.filter((result) => result.success)).toHaveLength(1);
-    expect(race[0].success).toBe(false);
-    if (!race[0].success && !race[0].canceled) expect(["BUSY", "INTERNAL"]).toContain(race[0].error.code);
+    expect(race[0]).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
     if (!race[1].success) throw new TypeError("serialized reopen failed");
     expect(race[1].session.sessionId).not.toBe(savedAs.session.sessionId);
     const rematerialized = await openRecentThroughBridge(harness.page, copyRecent.id, race[1].session);
@@ -139,6 +138,7 @@ test("invalid, overlapping, oversized, traversal, and non-portable archives pres
 
     // Then: no traversal target is written and visible open reports failure over the preserved editor.
     await expect(access(outsideSentinel)).rejects.toThrow();
+    expect((await closeProjectThroughBridge(harness.page, active, "discard")).success).toBe(true);
     await harness.page.reload();
     await expect(harness.page.getByText("Loading...", { exact: true })).toHaveCount(0);
     await harness.page.getByText("Preserved Session", { exact: true }).click();

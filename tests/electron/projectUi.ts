@@ -73,12 +73,22 @@ export const openProjectThroughUi = async (request: ProjectUiRequest): Promise<v
 };
 
 export const closeProjectThroughUi = async (harness: AmagonHarness): Promise<void> => {
-  await harness.app.evaluate(({ BrowserWindow }, pageUrl) => {
-    const window = BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL() === pageUrl);
-    if (window === undefined) throw new TypeError(`no Electron window found for ${pageUrl}`);
-    window.webContents.send("menu:action", "close-project");
-  }, harness.page.url());
-  await expect(harness.page.getByRole("button", { name: /New Project/u })).toBeVisible({ timeout: projectUiStepTimeoutMs });
+  const discardDirtyProject = async (dialog: Dialog): Promise<void> => {
+    if (dialog.message() === "Save changes before closing?") await dialog.dismiss();
+    else if (dialog.message() === "Discard unsaved changes?") await dialog.accept();
+    else throw new TypeError(`unexpected close confirmation: ${dialog.message()}`);
+  };
+  harness.page.on("dialog", discardDirtyProject);
+  try {
+    await harness.app.evaluate(({ BrowserWindow }, pageUrl) => {
+      const window = BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL() === pageUrl);
+      if (window === undefined) throw new TypeError(`no Electron window found for ${pageUrl}`);
+      window.webContents.send("menu:action", "close-project");
+    }, harness.page.url());
+    await expect(harness.page.getByRole("button", { name: /New Project/u })).toBeVisible({ timeout: projectUiStepTimeoutMs });
+  } finally {
+    harness.page.off("dialog", discardDirtyProject);
+  }
 };
 
 export const openRecentThroughBridge = async (
