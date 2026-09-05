@@ -1,4 +1,3 @@
-import type { BrowserWindow } from "electron";
 import * as electron from "electron";
 import * as path from "path";
 import * as fs from "fs/promises";
@@ -52,7 +51,7 @@ import { createRecentProjectsStore } from "./projects/recentProjects";
 import { registerProjectIpc } from "./projects/registerProjectIpc";
 import { ProjectSessionRegistry } from "./projects/projectSession";
 import { cleanupStaleOwnedWorkspaces } from "./projects/projectWorkspace";
-import { createLifecycleController, focusSecondInstance, type LifecycleController, type LifecycleResult } from "./projects/projectLifecycle";
+import { focusSecondInstance, type LifecycleResult } from "./projects/projectLifecycle";
 import { buildRuntimeAssetUrl } from "../shared/projects/assetReference";
 import { createProjectTransferRegistry } from "./projects/projectTransferRegistry";
 import { initializeProjectStartup } from "./projects/projectStartup";
@@ -64,6 +63,7 @@ import { createGoogleFontsService } from "./googleFontsTransport";
 import { registerAppProtocols } from "./registerAppProtocols";
 import { createAutosaveController } from "./autosaveController";
 import { registerAutosaveIpc } from "./registerAutosaveIpc";
+import { createMainWindowController } from "./mainWindowController";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -75,13 +75,11 @@ const BrowserWindowCtor = electron.BrowserWindow;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let mainWindow: BrowserWindow | null = null;
 let currentProjectDir: string | null = null;
 const projectSessions = new ProjectSessionRegistry();
 const projectTransfers = createProjectTransferRegistry();
 const projectFiles = createDefaultProjectServiceFiles();
 let projectService: ProjectPersistenceService | null = null;
-let lifecycleController: LifecycleController | null = null;
 
 const hasSingleInstanceLock = initializeProjectStartup({
   registerScheme: (scheme, privileges) => protocol.registerSchemesAsPrivileged([{ scheme, privileges }]),
@@ -100,59 +98,22 @@ const googleFonts = createGoogleFontsService({
   fetch,
 }, getMimeType);
 
-const autosave = createAutosaveController({
-  getMainWindow: () => mainWindow,
-  getCurrentProjectDir: () => currentProjectDir,
+const windowController = createMainWindowController({
+  moduleDirectory: __dirname,
+  rendererUrl: process.env.ELECTRON_RENDERER_URL,
+  platform: process.platform,
+  createRequestId: randomUUID,
+  quit: () => app.quit(),
+  stopAutosave: () => autosave.stop(),
+  createWindow: (options) => new BrowserWindowCtor(options),
+  onClosed: (window, listener) => window.on("closed", listener),
+  onClose: (window, listener) => window.on("close", listener),
 });
 
-// ---------------------------------------------------------------------------
-// Window creation
-// ---------------------------------------------------------------------------
-
-async function createWindow(): Promise<void> {
-  mainWindow = new BrowserWindowCtor({
-    width: 1400,
-    height: 900,
-    minWidth: 900,
-    minHeight: 600,
-    title: "Amagon",
-    icon: path.join(
-      __dirname,
-      process.platform === "win32"
-        ? "../../assets/app.ico"
-        : "../../assets/app.png",
-    ),
-    webPreferences: {
-      preload: path.join(__dirname, "../preload/index.mjs"),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: false,
-    },
-  });
-
-  // In development, load from the Vite dev server
-  if (process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-  }
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-    autosave.stop();
-  });
-  lifecycleController = createLifecycleController({
-    createRequestId: randomUUID,
-    send: (request) => mainWindow?.webContents.send("project:lifecycle-close-request", request),
-    closeWindow: () => mainWindow?.close(),
-    quit: () => app.quit(),
-  });
-  mainWindow.on("close", (event) => {
-    if (lifecycleController?.canCloseWindow()) return;
-    event.preventDefault();
-    lifecycleController?.request("window-close");
-  });
-}
+const autosave = createAutosaveController({
+  getMainWindow: windowController.getMainWindow,
+  getCurrentProjectDir: () => currentProjectDir,
+});
 
 // ---------------------------------------------------------------------------
 // Publish credential helpers
@@ -205,6 +166,7 @@ function registerIpcHandlers(): void {
   // ── Menu State ─────────────────────────────────────────────────────────
 
   ipcMain.handle("menu:setProjectLoaded", (_, isLoaded: boolean) => {
+    const mainWindow = windowController.getMainWindow();
     if (mainWindow) {
       const menu = buildAppMenu(mainWindow, isLoaded);
       Menu.setApplicationMenu(menu);
@@ -214,7 +176,7 @@ function registerIpcHandlers(): void {
   // ── Font Management ───────────────────────────────────────────────────
 
   ipcMain.handle("fonts:listSystem", async (event) => {
-    assertTrustedMainFrame(event, mainWindow);
+    assertTrustedMainFrame(event, windowController.getMainWindow());
     try {
       const fonts = await getFonts();
       return { success: true, fonts };
@@ -226,7 +188,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle(
     "fonts:fetchGoogleFontCss",
     async (event, args: { family: string; weight: string; style: string }) => {
-      assertTrustedMainFrame(event, mainWindow);
+      assertTrustedMainFrame(event, windowController.getMainWindow());
       if (!args?.family || typeof args.family !== "string") {
         return { success: false, error: "family required", css: "" };
       }
@@ -260,7 +222,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle(
     "fonts:fetchGoogleFontFile",
     async (event, args: { url: string }) => {
-      assertTrustedMainFrame(event, mainWindow);
+      assertTrustedMainFrame(event, windowController.getMainWindow());
       if (!args?.url || typeof args.url !== "string") {
         return { success: false, error: "url required", dataUri: "" };
       }
@@ -291,7 +253,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle(
     "fonts:checkFileExists",
     async (event, args: { relativePath: string }) => {
-      assertTrustedMainFrame(event, mainWindow);
+      assertTrustedMainFrame(event, windowController.getMainWindow());
       if (!currentProjectDir) return { exists: false };
       if (!args?.relativePath) return { exists: false };
 
@@ -307,7 +269,7 @@ function registerIpcHandlers(): void {
   );
 
   ipcMain.handle("fonts:listProject", async (event) => {
-    assertTrustedMainFrame(event, mainWindow);
+    assertTrustedMainFrame(event, windowController.getMainWindow());
     if (!currentProjectDir) return { success: true, fonts: [] };
 
     try {
@@ -355,7 +317,7 @@ function registerIpcHandlers(): void {
     async (_, data: { html: string; defaultPath?: string }) => {
       try {
         const { canceled, filePath } = await dialog.showSaveDialog(
-          mainWindow!,
+          windowController.getMainWindow()!,
           {
             title: "Export HTML",
             defaultPath: path.join(
@@ -390,7 +352,7 @@ function registerIpcHandlers(): void {
     ) => {
       try {
         const { canceled, filePaths } = await dialog.showOpenDialog(
-          mainWindow!,
+          windowController.getMainWindow()!,
           {
             title: "Choose Export Directory",
             defaultPath: app.getPath("documents"),
@@ -445,6 +407,7 @@ function registerIpcHandlers(): void {
           }
 
           written++;
+          const mainWindow = windowController.getMainWindow();
           if (mainWindow) {
             mainWindow.webContents.send("project:exportProgress", {
               written,
@@ -498,7 +461,7 @@ function registerIpcHandlers(): void {
   // ── List project assets ───────────────────────────────────────────────
 
   ipcMain.handle("assets:list", async (event) => {
-    assertTrustedMainFrame(event, mainWindow);
+    assertTrustedMainFrame(event, windowController.getMainWindow());
     try {
       const workspacePath = projectSessions.active.workspacePath;
       const sessionId = projectSessions.active.id;
@@ -553,7 +516,7 @@ function registerIpcHandlers(): void {
   });
 
   ipcMain.handle("assets:readFileAsBase64", async (event, reference: string) => {
-    assertTrustedMainFrame(event, mainWindow);
+    assertTrustedMainFrame(event, windowController.getMainWindow());
     try {
       const input = String(reference || "");
       if (!input) return { success: false, error: "No file path provided" };
@@ -604,7 +567,7 @@ function registerIpcHandlers(): void {
   // ── Read asset as base64 (for preview / export) ───────────────────────
 
   ipcMain.handle("assets:readAsset", async (event, reference: string) => {
-    assertTrustedMainFrame(event, mainWindow);
+    assertTrustedMainFrame(event, windowController.getMainWindow());
     try {
       if (projectService === null) return { success: false, error: "Project service unavailable" };
       const readable = await projectService.resolveAssetRead(reference);
@@ -990,6 +953,7 @@ function registerIpcHandlers(): void {
     documentsPath: app.getPath("documents"),
     dialogs: {
       showSave: async (request) => {
+        const mainWindow = windowController.getMainWindow();
         const options = {
           title: request.title,
           defaultPath: request.defaultPath,
@@ -1003,6 +967,7 @@ function registerIpcHandlers(): void {
           : dialog.showSaveDialog(mainWindow, options);
       },
       showOpen: async (request) => {
+        const mainWindow = windowController.getMainWindow();
         const options = {
           title: request.title,
           filters: request.filters.map((filter) => ({
@@ -1039,13 +1004,13 @@ function registerIpcHandlers(): void {
     sessions: projectSessions,
     transfers: projectTransfers,
     projectFiles,
-    getMainWindow: () => mainWindow,
+    getMainWindow: windowController.getMainWindow,
     resolveSystemFontPath: resolveMainSystemFontPath,
     fetchGoogleFontsText: (url, options) => googleFonts.fetchText(url, options),
     googleFontsMaxBytes: googleFonts.maxResponseBytes,
   });
   ipcMain.handle("project:finish-lifecycle-close", (_event, result: LifecycleResult) => (
-    lifecycleController?.finish(result) ?? false
+    windowController.getLifecycleController()?.finish(result) ?? false
   ));
 }
 
@@ -1054,7 +1019,7 @@ function registerIpcHandlers(): void {
 // ---------------------------------------------------------------------------
 
 if (hasSingleInstanceLock) app.on("second-instance", () => {
-  focusSecondInstance(mainWindow);
+  focusSecondInstance(windowController.getMainWindow());
 });
 
 if (hasSingleInstanceLock) app.whenReady().then(async () => {
@@ -1070,8 +1035,9 @@ if (hasSingleInstanceLock) app.whenReady().then(async () => {
     getMimeType,
   });
   registerIpcHandlers();
-  await createWindow();
+  await windowController.createWindow();
 
+  const mainWindow = windowController.getMainWindow();
   if (mainWindow) {
     const menu = buildAppMenu(mainWindow, false);
     Menu.setApplicationMenu(menu);
@@ -1079,15 +1045,15 @@ if (hasSingleInstanceLock) app.whenReady().then(async () => {
 
   app.on("activate", () => {
     if (BrowserWindowCtor.getAllWindows().length === 0) {
-      createWindow();
+      windowController.createWindow();
     }
   });
 });
 
 app.on("before-quit", (event) => {
-  const controller = lifecycleController;
+  const controller = windowController.getLifecycleController();
   if (!hasSingleInstanceLock || controller === null || controller.canQuit()) return;
-  if (mainWindow === null) return;
+  if (windowController.getMainWindow() === null) return;
   event.preventDefault();
   controller.request("quit");
 });
