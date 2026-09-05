@@ -18,6 +18,7 @@ import { buildRuntimeAssetUrl } from "../../shared/projects/assetReference";
 import { createProjectSaveCoordinator } from "../../renderer/project/projectSaveCoordinator";
 import { buildProjectSnapshot } from "../../renderer/project/projectSnapshot";
 import { ProjectDocumentV1Schema } from "../../shared/projects/projectDocumentSchema";
+import { parseProjectSessionId } from "../../shared/projects/projectIpcContract";
 import { createDefaultTheme, type ProjectData } from "../../renderer/store/types";
 import { createProjectService, type ProjectDialogPort } from "./projectService";
 import { inventoryWithHashes, runProjectMutation } from "./projectMutation";
@@ -158,7 +159,15 @@ describe("media import streaming", () => {
       created.session.sessionId,
       (signal) => downloadAndImportMedia({ url: "https://media.example/blocked", projectDir: workspace, filename: "blocked", signal, fetcher: testMediaFetch }),
     ));
-    while (harness.transfers.activeCount(created.session.sessionId) === 0) await Promise.resolve();
+    while (harness.transfers.activeCount(created.session.sessionId) === 0 || observedSignal === undefined) await Promise.resolve();
+    const staleClosing = await harness.service.close({
+      expectedSessionId: parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"),
+      rendererGeneration: created.session.committedRendererGeneration,
+      snapshot: created.session.data,
+      dirtyChoice: "discard",
+    });
+    expect(staleClosing).toMatchObject({ success: false, error: { code: "STALE_SESSION" } });
+    expect(observedSignal?.aborted).toBe(false);
     const closing = harness.service.close({
       expectedSessionId: created.session.sessionId,
       rendererGeneration: created.session.committedRendererGeneration,

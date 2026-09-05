@@ -218,13 +218,13 @@ class ProjectPersistenceServiceImpl implements ProjectPersistenceService {
 
   async close(request: ProjectCloseRequest): Promise<ProjectCloseResult> {
     if (request.dirtyChoice === "cancel") return { success: false, canceled: true };
+    if (this.active?.session.id === request.expectedSessionId) {
+      this.runtime.abortSessionTransfers?.(request.expectedSessionId);
+    }
     try {
       await this.preflightPersistence(request);
     } catch (error) {
       return this.failure(error, this.context(request));
-    }
-    if (this.active?.session.id === request.expectedSessionId) {
-      this.runtime.abortSessionTransfers?.(request.expectedSessionId);
     }
     if (request.dirtyChoice === "save") {
       const saved = await this.save(request);
