@@ -8,6 +8,7 @@ import { downloadAndImportMedia } from "../mediaDownload";
 import { copyFilesAtomically, runFileCopyMutation, runProjectMutation } from "./projectMutation";
 import { canceledMutation, runMutationBoundary } from "./projectMutationBoundary";
 import { assertTrustedMainFrame } from "./projectIpcSecurity";
+import { resolveMutationPath } from "./mutationPath";
 import { importedFont, resourceMutationContext, type ProjectResourceContext } from "./projectResourceContext";
 import { runCancellableTransferBatch } from "./projectTransferRegistry";
 
@@ -37,6 +38,7 @@ export const registerFontMutationIpc = (context: ProjectResourceContext): void =
   install("fonts:importFile", async (event, request: unknown) => {
     assertTrustedMainFrame(event, context.getMainWindow());
     return runMutationBoundary(context.sessions, request, async (expectedSessionId) => {
+      const mutation = resourceMutationContext(context, expectedSessionId);
       const mainWindow = context.getMainWindow();
       if (mainWindow === null) throw new TypeError("Main window not available");
       const selected = await dialog.showOpenDialog(mainWindow, {
@@ -47,7 +49,6 @@ export const registerFontMutationIpc = (context: ProjectResourceContext): void =
       if (selected.canceled || selected.filePaths.length === 0) {
         return canceledMutation(context.sessions, expectedSessionId);
       }
-      const mutation = resourceMutationContext(context, expectedSessionId);
       return runFileCopyMutation(
         mutation.context,
         mutation.workspacePath,
@@ -126,7 +127,10 @@ export const registerFontMutationIpc = (context: ProjectResourceContext): void =
             return importedFont({ fileName: path.basename(downloaded.relativePath), relativePath: downloaded.relativePath }, family, "google-fonts", weight, style);
           });
         } catch (error) {
-          await Promise.all(completed.map((relativePath) => fs.rm(path.join(mutation.workspacePath, ...relativePath.split("/")), { force: true })));
+          await Promise.all(completed.map(async (relativePath) => {
+            const target = await resolveMutationPath(mutation.workspacePath, relativePath);
+            await fs.rm(target, { force: true });
+          }));
           throw error;
         }
       }));
@@ -143,10 +147,11 @@ export const registerFontMutationIpc = (context: ProjectResourceContext): void =
       if (!relativePath.startsWith("assets/fonts/")) throw new TypeError("only project fonts can be deleted");
       const mutation = resourceMutationContext(context, expectedSessionId);
       return runProjectMutation(mutation.context, async () => {
-        const target = path.join(mutation.workspacePath, ...relativePath.split("/"));
-        const backup = `${target}.amagon-delete-${randomUUID()}`;
+        const target = await resolveMutationPath(mutation.workspacePath, relativePath);
+        const backupRelativePath = `${relativePath}.amagon-delete-${randomUUID()}`;
+        const backup = await resolveMutationPath(mutation.workspacePath, backupRelativePath);
         await fs.rename(target, backup);
-        await fs.rm(backup);
+        await fs.rm(await resolveMutationPath(mutation.workspacePath, backupRelativePath));
         return null;
       });
     });

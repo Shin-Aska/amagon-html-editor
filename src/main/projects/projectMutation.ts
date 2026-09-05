@@ -9,6 +9,7 @@ import {
   type ProjectSessionId,
 } from "../../shared/projects/projectIpcContract";
 import { canonicalizePortablePath } from "../../shared/projects/assetReference";
+import { resolveMutationPath } from "./mutationPath";
 import { SessionStateError, type ProjectSessionRegistry } from "./projectSession";
 
 export type ProjectMutationContext = {
@@ -163,10 +164,11 @@ export const copyFilesAtomically = async (
 ): Promise<readonly ImportedFile[]> => {
   const portableDirectory = canonicalizePortablePath(relativeDirectory);
   if (!portableDirectory.startsWith("assets")) throw new TypeError("imports must target the assets directory");
-  const destinationDirectory = path.join(workspacePath, ...portableDirectory.split("/"));
+  const destinationDirectory = await resolveMutationPath(workspacePath, portableDirectory);
   await mkdir(destinationDirectory, { recursive: true });
+  await resolveMutationPath(workspacePath, portableDirectory);
   const used = new Set<string>();
-  const staged: Array<ImportedFile & { readonly partialPath: string }> = [];
+  const staged: Array<ImportedFile & { readonly partialPath: string; readonly partialRelativePath: string }> = [];
   const promoted: ImportedFile[] = [];
   try {
     for (const sourcePath of sourcePaths) {
@@ -175,7 +177,7 @@ export const copyFilesAtomically = async (
       const base = path.basename(original, extension);
       let fileName = original;
       let counter = 1;
-      while (used.has(fileName) || await open(path.join(destinationDirectory, fileName), "r").then(
+      while (used.has(fileName) || await open(await resolveMutationPath(workspacePath, `${portableDirectory}/${fileName}`), "r").then(
         async (handle) => { await handle.close(); return true; },
         (error: unknown) => {
           if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
@@ -187,10 +189,11 @@ export const copyFilesAtomically = async (
       }
       used.add(fileName);
       const relativePath = canonicalizePortablePath(`${portableDirectory}/${fileName}`);
-      const destinationPath = path.join(destinationDirectory, fileName);
-      const partialPath = `${destinationPath}.amagon-partial-${randomUUID()}`;
+      const destinationPath = await resolveMutationPath(workspacePath, relativePath);
+      const partialRelativePath = `${relativePath}.amagon-partial-${randomUUID()}`;
+      const partialPath = await resolveMutationPath(workspacePath, partialRelativePath);
       await copyFile(sourcePath, partialPath, constants.COPYFILE_EXCL);
-      const handle = await open(partialPath, "r+");
+      const handle = await open(await resolveMutationPath(workspacePath, partialRelativePath), "r+");
       try {
         await handle.sync();
       } finally {
@@ -202,9 +205,12 @@ export const copyFilesAtomically = async (
         relativePath,
         destinationPath,
         partialPath,
+        partialRelativePath,
       });
     }
     for (const item of staged) {
+      await resolveMutationPath(workspacePath, item.partialRelativePath);
+      await resolveMutationPath(workspacePath, item.relativePath);
       await operations.promote(item.partialPath, item.destinationPath);
       promoted.push(item);
     }
@@ -212,12 +218,16 @@ export const copyFilesAtomically = async (
   } catch (error) {
     const cleanupFailures: string[] = [];
     for (const item of staged) {
-      await operations.remove(item.partialPath, { force: true }).catch((cleanupError: unknown) => {
+      await resolveMutationPath(workspacePath, item.partialRelativePath).then(
+        (safePath) => operations.remove(safePath, { force: true }),
+      ).catch((cleanupError: unknown) => {
         cleanupFailures.push(cleanupError instanceof Error ? cleanupError.message : item.partialPath);
       });
     }
     for (const item of promoted) {
-      await operations.remove(item.destinationPath, { force: true }).catch((cleanupError: unknown) => {
+      await resolveMutationPath(workspacePath, item.relativePath).then(
+        (safePath) => operations.remove(safePath, { force: true }),
+      ).catch((cleanupError: unknown) => {
         cleanupFailures.push(cleanupError instanceof Error ? cleanupError.message : item.destinationPath);
       });
     }

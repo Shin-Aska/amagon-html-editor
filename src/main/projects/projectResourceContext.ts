@@ -35,18 +35,23 @@ export const resourceMutationContext = (
   context: ProjectResourceContext,
   expectedSessionId: ProjectSessionId,
 ) => {
-  const workspacePath = requireWorkspacePath(context);
-  return {
-    workspacePath,
-    context: {
-      sessions: context.sessions,
-      expectedSessionId,
-      listInventory: async () => inventoryWithHashes(
-        workspacePath,
-        await context.projectFiles.listAssetPaths(workspacePath),
-      ),
-    },
-  };
+  const lease = context.sessions.acquireReadLease(expectedSessionId);
+  try {
+    const workspacePath = requireWorkspacePath(context);
+    return {
+      workspacePath,
+      context: {
+        sessions: context.sessions,
+        expectedSessionId,
+        listInventory: async () => inventoryWithHashes(
+          workspacePath,
+          await context.projectFiles.listAssetPaths(workspacePath),
+        ),
+      },
+    };
+  } finally {
+    lease.release();
+  }
 };
 
 export const importedAsset = (

@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdir, mkdtemp, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -89,6 +89,36 @@ describe("project session concurrency", () => {
     expect(await test.listInventory()).toEqual(["same.txt"]);
   });
 
+  it("rejects asset and nested font junction destinations without changing outside files", async () => {
+    // Given: a legacy-style workspace whose mutation destinations redirect outside the workspace.
+    const root = await mkdtemp(path.join(os.tmpdir(), "amagon-junction-copy-"));
+    roots.push(root);
+    const workspacePath = path.join(root, "workspace");
+    const outsideAssets = path.join(root, "outside-assets");
+    const outsideFonts = path.join(root, "outside-fonts");
+    const source = path.join(root, "source.txt");
+    await mkdir(workspacePath);
+    await mkdir(outsideAssets);
+    await mkdir(outsideFonts);
+    await writeFile(source, "attacker-selected bytes");
+    await writeFile(path.join(outsideAssets, "sentinel.txt"), "asset sentinel");
+    await writeFile(path.join(outsideFonts, "sentinel.txt"), "font sentinel");
+    await symlink(outsideAssets, path.join(workspacePath, "assets"), "junction");
+
+    // When: import targets the linked assets root and then a linked nested fonts directory.
+    await expect(copyFilesAtomically(workspacePath, "assets", [source])).rejects.toThrow();
+    await rm(path.join(workspacePath, "assets"));
+    await mkdir(path.join(workspacePath, "assets"));
+    await symlink(outsideFonts, path.join(workspacePath, "assets", "fonts"), "junction");
+    await expect(copyFilesAtomically(workspacePath, "assets/fonts", [source])).rejects.toThrow();
+
+    // Then: neither outside tree is mutated and no staging artifact escapes.
+    expect(await readFile(path.join(outsideAssets, "sentinel.txt"), "utf8")).toBe("asset sentinel");
+    expect(await readFile(path.join(outsideFonts, "sentinel.txt"), "utf8")).toBe("font sentinel");
+    expect(await readdir(outsideAssets)).toEqual(["sentinel.txt"]);
+    expect(await readdir(outsideFonts)).toEqual(["sentinel.txt"]);
+  });
+
   it("returns a typed unchanged failure for a stale queued mutation", async () => {
     const test = await fixture();
     const next = ProjectSession.createAmg({ sourcePath: "next.amg", workspacePath: test.workspacePath });
@@ -161,6 +191,38 @@ describe("project session concurrency", () => {
       error: { code: "PARTIAL_MUTATION" },
     });
     expect(await fontInventory()).toEqual(["asset-a.txt"]);
+  });
+
+  it("revalidates rollback paths after a destination directory becomes a junction", async () => {
+    // Given: two staged imports and a clean outside directory with a sentinel.
+    const test = await fixture();
+    const firstSource = path.join(test.workspacePath, "first.txt");
+    const secondSource = path.join(test.workspacePath, "second.txt");
+    const outside = await mkdtemp(path.join(os.tmpdir(), "amagon-rollback-outside-"));
+    roots.push(outside);
+    await writeFile(firstSource, "first");
+    await writeFile(secondSource, "second");
+    await writeFile(path.join(outside, "sentinel.txt"), "outside sentinel");
+    let promotions = 0;
+
+    // When: the promotion seam replaces assets with a junction before failing.
+    const action = copyFilesAtomically(test.workspacePath, "assets", [firstSource, secondSource], {
+      promote: async (source, destination) => {
+        promotions += 1;
+        if (promotions === 2) {
+          await rm(path.join(test.workspacePath, "assets"), { recursive: true });
+          await symlink(outside, path.join(test.workspacePath, "assets"), "junction");
+          throw new Error("injected representation replacement");
+        }
+        await rename(source, destination);
+      },
+      remove: rm,
+    });
+
+    // Then: rollback reports its inability to re-enter the replaced path and never touches outside.
+    await expect(action).rejects.toMatchObject({ name: "MutationRollbackError" });
+    expect(await readFile(path.join(outside, "sentinel.txt"), "utf8")).toBe("outside sentinel");
+    expect(await readdir(outside)).toEqual(["sentinel.txt"]);
   });
 
   it("returns typed unchanged failures for malformed mutation requests and paths", async () => {

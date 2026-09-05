@@ -1,11 +1,11 @@
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { dialog, ipcMain } from "electron";
 import { canonicalizePortablePath } from "../../shared/projects/assetReference";
 import { canceledMutation, runMutationBoundary } from "./projectMutationBoundary";
 import { copyFilesAtomically, runFileCopyMutation, runProjectMutation } from "./projectMutation";
 import { assertTrustedMainFrame } from "./projectIpcSecurity";
+import { resolveMutationPath } from "./mutationPath";
 import {
   importedAsset,
   resourceMutationContext,
@@ -25,6 +25,7 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
   install("assets:selectImage", async (event, request: unknown) => {
     assertTrustedMainFrame(event, context.getMainWindow());
     return runMutationBoundary(context.sessions, request, async (expectedSessionId) => {
+      const mutation = resourceMutationContext(context, expectedSessionId);
       const mainWindow = context.getMainWindow();
       if (mainWindow === null) throw new TypeError("Main window not available");
       const selected = await dialog.showOpenDialog(mainWindow, {
@@ -35,7 +36,6 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
       if (selected.canceled || selected.filePaths.length === 0) {
         return canceledMutation(context.sessions, expectedSessionId);
       }
-      const mutation = resourceMutationContext(context, expectedSessionId);
       return runFileCopyMutation(
         mutation.context,
         mutation.workspacePath,
@@ -49,6 +49,7 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
   install("assets:selectSingleImage", async (event, request: unknown) => {
     assertTrustedMainFrame(event, context.getMainWindow());
     return runMutationBoundary(context.sessions, request, async (expectedSessionId) => {
+      const mutation = resourceMutationContext(context, expectedSessionId);
       const mainWindow = context.getMainWindow();
       if (mainWindow === null) throw new TypeError("Main window not available");
       const selected = await dialog.showOpenDialog(mainWindow, {
@@ -61,7 +62,6 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
       }
       const sourcePath = selected.filePaths[0];
       if (sourcePath === undefined) throw new TypeError("selected image path is missing");
-      const mutation = resourceMutationContext(context, expectedSessionId);
       return runProjectMutation(mutation.context, async () => {
         const file = (await copyFilesAtomically(mutation.workspacePath, "assets", [sourcePath]))[0];
         if (file === undefined) throw new TypeError("image import produced no file");
@@ -73,6 +73,7 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
   install("assets:selectVideo", async (event, request: unknown) => {
     assertTrustedMainFrame(event, context.getMainWindow());
     return runMutationBoundary(context.sessions, request, async (expectedSessionId) => {
+      const mutation = resourceMutationContext(context, expectedSessionId);
       const mainWindow = context.getMainWindow();
       if (mainWindow === null) throw new TypeError("Main window not available");
       const selected = await dialog.showOpenDialog(mainWindow, {
@@ -83,7 +84,6 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
       if (selected.canceled || selected.filePaths.length === 0) {
         return canceledMutation(context.sessions, expectedSessionId);
       }
-      const mutation = resourceMutationContext(context, expectedSessionId);
       return runProjectMutation(mutation.context, async () => (
         await copyFilesAtomically(mutation.workspacePath, "assets", selected.filePaths)
       ).map((file) => importedAsset(expectedSessionId, file, "video")));
@@ -100,10 +100,11 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
       if (!relativePath.startsWith("assets/")) throw new TypeError("only project assets can be deleted");
       const mutation = resourceMutationContext(context, expectedSessionId);
       return runProjectMutation(mutation.context, async () => {
-        const fullPath = path.join(mutation.workspacePath, ...relativePath.split("/"));
-        const backupPath = `${fullPath}.amagon-delete-${randomUUID()}`;
+        const fullPath = await resolveMutationPath(mutation.workspacePath, relativePath);
+        const backupRelativePath = `${relativePath}.amagon-delete-${randomUUID()}`;
+        const backupPath = await resolveMutationPath(mutation.workspacePath, backupRelativePath);
         await fs.rename(fullPath, backupPath);
-        await fs.rm(backupPath);
+        await fs.rm(await resolveMutationPath(mutation.workspacePath, backupRelativePath));
         return null;
       });
     });

@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
+import { resolveMutationPath } from "./projects/mutationPath";
 import { safeMediaFetch, type SafeMediaFetcher } from "./projects/safeMediaNetwork";
 
 export type MediaDownloadRequest = {
@@ -32,16 +33,22 @@ const extensionForContentType = (contentType: string): string => {
 };
 
 const availableDestination = async (
-  directory: string,
-  baseName: string,
-  extension: string,
-): Promise<string> => {
+  request: {
+    readonly workspacePath: string;
+    readonly relativeDirectory: string;
+    readonly baseName: string;
+    readonly extension: string;
+  },
+): Promise<{ readonly path: string; readonly relativePath: string }> => {
   let suffix = 0;
   while (true) {
-    const name = suffix === 0 ? `${baseName}${extension}` : `${baseName}-${suffix}${extension}`;
-    const candidate = path.join(directory, name);
+    const name = suffix === 0
+      ? `${request.baseName}${request.extension}`
+      : `${request.baseName}-${suffix}${request.extension}`;
+    const relativePath = `${request.relativeDirectory}/${name}`;
+    const candidate = await resolveMutationPath(request.workspacePath, relativePath);
     const exists = await fs.access(candidate).then(() => true).catch(() => false);
-    if (!exists) return candidate;
+    if (!exists) return { path: candidate, relativePath };
     suffix += 1;
   }
 };
@@ -51,6 +58,7 @@ export const downloadAndImportMedia = async (
 ): Promise<MediaDownloadResult> => {
   const maxBytes = request.maxBytes ?? 250 * 1024 * 1024;
   let partialPath: string | null = null;
+  let partialRelativePath: string | null = null;
   let partialHandle: Awaited<ReturnType<typeof fs.open>> | null = null;
   try {
     const response = await (request.fetcher ?? safeMediaFetch)(request.url, request.signal);
@@ -65,11 +73,19 @@ export const downloadAndImportMedia = async (
     const extension = extensionForContentType(response.headers.get("content-type") ?? "application/octet-stream");
     const requestedName = request.filename ?? `web-${Date.now()}`;
     const baseName = path.basename(requestedName).replace(/[^a-zA-Z0-9._-]/gu, "-") || "web-media";
-    const directory = path.join(request.projectDir, ...(request.relativeDirectory ?? "assets").split("/"));
+    const relativeDirectory = request.relativeDirectory ?? "assets";
+    const directory = await resolveMutationPath(request.projectDir, relativeDirectory);
     await fs.mkdir(directory, { recursive: true });
-    const destination = await availableDestination(directory, baseName, extension);
+    await resolveMutationPath(request.projectDir, relativeDirectory);
+    const destination = await availableDestination({
+      workspacePath: request.projectDir,
+      relativeDirectory,
+      baseName,
+      extension,
+    });
 
-    partialPath = `${destination}.amagon-partial-${randomUUID()}`;
+    partialRelativePath = `${destination.relativePath}.amagon-partial-${randomUUID()}`;
+    partialPath = await resolveMutationPath(request.projectDir, partialRelativePath);
     partialHandle = await fs.open(partialPath, "wx");
     const reader = response.body.getReader();
     const cancelReader = (): void => { void reader.cancel("download canceled"); };
@@ -95,12 +111,19 @@ export const downloadAndImportMedia = async (
     await partialHandle.sync();
     await partialHandle.close();
     partialHandle = null;
-    await fs.rename(partialPath, destination);
+    await resolveMutationPath(request.projectDir, partialRelativePath);
+    await resolveMutationPath(request.projectDir, destination.relativePath);
+    await fs.rename(partialPath, destination.path);
     partialPath = null;
-    return { success: true, relativePath: path.relative(request.projectDir, destination).replace(/\\/gu, "/") };
+    partialRelativePath = null;
+    return { success: true, relativePath: destination.relativePath };
   } catch (error) {
     if (partialHandle !== null) await partialHandle.close().catch(() => undefined);
-    if (partialPath !== null) await fs.rm(partialPath, { force: true }).catch(() => undefined);
+    if (partialRelativePath !== null) {
+      await resolveMutationPath(request.projectDir, partialRelativePath).then(
+        (safePath) => fs.rm(safePath, { force: true }),
+      ).catch(() => undefined);
+    }
     return { success: false, error: error instanceof Error ? error.message : "Media download failed" };
   }
 };
