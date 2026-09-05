@@ -9,7 +9,6 @@ import { getFonts } from "font-list";
 import {
   buildSystemPrompt,
   chat as aiChat,
-  type ChatMessage,
   fetchAvailableModels,
   fetchModelsForProvider,
   loadApiKeyForProvider,
@@ -66,6 +65,7 @@ import { registerAssetReadIpc } from "./registerAssetReadIpc";
 import { registerSettingsIpc } from "./registerSettingsIpc";
 import { registerCredentialIpc } from "./registerCredentialIpc";
 import { registerPublishIpc } from "./registerPublishIpc";
+import { registerAiIpc } from "./registerAiIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -212,155 +212,25 @@ function registerIpcHandlers(): void {
     maskApiKey,
   });
 
-  // ── AI Assistant ─────────────────────────────────────────────────────
-
-  ipcMain.handle(
-    "ai:chat",
-    async (
-      _,
-      data: {
-        messages: ChatMessage[];
-        blockRegistry?: string;
-        config?: any;
-        themeContext?: { projectTheme?: unknown; uiTheme?: "light" | "dark" };
-      },
-    ) => {
-      try {
-        // Prepend system prompt if block registry schema is provided
-        let messages = data.messages;
-        if (data.blockRegistry) {
-          const systemPrompt = buildSystemPrompt(
-            data.blockRegistry,
-            data.themeContext,
-          );
-          messages = [
-            { role: "system" as const, content: systemPrompt },
-            ...messages.filter((m) => m.role !== "system"),
-          ];
-        }
-
-        const result = await aiChat(messages, data.config);
-        if (result.error) {
-          return { success: false, error: result.error };
-        }
-        return { success: true, content: result.content };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
+  registerAiIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    buildSystemPrompt,
+    chat: aiChat,
+    cliBinaryNames: CLI_BINARY_NAMES,
+    detectCliProvider,
+    createOpenCodeClient: async () => {
+      const { createOpencodeClient } = await import("@opencode-ai/sdk");
+      return createOpencodeClient({ baseUrl: "http://127.0.0.1:4096" });
     },
-  );
-
-  ipcMain.handle("ai:checkCliAvailability", async () => {
-    try {
-      const entries = await Promise.all(
-        (
-          Object.keys(CLI_BINARY_NAMES) as Array<keyof typeof CLI_BINARY_NAMES>
-        ).map(
-          async (providerId) =>
-            [providerId, await detectCliProvider(providerId)] as const,
-        ),
-      );
-
-      // Also probe OpenCode SDK availability
-      let opencodeAvailable = false;
-      try {
-        const { createOpencodeClient } = await import("@opencode-ai/sdk");
-        const client = createOpencodeClient({ baseUrl: "http://127.0.0.1:4096" });
-        await client.provider.list();
-        opencodeAvailable = true;
-      } catch {
-        // OpenCode service is not currently running
-      }
-
-      return {
-        success: true,
-        availability: {
-          ...Object.fromEntries(entries),
-          opencode: { available: opencodeAvailable },
-        },
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
+    loadConfig: aiLoadConfig,
+    saveConfig: aiSaveConfig,
+    maskApiKey,
+    maskedKeyPrefix: MASKED_KEY_PREFIX,
+    fetchAvailableModels,
+    staticModels: PROVIDER_MODELS,
+    loadApiKeyForProvider,
+    fetchModelsForProvider,
   });
-
-  ipcMain.handle("ai:getConfig", async () => {
-    try {
-      const config = await aiLoadConfig();
-      // Never send the raw API key to the renderer — mask it
-      return {
-        success: true,
-        config: {
-          ...config,
-          apiKey: maskApiKey(config.apiKey),
-        },
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle("ai:setConfig", async (_, config: any) => {
-    try {
-      const configToSave = { ...config };
-      // If the renderer sent back a masked key, the user didn't change it
-      if (
-        configToSave.apiKey &&
-        configToSave.apiKey.startsWith(MASKED_KEY_PREFIX)
-      ) {
-        delete configToSave.apiKey; // preserve existing encrypted key
-      }
-      const saved = await aiSaveConfig(configToSave);
-      return {
-        success: true,
-        config: {
-          ...saved,
-          apiKey: maskApiKey(saved.apiKey),
-        },
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle("ai:getModels", async () => {
-    try {
-      const models = await fetchAvailableModels();
-      return { success: true, models };
-    } catch {
-      // Fall back to static list if dynamic fetch fails entirely
-      return { success: true, models: PROVIDER_MODELS };
-    }
-  });
-
-  ipcMain.handle(
-    "ai:fetchModelsForProvider",
-    async (
-      _event,
-      data: {
-        provider: string;
-        apiKey: string;
-        ollamaUrl?: string;
-      },
-    ) => {
-      try {
-        let apiKeyToUse = data.apiKey || "";
-        // If the renderer sent a masked or empty key, look up the saved key for this specific provider
-        if (!apiKeyToUse || apiKeyToUse.startsWith(MASKED_KEY_PREFIX)) {
-          apiKeyToUse = await loadApiKeyForProvider(data.provider as any);
-        }
-
-        const models = await fetchModelsForProvider(
-          data.provider as any,
-          apiKeyToUse,
-          data.ollamaUrl,
-        );
-        return { success: true, models };
-      } catch (error: any) {
-        return { success: false, error: error.message, models: [] };
-      }
-    },
-  );
 
   projectService = createProjectService({
     userDataPath: app.getPath("userData"),
