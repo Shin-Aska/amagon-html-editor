@@ -12,17 +12,20 @@ import {
   replaceAsciiSameLength,
 } from "../../src/main/projects/amgArchiveFixtures";
 import { capture, launchAmagon, queueNativeDialogs, stopAmagon } from "./electronHarness";
-import { answerConfirmations, createProjectThroughUi, settleEditor } from "./projectUi";
+import {
+  answerConfirmations,
+  closeProjectThroughBridge,
+  createProjectThroughUi,
+  loadProjectThroughBridge,
+  materializeCurrentSession,
+  openRecentThroughBridge,
+  saveProjectAsThroughBridge,
+  saveProjectThroughBridge,
+  settleEditor,
+} from "./projectUi";
+import { openRecentRequest, saveRequest, sessionAfterWorkspaceMutation } from "./projectTransitionRequests";
 
 const encoder = new TextEncoder();
-
-const currentSession = async (page: import("@playwright/test").Page) => {
-  const recents = await page.evaluate(() => window.api.project.getRecent());
-  if (!recents.success || recents.projects[0] === undefined) throw new TypeError("active recent missing");
-  const opened = await page.evaluate((id) => window.api.project.openRecent(id), recents.projects[0].id);
-  if (!opened.success) throw new TypeError("active session could not be materialized");
-  return opened.session;
-};
 
 test("Save As rematerializes identity and serialization rejects stale cross-session work", async () => {
   // Given: an active archive, a destination, and a queued second-file import failure.
@@ -36,15 +39,14 @@ test("Save As rematerializes identity and serialization rejects stale cross-sess
   try {
     await createProjectThroughUi({ harness, filePath: original, name: "Identity Matrix" });
     await harness.page.evaluate(() => window.api.autosave.stop());
-    const first = await currentSession(harness.page);
+    const first = await materializeCurrentSession(harness);
 
     // When: Save As commits through the shipped bridge.
     await queueNativeDialogs(harness.app, { saves: [copy] });
-    const savedAs = await harness.page.evaluate((session) => window.api.project.saveAs({
-      expectedSessionId: session.sessionId,
-      rendererGeneration: session.committedRendererGeneration + 1,
-      snapshot: session.data,
-    }), first);
+    const savedAs = await saveProjectAsThroughBridge(
+      harness.page,
+      { session: first, rendererGeneration: first.committedRendererGeneration + 1, snapshot: first.data },
+    );
 
     // Then: the destination gets a fresh identity and the old session is stale.
     expect(savedAs.success).toBe(true);
@@ -70,20 +72,19 @@ test("Save As rematerializes identity and serialization rejects stale cross-sess
     if (!recents.success) throw new TypeError("recents failed");
     const copyRecent = recents.projects.find((recent) => recent.displayPath === copy);
     if (copyRecent === undefined) throw new TypeError("Save As recent missing");
-    const race = await harness.page.evaluate(async ({ session, recentId }) => Promise.all([
-      window.api.project.save({
-        expectedSessionId: session.sessionId,
-        rendererGeneration: session.committedRendererGeneration + 2,
-        snapshot: session.data,
-      }),
-      window.api.project.openRecent(recentId),
-    ]), { session: savedAs.session, recentId: copyRecent.id });
+    const race = await harness.page.evaluate(async ({ save, openRecent }) => Promise.all([
+      window.api.project.save(save),
+      window.api.project.openRecent(openRecent),
+    ]), {
+      save: saveRequest(savedAs.session, savedAs.session.committedRendererGeneration + 2, savedAs.session.data),
+      openRecent: openRecentRequest(copyRecent.id, savedAs.session),
+    });
     expect(race.filter((result) => result.success)).toHaveLength(1);
     expect(race[0].success).toBe(false);
     if (!race[0].success && !race[0].canceled) expect(["BUSY", "INTERNAL"]).toContain(race[0].error.code);
     if (!race[1].success) throw new TypeError("serialized reopen failed");
     expect(race[1].session.sessionId).not.toBe(savedAs.session.sessionId);
-    const rematerialized = await harness.page.evaluate((id) => window.api.project.openRecent(id), copyRecent.id);
+    const rematerialized = await openRecentThroughBridge(harness.page, copyRecent.id, race[1].session);
     if (!rematerialized.success) throw new TypeError("post-race rematerialization failed");
     expect(rematerialized.session.sessionId).not.toBe(savedAs.session.sessionId);
     expect(rematerialized.session.displayPath).toBe(copy);
@@ -117,22 +118,23 @@ test("invalid, overlapping, oversized, traversal, and non-portable archives pres
   const harness = await launchAmagon(root);
   try {
     await createProjectThroughUi({ harness, filePath: activePath, name: "Preserved Session" });
-    const active = await currentSession(harness.page);
+    let active = await materializeCurrentSession(harness);
 
     // When: every invalid archive is opened through the production IPC surface.
     for (const [name] of fixtures) {
       await queueNativeDialogs(harness.app, { opens: [[path.join(root, name)]] });
-      const rejected = await harness.page.evaluate(() => window.api.project.load());
+      const rejected = await loadProjectThroughBridge(harness.page, active);
       expect(rejected.success, name).toBe(false);
       if (!rejected.success && !rejected.canceled) {
         expect(["ARCHIVE_INVALID", "ARCHIVE_LIMIT_EXCEEDED", "ARCHIVE_INTEGRITY_FAILED"]).toContain(rejected.error.code);
       }
-      const preserved = await harness.page.evaluate((session) => window.api.project.save({
-        expectedSessionId: session.sessionId,
-        rendererGeneration: session.committedRendererGeneration + 1,
-        snapshot: session.data,
-      }), active);
+      const preserved = await saveProjectThroughBridge(
+        harness.page,
+        { session: active, rendererGeneration: active.committedRendererGeneration + 1, snapshot: active.data },
+      );
       expect(preserved.success, name).toBe(true);
+      if (!preserved.success) throw new TypeError("preserved session save failed");
+      active = preserved.session;
     }
 
     // Then: no traversal target is written and visible open reports failure over the preserved editor.
@@ -205,7 +207,7 @@ test("forged media download authority cannot reach loopback or create partial fi
   const harness = await launchAmagon(root);
   try {
     await createProjectThroughUi({ harness, filePath: path.join(root, "downloads.amg"), name: "Downloads" });
-    const session = await currentSession(harness.page);
+    const session = await materializeCurrentSession(harness);
 
     // When: a forged token is paired with a renderer-supplied loopback URL.
     const denied = await harness.page.evaluate(({ expectedSessionId, url }) => Reflect.apply(
@@ -215,12 +217,7 @@ test("forged media download authority cannot reach loopback or create partial fi
     ), { expectedSessionId: session.sessionId, url: `http://127.0.0.1:${port}/media.png` });
     expect(denied.success).toBe(false);
     expect(denied.changed).toBe(false);
-    const closed = await harness.page.evaluate((value) => window.api.project.close({
-      expectedSessionId: value.sessionId,
-      rendererGeneration: value.committedRendererGeneration,
-      snapshot: value.data,
-      dirtyChoice: "discard",
-    }), session);
+    const closed = await closeProjectThroughBridge(harness.page, session, "discard");
     expect(closed.success).toBe(true);
 
     // Then: no network request occurs and no partial file is allocated.
@@ -258,7 +255,7 @@ test("close waits for an active app-media read lease and cleans after cancellati
   const harness = await launchAmagon(root);
   try {
     await createProjectThroughUi({ harness, filePath: target, name: "Read Lease" });
-    const session = await currentSession(harness.page);
+    const session = await materializeCurrentSession(harness);
     await queueNativeDialogs(harness.app, { opens: [[mediaPath]] });
     const importedBatch = await harness.page.evaluate(
       (expectedSessionId) => window.api.assets.selectVideo({ expectedSessionId }),
@@ -266,6 +263,7 @@ test("close waits for an active app-media read lease and cleans after cancellati
     );
     if (!importedBatch.success || importedBatch.value[0] === undefined) throw new TypeError("media import failed");
     const imported = importedBatch.value[0];
+    const activeSession = sessionAfterWorkspaceMutation(session, importedBatch.workspaceGeneration);
 
     // When: close begins after one stream chunk while the renderer deliberately holds the reader.
     const observed = await harness.page.evaluate(async ({ active, mediaUrl }) => {
@@ -284,7 +282,8 @@ test("close waits for an active app-media read lease and cleans after cancellati
       const close = window.api.project.close({
         expectedSessionId: active.sessionId,
         rendererGeneration: active.committedRendererGeneration,
-        snapshot: active.data,
+        workspaceGeneration: active.committedWorkspaceGeneration,
+        snapshot: null,
         dirtyChoice: "discard",
       }).then((result) => {
         settled = true;
@@ -297,7 +296,7 @@ test("close waits for an active app-media read lease and cleans after cancellati
       audio.load();
       audio.remove();
       return { deferredWhileHeld, close: await close };
-    }, { active: session, mediaUrl: imported.path });
+    }, { active: activeSession, mediaUrl: imported.path });
 
     // Then: the read lease defers close until cancellation and cleanup removes the session workspace.
     expect(observed.deferredWhileHeld).toBe(true);

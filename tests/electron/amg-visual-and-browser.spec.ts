@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { TEST_PROJECT } from "../../src/main/projects/amgArchiveFixtures";
 import { inspectAmgArchive } from "./archiveAssertions";
 import { capture, launchAmagon, queueNativeDialogs, stopAmagon } from "./electronHarness";
-import { openProjectThroughUi, settleEditor } from "./projectUi";
+import { materializeCurrentSession, openProjectThroughUi, saveProjectAsThroughBridge, settleEditor } from "./projectUi";
 
 test("visible legacy open converts to AMG and mixed recents survive relaunch", async () => {
   // Given: a portable legacy JSON document and an isolated persistent profile.
@@ -33,16 +33,16 @@ test("visible legacy open converts to AMG and mixed recents survive relaunch", a
   try {
     // When: the user visibly opens JSON and invokes Save As to an AMG destination.
     await openProjectThroughUi({ harness: first, filePath: legacyPath });
-    const legacyRecents = await first.page.evaluate(() => window.api.project.getRecent());
-    if (!legacyRecents.success || legacyRecents.projects[0] === undefined) throw new TypeError("visible legacy recent missing");
-    const legacySession = await first.page.evaluate((id) => window.api.project.openRecent(id), legacyRecents.projects[0].id);
-    if (!legacySession.success) throw new TypeError("legacy session rematerialization failed");
+    const legacySession = await materializeCurrentSession(first);
     await queueNativeDialogs(first.app, { saves: [convertedPath] });
-    const converted = await first.page.evaluate((session) => window.api.project.saveAs({
-      expectedSessionId: session.sessionId,
-      rendererGeneration: session.committedRendererGeneration + 1,
-      snapshot: session.data,
-    }), legacySession.session);
+    const converted = await saveProjectAsThroughBridge(
+      first.page,
+      {
+        session: legacySession,
+        rendererGeneration: legacySession.committedRendererGeneration + 1,
+        snapshot: legacySession.data,
+      },
+    );
     expect(converted.success).toBe(true);
     await expect.poll(async () => readFile(convertedPath).then((bytes) => bytes.byteLength).catch(() => 0))
       .toBeGreaterThan(0);

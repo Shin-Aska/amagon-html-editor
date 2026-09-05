@@ -6,7 +6,16 @@ import { expect, test } from "@playwright/test";
 import { TEST_PROJECT, buildAmgFixture, replaceAsciiSameLength } from "../../src/main/projects/amgArchiveFixtures";
 import { inspectAmgArchive } from "./archiveAssertions";
 import { capture, launchAmagon, queueNativeDialogs, stopAmagon } from "./electronHarness";
-import { openProjectThroughUi } from "./projectUi";
+import {
+  closeProjectThroughBridge,
+  closeProjectThroughUi,
+  loadProjectThroughBridge,
+  openProjectThroughUi,
+  openRecentThroughBridge,
+  saveProjectAsThroughBridge,
+  saveProjectThroughBridge,
+} from "./projectUi";
+import { sessionAfterWorkspaceMutation } from "./projectTransitionRequests";
 
 const projectWithReference = (reference: string) => ({
   ...TEST_PROJECT,
@@ -96,7 +105,8 @@ test.describe.serial("AMG desktop project format", () => {
       if (recentId === undefined) throw new TypeError("recent-project ID is missing");
 
       // When: the recent is opened, a media-only mutation is saved, then opened again.
-      const firstOpen = await harness.page.evaluate((id) => window.api.project.openRecent(id), recentId);
+      await closeProjectThroughUi(harness);
+      const firstOpen = await openRecentThroughBridge(harness.page, recentId, null);
       expect(firstOpen.success).toBe(true);
       if (!firstOpen.success) throw new TypeError("first recent open failed");
       await queueNativeDialogs(harness.app, { opens: [[audioPath]] });
@@ -109,20 +119,22 @@ test.describe.serial("AMG desktop project format", () => {
         : importedBatch;
       expect(imported.success && imported.changed).toBe(true);
       if (!imported.success) throw new TypeError("media import failed");
-      const saved = await harness.page.evaluate(
-        ({ session, rendererGeneration }) => window.api.project.save({
-          expectedSessionId: session.sessionId,
-          rendererGeneration,
-          snapshot: session.data,
-        }),
-        { session: firstOpen.session, rendererGeneration: firstOpen.session.committedRendererGeneration + 1 },
+      const sessionAfterImport = sessionAfterWorkspaceMutation(firstOpen.session, imported.workspaceGeneration);
+      const saved = await saveProjectThroughBridge(
+        harness.page,
+        {
+          session: sessionAfterImport,
+          rendererGeneration: sessionAfterImport.committedRendererGeneration + 1,
+          snapshot: sessionAfterImport.data,
+        },
       );
       expect(saved.success).toBe(true);
+      if (!saved.success) throw new TypeError("media save failed");
       const afterMedia = await inspectAmgArchive(target, "archive-after-media.json");
       expect(afterMedia.paths).toContain("assets/tone.wav");
       expect(afterMedia.projectText).not.toContain(firstOpen.session.sessionId);
 
-      const secondOpen = await harness.page.evaluate((id) => window.api.project.openRecent(id), recentId);
+      const secondOpen = await openRecentThroughBridge(harness.page, recentId, saved.session);
       expect(secondOpen.success).toBe(true);
       if (!secondOpen.success) throw new TypeError("second recent open failed");
       expect(secondOpen.session.sessionId).not.toBe(firstOpen.session.sessionId);
@@ -153,19 +165,9 @@ test.describe.serial("AMG desktop project format", () => {
       expect(media.staleCode).not.toBe(0);
 
       // Then: Cancel preserves the session and Discard returns to the welcome surface.
-      const canceled = await harness.page.evaluate((session) => window.api.project.close({
-        expectedSessionId: session.sessionId,
-        rendererGeneration: session.committedRendererGeneration,
-        snapshot: session.data,
-        dirtyChoice: "cancel",
-      }), secondOpen.session);
+      const canceled = await closeProjectThroughBridge(harness.page, secondOpen.session, "cancel");
       expect(canceled.success).toBe(false);
-      const closed = await harness.page.evaluate((session) => window.api.project.close({
-        expectedSessionId: session.sessionId,
-        rendererGeneration: session.committedRendererGeneration,
-        snapshot: session.data,
-        dirtyChoice: "discard",
-      }), secondOpen.session);
+      const closed = await closeProjectThroughBridge(harness.page, secondOpen.session, "discard");
       expect(closed.success).toBe(true);
       expect(harness.pageErrors).toEqual([]);
     } finally {
@@ -192,60 +194,60 @@ test.describe.serial("AMG desktop project format", () => {
       await queueNativeDialogs(harness.app, { opens: [[legacyPath]] });
 
       // When: legacy JSON is opened and saved in place.
-      const opened = await harness.page.evaluate(() => window.api.project.load());
+      const opened = await loadProjectThroughBridge(harness.page, null);
       expect(opened.success).toBe(true);
       if (!opened.success) throw new TypeError("legacy open failed");
       expect(opened.session.kind).toBe("legacy-json");
       const legacySnapshot = { ...opened.session.data, customCss: ".legacy-roundtrip { color: blue; }" };
-      const ordinarySave = await harness.page.evaluate(
-        ({ session, snapshot }) => window.api.project.save({
-          expectedSessionId: session.sessionId,
-          rendererGeneration: session.committedRendererGeneration + 1,
-          snapshot,
-        }),
-        { session: opened.session, snapshot: legacySnapshot },
+      const ordinarySave = await saveProjectThroughBridge(
+        harness.page,
+        {
+          session: opened.session,
+          rendererGeneration: opened.session.committedRendererGeneration + 1,
+          snapshot: legacySnapshot,
+        },
       );
       expect(ordinarySave.success).toBe(true);
+      if (!ordinarySave.success) throw new TypeError("legacy save failed");
+      let activeLegacySession = ordinarySave.session;
       const legacyAfterOrdinarySave = await readFile(legacyPath);
 
       // Then: conversion rejects the external path, succeeds after explicit import, and leaves the source unchanged.
       await queueNativeDialogs(harness.app, { saves: [convertedPath] });
-      const rejected = await harness.page.evaluate(
-        ({ session, snapshot }) => window.api.project.saveAs({
-          expectedSessionId: session.sessionId,
-          rendererGeneration: session.committedRendererGeneration + 2,
-          snapshot: { ...snapshot, projectSchemaVersion: 1 },
-        }),
-        { session: opened.session, snapshot: legacySnapshot },
+      const rejected = await saveProjectAsThroughBridge(
+        harness.page,
+        {
+          session: activeLegacySession,
+          rendererGeneration: activeLegacySession.committedRendererGeneration + 1,
+          snapshot: { ...legacySnapshot, projectSchemaVersion: 1 },
+        },
       );
       expect(rejected.success).toBe(false);
       if (!rejected.success && !rejected.canceled) expect(rejected.error.code).toBe("PROJECT_NOT_PORTABLE");
       await queueNativeDialogs(harness.app, { opens: [[externalPath]] });
       const imported = await harness.page.evaluate(
         (expectedSessionId) => window.api.assets.selectSingleImage({ expectedSessionId }),
-        opened.session.sessionId,
+        activeLegacySession.sessionId,
       );
       expect(imported.success).toBe(true);
       if (!imported.success) throw new TypeError("legacy asset import failed");
+      activeLegacySession = sessionAfterWorkspaceMutation(activeLegacySession, imported.workspaceGeneration);
       await queueNativeDialogs(harness.app, { saves: [convertedPath] });
       const portable = projectWithReference(imported.value.relativePath);
-      const converted = await harness.page.evaluate(
-        ({ session, snapshot }) => window.api.project.saveAs({
-          expectedSessionId: session.sessionId,
-          rendererGeneration: session.committedRendererGeneration + 3,
-          snapshot,
-        }),
-        { session: opened.session, snapshot: portable },
+      const converted = await saveProjectAsThroughBridge(
+        harness.page,
+        {
+          session: activeLegacySession,
+          rendererGeneration: activeLegacySession.committedRendererGeneration + 1,
+          snapshot: portable,
+        },
       );
       expect(converted.success).toBe(true);
       if (!converted.success) throw new TypeError("legacy conversion failed");
       expect(await readFile(legacyPath)).toEqual(legacyAfterOrdinarySave);
       await inspectAmgArchive(convertedPath, "archive-legacy-conversion.json");
 
-      await queueNativeDialogs(harness.app, { opens: [[forcedZip64Path]] });
-      const forcedOpen = await harness.page.evaluate(() => window.api.project.load());
-      expect(forcedOpen.success).toBe(true);
-      if (!forcedOpen.success) throw new TypeError("forced-ZIP64 open failed");
+      await closeProjectThroughBridge(harness.page, converted.session, "discard");
       await openProjectThroughUi({ harness, filePath: forcedZip64Path });
 
       // When: an archive with a traversal entry is selected over the active forced-ZIP64 session.

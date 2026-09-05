@@ -1,6 +1,16 @@
 import { expect, type Dialog, type Page } from "@playwright/test";
+import type {
+  DurableProjectData,
+  ProjectCloseRequest,
+  ProjectCloseResult,
+  ProjectOpenRecentRequest,
+  ProjectSession,
+  ProjectSessionResult,
+  RecentProjectId,
+} from "../../src/shared/projects/projectIpcContract";
 import type { AmagonHarness } from "./electronHarness";
 import { queueNativeDialogs } from "./electronHarness";
+import { discardProjectTransition, initialProjectTransition, openRecentRequest, saveRequest } from "./projectTransitionRequests";
 
 const projectUiStepTimeoutMs = 15_000;
 
@@ -17,6 +27,12 @@ type MediaUiRequest = {
   readonly harness: AmagonHarness;
   readonly filePaths: readonly string[];
   readonly kind: "image" | "video";
+};
+
+type SaveBridgeRequest = {
+  readonly session: ProjectSession;
+  readonly rendererGeneration: number;
+  readonly snapshot: DurableProjectData;
 };
 
 export const answerConfirmations = (page: Page, answers: readonly boolean[]): void => {
@@ -54,6 +70,72 @@ export const openProjectThroughUi = async (request: ProjectUiRequest): Promise<v
   if (await welcomeOpen.isVisible()) await welcomeOpen.click();
   else await request.harness.page.keyboard.press("Control+O");
   await settleEditor(request.harness);
+};
+
+export const closeProjectThroughUi = async (harness: AmagonHarness): Promise<void> => {
+  await harness.app.evaluate(({ BrowserWindow }, pageUrl) => {
+    const window = BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL() === pageUrl);
+    if (window === undefined) throw new TypeError(`no Electron window found for ${pageUrl}`);
+    window.webContents.send("menu-action", "close-project");
+  }, harness.page.url());
+  await expect(harness.page.getByRole("button", { name: /New Project/u })).toBeVisible({ timeout: projectUiStepTimeoutMs });
+};
+
+export const openRecentThroughBridge = async (
+  page: Page,
+  recentId: RecentProjectId,
+  session: ProjectSession | null,
+): Promise<ProjectSessionResult> => {
+  const request: ProjectOpenRecentRequest = openRecentRequest(recentId, session);
+  return page.evaluate((input) => window.api.project.openRecent(input), request);
+};
+
+export const loadProjectThroughBridge = async (
+  page: Page,
+  session: ProjectSession | null,
+): Promise<ProjectSessionResult> => page.evaluate(
+  (input) => window.api.project.load(input),
+  session === null ? initialProjectTransition() : discardProjectTransition(session),
+);
+
+export const saveProjectThroughBridge = async (
+  page: Page,
+  request: SaveBridgeRequest,
+): Promise<ProjectSessionResult> => page.evaluate(
+  (input) => window.api.project.save(input),
+  saveRequest(request.session, request.rendererGeneration, request.snapshot),
+);
+
+export const saveProjectAsThroughBridge = async (
+  page: Page,
+  request: SaveBridgeRequest,
+): Promise<ProjectSessionResult> => page.evaluate(
+  (input) => window.api.project.saveAs(input),
+  saveRequest(request.session, request.rendererGeneration, request.snapshot),
+);
+
+export const closeProjectThroughBridge = async (
+  page: Page,
+  session: ProjectSession,
+  dirtyChoice: "cancel" | "discard",
+): Promise<ProjectCloseResult> => {
+  const request: ProjectCloseRequest = {
+    expectedSessionId: session.sessionId,
+    rendererGeneration: session.committedRendererGeneration,
+    workspaceGeneration: session.committedWorkspaceGeneration,
+    snapshot: null,
+    dirtyChoice,
+  };
+  return page.evaluate((input) => window.api.project.close(input), request);
+};
+
+export const materializeCurrentSession = async (harness: AmagonHarness): Promise<ProjectSession> => {
+  const recents = await harness.page.evaluate(() => window.api.project.getRecent());
+  if (!recents.success || recents.projects[0] === undefined) throw new TypeError("active recent missing");
+  await closeProjectThroughUi(harness);
+  const opened = await openRecentThroughBridge(harness.page, recents.projects[0].id, null);
+  if (!opened.success) throw new TypeError("active session could not be materialized");
+  return opened.session;
 };
 
 export const importMediaThroughUi = async (request: MediaUiRequest): Promise<void> => {
