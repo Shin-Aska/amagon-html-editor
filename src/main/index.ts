@@ -67,6 +67,7 @@ import { createMainWindowController } from "./mainWindowController";
 import { registerMenuIpc } from "./registerMenuIpc";
 import { registerFontQueryIpc } from "./registerFontQueryIpc";
 import { registerExportIpc } from "./registerExportIpc";
+import { registerAssetReadIpc } from "./registerAssetReadIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -209,131 +210,17 @@ function registerIpcHandlers(): void {
     openPath: shell.openPath,
   });
 
-  // ── List project assets ───────────────────────────────────────────────
-
-  ipcMain.handle("assets:list", async (event) => {
-    assertTrustedMainFrame(event, windowController.getMainWindow());
-    try {
-      const workspacePath = projectSessions.active.workspacePath;
-      const sessionId = projectSessions.active.id;
-      if (workspacePath === null || sessionId === null) {
-        return { success: true, assets: [] };
-      }
-
-      const assetsDir = path.join(workspacePath, "assets");
-      if (!existsSync(assetsDir)) {
-        return { success: true, assets: [] };
-      }
-
-      const entries = await fs.readdir(assetsDir, { withFileTypes: true });
-      const imageExts = [
-        ".jpg",
-        ".jpeg",
-        ".png",
-        ".gif",
-        ".webp",
-        ".svg",
-        ".bmp",
-        ".ico",
-        ".avif",
-        ".apng",
-        ".tif",
-        ".tiff",
-      ];
-      const videoExts = [".mp4", ".webm", ".ogv", ".ogg", ".mov", ".m4v"];
-      const assets = entries
-        .filter(
-          (e) =>
-            e.isFile() &&
-            (imageExts.includes(path.extname(e.name).toLowerCase()) ||
-              videoExts.includes(path.extname(e.name).toLowerCase())),
-        )
-        .map((e) => {
-          const ext = path.extname(e.name).toLowerCase();
-          const type = imageExts.includes(ext) ? "image" : "video";
-          const relativePath = `assets/${e.name}`;
-          return {
-            name: e.name,
-            path: buildRuntimeAssetUrl(sessionId, relativePath),
-            relativePath,
-            type,
-          };
-        });
-
-      return { success: true, assets };
-    } catch (error: any) {
-      return { success: false, error: error.message, assets: [] };
-    }
-  });
-
-  ipcMain.handle("assets:readFileAsBase64", async (event, reference: string) => {
-    assertTrustedMainFrame(event, windowController.getMainWindow());
-    try {
-      const input = String(reference || "");
-      if (!input) return { success: false, error: "No file path provided" };
-
-      const maxBytes = 5 * 1024 * 1024;
-
-      if (/^https?:\/\//i.test(input)) {
-        return {
-          success: false,
-          error: "Remote URLs cannot be read through the local project asset bridge",
-        };
-      }
-
-      if (input.startsWith("blob:")) {
-        return {
-          success: false,
-          error:
-            "Blob URLs are not supported for base64 embedding in Electron mode. Please re-browse the file.",
-        };
-      }
-
-      if (projectService === null) return { success: false, error: "Project service unavailable" };
-      const readable = await projectService.resolveAssetRead(input);
-      try {
-        const stats = await fs.stat(readable.filePath);
-        const sizeMB = stats.size / (1024 * 1024);
-        if (stats.size > maxBytes) {
-          return {
-            success: false,
-            error: `File is too large (${sizeMB.toFixed(1)}MB). Max 5MB for base64 embedding.`,
-          };
-        }
-        const data = await fs.readFile(readable.filePath);
-        const mime = getMimeType(readable.filePath);
-        return {
-          success: true,
-          data: `data:${mime};base64,${data.toString("base64")}`,
-          mimeType: mime,
-        };
-      } finally {
-        readable.release();
-      }
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  // ── Read asset as base64 (for preview / export) ───────────────────────
-
-  ipcMain.handle("assets:readAsset", async (event, reference: string) => {
-    assertTrustedMainFrame(event, windowController.getMainWindow());
-    try {
-      if (projectService === null) return { success: false, error: "Project service unavailable" };
-      const readable = await projectService.resolveAssetRead(reference);
-      try {
-        const stats = await fs.stat(readable.filePath);
-        if (stats.size > 5 * 1024 * 1024) return { success: false, error: "File exceeds the 5MB base64 limit" };
-        const data = await fs.readFile(readable.filePath);
-        const mime = getMimeType(readable.filePath);
-        return { success: true, data: `data:${mime};base64,${data.toString("base64")}`, mimeType: mime };
-      } finally {
-        readable.release();
-      }
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : "asset read failed" };
-    }
+  registerAssetReadIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
+    sessions: projectSessions,
+    getProjectService: () => projectService,
+    exists: existsSync,
+    readDirectory: (directory) => fs.readdir(directory, { withFileTypes: true }),
+    stat: fs.stat,
+    readFile: fs.readFile,
+    buildRuntimeAssetUrl,
+    getMimeType,
   });
 
   // ── Auto-save configuration ───────────────────────────────────────────
