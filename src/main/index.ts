@@ -66,6 +66,7 @@ import { registerSettingsIpc } from "./registerSettingsIpc";
 import { registerCredentialIpc } from "./registerCredentialIpc";
 import { registerPublishIpc } from "./registerPublishIpc";
 import { registerAiIpc } from "./registerAiIpc";
+import { registerProjectRuntime } from "./registerProjectRuntime";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -232,70 +233,34 @@ function registerIpcHandlers(): void {
     fetchModelsForProvider,
   });
 
-  projectService = createProjectService({
+  projectService = registerProjectRuntime({
     userDataPath: app.getPath("userData"),
     documentsPath: app.getPath("documents"),
-    dialogs: {
-      showSave: async (request) => {
-        const mainWindow = windowController.getMainWindow();
-        const options = {
-          title: request.title,
-          defaultPath: request.defaultPath,
-          filters: request.filters.map((filter) => ({
-            name: filter.name,
-            extensions: [...filter.extensions],
-          })),
-        };
-        return mainWindow === null
-          ? dialog.showSaveDialog(options)
-          : dialog.showSaveDialog(mainWindow, options);
-      },
-      showOpen: async (request) => {
-        const mainWindow = windowController.getMainWindow();
-        const options = {
-          title: request.title,
-          filters: request.filters.map((filter) => ({
-            name: filter.name,
-            extensions: [...filter.extensions],
-          })),
-          properties: ["openFile" as const],
-        };
-        return mainWindow === null
-          ? dialog.showOpenDialog(options)
-          : dialog.showOpenDialog(mainWindow, options);
-      },
-    },
-    recents: createRecentProjectsStore({
-      storagePath: path.join(app.getPath("userData"), "recent-projects.json"),
-      inspect: inspectProjectMetadata,
-    }),
-    sessions: projectSessions,
-    files: projectFiles,
-    abortSessionTransfers: (sessionId) => projectTransfers.abortSession(sessionId),
-    onDirectoryChange: (directory) => {
-      currentProjectDir = directory;
-      if (directory === null) autosave.stop();
-      else autosave.start();
-    },
-  });
-  registerProjectIpc({
-    handle: (channel, handler) => {
-      ipcMain.handle(channel, (event, argument) => handler(event, argument));
-    },
-    removeHandler: (channel) => ipcMain.removeHandler(channel),
-  }, projectService);
-  registerProjectResourceIpc({
     sessions: projectSessions,
     transfers: projectTransfers,
     projectFiles,
+    autosave,
+    googleFonts,
     getMainWindow: windowController.getMainWindow,
+    getLifecycleController: windowController.getLifecycleController,
+    setCurrentProjectDirectory: (directory) => {
+      currentProjectDir = directory;
+    },
+    showSaveDialog: (mainWindow, options) => mainWindow === null
+      ? dialog.showSaveDialog(options)
+      : dialog.showSaveDialog(mainWindow, options),
+    showOpenDialog: (mainWindow, options) => mainWindow === null
+      ? dialog.showOpenDialog(options)
+      : dialog.showOpenDialog(mainWindow, options),
+    inspectProjectMetadata,
     resolveSystemFontPath: resolveMainSystemFontPath,
-    fetchGoogleFontsText: (url, options) => googleFonts.fetchText(url, options),
-    googleFontsMaxBytes: googleFonts.maxResponseBytes,
+    createRecentProjectsStore,
+    createProjectService,
+    registerProjectIpc,
+    registerProjectResources: registerProjectResourceIpc,
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    removeHandler: (channel) => ipcMain.removeHandler(channel),
   });
-  ipcMain.handle("project:finish-lifecycle-close", (_event, result: LifecycleResult) => (
-    windowController.getLifecycleController()?.finish(result) ?? false
-  ));
 }
 
 // ---------------------------------------------------------------------------
