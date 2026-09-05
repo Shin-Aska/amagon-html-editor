@@ -5,7 +5,7 @@ import * as fs from "fs/promises";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { execFile } from "child_process";
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { getFonts } from "font-list";
 import {
   buildSystemPrompt,
@@ -61,6 +61,7 @@ import { registerProjectResourceIpc } from "./projects/registerProjectResourceIp
 import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 import { resolveSystemFontPath as resolveMainSystemFontPath } from "./systemFontResolver";
 import { getMimeType, isPathSafe } from "./mainFileHelpers";
+import { createGoogleFontsService } from "./googleFontsTransport";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -86,6 +87,17 @@ const hasSingleInstanceLock = initializeProjectStartup({
   requestSingleInstanceLock: () => app.requestSingleInstanceLock(),
   quit: () => app.quit(),
 });
+
+const googleFonts = createGoogleFontsService({
+  getTempPath: () => app.getPath("temp"),
+  exists: existsSync,
+  mkdir: async (directory) => fs.mkdir(directory, { recursive: true }),
+  writeFile: async (filePath, data) => fs.writeFile(filePath, data),
+  execFile: (file, args, options, callback) => {
+    execFile(file, [...args], options, callback);
+  },
+  fetch,
+}, getMimeType);
 
 // ---------------------------------------------------------------------------
 // Window creation
@@ -147,234 +159,6 @@ function getFrameworksDirectory(): string {
     return path.join(app.getAppPath(), "out", "renderer", "frameworks");
   }
   return path.join(__dirname, "..", "..", "public", "frameworks");
-}
-
-const GOOGLE_FONTS_ALLOWED_ORIGINS = new Set([
-  "https://fonts.googleapis.com",
-  "https://fonts.gstatic.com",
-]);
-const GOOGLE_FONTS_MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
-const GOOGLE_FONTS_REQUEST_TIMEOUT_MS = 30_000;
-const GOOGLE_FONTS_MAX_CONCURRENT_REQUESTS = 4;
-const GOOGLE_FONTS_MAX_QUEUED_REQUESTS = 100;
-
-let activeGoogleFontsRequests = 0;
-const queuedGoogleFontsRequests: Array<{ readonly start: () => void }> = [];
-
-function isGoogleFontsUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return (
-      parsed.protocol === "https:" &&
-      GOOGLE_FONTS_ALLOWED_ORIGINS.has(`${parsed.protocol}//${parsed.host}`)
-    );
-  } catch {
-    return false;
-  }
-}
-
-function fetchGoogleFontsWithCurl(
-  url: string,
-  options?: { headers?: Record<string, string>; signal?: AbortSignal },
-): Promise<Buffer> {
-  const curlPath = process.platform === "win32" ? "curl.exe" : "curl";
-  const args = [
-    "--disable",
-    "--fail",
-    "--silent",
-    "--show-error",
-    "--proto",
-    "=https",
-    "--connect-timeout",
-    "10",
-    "--max-time",
-    "30",
-  ];
-  const userAgent = options?.headers?.["User-Agent"];
-  if (userAgent) {
-    args.push("--user-agent", userAgent);
-  }
-  args.push("--url", url);
-
-  return new Promise((resolve, reject) => {
-    execFile(
-      curlPath,
-      args,
-      { encoding: "buffer", maxBuffer: 10 * 1024 * 1024, windowsHide: true, signal: options?.signal },
-      (error, stdout, stderr) => {
-        if (error) {
-          const details = stderr.toString().trim();
-          reject(new Error(details || error.message));
-          return;
-        }
-        resolve(stdout);
-      },
-    );
-  });
-}
-
-async function fetchGoogleFontsWithNode(
-  url: string,
-  options?: { headers?: Record<string, string>; signal?: AbortSignal },
-): Promise<Buffer> {
-  const controller = new AbortController();
-  const abortFromCaller = (): void => controller.abort();
-  options?.signal?.addEventListener("abort", abortFromCaller, { once: true });
-  if (options?.signal?.aborted) controller.abort();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    GOOGLE_FONTS_REQUEST_TIMEOUT_MS,
-  );
-
-  try {
-    const response = await fetch(url, {
-      headers: options?.headers,
-      redirect: "error",
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw new Error(`Google Fonts request failed (${response.status})`);
-    }
-
-    const contentLength = Number(response.headers.get("content-length"));
-    if (
-      Number.isFinite(contentLength) &&
-      contentLength > GOOGLE_FONTS_MAX_RESPONSE_BYTES
-    ) {
-      throw new Error("Google Fonts response exceeds the 10 MB limit");
-    }
-    if (!response.body) {
-      throw new Error("Google Fonts response has no body");
-    }
-
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.byteLength;
-      if (totalBytes > GOOGLE_FONTS_MAX_RESPONSE_BYTES) {
-        await reader.cancel();
-        throw new Error("Google Fonts response exceeds the 10 MB limit");
-      }
-      chunks.push(value);
-    }
-    return Buffer.concat(chunks);
-  } finally {
-    options?.signal?.removeEventListener("abort", abortFromCaller);
-    clearTimeout(timeout);
-  }
-}
-
-function isCurlUnavailable(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const code = (error as NodeJS.ErrnoException).code;
-  return code === "ENOENT" || code === "EACCES";
-}
-
-async function fetchGoogleFontsBuffer(
-  url: string,
-  options?: { headers?: Record<string, string>; signal?: AbortSignal },
-): Promise<Buffer> {
-  if (!isGoogleFontsUrl(url)) {
-    throw new Error("Unexpected font URL origin (blocked)");
-  }
-
-  const releaseRequest = await acquireGoogleFontsRequest(options?.signal);
-  try {
-    try {
-      return await fetchGoogleFontsWithCurl(url, options);
-    } catch (curlError) {
-      if (!isCurlUnavailable(curlError)) {
-        throw curlError;
-      }
-      return fetchGoogleFontsWithNode(url, options);
-    }
-  } finally {
-    releaseRequest();
-  }
-}
-
-async function acquireGoogleFontsRequest(signal?: AbortSignal): Promise<() => void> {
-  if (signal?.aborted) throw new DOMException("Google Fonts request canceled", "AbortError");
-  if (activeGoogleFontsRequests < GOOGLE_FONTS_MAX_CONCURRENT_REQUESTS) {
-    activeGoogleFontsRequests++;
-    return releaseGoogleFontsRequest;
-  }
-  if (queuedGoogleFontsRequests.length >= GOOGLE_FONTS_MAX_QUEUED_REQUESTS) {
-    throw new Error("Too many Google Fonts requests in progress");
-  }
-
-  return new Promise((resolve, reject) => {
-    const queued = {
-      start: () => {
-        signal?.removeEventListener("abort", cancel);
-        if (signal?.aborted) {
-          reject(new DOMException("Google Fonts request canceled", "AbortError"));
-          return;
-        }
-        activeGoogleFontsRequests++;
-        resolve(releaseGoogleFontsRequest);
-      },
-    };
-    const cancel = (): void => {
-      const index = queuedGoogleFontsRequests.indexOf(queued);
-      if (index >= 0) queuedGoogleFontsRequests.splice(index, 1);
-      reject(new DOMException("Google Fonts request canceled", "AbortError"));
-    };
-    signal?.addEventListener("abort", cancel, { once: true });
-    queuedGoogleFontsRequests.push(queued);
-  });
-}
-
-function releaseGoogleFontsRequest(): void {
-  activeGoogleFontsRequests--;
-  const nextRequest = queuedGoogleFontsRequests.shift();
-  if (nextRequest) {
-    nextRequest.start();
-  }
-}
-
-async function fetchGoogleFontsText(
-  url: string,
-  options?: { headers?: Record<string, string>; signal?: AbortSignal },
-): Promise<string> {
-  const buffer = await fetchGoogleFontsBuffer(url, options);
-  return buffer.toString("utf-8");
-}
-
-// ---------------------------------------------------------------------------
-// Google Fonts preview file cache
-// ---------------------------------------------------------------------------
-
-function getGoogleFontsCacheDirectory(): string {
-  return path.join(app.getPath("temp"), "amagon-google-fonts-cache-v2");
-}
-
-async function ensureGoogleFontsCacheDirectory(): Promise<string> {
-  const dir = getGoogleFontsCacheDirectory();
-  await fs.mkdir(dir, { recursive: true });
-  return dir;
-}
-
-async function fetchGoogleFontFileBuffer(url: string): Promise<Buffer> {
-  return fetchGoogleFontsBuffer(url);
-}
-
-async function cacheGoogleFontFile(url: string): Promise<{ filePath: string; mimeType: string }> {
-  const cacheDir = await ensureGoogleFontsCacheDirectory();
-  const urlHash = createHash("sha256").update(url).digest("hex");
-  const originalExt = path.extname(new URL(url).pathname).toLowerCase() || ".woff2";
-  const fileName = `${urlHash}${originalExt}`;
-  const filePath = path.join(cacheDir, fileName);
-
-  if (!existsSync(filePath)) {
-    const buffer = await fetchGoogleFontFileBuffer(url);
-    await fs.writeFile(filePath, buffer);
-  }
-
-  return { filePath, mimeType: getMimeType(filePath) };
 }
 
 // ---------------------------------------------------------------------------
@@ -536,7 +320,7 @@ function registerIpcHandlers(): void {
 
         const encodedFamily = encodeURIComponent(family).replace(/%20/g, "+");
         const cssUrl = `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${italic},${weight}&display=swap`;
-        const css = await fetchGoogleFontsText(cssUrl, {
+        const css = await googleFonts.fetchText(cssUrl, {
           headers: {
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -559,7 +343,7 @@ function registerIpcHandlers(): void {
 
       try {
         const url = args.url.trim();
-        if (!isGoogleFontsUrl(url)) {
+        if (!googleFonts.isAllowedUrl(url)) {
           return {
             success: false,
             error: "Unexpected font URL origin (blocked)",
@@ -567,7 +351,7 @@ function registerIpcHandlers(): void {
           };
         }
 
-        const { filePath, mimeType } = await cacheGoogleFontFile(url);
+        const { filePath, mimeType } = await googleFonts.cacheFile(url);
         const data = await fs.readFile(filePath);
         const base64 = data.toString("base64");
         return {
@@ -1341,8 +1125,8 @@ function registerIpcHandlers(): void {
     projectFiles,
     getMainWindow: () => mainWindow,
     resolveSystemFontPath: resolveMainSystemFontPath,
-    fetchGoogleFontsText: (url, options) => fetchGoogleFontsText(url, options),
-    googleFontsMaxBytes: GOOGLE_FONTS_MAX_RESPONSE_BYTES,
+    fetchGoogleFontsText: (url, options) => googleFonts.fetchText(url, options),
+    googleFontsMaxBytes: googleFonts.maxResponseBytes,
   });
   ipcMain.handle("project:finish-lifecycle-close", (_event, result: LifecycleResult) => (
     lifecycleController?.finish(result) ?? false
