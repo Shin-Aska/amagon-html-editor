@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { LegacyProjectDocumentSchema, ProjectDocumentV1Schema } from "../../shared/projects/projectDocumentSchema";
 import {
   parseRendererGeneration,
@@ -10,15 +9,12 @@ import {
   type ProjectSession,
   type ProjectTransitionRequest,
 } from "../../shared/projects/projectIpcContract";
-import type { ProjectData } from "../store/types";
-import { buildProjectSnapshot, materializeProjectSnapshot } from "./projectSnapshot";
+import { buildProjectSnapshot } from "./projectSnapshot";
 import {
-  createProjectSaveCoordinator,
   type CoordinatorSaveKind,
-  type CoordinatorSaveResponse,
-  type ProjectSaveCoordinator,
 } from "./projectSaveCoordinator";
 import { canceledMessage, operationErrorMessage } from "./projectCommandMessages";
+import { ProjectCommandSessionInstaller, type ProjectCommandSessionRuntime } from "./projectCommandSession";
 import type {
   MutationPerformer,
   ProjectCommandDependencies,
@@ -28,21 +24,13 @@ import type {
   ProjectCommandState,
 } from "./projectCommandTypes";
 
-const RendererProjectSchema = z.custom<ProjectData>(
-  (value) => LegacyProjectDocumentSchema.safeParse(value).success,
-  { message: "Project data is not compatible with the renderer" },
-);
-
 export const createProjectCommands = (dependencies: ProjectCommandDependencies): ProjectCommands => {
   const listeners = new Set<() => void>();
   let state: ProjectCommandState = { session: null, busy: null, progress: null, dirty: false, message: null };
-  let coordinator: ProjectSaveCoordinator | null = null;
-  let installing = false;
+  const sessionRuntime: ProjectCommandSessionRuntime = { coordinator: null, installing: false, latestSaveSession: null, availableAssetPaths: [] };
   let mutating = false;
-  let latestSaveSession: ProjectSession | null = null;
   let runSave: (kind: CoordinatorSaveKind) => Promise<ProjectCommandResult>;
-  let availableAssetPaths: readonly string[] = [];
-  const getLatestSaveSession = (): ProjectSession | null => latestSaveSession;
+  const getLatestSaveSession = (): ProjectSession | null => sessionRuntime.latestSaveSession;
 
   const publish = (patch: Partial<ProjectCommandState>): void => {
     state = { ...state, ...patch };
@@ -73,75 +61,16 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       operation: kind === "save-as" ? "save-as" : "save",
       sessionId: state.session.sessionId,
       sessionKind: state.session.kind,
-      availableAssetPaths,
+      availableAssetPaths: sessionRuntime.availableAssetPaths,
     });
   };
 
-  const installSession = async (session: ProjectSession): Promise<ProjectCommandResult> => {
-    try {
-      availableAssetPaths = await dependencies.assets.listPaths();
-      const materialized = materializeProjectSnapshot({
-        project: RendererProjectSchema.parse(session.data),
-        sessionId: session.sessionId,
-        sessionKind: session.kind,
-        availableAssetPaths,
-      });
-      if (!materialized.ok) return fail({
-        tone: "error",
-        title: "Project contains invalid asset references",
-        detail: "Fix the listed locations before continuing.",
-        locations: materialized.offenders.map((item) => item.location),
-      });
-      installing = true;
-      dependencies.installProject(materialized.project, session.displayPath);
-      dependencies.markSaved();
-      installing = false;
-      coordinator = createProjectSaveCoordinator({
-        sessionId: session.sessionId,
-        rendererGeneration: session.committedRendererGeneration,
-        committedRendererGeneration: session.committedRendererGeneration,
-        workspaceGeneration: session.committedWorkspaceGeneration,
-        committedWorkspaceGeneration: session.committedWorkspaceGeneration,
-        createSnapshot,
-        executeSave: async (invocation): Promise<CoordinatorSaveResponse> => {
-          const snapshot = session.kind === "legacy-json" && invocation.kind !== "save-as"
-            ? LegacyProjectDocumentSchema.parse(invocation.snapshot)
-            : ProjectDocumentV1Schema.parse(invocation.snapshot);
-          const result = invocation.kind === "save-as"
-            ? await dependencies.project.saveAs({
-                expectedSessionId: invocation.expectedSessionId,
-                rendererGeneration: invocation.rendererGeneration,
-                workspaceGeneration: invocation.workspaceGeneration,
-                snapshot,
-              })
-            : await dependencies.project.save({
-                expectedSessionId: invocation.expectedSessionId,
-                rendererGeneration: invocation.rendererGeneration,
-                workspaceGeneration: invocation.workspaceGeneration,
-                snapshot,
-              });
-          if (!result.success) {
-            if (result.canceled) return { success: false, error: { code: "CANCELED" } };
-            const detail = operationErrorMessage(result.error).detail;
-            return { success: false, error: { code: result.error.code, message: detail } };
-          }
-          latestSaveSession = result.session;
-          return {
-            success: true,
-            sessionId: invocation.kind === "save-as" ? invocation.expectedSessionId : result.session.sessionId,
-            rendererGeneration: result.session.committedRendererGeneration,
-            workspaceGeneration: result.session.committedWorkspaceGeneration,
-          };
-        },
-      });
-      latestSaveSession = null;
-      publish({ session, dirty: false, message: null });
-      return { ok: true, value: undefined };
-    } catch (error) {
-      installing = false;
-      return unexpected(error);
-    }
-  };
+  const sessionInstaller = new ProjectCommandSessionInstaller(
+    sessionRuntime,
+    dependencies,
+    { createSnapshot, fail, unexpected, publish },
+  );
+  const installSession = (session: ProjectSession): Promise<ProjectCommandResult> => sessionInstaller.install(session);
 
   const activate = async (
     operation: ProjectOperation,
@@ -149,7 +78,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   ): Promise<ProjectCommandResult> => {
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
     let transition: ProjectTransitionRequest;
-    if (state.session === null || coordinator === null) {
+    if (state.session === null || sessionRuntime.coordinator === null) {
       transition = {
         expectedSessionId: null,
         rendererGeneration: parseRendererGeneration(0),
@@ -172,16 +101,16 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
           : ProjectDocumentV1Schema.parse(built.project);
         transition = {
           expectedSessionId: state.session.sessionId,
-          rendererGeneration: coordinator.state.rendererGeneration,
-          workspaceGeneration: coordinator.state.workspaceGeneration,
+          rendererGeneration: sessionRuntime.coordinator.state.rendererGeneration,
+          workspaceGeneration: sessionRuntime.coordinator.state.workspaceGeneration,
           snapshot,
           dirtyChoice,
         };
       } else {
         transition = {
           expectedSessionId: state.session.sessionId,
-          rendererGeneration: coordinator.state.rendererGeneration,
-          workspaceGeneration: coordinator.state.workspaceGeneration,
+          rendererGeneration: sessionRuntime.coordinator.state.rendererGeneration,
+          workspaceGeneration: sessionRuntime.coordinator.state.workspaceGeneration,
           snapshot: null,
           dirtyChoice,
         };
@@ -200,14 +129,14 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   };
 
   runSave = async (kind: CoordinatorSaveKind): Promise<ProjectCommandResult> => {
-    if (coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
+    if (sessionRuntime.coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
-    if (kind === "autosave" && !coordinator.state.dirty) return { ok: true, value: undefined };
+    if (kind === "autosave" && !sessionRuntime.coordinator.state.dirty) return { ok: true, value: undefined };
     const operation = kind === "save-as" ? "save-as" : "save";
-    latestSaveSession = null;
+    sessionRuntime.latestSaveSession = null;
     publish({ busy: operation, message: null });
     try {
-      const result = kind === "autosave" ? await coordinator.requestAutosave() : kind === "save-as" ? await coordinator.requestSaveAs() : await coordinator.requestSave();
+      const result = kind === "autosave" ? await sessionRuntime.coordinator.requestAutosave() : kind === "save-as" ? await sessionRuntime.coordinator.requestSaveAs() : await sessionRuntime.coordinator.requestSave();
       if (!result.success) {
         if ("error" in result) return fail({ tone: "error", title: "Save did not complete", detail: result.error.message ?? result.error.code, locations: [] }, result.error.code === "CANCELED");
         if (result.code === "portability") return fail({ tone: "error", title: "Project contains non-portable references", detail: "Fix the listed locations before saving.", locations: result.offenders.map((item) => item.location) });
@@ -216,7 +145,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       const savedSession = getLatestSaveSession();
       if (savedSession !== null && kind === "save-as") return await installSession(savedSession);
       if (savedSession !== null) publish({ session: savedSession });
-      const dirty = coordinator.state.dirty;
+      const dirty = sessionRuntime.coordinator.state.dirty;
       if (!dirty) dependencies.markSaved();
       publish({ dirty, message: kind === "autosave" ? null : { tone: "success", title: "Project saved", detail: savedSession?.displayPath ?? state.session.displayPath, locations: [] } });
       return { ok: true, value: undefined };
@@ -228,18 +157,18 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   };
 
   const runMutation = async <T>(perform: MutationPerformer<T>): Promise<ProjectCommandResult<T>> => {
-    if (coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
+    if (sessionRuntime.coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
     if (mutating || state.busy !== null) return fail({ tone: "info", title: "Project operation in progress", detail: "Wait for the current file operation to finish.", locations: [] });
     mutating = true;
     try {
       const result: MutationResult<T> = await perform(state.session.sessionId);
-      const acceptance = coordinator.recordMutation(result);
+      const acceptance = sessionRuntime.coordinator.recordMutation(result);
       if (!acceptance.accepted) return fail({ tone: "error", title: "Stale project mutation ignored", detail: "Retry in the currently open project.", locations: [] });
       if (result.changed) {
         dependencies.markDirty();
-        publish({ dirty: coordinator.state.dirty });
+        publish({ dirty: sessionRuntime.coordinator.state.dirty });
         try {
-          availableAssetPaths = await dependencies.assets.listPaths();
+          sessionRuntime.availableAssetPaths = await dependencies.assets.listPaths();
         } catch {
           return fail({ tone: "error", title: "Project files changed but the file index did not refresh", detail: "Retry Save after reopening the asset or font manager.", locations: [] });
         }
@@ -256,7 +185,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   };
 
   const close = async (choice?: DirtyTransitionChoice): Promise<ProjectCommandResult> => {
-    if (coordinator === null || state.session === null) return { ok: true, value: undefined };
+    if (sessionRuntime.coordinator === null || state.session === null) return { ok: true, value: undefined };
     if (state.busy !== null || mutating) return fail({ tone: "info", title: "Project operation in progress", detail: "Wait for the current operation before closing.", locations: [] });
     const dirtyChoice = choice ?? (state.dirty ? dependencies.chooseDirtyTransition?.() ?? "cancel" : "discard");
     publish({ busy: "close", message: null });
@@ -268,31 +197,31 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
         const snapshot = state.session.kind === "legacy-json" ? LegacyProjectDocumentSchema.parse(built.project) : ProjectDocumentV1Schema.parse(built.project);
         request = {
           expectedSessionId: state.session.sessionId,
-          rendererGeneration: coordinator.state.rendererGeneration,
-          workspaceGeneration: coordinator.state.workspaceGeneration,
+          rendererGeneration: sessionRuntime.coordinator.state.rendererGeneration,
+          workspaceGeneration: sessionRuntime.coordinator.state.workspaceGeneration,
           snapshot,
           dirtyChoice,
         };
       } else {
         request = {
           expectedSessionId: state.session.sessionId,
-          rendererGeneration: coordinator.state.rendererGeneration,
-          workspaceGeneration: coordinator.state.workspaceGeneration,
+          rendererGeneration: sessionRuntime.coordinator.state.rendererGeneration,
+          workspaceGeneration: sessionRuntime.coordinator.state.workspaceGeneration,
           snapshot: null,
           dirtyChoice,
         };
       }
       const result = await dependencies.project.close(request);
       if (!result.success) return result.canceled ? cancel() : fromError(result.error);
-      installing = true;
+      sessionRuntime.installing = true;
       dependencies.closeProject();
       dependencies.markSaved();
-      installing = false;
-      coordinator = null;
+      sessionRuntime.installing = false;
+      sessionRuntime.coordinator = null;
       publish({ session: null, dirty: false, message: null });
       return { ok: true, value: undefined };
     } catch (error) {
-      installing = false;
+      sessionRuntime.installing = false;
       return unexpected(error);
     } finally {
       publish({ busy: null });
@@ -300,8 +229,8 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   };
 
   const unsubscribeEdits = dependencies.subscribeRendererEdits(() => {
-    if (installing || coordinator === null) return;
-    coordinator.recordRendererEdit(parseRendererGeneration(coordinator.state.rendererGeneration + 1));
+    if (sessionRuntime.installing || sessionRuntime.coordinator === null) return;
+    sessionRuntime.coordinator.recordRendererEdit(parseRendererGeneration(sessionRuntime.coordinator.state.rendererGeneration + 1));
     dependencies.markDirty();
     publish({ dirty: true });
   });

@@ -3,7 +3,12 @@ import {
   centralDirectoryRecordLength,
   parseCentralDirectoryRecord,
 } from "./amgArchiveCentralDirectory";
+import { readExactly } from "./amgArchiveRead";
 import { AmgArchiveReaderError } from "./amgArchiveReaderError";
+import type { ArchiveReadHandle, PreflightEntry } from "./amgArchiveTypes";
+
+export { readExactly } from "./amgArchiveRead";
+export type { ArchiveReadHandle, PreflightEntry } from "./amgArchiveTypes";
 
 const EOCD = 0x06054b50;
 const ZIP64_EOCD = 0x06064b50;
@@ -11,30 +16,9 @@ const ZIP64_LOCATOR = 0x07064b50;
 const LOCAL = 0x04034b50;
 const MAX_TAIL = 65_557;
 
-export type PreflightEntry = {
-  readonly filename: string;
-  readonly localOffset: number;
-  readonly dataOffset: number;
-  readonly dataEnd: number;
-  readonly compressedSize: number;
-  readonly uncompressedSize: number;
-  readonly compressionMethod: number;
-  readonly flags: number;
-  readonly crc32: number;
-};
-
 export type ArchivePreflight = {
   readonly fileSize: number;
   readonly entries: readonly PreflightEntry[];
-};
-
-export type ArchiveReadHandle = {
-  read(
-    buffer: Uint8Array,
-    offset: number,
-    length: number,
-    position: number,
-  ): Promise<{ readonly bytesRead: number }>;
 };
 
 export type ArchivePreflightFileHandle = ArchiveReadHandle & {
@@ -44,28 +28,6 @@ export type ArchivePreflightFileHandle = ArchiveReadHandle & {
 const invalid = (message: string): never => {
   throw new AmgArchiveReaderError("invalid-archive", message);
 };
-
-export async function readExactly(
-  archive: ArchiveReadHandle,
-  position: number,
-  length: number,
-): Promise<Uint8Array> {
-  if (!Number.isSafeInteger(position) || !Number.isSafeInteger(length) || position < 0 || length < 0) {
-    invalid("archive requested an unsafe positional range");
-  }
-  if (length > AMG_FIXED_LIMITS.streamChunkBytes) {
-    throw new AmgArchiveReaderError("limit-exceeded", "archive read exceeds the stream chunk limit");
-  }
-  const bytes = new Uint8Array(length);
-  let read = 0;
-  while (read < length) {
-    const requestBytes = Math.min(AMG_FIXED_LIMITS.streamChunkBytes, length - read);
-    const result = await archive.read(bytes, read, requestBytes, position + read);
-    if (result.bytesRead === 0) invalid("archive ended inside a ZIP record");
-    read += result.bytesRead;
-  }
-  return bytes;
-}
 
 async function readCentralDirectory(
   archive: ArchiveReadHandle,

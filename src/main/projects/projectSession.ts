@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import {
   parseRuntimeAssetUrl,
-  type ParsedRuntimeAssetUrl,
 } from "../../shared/projects/assetReference";
 import type {
   ProjectSessionId,
@@ -9,47 +8,33 @@ import type {
   WorkspaceGeneration,
 } from "../../shared/projects/projectIpcContract";
 import { resolveExistingArchiveFile } from "./archivePath";
+import {
+  ProjectMutationQueue,
+  ProjectReadLeaseManager,
+  type ProjectReadLease,
+} from "./projectSessionConcurrency";
+import {
+  SessionStateError,
+  type ActiveProjectSessionOptions,
+  type GenerationCommit,
+  type ProjectSessionKind,
+  type ProjectSessionState,
+  type SessionAssetRead,
+  type SessionGenerations,
+  type WorkspaceOwnership,
+} from "./projectSessionTypes";
 
-export type ProjectSessionKind = "none" | "legacy-json" | "amg";
-export type ProjectSessionState = "active" | "closing" | "closed";
-export type WorkspaceOwnership = "app" | "user";
-
-export class SessionStateError extends Error {
-  readonly name = "SessionStateError";
-
-  constructor(
-    readonly code: "no-session" | "stale-session" | "inactive" | "generation" | "workspace-generation",
-    message: string,
-  ) {
-    super(message);
-  }
-}
-
-export type SessionGenerations = {
-  readonly renderer: number;
-  readonly committedRenderer: number;
-  readonly workspace: number;
-  readonly committedWorkspace: number;
-};
-
-export type GenerationCommit = {
-  readonly rendererGeneration: number;
-  readonly workspaceGeneration: number;
-};
-
-export type ActiveProjectSessionOptions = {
-  readonly sourcePath: string;
-  readonly workspacePath: string;
-};
-
-export type ProjectReadLease = {
-  readonly release: () => void;
-};
-
-export type SessionAssetRead = ParsedRuntimeAssetUrl & {
-  readonly filePath: string;
-  readonly lease: ProjectReadLease;
-};
+export type { ProjectReadLease } from "./projectSessionConcurrency";
+export { SessionStateError } from "./projectSessionTypes";
+export type {
+  ActiveProjectSessionOptions,
+  GenerationCommit,
+  ProjectSessionKind,
+  ProjectSessionState,
+  SessionAssetRead,
+  SessionGenerations,
+  WorkspaceOwnership,
+} from "./projectSessionTypes";
 
 export class ProjectSession {
   readonly id: string | null;
@@ -61,9 +46,8 @@ export class ProjectSession {
   private committedRendererGeneration = 0;
   private workspaceGeneration = 0;
   private committedWorkspaceGeneration = 0;
-  private mutationTail: Promise<void> = Promise.resolve();
-  private readLeaseCount = 0;
-  private readonly leaseDrainWaiters = new Set<() => void>();
+  private readonly mutationQueue = new ProjectMutationQueue();
+  private readonly readLeases = new ProjectReadLeaseManager();
 
   private constructor(
     readonly kind: ProjectSessionKind,
@@ -111,7 +95,7 @@ export class ProjectSession {
   }
 
   get activeReadLeaseCount(): number {
-    return this.readLeaseCount;
+    return this.readLeases.count;
   }
 
   assertTransition(
@@ -139,37 +123,19 @@ export class ProjectSession {
     task: () => Promise<T> | T,
   ): Promise<T> {
     this.assertActive(expectedSessionId);
-    const result = this.mutationTail.then(() => {
-      this.assertActive(expectedSessionId);
-      return task();
-    });
-    this.mutationTail = result.then(
-      () => undefined,
-      () => undefined,
+    return this.mutationQueue.run(
+      () => this.assertActive(expectedSessionId),
+      task,
     );
-    return result;
   }
 
   acquireReadLease(expectedSessionId: string | null): ProjectReadLease {
     this.assertActive(expectedSessionId);
-    this.readLeaseCount += 1;
-    let active = true;
-    return {
-      release: () => {
-        if (!active) return;
-        active = false;
-        this.readLeaseCount -= 1;
-        if (this.readLeaseCount === 0) {
-          for (const resolve of this.leaseDrainWaiters) resolve();
-          this.leaseDrainWaiters.clear();
-        }
-      },
-    };
+    return this.readLeases.acquire();
   }
 
   waitForReadLeases(): Promise<void> {
-    if (this.readLeaseCount === 0) return Promise.resolve();
-    return new Promise((resolve) => this.leaseDrainWaiters.add(resolve));
+    return this.readLeases.waitForDrain();
   }
 
   beginClosing(): void {
@@ -177,7 +143,7 @@ export class ProjectSession {
   }
 
   close(): void {
-    if (this.readLeaseCount !== 0) {
+    if (this.readLeases.count !== 0) {
       throw new SessionStateError(
         "inactive",
         "cannot close a session with active read leases",

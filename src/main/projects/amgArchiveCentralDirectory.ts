@@ -1,5 +1,5 @@
-import type { PreflightEntry } from "./amgArchivePreflight";
 import { AmgArchiveReaderError } from "./amgArchiveReaderError";
+import type { PreflightEntry } from "./amgArchiveTypes";
 
 const CENTRAL = 0x02014b50;
 
