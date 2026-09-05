@@ -69,6 +69,7 @@ import { registerFontQueryIpc } from "./registerFontQueryIpc";
 import { registerExportIpc } from "./registerExportIpc";
 import { registerAssetReadIpc } from "./registerAssetReadIpc";
 import { registerSettingsIpc } from "./registerSettingsIpc";
+import { registerCredentialIpc } from "./registerCredentialIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -237,57 +238,14 @@ function registerIpcHandlers(): void {
     isEncryptionSecure,
   });
 
-  // ── Credential Manager ──────────────────────────────────────────────
-
-  ipcMain.handle("app:getCredentials", async () => {
-    try {
-      const credentials = await listCredentialRecords();
-      return {
-        success: true,
-        credentials,
-        definitions: getCredentialDefinitions(),
-        secure: isEncryptionSecure(),
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  });
-
-  ipcMain.handle("app:getCredentialDefinitions", async () => {
-    try {
-      return { success: true, definitions: getCredentialDefinitions() };
-    } catch (error: any) {
-      return { success: false, error: error.message, definitions: [] };
-    }
-  });
-
-  ipcMain.handle("app:getCredentialValues", async (_, id: string) => {
-    try {
-      return { success: true, values: await getCredentialValues(id) };
-    } catch (error: any) {
-      return { success: false, error: error.message, values: {} };
-    }
-  });
-
-  ipcMain.handle(
-    "app:saveCredential",
-    async (_, data: { id: string; values: PublishCredentials }) => {
-      try {
-        await saveCredentialRecord(data.id, data.values);
-        return { success: true };
-      } catch (error: any) {
-        return { success: false, error: error.message };
-      }
-    },
-  );
-
-  ipcMain.handle("app:deleteCredential", async (_, id: string) => {
-    try {
-      await deleteCredentialRecord(id);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
+  registerCredentialIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    listCredentials: listCredentialRecords,
+    getDefinitions: getCredentialDefinitions,
+    getValues: getCredentialValues,
+    saveCredential: saveCredentialRecord,
+    deleteCredential: deleteCredentialRecord,
+    isEncryptionSecure,
   });
 
   // ── Publish ───────────────────────────────────────────────────────────────
