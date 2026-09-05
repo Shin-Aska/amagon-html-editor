@@ -65,6 +65,7 @@ import { createAutosaveController } from "./autosaveController";
 import { registerAutosaveIpc } from "./registerAutosaveIpc";
 import { createMainWindowController } from "./mainWindowController";
 import { registerMenuIpc } from "./registerMenuIpc";
+import { registerFontQueryIpc } from "./registerFontQueryIpc";
 
 const { app, ipcMain, protocol, dialog, shell, net, Menu } = electron;
 const BrowserWindowCtor = electron.BrowserWindow;
@@ -173,141 +174,17 @@ function registerIpcHandlers(): void {
     setApplicationMenu: (menu) => Menu.setApplicationMenu(menu),
   });
 
-  // ── Font Management ───────────────────────────────────────────────────
-
-  ipcMain.handle("fonts:listSystem", async (event) => {
-    assertTrustedMainFrame(event, windowController.getMainWindow());
-    try {
-      const fonts = await getFonts();
-      return { success: true, fonts };
-    } catch (error: any) {
-      return { success: false, error: error.message, fonts: [] };
-    }
-  });
-
-  ipcMain.handle(
-    "fonts:fetchGoogleFontCss",
-    async (event, args: { family: string; weight: string; style: string }) => {
-      assertTrustedMainFrame(event, windowController.getMainWindow());
-      if (!args?.family || typeof args.family !== "string") {
-        return { success: false, error: "family required", css: "" };
-      }
-
-      try {
-        const family = args.family.trim();
-        const style =
-          String(args?.style || "normal").toLowerCase() === "italic"
-            ? "italic"
-            : "normal";
-        const weightRaw = String(args?.weight || "400");
-        const weightMatch = weightRaw.match(/\d{3}/);
-        const weight = weightMatch ? weightMatch[0] : "400";
-        const italic = style === "italic" ? "1" : "0";
-
-        const encodedFamily = encodeURIComponent(family).replace(/%20/g, "+");
-        const cssUrl = `https://fonts.googleapis.com/css2?family=${encodedFamily}:ital,wght@${italic},${weight}&display=swap`;
-        const css = await googleFonts.fetchText(cssUrl, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          },
-        });
-        return { success: true, css };
-      } catch (error: any) {
-        return { success: false, error: error.message, css: "" };
-      }
-    },
-  );
-
-  ipcMain.handle(
-    "fonts:fetchGoogleFontFile",
-    async (event, args: { url: string }) => {
-      assertTrustedMainFrame(event, windowController.getMainWindow());
-      if (!args?.url || typeof args.url !== "string") {
-        return { success: false, error: "url required", dataUri: "" };
-      }
-
-      try {
-        const url = args.url.trim();
-        if (!googleFonts.isAllowedUrl(url)) {
-          return {
-            success: false,
-            error: "Unexpected font URL origin (blocked)",
-            dataUri: "",
-          };
-        }
-
-        const { filePath, mimeType } = await googleFonts.cacheFile(url);
-        const data = await fs.readFile(filePath);
-        const base64 = data.toString("base64");
-        return {
-          success: true,
-          dataUri: `data:${mimeType};base64,${base64}`,
-        };
-      } catch (error: any) {
-        return { success: false, error: error.message, dataUri: "" };
-      }
-    },
-  );
-
-  ipcMain.handle(
-    "fonts:checkFileExists",
-    async (event, args: { relativePath: string }) => {
-      assertTrustedMainFrame(event, windowController.getMainWindow());
-      if (!currentProjectDir) return { exists: false };
-      if (!args?.relativePath) return { exists: false };
-
-      const rel = String(args.relativePath)
-        .replace(/^[/\\]+/, "")
-        .replace(/\\/g, "/");
-      const targetPath = path.join(currentProjectDir, rel);
-
-      if (!isPathSafe(targetPath, currentProjectDir)) return { exists: false };
-
-      return { exists: existsSync(targetPath) };
-    },
-  );
-
-  ipcMain.handle("fonts:listProject", async (event) => {
-    assertTrustedMainFrame(event, windowController.getMainWindow());
-    if (!currentProjectDir) return { success: true, fonts: [] };
-
-    try {
-      const fontsDir = path.join(currentProjectDir, "assets", "fonts");
-      try {
-        await fs.access(fontsDir);
-      } catch {
-        return { success: true, fonts: [] };
-      }
-
-      const entries = await fs.readdir(fontsDir);
-      const FONT_EXTS = new Set([".ttf", ".otf", ".woff", ".woff2"]);
-
-      const fonts: any[] = entries
-        .filter((f) => FONT_EXTS.has(path.extname(f).toLowerCase()))
-        .map((fileName) => {
-          const ext = path.extname(fileName).slice(1) as
-            | "ttf"
-            | "otf"
-            | "woff"
-            | "woff2";
-          const relativePath = `assets/fonts/${fileName}`;
-          return {
-            id: `font_${Buffer.from(relativePath).toString("base64url").slice(0, 12)}`,
-            name: path.basename(fileName, path.extname(fileName)),
-            fileName,
-            relativePath,
-            format: ext,
-            weight: "400",
-            style: "normal",
-            source: "imported",
-          };
-        });
-
-      return { success: true, fonts };
-    } catch (error: any) {
-      return { success: false, error: error.message, fonts: [] };
-    }
+  registerFontQueryIpc({
+    handle: (channel, handler) => ipcMain.handle(channel, handler),
+    getMainWindow: windowController.getMainWindow,
+    getProjectDirectory: () => currentProjectDir,
+    getSystemFonts: getFonts,
+    googleFonts,
+    exists: existsSync,
+    access: fs.access,
+    readFile: fs.readFile,
+    readDirectory: fs.readdir,
+    isPathSafe,
   });
 
   // ── Export HTML ────────────────────────────────────────────────────────
