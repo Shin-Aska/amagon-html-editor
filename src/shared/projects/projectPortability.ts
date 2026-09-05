@@ -1,8 +1,7 @@
 import type { Block, ProjectData, ProjectTheme } from "../../renderer/store/types";
 import { AssetReferenceError, buildRuntimeAssetUrl, decodeDurableAssetReference, encodeDurableAssetReference, isRelativePathTraversalReference, parseRuntimeAssetUrl } from "./assetReference";
 import type { LegacyProjectDocument, ProjectDocumentV1 } from "./projectDocumentSchema";
-import { ProjectSessionIdSchema } from "./projectIpcContract";
-import { isSensitiveProjectKey } from "./projectSensitiveKey";
+import { scanForbiddenPersistence } from "./projectPortabilityPersistence";
 
 export type ProjectPortabilityMode = "bundle-durable" | "bundle-runtime" | "bundle-stored" | "conversion-durable" | "legacy-durable" | "legacy-runtime" | "legacy-stored";
 
@@ -203,31 +202,6 @@ const transformTheme = (theme: PortabilityTheme, location: string, state: ScanSt
   });
 };
 
-const scanForbiddenPersistence = (value: unknown, location: string, state: ScanState): void => {
-  const persistenceMode = state.options.mode.endsWith("-durable") || state.options.mode.endsWith("-stored");
-  if (typeof value === "string") {
-    if (
-      persistenceMode
-      && (value.includes(state.options.sessionId) || ProjectSessionIdSchema.safeParse(value).success)
-    ) addOffender(state, "session-identity", location);
-    return;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => scanForbiddenPersistence(item, `${location}[${index}]`, state));
-    return;
-  }
-  if (!isRecord(value)) return;
-  for (const key of Object.keys(value).sort()) {
-    const childLocation = propertyLocation(location, key);
-    if (isSensitiveProjectKey(key)) addOffender(state, "credential", childLocation);
-    if (
-      persistenceMode
-      && (key.includes(state.options.sessionId) || ProjectSessionIdSchema.safeParse(key).success)
-    ) addOffender(state, "session-identity", childLocation);
-    scanForbiddenPersistence(value[key], childLocation, state);
-  }
-};
-
 const scanClone = (clone: PortabilityProject, options: ProjectPortabilityOptions): ProjectPortabilityScan => {
   const state: ScanState = {
     options,
@@ -257,7 +231,11 @@ const scanClone = (clone: PortabilityProject, options: ProjectPortabilityOptions
     });
   clone.pages.forEach((page, pageIndex) => page.blocks.forEach((block, blockIndex) => transformBlock(block, `$.pages[${pageIndex}].blocks[${blockIndex}]`, state)));
   clone.userBlocks.forEach((userBlock, index) => transformBlock(userBlock.content, `$.userBlocks[${index}].content`, state));
-  scanForbiddenPersistence(clone, "$", state);
+  scanForbiddenPersistence(clone, "$", {
+    persistenceMode: state.options.mode.endsWith("-durable") || state.options.mode.endsWith("-stored"),
+    sessionId: state.options.sessionId,
+    addOffender: (code, location) => addOffender(state, code, location),
+  });
 
   const offenders = state.offenders.sort((left, right) => (left.location === right.location ? (left.code < right.code ? -1 : left.code > right.code ? 1 : 0) : left.location < right.location ? -1 : 1));
   const referencedAssetPaths = [...state.referencedAssets].sort();

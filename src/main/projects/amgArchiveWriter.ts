@@ -2,8 +2,6 @@ import { createHash } from "node:crypto";
 import type { BigIntStats } from "node:fs";
 import { lstat, open, readdir } from "node:fs/promises";
 import path from "node:path";
-import { ZipWriter } from "@zip.js/zip.js";
-import type { ZipWriterAddDataOptions, ZipWriterCloseOptions } from "@zip.js/zip.js";
 import {
   AMG_FIXED_LIMITS,
   AMG_FORMAT_VERSION,
@@ -17,18 +15,19 @@ import {
 import { parseProjectDocumentV1, type ProjectDocumentV1 } from "../../shared/projects/projectDocumentSchema";
 import { ArchivePathError, canonicalizeArchivePath, createArchivePathIndex } from "./archivePath";
 import { AtomicWriteError, atomicWriteFile, type AtomicFileSystem } from "./atomicFile";
+import {
+  amgArchiveEntryOptions,
+  defaultAmgZipWriterFactory,
+  type AmgZipWriter,
+  type AmgZipWriterFactory,
+} from "./amgArchiveZipWriter";
+
+export type { AmgZipWriter, AmgZipWriterFactory } from "./amgArchiveZipWriter";
 
 type WriterLimits = { readonly [Key in keyof typeof AMG_FIXED_LIMITS]: number };
 type AssetStat = Pick<BigIntStats, "size" | "mtimeNs" | "ctimeNs" | "ino" | "dev">;
 type AssetInventory = AssetStat & { readonly archivePath: string; readonly filePath: string };
 type AssetLstat = (filePath: string) => Promise<BigIntStats>;
-
-export interface AmgZipWriter {
-  add(filename: string, source: ReadableStream<Uint8Array>, options: ZipWriterAddDataOptions): Promise<void>;
-  close(comment: Uint8Array | undefined, options: ZipWriterCloseOptions): Promise<void>;
-}
-
-export type AmgZipWriterFactory = (writable: WritableStream<Uint8Array>) => AmgZipWriter;
 
 export type WriteAmgArchiveOptions = {
   readonly targetPath: string;
@@ -45,7 +44,6 @@ export class AmgArchiveWriterError extends Error {
   constructor(readonly code: "capacity" | "unsafe-asset" | "changed-asset" | "stream", message: string, readonly cause?: unknown) { super(message); }
 }
 
-const FIXED_DATE = new Date("1980-01-01T00:00:00.000Z");
 const encoder = new TextEncoder();
 const nodeAssetLstat: AssetLstat = (filePath) => lstat(filePath, { bigint: true });
 
@@ -150,28 +148,6 @@ async function assetStream(asset: AssetInventory, limits: WriterLimits, hash: Re
   });
 }
 
-function entryOptions(compression: "store" | "deflate", uncompressedSize: number): ZipWriterAddDataOptions {
-  return {
-    zip64: true,
-    compressionMethod: compression === "store" ? 0 : 8,
-    level: compression === "store" ? 0 : 6,
-    uncompressedSize,
-    bufferedWrite: false,
-    dataDescriptor: true,
-    extendedTimestamp: false,
-    lastModDate: FIXED_DATE,
-    useWebWorkers: false,
-  };
-}
-
-const defaultZipWriterFactory: AmgZipWriterFactory = (writable) => {
-  const zip = new ZipWriter(writable, { bufferedWrite: false, keepOrder: true, useWebWorkers: false });
-  return {
-    async add(filename, source, options) { await zip.add(filename, source, options); },
-    async close(comment, options) { await zip.close(comment, options); },
-  };
-};
-
 async function packArchive(
   zip: AmgZipWriter,
   workspacePath: string,
@@ -182,11 +158,11 @@ async function packArchive(
 ): Promise<void> {
   const entries: AmgManifestEntryV1[] = [];
   const projectHash = createHash("sha256");
-  await zip.add(AMG_PROJECT_PATH, byteStream(projectBytes, limits.streamChunkBytes, projectHash), entryOptions("deflate", projectBytes.byteLength));
+  await zip.add(AMG_PROJECT_PATH, byteStream(projectBytes, limits.streamChunkBytes, projectHash), amgArchiveEntryOptions("deflate", projectBytes.byteLength));
   entries.push({ path: AMG_PROJECT_PATH, uncompressedBytes: projectBytes.byteLength, sha256: projectHash.digest("hex"), compression: "deflate" });
   for (const asset of inventory) {
     const hash = createHash("sha256");
-    await zip.add(asset.archivePath, await assetStream(asset, limits, hash, assetLstat), entryOptions("store", Number(asset.size)));
+    await zip.add(asset.archivePath, await assetStream(asset, limits, hash, assetLstat), amgArchiveEntryOptions("store", Number(asset.size)));
     entries.push({ path: asset.archivePath, uncompressedBytes: Number(asset.size), sha256: hash.digest("hex"), compression: "store" });
   }
   const after = await inventoryAssets(workspacePath, limits, assetLstat);
@@ -203,7 +179,7 @@ async function packArchive(
   });
   const manifestBytes = encoder.encode(JSON.stringify(manifest));
   if (manifestBytes.byteLength > limits.manifestJsonBytes) capacity("manifest.json exceeds its limit");
-  await zip.add(AMG_MANIFEST_PATH, byteStream(manifestBytes, limits.streamChunkBytes, createHash("sha256")), entryOptions("deflate", manifestBytes.byteLength));
+  await zip.add(AMG_MANIFEST_PATH, byteStream(manifestBytes, limits.streamChunkBytes, createHash("sha256")), amgArchiveEntryOptions("deflate", manifestBytes.byteLength));
   await zip.close(undefined, { zip64: true });
 }
 
@@ -217,7 +193,7 @@ async function* archiveSource(options: WriteAmgArchiveOptions, projectBytes: Uin
     { highWaterMark: limits.queuedStreamBytes - (limits.streamChunkBytes * 2), size: (chunk) => chunk.byteLength },
   );
   const reader = output.readable.getReader();
-  const packing = packArchive((options.zipWriterFactory ?? defaultZipWriterFactory)(output.writable), options.workspacePath, projectBytes, inventory, limits, options.assetLstat ?? nodeAssetLstat)
+  const packing = packArchive((options.zipWriterFactory ?? defaultAmgZipWriterFactory)(output.writable), options.workspacePath, projectBytes, inventory, limits, options.assetLstat ?? nodeAssetLstat)
     .then(() => ({ ok: true } as const), (error: unknown) => ({ ok: false, error } as const));
   let settled = false;
   while (true) {

@@ -1,6 +1,7 @@
 import { BrowserWindow, type MenuItemConstructorOptions } from "electron";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAppMenu } from "../menu";
+import { MENU_ACTION_CHANNEL } from "../../shared/menuContract";
 
 const electronMock = vi.hoisted(() => {
   const templates: MenuItemConstructorOptions[][] = [];
@@ -36,6 +37,6 @@ describe("Electron project menu", () => {
 
     Reflect.apply(closeProject.click, closeProject, []);
 
-    expect(electronMock.sent).toHaveBeenCalledWith("menu:action", "close-project");
+    expect(electronMock.sent).toHaveBeenCalledWith(MENU_ACTION_CHANNEL, "close-project");
   });
 });

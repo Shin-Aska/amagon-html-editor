@@ -18,6 +18,7 @@ import type {
     ProjectBridge,
 } from '../shared/projects/projectIpcContract'
 import type {LifecycleRequest, LifecycleResult} from '../main/projects/projectLifecycle'
+import type {MenuAction} from '../shared/menuContract'
 
 declare global {
     type CredentialCategory = 'ai' | 'multimedia' | 'publisher'
@@ -73,7 +74,7 @@ declare global {
         }
         menu: {
             setProjectLoaded: (isLoaded: boolean) => Promise<any>
-            onAction: (callback: (action: string) => void) => () => void
+            onAction: (callback: (action: MenuAction) => void) => () => void
         }
         publish: {
             getProviders: () => Promise<PublishProviderInfo[]>

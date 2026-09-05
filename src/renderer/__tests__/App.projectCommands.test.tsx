@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useProjectStore } from "../store/projectStore";
 import App from "../App";
+import type { MenuAction } from "../../shared/menuContract";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -13,11 +14,11 @@ const commandMocks = vi.hoisted(() => ({
   saveAs: vi.fn(async () => ({ ok: true, value: undefined })),
 }));
 const testBridge = vi.hoisted(() => {
-  const state: { action: (value: string) => void } = { action: () => undefined };
+  const state: { action: (value: MenuAction) => void } = { action: () => undefined };
   const api = {
     menu: {
       setProjectLoaded: async () => undefined,
-      onAction: (callback: (action: string) => void) => {
+      onAction: (callback: (action: MenuAction) => void) => {
         state.action = callback;
         return () => undefined;
       },

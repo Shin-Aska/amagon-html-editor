@@ -9,6 +9,7 @@ import type {
   RecentProjectId,
 } from "../../src/shared/projects/projectIpcContract";
 import type { AmagonHarness } from "./electronHarness";
+import { MENU_ACTION_CHANNEL } from "../../src/shared/menuContract";
 import { queueNativeDialogs } from "./electronHarness";
 import { discardProjectTransition, initialProjectTransition, openRecentRequest, saveRequest } from "./projectTransitionRequests";
 
@@ -80,11 +81,13 @@ export const closeProjectThroughUi = async (harness: AmagonHarness): Promise<voi
   };
   harness.page.on("dialog", discardDirtyProject);
   try {
-    await harness.app.evaluate(({ BrowserWindow }, pageUrl) => {
-      const window = BrowserWindow.getAllWindows().find((candidate) => candidate.webContents.getURL() === pageUrl);
-      if (window === undefined) throw new TypeError(`no Electron window found for ${pageUrl}`);
-      window.webContents.send("menu:action", "close-project");
-    }, harness.page.url());
+    await harness.app.evaluate(({ BrowserWindow }, request) => {
+      const window = BrowserWindow.getAllWindows().find(
+        (candidate) => candidate.webContents.getURL() === request.pageUrl,
+      );
+      if (window === undefined) throw new TypeError(`no Electron window found for ${request.pageUrl}`);
+      window.webContents.send(request.channel, "close-project");
+    }, { pageUrl: harness.page.url(), channel: MENU_ACTION_CHANNEL });
     await expect(harness.page.getByRole("button", { name: /New Project/u })).toBeVisible({ timeout: projectUiStepTimeoutMs });
   } finally {
     harness.page.off("dialog", discardDirtyProject);

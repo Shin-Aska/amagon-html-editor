@@ -1,12 +1,13 @@
 import {type BrowserWindow, Menu} from 'electron'
+import {MENU_ACTION_CHANNEL, type MenuAction} from '../shared/menuContract'
 
 const isMac = process.platform === 'darwin';
 const mod = isMac ? 'Cmd' : 'Ctrl';
 
 export function buildAppMenu(mainWindow: BrowserWindow, isProjectLoaded: boolean = false): Menu {
-    const send = (action: string) => {
+    const send = (action: MenuAction) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('menu:action', action)
+            mainWindow.webContents.send(MENU_ACTION_CHANNEL, action)
         }
     };
 

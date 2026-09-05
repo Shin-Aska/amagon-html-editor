@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import { copyFile, mkdir, open, rename, rm } from "node:fs/promises";
 import path from "node:path";
@@ -12,37 +12,12 @@ import { canonicalizePortablePath } from "../../shared/projects/assetReference";
 import { resolveMutationPath } from "./mutationPath";
 import { SessionStateError, type ProjectSessionRegistry } from "./projectSession";
 
+export { inventoryWithHashes } from "./projectInventory";
+
 export type ProjectMutationContext = {
   readonly sessions: ProjectSessionRegistry;
   readonly expectedSessionId: ProjectSessionId;
   readonly listInventory: () => Promise<readonly string[]>;
-};
-
-export const inventoryWithHashes = async (
-  workspacePath: string,
-  relativePaths: readonly string[],
-): Promise<readonly string[]> => {
-  const inventory: string[] = [];
-  for (const relativePath of relativePaths) {
-    const filePath = path.join(workspacePath, ...canonicalizePortablePath(relativePath).split("/"));
-    const handle = await open(filePath, "r");
-    try {
-      const stats = await handle.stat();
-      const hash = createHash("sha256");
-      let position = 0;
-      while (position < stats.size) {
-        const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, stats.size - position));
-        const result = await handle.read(buffer, 0, buffer.byteLength, position);
-        if (result.bytesRead === 0) break;
-        hash.update(buffer.subarray(0, result.bytesRead));
-        position += result.bytesRead;
-      }
-      inventory.push(`${relativePath}:${stats.size}:${hash.digest("hex")}`);
-    } finally {
-      await handle.close();
-    }
-  }
-  return inventory;
 };
 
 export class MutationRollbackError extends Error {

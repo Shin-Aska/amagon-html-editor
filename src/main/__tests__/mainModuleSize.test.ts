@@ -18,10 +18,17 @@ const productionModules = [
   "src/main/registerPublishIpc.ts",
   "src/main/registerAiIpc.ts",
   "src/main/registerProjectRuntime.ts",
+  "src/main/projects/amgArchiveWriter.ts",
+  "src/main/projects/amgArchiveZipWriter.ts",
+  "src/main/projects/projectMutation.ts",
+  "src/main/projects/projectInventory.ts",
+  "src/shared/projects/projectPortability.ts",
+  "src/shared/projects/projectPortabilityPersistence.ts",
+  "src/shared/menuContract.ts",
 ];
 
-describe("main process module size", () => {
-  it("keeps the composition root and every extracted module within 250 pure LOC", () => {
+describe("production module architecture", () => {
+  it("keeps the composition root and protected extracted modules within 250 pure LOC", () => {
     const output = execFileSync(process.execPath, [
       "scripts/check-main-module-loc.mjs",
       ...productionModules,

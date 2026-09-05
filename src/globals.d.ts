@@ -10,6 +10,7 @@ import type {
 } from './shared/projects/projectIpcContract'
 import type {IpcResult} from './renderer/utils/api'
 import type {LifecycleRequest, LifecycleResult} from './main/projects/projectLifecycle'
+import type {MenuAction} from './shared/menuContract'
 
 export {}
 
@@ -54,7 +55,7 @@ declare global {
         }
         menu: {
             setProjectLoaded: (isLoaded: boolean) => Promise<any>
-            onAction: (callback: (action: string) => void) => () => void
+            onAction: (callback: (action: MenuAction) => void) => () => void
         }
         publish: {
             getProviders: () => Promise<any>

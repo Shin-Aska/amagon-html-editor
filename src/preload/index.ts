@@ -19,6 +19,7 @@ import type {
     MediaSearchResult,
 } from '../shared/projects/projectIpcContract'
 import type {LifecycleRequest, LifecycleResult} from '../main/projects/projectLifecycle'
+import {MENU_ACTION_CHANNEL, type MenuAction} from '../shared/menuContract'
 
 const {contextBridge, ipcRenderer} = electron;
 
@@ -129,12 +130,12 @@ const api = {
         setProjectLoaded: (isLoaded: boolean) =>
             ipcRenderer.invoke('menu:setProjectLoaded', isLoaded),
 
-        onAction: (callback: (action: string) => void) => {
-            const handler = (_event: any, action: string) => {
+        onAction: (callback: (action: MenuAction) => void) => {
+            const handler = (_event: electron.IpcRendererEvent, action: MenuAction) => {
                 callback(action)
             };
-            ipcRenderer.on('menu:action', handler);
-            return () => ipcRenderer.removeListener('menu:action', handler)
+            ipcRenderer.on(MENU_ACTION_CHANNEL, handler);
+            return () => ipcRenderer.removeListener(MENU_ACTION_CHANNEL, handler)
         }
     },
 
