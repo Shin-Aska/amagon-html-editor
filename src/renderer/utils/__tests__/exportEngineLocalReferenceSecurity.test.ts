@@ -72,4 +72,57 @@ describe("export asset authority", () => {
     expect(readAsset).not.toHaveBeenCalled();
     expect(files.some((file) => file.path.startsWith("assets/"))).toBe(true);
   });
+
+  it.each([
+    "../../secret.png",
+    "../secret.png",
+    " ../secret.png",
+    "./secret.png",
+    "images/../secret.png",
+    "..\\secret.png",
+    "%2e%2e/secret.png",
+    ".%2e/secret.png",
+    "%2e%2e%2fsecret.png",
+    "..%5csecret.png",
+    "\t..\\secret.png",
+    "%252e%252e/secret.png",
+    "%25%32%65%25%32%65/secret.png",
+  ])("excludes relative traversal %s from export and publish files", async (reference) => {
+    // Given: a crafted relative reference whose direct fetch would disclose sentinel bytes.
+    const sentinel = new Uint8Array([115, 101, 99, 114, 101, 116]);
+    const directFetch = vi.fn(async () => new Response(sentinel, {
+      status: 200,
+      headers: { "content-type": "image/png" },
+    }));
+    vi.stubGlobal("fetch", directFetch);
+
+    // When: the renderer creates the exact file array consumed by export and publish.
+    const publishFiles = await exportProject(projectWithImage(reference));
+
+    // Then: neither local authority nor browser fetch runs, and no sentinel bytes enter the payload.
+    expect(directFetch).not.toHaveBeenCalled();
+    expect(readAsset).not.toHaveBeenCalled();
+    expect(publishFiles.some((file) => file.path.startsWith("assets/"))).toBe(false);
+    expect(JSON.stringify(publishFiles)).not.toContain(reference);
+    expect(publishFiles.some((file) => file.content instanceof Uint8Array
+      && file.content.join(",") === sentinel.join(","))).toBe(false);
+  });
+
+  it("keeps non-dot web-relative assets on the browser fetch path", async () => {
+    // Given: an intentional web-relative image reference.
+    const reference = "images/photo.png";
+    const directFetch = vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), {
+      status: 200,
+      headers: { "content-type": "image/png" },
+    }));
+    vi.stubGlobal("fetch", directFetch);
+
+    // When: the renderer exports the project.
+    const files = await exportProject(projectWithImage(reference));
+
+    // Then: existing non-dot relative asset behavior remains intact.
+    expect(directFetch).toHaveBeenCalledWith(reference);
+    expect(readAsset).not.toHaveBeenCalled();
+    expect(files.some((file) => file.path.startsWith("assets/"))).toBe(true);
+  });
 });

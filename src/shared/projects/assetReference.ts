@@ -3,6 +3,8 @@ const ILLEGAL_WINDOWS_CHARACTERS = /[<>:"|?*]/u;
 const CONTROL_CHARACTERS = /\p{Cc}/u;
 const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu;
 const OPAQUE_SESSION_ID = /^[A-Za-z0-9_-]{8,128}$/u;
+const URI_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/u;
+const PERCENT_BYTE = /%([0-9a-f]{2})/giu;
 
 export class AssetReferenceError extends Error {
   readonly name = "AssetReferenceError";
@@ -17,6 +19,21 @@ export class AssetReferenceError extends Error {
   ) {
     super(message);
   }
+}
+
+export function isRelativePathTraversalReference(reference: string): boolean {
+  const path = reference.trim().split(/[?#]/u, 1)[0] ?? "";
+  if (path.length === 0 || URI_SCHEME.test(path) || path.startsWith("/") || path.startsWith("\\")) return false;
+
+  let decoded = path;
+  for (let pass = 0; pass < 3; pass += 1) {
+    decoded = decoded.replace(PERCENT_BYTE, (_encoding, hexadecimal: string) => (
+      String.fromCharCode(Number.parseInt(hexadecimal, 16))
+    ));
+  }
+
+  const normalized = decoded.replace(/\\/gu, "/");
+  return normalized.includes("/") && normalized.split("/").some((segment) => segment === "." || segment === "..");
 }
 
 export function canonicalizePortablePath(input: string): string {

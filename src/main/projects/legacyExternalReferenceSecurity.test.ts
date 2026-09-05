@@ -58,6 +58,35 @@ const createFixture = async (kind: "absolute" | "file-url" | "app-media-absolute
 };
 
 describe("legacy external reference authority", () => {
+  it("rejects relative traversal at the project asset-read boundary", async () => {
+    // Given: an active legacy project that grants no document-derived file authority.
+    const fixture = await createFixture("absolute");
+    const service = createProjectService({
+      userDataPath: fixture.root,
+      documentsPath: fixture.root,
+      dialogs: {
+        showOpen: async () => ({ canceled: false, filePaths: [fixture.projectPath] }),
+        showSave: async () => ({ canceled: true }),
+      },
+      recents: createRecentProjectsStore({ storagePath: path.join(fixture.root, "recents.json") }),
+      sessions: new ProjectSessionRegistry(),
+    });
+    const opened = await service.openProject({
+      expectedSessionId: null,
+      rendererGeneration: parseRendererGeneration(0),
+      workspaceGeneration: parseWorkspaceGeneration(0),
+      snapshot: null,
+      dirtyChoice: "discard",
+    });
+    if (!opened.success) throw new Error("legacy open failed");
+
+    // When: a renderer asks the service to resolve a relative traversal reference.
+    const resolution = service.resolveAssetRead("../secret.txt");
+
+    // Then: the main-owned boundary denies it before returning a readable path.
+    await expect(resolution).rejects.toThrow("cannot authorize this local file read");
+  });
+
   it.each(["absolute", "file-url", "app-media-absolute", "uppercase-app-media-absolute"] as const)(
     "does not derive %s read authority from document strings",
     async (kind) => {

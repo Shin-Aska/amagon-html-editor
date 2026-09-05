@@ -5,6 +5,7 @@ import {buildAnimationStylesCss} from './animationPresets'
 import {buildHoverEffectStylesCss} from './hoverEffects'
 import {buildActionEffectRuntimeScript, buildActionEffectStylesCss} from './actionEffects'
 import {getApi} from './api'
+import {isRelativePathTraversalReference} from '../../shared/projects/assetReference'
 
 export interface ExportFile {
     path: string
@@ -1041,7 +1042,7 @@ async function buildAssetFiles(
 
     for (const token of ctx.assetsToFetch) {
         const url = ctx.assetTokenToUrl.get(token);
-        if (!url) continue;
+        if (!url || isRelativePathTraversalReference(url)) continue;
 
         const preferredName = ctx.assetTokenToPreferredName.get(token) || 'asset';
         const resolved = await resolveAsset(url);

@@ -1,5 +1,5 @@
 import type { Block, ProjectData, ProjectTheme } from "../../renderer/store/types";
-import { AssetReferenceError, buildRuntimeAssetUrl, decodeDurableAssetReference, encodeDurableAssetReference, parseRuntimeAssetUrl } from "./assetReference";
+import { AssetReferenceError, buildRuntimeAssetUrl, decodeDurableAssetReference, encodeDurableAssetReference, isRelativePathTraversalReference, parseRuntimeAssetUrl } from "./assetReference";
 import type { LegacyProjectDocument, ProjectDocumentV1 } from "./projectDocumentSchema";
 import { ProjectSessionIdSchema } from "./projectIpcContract";
 
@@ -68,6 +68,7 @@ const recordAsset = (assetPath: string, location: string, state: ScanState): voi
 };
 
 const transformReference = (value: string, location: string, state: ScanState): string => {
+  if (isRelativePathTraversalReference(value)) { addOffender(state, "invalid-reference", location, value); return value; }
   if (/^https?:\/\//iu.test(value)) {
     if (/^https?:\/\/[^/@\s]+@/iu.test(value)) addOffender(state, "credential", location);
     return value;
@@ -191,7 +192,7 @@ const transformBlock = (block: PortabilityBlock, location: string, state: ScanSt
   for (const key of Object.keys(block.styles).sort()) {
     Reflect.set(block.styles, key, transformCss(block.styles[key] ?? "", propertyLocation(`${location}.styles`, key), state));
   }
-  if (typeof block.content === "string") Reflect.set(block, "content", transformHtml(block.content, `${location}.content`, state));
+  if (typeof block.content === "string") Reflect.set(block, "content", transformHtml(transformCss(block.content, `${location}.content`, state), `${location}.content`, state));
   block.children.forEach((child, index) => transformBlock(child, `${location}.children[${index}]`, state));
 };
 
