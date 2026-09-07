@@ -153,6 +153,14 @@ All spacing derives from 4px.
 
 ## 6. Motion & Interaction
 
+### Internet Font Preview Feedback
+
+- The Name column identifies each font; the Preview column never shows a misleading fallback name while loading or after a failure.
+- Reserve one 140px-wide, 24px-high preview slot (constrained by its column). Loading shows a 70%-width, 12px-high rounded skeleton using the muted text token; failure shows a 16px warning icon with a descriptive tooltip. Ready shows only the real 16px font sample at 1.5 line height.
+- Adapt beui.dev's loader opacity feedback to CSS only: `--font-preview-pulse-duration: 1400ms`, ease-in-out, opacity 0.35–0.75. Ready samples fade in for `--font-preview-reveal-duration: 120ms` with ease-out. No layout animation, timers, or additional dependencies.
+- Reduced motion freezes the skeleton at 0.55 opacity and disables the ready fade. Maintain the same slot geometry in all states, with no extra status line.
+- Announce the family and status politely through an accessible label, mark only the preview slot busy, and keep the icon decorative. Preview status is separate from project download/import status and never disables the download action.
+
 ### Timing
 
 | Type | Duration | Easing | Usage |

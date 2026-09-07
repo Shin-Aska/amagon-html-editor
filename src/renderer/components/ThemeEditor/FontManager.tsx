@@ -13,11 +13,7 @@ import { useProjectStore } from "../../store/projectStore";
 import { useToastStore } from "../../store/toastStore";
 import type { FontAsset, ThemeTypography } from "../../store/types";
 import { type GoogleFontMeta, googleFontsCatalog } from "../../data/googleFontsCatalog";
-import {
-  applyGoogleFontPreviewStyle,
-  fetchGoogleFontPreviewCss,
-  getPreviewFontIdForFamily,
-} from "../../utils/googleFontCss";
+import { InternetFontPreview } from "./InternetFontPreview";
 import TypographyFontPicker from "./TypographyFontPicker";
 import { projectCommands, useProjectCommandState } from "../../project/projectCommands";
 import { projectFontUrl } from "../../utils/projectFontUrl";
@@ -208,58 +204,6 @@ export default function FontManager({
     setPage(1);
   }, [filter, searchQuery]);
 
-  useEffect(() => {
-    const cancellation = { cancelled: false };
-    const cleanups: Array<() => void> = [];
-
-    const internetItems = pageItems.filter(
-      (i): i is typeof i & { internetMeta: NonNullable<typeof i.internetMeta> } =>
-        i.source === "internet" && i.internetMeta != null,
-    );
-
-    internetItems.forEach((item) => {
-      const meta = item.internetMeta;
-      const regularVariant =
-        meta.variants.find((v) => v.weight === "400" && v.style === "normal") ||
-        meta.variants[0];
-      const previewId = getPreviewFontIdForFamily(meta.family);
-
-      if (document.getElementById(previewId)) return;
-
-      fetchGoogleFontPreviewCss(
-        {
-          family: meta.family,
-          weight: regularVariant.weight,
-          style: regularVariant.style,
-        },
-        {
-          fetchGoogleFontCss: (req) => window.api.fonts.fetchGoogleFontCss(req),
-          fetchGoogleFontFile: (url) =>
-            window.api.fonts.fetchGoogleFontFile({ url }),
-        },
-      ).then((result) => {
-        if (!result.success || typeof result.css !== "string") {
-          console.warn(
-            `Failed to load font preview for ${meta.family}:`,
-            result.error || "Unknown error",
-          );
-          return;
-        }
-        const cleanup = applyGoogleFontPreviewStyle(
-          meta.family,
-          result.css,
-          cancellation,
-        );
-        if (cleanup) cleanups.push(cleanup);
-      });
-    });
-
-    return () => {
-      cancellation.cancelled = true;
-      cleanups.forEach((cleanup) => cleanup());
-    };
-  }, [pageItems]);
-
   const handleImportFile = async () => {
     try {
       const res = await projectCommands.importFonts();
@@ -388,9 +332,6 @@ export default function FontManager({
   );
 
   const previewFamily = (item: UnifiedFont): string => {
-    if (item.source === "internet" && item.internetMeta) {
-      return `"${getPreviewFontIdForFamily(item.name)}", sans-serif`;
-    }
     return `"${item.name}", sans-serif`;
   };
 
@@ -540,12 +481,12 @@ export default function FontManager({
                 pageItems.map((item) => (
                   <tr key={item.id}>
                     <td className="col-preview">
-                      <span
+                      {item.internetMeta ? <InternetFontPreview font={item.internetMeta} /> : <span
                         className="theme-font-preview-text"
                         style={{ fontFamily: previewFamily(item) }}
                       >
                         {item.name}
-                      </span>
+                      </span>}
                     </td>
                     <td className="col-name">{item.name}</td>
                     <td className="col-source">{sourceBadge(item.source)}</td>
