@@ -80,6 +80,20 @@ afterEach(async () => {
 });
 
 describe("resource mutation security", () => {
+  it("classifies a physically copied system font as a portable import", async () => {
+    const fixture = await createContext();
+    const sourcePath = path.join(fixture.root, "impact.ttf");
+    await writeFile(sourcePath, "font bytes");
+    registerFontMutationIpc({ ...fixture.context, resolveSystemFontPath: async () => sourcePath });
+    const result = await invoke("fonts:copySystemFont", {
+      expectedSessionId: fixture.sessionId, familyName: "Impact",
+    });
+    expect(result).toMatchObject({ success: true, value: [{
+      name: "Impact", source: "imported", relativePath: "assets/fonts/impact.ttf",
+    }] });
+    expect(await readFile(path.join(fixture.workspacePath, "assets/fonts/impact.ttf"), "utf8")).toBe("font bytes");
+  });
+
   it.each([
     ["assets:selectImage", registerAssetMutationIpc],
     ["fonts:importFile", registerFontMutationIpc],

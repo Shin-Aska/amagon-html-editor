@@ -82,7 +82,7 @@ export const registerFontMutationIpc = (context: ProjectResourceContext): void =
           } satisfies FontAsset];
         }
         const files = await copyFilesAtomically(mutation.workspacePath, "assets/fonts", [sourcePath]);
-        return files.map((file) => importedFont(file, familyName, "system"));
+        return files.map((file) => importedFont(file, familyName, "imported"));
       });
     });
   });

@@ -59,10 +59,10 @@ const pixabayResponse = z.object({
     user: optionalText,
     pageURL: optionalText,
     videos: z.object({
-      large: z.object({ url: optionalText }).optional(),
-      medium: z.object({ url: optionalText }).optional(),
-      small: z.object({ url: optionalText }).optional(),
-      tiny: z.object({ url: optionalText }).optional(),
+      large: z.object({ url: optionalText, thumbnail: optionalText }).optional(),
+      medium: z.object({ url: optionalText, thumbnail: optionalText }).optional(),
+      small: z.object({ url: optionalText, thumbnail: optionalText }).optional(),
+      tiny: z.object({ url: optionalText, thumbnail: optionalText }).optional(),
     }).optional(),
   }).passthrough()).default([]),
 }).passthrough();
@@ -124,9 +124,9 @@ export const searchPixabay = async (options: MediaSearchOptions, apiKey: string)
   if (!response.ok) throw new TypeError(`Pixabay API error: ${response.status}`);
   return pixabayResponse.parse(await response.json()).hits.map((item) => ({
     id: item.id,
-    url: requiredMediaUrl(type === "video" ? item.videos?.large?.url ?? item.videos?.medium?.url ?? item.videos?.small?.url : item.largeImageURL ?? item.webformatURL, "pixabay"),
-    thumbUrl: requiredMediaUrl(type === "video" ? item.videos?.tiny?.url ?? item.videos?.small?.url : item.webformatURL, "pixabay"),
-    previewUrl: requiredMediaUrl(type === "video" ? item.videos?.medium?.url ?? item.videos?.small?.url : item.previewURL, "pixabay"),
+    url: requiredMediaUrl(type === "video" ? item.videos?.large?.url || item.videos?.medium?.url || item.videos?.small?.url || item.videos?.tiny?.url : item.largeImageURL ?? item.webformatURL, "pixabay"),
+    thumbUrl: requiredMediaUrl(type === "video" ? item.videos?.tiny?.thumbnail || item.videos?.small?.thumbnail || item.videos?.medium?.thumbnail || item.videos?.large?.thumbnail : item.webformatURL, "pixabay"),
+    previewUrl: requiredMediaUrl(type === "video" ? item.videos?.medium?.thumbnail || item.videos?.small?.thumbnail || item.videos?.tiny?.thumbnail || item.videos?.large?.thumbnail : item.previewURL, "pixabay"),
     alt: item.tags ?? `Pixabay ${type}`,
     ...(item.user === undefined ? {} : { photographer: item.user }),
     ...(item.pageURL === undefined ? {} : { sourceUrl: item.pageURL }),

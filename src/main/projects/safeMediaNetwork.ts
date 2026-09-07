@@ -1,5 +1,6 @@
 import { lookup as resolveDns } from "node:dns/promises";
 import { request as requestHttps } from "node:https";
+import { Readable } from "node:stream";
 import { BlockList, isIP, type LookupFunction } from "node:net";
 
 export type ResolvedAddress = {
@@ -89,40 +90,18 @@ const assertPublicHost = async (
 };
 
 const responseBody = (response: import("node:http").IncomingMessage): ReadableStream<Uint8Array> => {
-  response.pause();
+  const reader = Readable.toWeb(response).getReader();
   return new ReadableStream<Uint8Array>({
-    pull(controller) {
-      return new Promise<void>((resolve, reject) => {
-        const cleanup = (): void => {
-          response.off("data", onData);
-          response.off("end", onEnd);
-          response.off("error", onError);
-        };
-        const onData = (chunk: Buffer): void => {
-          cleanup();
-          response.pause();
-          controller.enqueue(new Uint8Array(chunk));
-          resolve();
-        };
-        const onEnd = (): void => {
-          cleanup();
-          controller.close();
-          resolve();
-        };
-        const onError = (error: Error): void => {
-          cleanup();
-          controller.error(error);
-          reject(error);
-        };
-        response.once("data", onData);
-        response.once("end", onEnd);
-        response.once("error", onError);
-        response.resume();
-      });
+    async pull(controller) {
+      const next = await reader.read();
+      if (next.done) controller.close();
+      else {
+        const chunk: unknown = next.value;
+        if (!(chunk instanceof Uint8Array)) throw new TypeError("media response must contain bytes");
+        controller.enqueue(chunk);
+      }
     },
-    cancel() {
-      response.destroy();
-    },
+    cancel(reason: unknown) { return reader.cancel(reason); },
   });
 };
 
