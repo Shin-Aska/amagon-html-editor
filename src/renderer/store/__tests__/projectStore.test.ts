@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from 'vitest'
 import {useProjectStore} from '../projectStore'
-import {createBlock, createDefaultTheme} from '../types'
+import {createBlock, createDefaultTheme, createDefaultThemeVariants} from '../types'
 
 // Initial state for resetting store between tests
 const initialProjectState = {
@@ -145,6 +145,18 @@ describe('projectStore', () => {
     });
 
     describe('project data import/export', () => {
+        it.each([true, false])('retains transition preference %s after loading and editing themes', (transitionEnabled) => {
+            // Given
+            const project = store.getProjectData();
+            project.projectSettings.themes = {...createDefaultThemeVariants(), transitionEnabled};
+            // When
+            store.setProject(project);
+            store.setThemePreviewMode('dark');
+            store.setProjectTheme(createDefaultTheme(), 'dark');
+            // Then
+            expect(get().getProjectData().projectSettings.themes?.transitionEnabled).toBe(transitionEnabled);
+        });
+
         it('exports complete project data', () => {
             store.updateSettings({name: 'Test Project'});
             store.addPage('About');

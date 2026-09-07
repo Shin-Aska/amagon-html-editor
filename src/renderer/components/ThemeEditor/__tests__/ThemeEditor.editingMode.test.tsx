@@ -29,6 +29,20 @@ describe("ThemeEditor editing mode", () => {
     return match;
   };
 
+  it("saves the transition checkbox without changing the editing target", async () => {
+    // Given
+    await act(async () => root.render(<ThemeEditor isOpen onClose={vi.fn()} />));
+    await act(async () => button("Dark Page").click());
+    const checkbox = container.querySelector<HTMLInputElement>('input[aria-label="Smooth transition"]');
+    expect(checkbox).not.toBeNull();
+    expect(checkbox?.checked).toBe(false);
+    // When
+    await act(async () => checkbox?.click());
+    // Then
+    expect(useProjectStore.getState().getProjectData().projectSettings.themes?.transitionEnabled).toBe(true);
+    expect(button("Dark Page").classList.contains("theme-btn-primary")).toBe(true);
+  });
+
   it("keeps Dark Page selected when a parent rerender replaces the close callback", async () => {
     const onClose = vi.fn();
     await act(async () => root.render(<ThemeEditor isOpen onClose={onClose} />));

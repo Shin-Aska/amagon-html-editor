@@ -228,6 +228,7 @@ function normalizeThemeVariants(
     light: cloneTheme(variants.light ?? fallbackTheme),
     dark: cloneTheme(variants.dark ?? createDefaultDarkTheme()),
     previewMode: variants.previewMode ?? "device",
+    transitionEnabled: variants.transitionEnabled ?? false,
   };
 }
 

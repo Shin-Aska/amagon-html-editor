@@ -114,6 +114,25 @@
     color: var(--color-text-muted);
 }
 
+.theme-editor-transition {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-primary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.theme-editor-transition input {
+    margin: 0;
+    accent-color: var(--color-accent);
+}
+
+.theme-editor-transition input:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: var(--space-1);
+}
+
 /* Content */
 .theme-editor-content {
     flex: 1;

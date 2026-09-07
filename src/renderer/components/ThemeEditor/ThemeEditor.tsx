@@ -511,6 +511,7 @@ export default function ThemeEditor({
   const customPresets = useProjectStore((s) => s.customPresets);
   const setProjectTheme = useProjectStore((s) => s.setProjectTheme);
   const setThemePreviewMode = useProjectStore((s) => s.setThemePreviewMode);
+  const updateSettings = useProjectStore((s) => s.updateSettings);
   const addCustomPreset = useProjectStore((s) => s.addCustomPreset);
   const updateCustomPreset = useProjectStore((s) => s.updateCustomPreset);
   const deleteCustomPreset = useProjectStore((s) => s.deleteCustomPreset);
@@ -753,6 +754,16 @@ export default function ThemeEditor({
               Dark Page
             </button>
           </div>
+
+          <label className="theme-editor-transition" title="Smoothly blend page colors when switching light and dark, including exported sites. Respects reduced motion.">
+            <input
+              type="checkbox"
+              aria-label="Smooth transition"
+              checked={themeVariants?.transitionEnabled ?? false}
+              onChange={(event) => themeVariants && updateSettings({themes: {...themeVariants, transitionEnabled: event.currentTarget.checked}})}
+            />
+            Smooth transition
+          </label>
 
           <div className="theme-editor-mode-group">
             <span className="theme-editor-mode-label">Page Preview</span>

@@ -153,6 +153,14 @@ All spacing derives from 4px.
 
 ## 6. Motion & Interaction
 
+### Page Theme Transition
+
+- Add a native, label-wrapped "Smooth transition" checkbox to the Theme Editor mode bar, between Editing and Page Preview. Use existing control typography, accent, and spacing tokens; allow the groups to wrap at compact widths.
+- The setting belongs to the project, defaults off, and applies to both page preview and exported theme CSS. Editing Light/Dark chooses a theme to edit, not a preview destination.
+- Smoothly interpolate the shared theme color tokens on the page root using registered CSS color properties, with `--theme-transition-duration: 200ms` and `ease-in-out`. This adapts beui.dev's theme-toggle state-change intent to the existing CSS-only, device-aware theme system without an overlay, animation dependency, or overriding individual widgets' transitions.
+- Only palette colors interpolate; typography and layout never animate. Rapid switches retarget the native transition. Canvas follows its existing System/Full/Reduced motion preview setting; exports always follow the visitor preference via `prefers-reduced-motion: no-preference` gating. Older browsers without registered-property interpolation retain an immediate theme switch.
+- Native checkbox semantics provide keyboard/Space operation and checked-state announcements. Tooltip explains that the setting affects page colors, including exports. No extra app-shell motion is introduced.
+
 ### Internet Font Preview Feedback
 
 - The Name column identifies each font; the Preview column never shows a misleading fallback name while loading or after a failure.

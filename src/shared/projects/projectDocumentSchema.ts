@@ -70,6 +70,7 @@ const ProjectSettingsSchema = z.object({
         light: ThemeSchema,
         dark: ThemeSchema,
         previewMode: z.enum(['device', 'light', 'dark']),
+        transitionEnabled: z.boolean().optional(),
     }).passthrough().readonly().optional(),
     fonts: z.array(FontAssetSchema).readonly().optional(),
     componentTokens: UnknownMapSchema.optional(),

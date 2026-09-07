@@ -9,6 +9,7 @@ import {
     parseProjectDocumentV1,
 } from './projectDocumentSchema'
 import type { ProjectData } from '../../renderer/store/types'
+import { createDefaultThemeVariants } from '../../renderer/store/types'
 
 const createProject = (): ProjectData => ({
     customCss: '.plugin { color: rebeccapurple; }',
@@ -61,6 +62,26 @@ describe('ProjectData characterization', () => {
 })
 
 describe('project document schema', () => {
+    it.each([true, false])('preserves transition preference %s in legacy and AMG documents', (transitionEnabled) => {
+        // Given
+        const project = createProject();
+        project.projectSettings.themes = {...createDefaultThemeVariants(), transitionEnabled};
+        // When
+        const legacy = parseLegacyProjectDocument(JSON.parse(JSON.stringify(project)));
+        const amg = parseProjectDocumentV1({projectSchemaVersion: PROJECT_SCHEMA_VERSION, ...project});
+        // Then
+        expect(legacy.projectSettings.themes?.transitionEnabled).toBe(transitionEnabled);
+        expect(amg.projectSettings.themes?.transitionEnabled).toBe(transitionEnabled);
+    });
+
+    it('rejects a non-boolean transition preference at the document boundary', () => {
+        // Given
+        const project = createProject();
+        const document = {...project, projectSettings: {...project.projectSettings, themes: {...createDefaultThemeVariants(), transitionEnabled: 'yes'}}};
+        // When / Then
+        expect(() => parseLegacyProjectDocument(document)).toThrowError(AmgContractError);
+    });
+
     it('parses a complete v1 project without stripping custom or dynamic properties', () => {
         // Given
         const project = {

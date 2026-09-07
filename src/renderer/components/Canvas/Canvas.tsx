@@ -345,7 +345,7 @@ function Canvas(): JSX.Element {
     useEffect(() => {
         if (!runtimeReady) return;
         const runtimeFonts = projectFonts.map((font) => ({...font, relativePath: projectFontUrl(font.relativePath, sessionId)}));
-        const themeCss = themeToCSS(projectTheme, projectThemeVariants, runtimeFonts, {componentTokens});
+        const themeCss = themeToCSS(projectTheme, projectThemeVariants, runtimeFonts, {componentTokens, motionPreviewMode});
         postToIframe({type: 'setThemeCss', css: themeCss});
         postToIframe({
             type: 'setAnimationCss',

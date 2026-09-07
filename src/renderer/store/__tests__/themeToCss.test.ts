@@ -1,7 +1,41 @@
 import {describe, expect, it} from 'vitest'
-import {createDefaultTheme, themeToCSS} from '../types'
+import {createDefaultTheme, createDefaultThemeVariants, themeToCSS} from '../types'
 
 describe('themeToCSS', () => {
+    it('emits opt-in palette transitions with reduced-motion protection', () => {
+        // Given
+        const theme = createDefaultTheme();
+        const variants = {...createDefaultThemeVariants(theme), transitionEnabled: true};
+        // When
+        const css = themeToCSS(theme, variants);
+        // Then
+        expect(css).toContain('@property --theme-bg');
+        expect(css).toContain('@media (prefers-reduced-motion: no-preference)');
+        expect(css).toContain('--theme-bg var(--theme-transition-duration) ease-in-out');
+        expect(css).not.toContain('transition: all');
+    });
+
+    it('honors full and reduced canvas motion overrides without changing export defaults', () => {
+        const theme = createDefaultTheme();
+        const variants = {...createDefaultThemeVariants(theme), transitionEnabled: true};
+        const full = themeToCSS(theme, variants, [], {motionPreviewMode: 'full'});
+        const reduced = themeToCSS(theme, variants, [], {motionPreviewMode: 'reduced'});
+        expect(full).toContain('--theme-transition-duration');
+        expect(full).not.toContain('@media (prefers-reduced-motion: no-preference)');
+        expect(reduced).not.toContain('--theme-transition-duration');
+        expect(themeToCSS(theme, {...variants, transitionEnabled: false}, [], {motionPreviewMode: 'full'})).not.toContain('--theme-transition-duration');
+    });
+
+    it('keeps transitions absent for existing projects and an unchecked setting', () => {
+        // Given
+        const theme = createDefaultTheme();
+        const variants = createDefaultThemeVariants(theme);
+        // When
+        const outputs = [themeToCSS(theme), themeToCSS(theme, variants), themeToCSS(theme, {...variants, transitionEnabled: false})];
+        // Then
+        for (const css of outputs) expect(css).not.toContain('--theme-transition-duration');
+    });
+
     it('emits a baseline heading size scale so H1-H6 are visually distinct', () => {
         const css = themeToCSS(createDefaultTheme());
 
