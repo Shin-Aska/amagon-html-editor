@@ -54,7 +54,7 @@ describe("asset read IPC registration", () => {
     const sessions = new ProjectSessionRegistry();
     sessions.activate(ProjectSession.createLegacyJson({ sourcePath: "project.json", workspacePath: "C:/project" }));
     const entries = [
-      { name: "photo.PNG", isFile: () => true },
+      { name: "My Photo.PNG", isFile: () => true },
       { name: "clip.webm", isFile: () => true },
       { name: "notes.txt", isFile: () => true },
       { name: "nested.jpg", isFile: () => false },
@@ -65,7 +65,7 @@ describe("asset read IPC registration", () => {
     await expect(invoke(listed.handlers, "assets:list", listed.event)).resolves.toEqual({
       success: true,
       assets: [
-        { name: "photo.PNG", relativePath: "assets/photo.PNG", path: buildRuntimeAssetUrl(sessionId, "assets/photo.PNG"), type: "image" },
+        { name: "My Photo.PNG", relativePath: "assets/My Photo.PNG", path: buildRuntimeAssetUrl(sessionId, "assets/My%20Photo.PNG"), type: "image" },
         { name: "clip.webm", relativePath: "assets/clip.webm", path: buildRuntimeAssetUrl(sessionId, "assets/clip.webm"), type: "video" },
       ],
     });

@@ -1,53 +1,14 @@
-import type { Block, ProjectData, ProjectTheme } from "../../renderer/store/types";
 import { AssetReferenceError, buildRuntimeAssetUrl, decodeDurableAssetReference, encodeDurableAssetReference, isRelativePathTraversalReference, parseRuntimeAssetUrl } from "./assetReference";
-import type { LegacyProjectDocument, ProjectDocumentV1 } from "./projectDocumentSchema";
 import { scanForbiddenPersistence } from "./projectPortabilityPersistence";
+import type { PortabilityBlock, PortabilityProject, PortabilityTheme, ProjectPortabilityOffenderCode, ProjectPortabilityOptions, ProjectPortabilityResult, ProjectPortabilityScan, ScanState } from "./projectPortabilityTypes";
 
-export type ProjectPortabilityMode = "bundle-durable" | "bundle-runtime" | "bundle-stored" | "conversion-durable" | "legacy-durable" | "legacy-runtime" | "legacy-stored";
-
-export type ProjectPortabilityOffenderCode = "blob" | "credential" | "external-local" | "invalid-reference" | "missing-asset" | "session-identity" | "stale-session" | "system-font" | "unexpected-reference-form";
-
-export type ProjectPortabilityOffender = {
-  readonly code: ProjectPortabilityOffenderCode;
-  readonly location: string;
-  readonly reference?: string;
-};
-
-export type ProjectPortabilityOptions = {
-  readonly mode: ProjectPortabilityMode;
-  readonly sessionId: string;
-  readonly availableAssetPaths: readonly string[];
-  readonly approvedExternalReferences?: readonly string[];
-};
-
-export type ProjectPortabilityScan = {
-  readonly offenders: readonly ProjectPortabilityOffender[];
-  readonly referencedAssetPaths: readonly string[];
-};
-
-export type ProjectPortabilityResult<Project extends PortabilityProject = PortabilityProject> =
-  | ({
-      readonly ok: true;
-      readonly project: Project;
-    } & ProjectPortabilityScan)
-  | ({ readonly ok: false } & ProjectPortabilityScan);
-
-type ScanState = {
-  readonly options: ProjectPortabilityOptions;
-  readonly available: ReadonlySet<string>;
-  readonly approvedExternal: ReadonlySet<string>;
-  readonly offenders: ProjectPortabilityOffender[];
-  readonly referencedAssets: Set<string>;
-};
-
-export type PortabilityProject = ProjectData | ProjectDocumentV1 | LegacyProjectDocument;
-type PortabilityBlock = Block | ProjectDocumentV1["pages"][number]["blocks"][number];
-type PortabilityTheme = ProjectTheme | ProjectDocumentV1["projectSettings"]["theme"];
+export type { PortabilityProject, ProjectPortabilityMode, ProjectPortabilityOffender, ProjectPortabilityOffenderCode, ProjectPortabilityOptions, ProjectPortabilityResult, ProjectPortabilityScan } from "./projectPortabilityTypes";
 
 const CSS_URL = /(url\(\s*)(["']?)([^"')]*?)(\2\s*\))/giu;
 const HTML_ATTRIBUTE = /(\b(?:src|href|poster)\s*=\s*)(["'])(.*?)\2/giu;
 const HTML_SRCSET = /(\bsrcset\s*=\s*)(["'])(.*?)\2/giu;
 const HTML_UNQUOTED = /(\b(src|href|poster|srcset)\s*=\s*)([^\s"'=<>`]+)/giu;
+const BILLING_PERIOD_LABEL = /^\/(?:day|week|month|year|mo|yr)$/iu;
 const DRIVE_PATH = /^[A-Za-z]:[\\/]/u,
   RUNTIME_PREFIX = "app-media://project-asset/";
 
@@ -90,17 +51,33 @@ const transformReference = (value: string, location: string, state: ScanState): 
       addOffender(state, "invalid-reference", location, value);
       return value;
     }
-    if (state.options.mode.endsWith("-stored")) {
-      addOffender(state, "unexpected-reference-form", location, value);
-      return value;
-    }
     const legacyReference = value.slice(RUNTIME_PREFIX.length);
     if (legacyReference.startsWith("assets/")) {
-      if (state.options.mode === "bundle-durable") {
+      if (state.options.mode === "bundle-durable" || state.options.mode === "bundle-stored") {
         addOffender(state, "unexpected-reference-form", location, value);
         return value;
       }
+      const acceptsUnescapedLegacyPath = state.options.mode.startsWith("legacy-")
+        || state.options.mode === "conversion-durable";
+      if (acceptsUnescapedLegacyPath
+        && !legacyReference.includes("%")
+        && !legacyReference.includes("?")
+        && !legacyReference.includes("#")) {
+        try {
+          return transformDurableReference(encodeDurableAssetReference(legacyReference), location, state);
+        } catch (error) {
+          if (error instanceof AssetReferenceError) {
+            addOffender(state, "invalid-reference", location, value);
+            return value;
+          }
+          throw error;
+        }
+      }
       return transformDurableReference(legacyReference, location, state);
+    }
+    if (state.options.mode.endsWith("-stored")) {
+      addOffender(state, "unexpected-reference-form", location, value);
+      return value;
     }
     try {
       const parsed = parseRuntimeAssetUrl(value);
@@ -181,6 +158,7 @@ const transformPropValue = (value: unknown, location: string, state: ScanState):
   if (Array.isArray(value)) return value.map((item, index) => transformPropValue(item, `${location}[${index}]`, state));
   if (!isRecord(value)) return value;
   for (const key of Object.keys(value).sort()) {
+    if (key === "period" && typeof value[key] === "string" && BILLING_PERIOD_LABEL.test(value[key])) continue;
     value[key] = transformPropValue(value[key], propertyLocation(location, key), state);
   }
   return value;

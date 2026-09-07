@@ -1,4 +1,5 @@
 import * as path from "path";
+import { encodeDurableAssetReference } from "../shared/projects/assetReference";
 import type { ProjectPersistenceService } from "./projects/projectServiceTypes";
 import type { ProjectSessionRegistry } from "./projects/projectSession";
 import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
@@ -53,7 +54,7 @@ export const registerAssetReadIpc = (context: AssetReadIpcContext): void => {
           const relativePath = `assets/${entry.name}`;
           return {
             name: entry.name,
-            path: context.buildRuntimeAssetUrl(sessionId, relativePath),
+            path: context.buildRuntimeAssetUrl(sessionId, encodeDurableAssetReference(relativePath)),
             relativePath,
             type: IMAGE_EXTENSIONS.includes(extension) ? "image" : "video",
           };
