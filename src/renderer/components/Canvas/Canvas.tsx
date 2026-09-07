@@ -12,6 +12,8 @@ import {buildActionEffectStylesCss} from '../../utils/actionEffects'
 import {cloneBlockTree} from '../../templates/templateFactories'
 import type {Block} from '../../store/types'
 import {createBlock, themeToCSS} from '../../store/types'
+import {useProjectCommandState} from '../../project/projectCommands'
+import {projectFontUrl} from '../../utils/projectFontUrl'
 
 // `canvas.html` is an electron-vite renderer entry point. A relative URL keeps
 // the iframe beside `index.html` in both the Vite dev server and packaged app.
@@ -126,6 +128,7 @@ function Canvas(): JSX.Element {
     const projectTheme = useProjectStore((s) => s.settings.theme);
     const projectThemeVariants = useProjectStore((s) => s.settings.themes);
     const projectFonts = useProjectStore((s) => s.fonts);
+    const sessionId = useProjectCommandState().session?.sessionId;
     const componentTokens = useProjectStore((s) => s.settings.componentTokens);
     const framework = useProjectStore((s) => s.settings.framework);
     const pages = useProjectStore((s) => s.pages);
@@ -341,13 +344,14 @@ function Canvas(): JSX.Element {
 
     useEffect(() => {
         if (!runtimeReady) return;
-        const themeCss = themeToCSS(projectTheme, projectThemeVariants, projectFonts, {componentTokens});
+        const runtimeFonts = projectFonts.map((font) => ({...font, relativePath: projectFontUrl(font.relativePath, sessionId)}));
+        const themeCss = themeToCSS(projectTheme, projectThemeVariants, runtimeFonts, {componentTokens});
         postToIframe({type: 'setThemeCss', css: themeCss});
         postToIframe({
             type: 'setAnimationCss',
             css: `${buildAnimationStylesCss(motionPreviewMode)}\n${buildHoverEffectStylesCss(motionPreviewMode)}\n${buildActionEffectStylesCss(motionPreviewMode)}`
         })
-    }, [projectTheme, projectThemeVariants, projectFonts, componentTokens, motionPreviewMode, runtimeReady]);
+    }, [projectTheme, projectThemeVariants, projectFonts, sessionId, componentTokens, motionPreviewMode, runtimeReady]);
 
     useEffect(() => {
         if (!runtimeReady) return;

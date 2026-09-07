@@ -19,7 +19,8 @@ import {
   getPreviewFontIdForFamily,
 } from "../../utils/googleFontCss";
 import TypographyFontPicker from "./TypographyFontPicker";
-import { projectCommands } from "../../project/projectCommands";
+import { projectCommands, useProjectCommandState } from "../../project/projectCommands";
+import { projectFontUrl } from "../../utils/projectFontUrl";
 import "./FontManager.css";
 
 type FilterTab = "all" | "imported" | "system" | "internet";
@@ -52,6 +53,7 @@ export default function FontManager({
   onTypographyChange: (patch: Partial<ThemeTypography>) => void;
 }): JSX.Element {
   const fonts = useProjectStore((s) => s.fonts);
+  const sessionId = useProjectCommandState().session?.sessionId;
   const systemFonts = useProjectStore((s) => s.systemFonts);
   const addFonts = useProjectStore((s) => s.addFonts);
   const removeFontStore = useProjectStore((s) => s.removeFont);
@@ -358,13 +360,13 @@ export default function FontManager({
         .map(
           (font) => `@font-face {
   font-family: "${font.name}";
-  src: url("app-media://project-asset/${font.relativePath}");
+  src: url("${projectFontUrl(font.relativePath, sessionId)}");
   ${font.weight ? `font-weight: ${font.weight};` : ""}
   ${font.style ? `font-style: ${font.style};` : ""}
 }`,
         )
         .join("\n"),
-    [fonts],
+    [fonts, sessionId],
   );
 
   const sourceBadge = (source: UnifiedFont["source"]) => {

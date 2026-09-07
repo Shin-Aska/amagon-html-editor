@@ -19,6 +19,28 @@ const temporaryRoot = async (prefix: string): Promise<string> => {
 };
 
 describe("media download mutation security", () => {
+  it.each([
+    ["font/ttf", "ttf"],
+    ["application/x-font-ttf", "ttf"],
+    ["font/otf", "otf"],
+    ["application/x-font-opentype", "otf"],
+    ["font/woff", "woff"],
+    ["application/font-woff", "woff"],
+    ["font/woff2", "woff2"],
+  ])("preserves a downloadable %s font's inventory extension", async (contentType, extension) => {
+    const workspace = await temporaryRoot("amagon-font-download-");
+    const result = await downloadAndImportMedia({
+      url: "https://fonts.gstatic.com/font",
+      projectDir: workspace,
+      relativeDirectory: "assets/fonts",
+      filename: "roboto-400-normal",
+      fetcher: async () => new Response("font bytes", { headers: { "content-type": contentType } }),
+    });
+    const relativePath = `assets/fonts/roboto-400-normal.${extension}`;
+    expect(result).toEqual({ success: true, relativePath });
+    expect(await readFile(path.join(workspace, relativePath), "utf8")).toBe("font bytes");
+  });
+
   it("rejects a linked media destination without changing outside files", async () => {
     // Given: a workspace assets junction and a successful streamed response.
     const workspace = await temporaryRoot("amagon-media-workspace-");

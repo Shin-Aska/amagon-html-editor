@@ -13,6 +13,7 @@ export interface AppProtocolContext {
   readonly readFile: (filePath: string) => Promise<Buffer>;
   readonly sessions: ProjectSessionRegistry;
   readonly getMimeType: (filePath: string) => string;
+  readonly rendererUrl?: string;
 }
 
 const frameworksDirectory = (context: AppProtocolContext): string => (
@@ -22,6 +23,7 @@ const frameworksDirectory = (context: AppProtocolContext): string => (
 );
 
 export const registerAppProtocols = (context: AppProtocolContext): void => {
+  const rendererUrl = context.rendererUrl ?? process.env.ELECTRON_RENDERER_URL;
   const baseDir = frameworksDirectory(context);
   context.handle("app-framework", async (request) => {
     const url = new URL(request.url);
@@ -45,5 +47,6 @@ export const registerAppProtocols = (context: AppProtocolContext): void => {
   context.handle(APP_MEDIA_SCHEME, createProjectMediaHandler({
     sessions: context.sessions,
     mimeType: context.getMimeType,
+    rendererOrigin: rendererUrl ? new URL(rendererUrl).origin : "file://",
   }));
 };

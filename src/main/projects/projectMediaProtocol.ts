@@ -9,6 +9,7 @@ export const APP_MEDIA_PRIVILEGES = {
   standard: true,
   secure: true,
   supportFetchAPI: true,
+  corsEnabled: true,
   stream: true,
 } as const;
 
@@ -16,6 +17,7 @@ type MediaProtocolOptions = {
   readonly sessions: ProjectSessionRegistry;
   readonly mimeType: (filePath: string) => string;
   readonly chunkBytes?: number;
+  readonly rendererOrigin?: string;
 };
 
 type ByteRange = {
@@ -100,7 +102,12 @@ export const createProjectMediaHandler = (
       "Accept-Ranges": "bytes",
       "Content-Length": String(contentLength),
       "Content-Type": options.mimeType(resolved.filePath),
+      "Vary": "Origin",
     });
+    const origin = request.headers.get("origin");
+    if (origin === (options.rendererOrigin ?? "file://")) {
+      headers.set("Access-Control-Allow-Origin", origin);
+    }
     if (range !== null) headers.set("Content-Range", `bytes ${selected.start}-${selected.end}/${stats.size}`);
     if (request.method === "HEAD" || contentLength === 0) {
       await closeRead(handle, resolved.lease.release);

@@ -29,6 +29,9 @@ const extensionForContentType = (contentType: string): string => {
   if (contentType.includes("video/webm")) return ".webm";
   if (contentType.includes("video/ogg")) return ".ogv";
   if (contentType.includes("font/woff2") || contentType.includes("application/font-woff2")) return ".woff2";
+  if (contentType.includes("font/woff") || contentType.includes("application/font-woff")) return ".woff";
+  if (contentType.includes("font/ttf") || contentType.includes("application/x-font-ttf")) return ".ttf";
+  if (contentType.includes("font/otf") || contentType.includes("application/x-font-opentype")) return ".otf";
   return ".bin";
 };
 

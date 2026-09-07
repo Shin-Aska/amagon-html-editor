@@ -54,7 +54,7 @@ describe("project lifecycle", () => {
   });
 
   it("registers the media scheme with the required streaming privileges", () => {
-    expect(APP_MEDIA_PRIVILEGES).toEqual({ standard: true, secure: true, supportFetchAPI: true, stream: true });
+    expect(APP_MEDIA_PRIVILEGES).toEqual({ standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true });
   });
 
   it("allows exactly one close re-entry only after the renderer accepts", () => {
@@ -177,6 +177,18 @@ describe("project lifecycle", () => {
     expect(closingSession.activeReadLeaseCount).toBe(0);
 
     expect((await handler(new Request(url))).status).toBe(403);
+  });
+
+  it.each(["file://", "http://localhost:5173"])("permits font CORS only for the configured renderer %s", async (rendererOrigin) => {
+    const fixture = await workspaceFixture();
+    const handler = createProjectMediaHandler({ sessions: fixture.sessions, mimeType: () => "font/ttf", rendererOrigin });
+    const url = buildRuntimeAssetUrl(fixture.sessionId, "assets/video.bin");
+    for (const origin of [rendererOrigin, "https://untrusted.example", "null", "http://localhost:9999"]) {
+      const response = await handler(new Request(url, { method: "HEAD", headers: { Origin: origin } }));
+      expect(response.headers.get("access-control-allow-origin")).toBe(origin === rendererOrigin ? rendererOrigin : null);
+      expect(response.headers.get("vary")).toBe("Origin");
+      expect(response.status).toBe(200);
+    }
   });
 
   it("rejects encoded traversal, Windows separators, and linked asset paths", async () => {

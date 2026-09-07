@@ -20,7 +20,10 @@ const commands = vi.hoisted(() => ({
   }] })),
 }));
 
-vi.mock("../../../project/projectCommands", () => ({ projectCommands: commands }));
+vi.mock("../../../project/projectCommands", () => ({
+  projectCommands: commands,
+  useProjectCommandState: () => ({ session: { sessionId: "font_session_123" } }),
+}));
 
 describe("FontManager project session", () => {
   let container: HTMLDivElement;
@@ -60,5 +63,21 @@ describe("FontManager project session", () => {
 
     expect(commands.importFonts).toHaveBeenCalledOnce();
     expect(useProjectStore.getState().fonts.map((font) => font.id)).toContain("font-1");
+  });
+
+  it.each([
+    "assets/fonts/Jost-Regular.ttf",
+    "app-media://project-asset/font_session_123/assets/fonts/Jost-Regular.ttf",
+  ])("renders a session-scoped font face when its path is %s", async (relativePath) => {
+    const font = {
+      id: "jost", name: "Jost", fileName: "Jost-Regular.ttf", relativePath,
+      format: "ttf" as const, source: "google-fonts" as const, weight: "400", style: "normal",
+    };
+
+    await act(async () => useProjectStore.setState({ fonts: [font] }));
+
+    expect(container.querySelector("style")?.textContent).toContain(
+      'src: url("app-media://project-asset/font_session_123/assets/fonts/Jost-Regular.ttf")',
+    );
   });
 });
