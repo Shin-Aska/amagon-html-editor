@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useState} from "react";
-import {Check, Download, Palette, Pencil, Plus, RotateCcw, Trash2, Upload, X, XIcon,} from "lucide-react";
+import {Check, Code, Download, Droplet, Palette, Pencil, Plus, RotateCcw, Scaling, Square, Trash2, Type, Upload, XIcon,} from "lucide-react";
 import {useProjectStore} from "../../store/projectStore";
 import {useToastStore} from "../../store/toastStore";
 import type {
@@ -18,6 +18,7 @@ import ColorField from "./ColorField";
 import CreatePresetModal from "./CreatePresetModal";
 import FontManager from "./FontManager";
 import ThemeMiniPreview from "../ThemeGallery/ThemeMiniPreview";
+import SettingsWorkspace, {type SettingsSection} from "../SettingsWorkspace/SettingsWorkspace";
 import "./ThemeEditor.css";
 
 type ThemeTab =
@@ -51,25 +52,27 @@ function ColorsTab({
   colors: ThemeColors;
   onChange: (patch: Partial<ThemeColors>) => void;
 }): JSX.Element {
-  const colorFields: { key: keyof ThemeColors; label: string }[] = [
-    { key: "primary", label: "Primary" },
-    { key: "secondary", label: "Secondary" },
-    { key: "accent", label: "Accent" },
-    { key: "background", label: "Background" },
-    { key: "surface", label: "Surface" },
-    { key: "text", label: "Text" },
-    { key: "textMuted", label: "Text Muted" },
-    { key: "border", label: "Border" },
-    { key: "success", label: "Success" },
-    { key: "warning", label: "Warning" },
-    { key: "danger", label: "Danger" },
+  const colorFields: { key: keyof ThemeColors; label: string; group: string }[] = [
+    { key: "primary", label: "Primary", group: "Brand colors" },
+    { key: "secondary", label: "Secondary", group: "Brand colors" },
+    { key: "accent", label: "Accent", group: "Brand colors" },
+    { key: "background", label: "Background", group: "Page colors" },
+    { key: "surface", label: "Surface", group: "Page colors" },
+    { key: "text", label: "Text", group: "Page colors" },
+    { key: "textMuted", label: "Muted text", group: "Page colors" },
+    { key: "border", label: "Border", group: "Page colors" },
+    { key: "success", label: "Success", group: "Feedback colors" },
+    { key: "warning", label: "Warning", group: "Feedback colors" },
+    { key: "danger", label: "Danger", group: "Feedback colors" },
   ];
 
   return (
-    <div className="theme-section">
-      <div className="theme-section-title">Theme Colors</div>
-      <div className="theme-color-grid">
-        {colorFields.map(({ key, label }) => (
+    <div className="theme-color-groups">
+      {["Brand colors", "Page colors", "Feedback colors"].map((group) => (
+        <section className="theme-section" key={group}>
+          <h4 className="theme-workspace-group-title">{group}</h4>
+          <div className="theme-color-grid">
+        {colorFields.filter((field) => field.group === group).map(({ key, label }) => (
           <ColorField
             key={key}
             label={label}
@@ -77,7 +80,9 @@ function ColorsTab({
             onChange={(v) => onChange({ [key]: v })}
           />
         ))}
-      </div>
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
@@ -507,6 +512,7 @@ export default function ThemeEditor({
   const [activeTab, setActiveTab] = useState<ThemeTab>("colors");
   const [editingMode, setEditingMode] = useState<PageThemeMode>("light");
   const theme = useProjectStore((s) => s.settings.theme);
+  const projectName = useProjectStore((s) => s.settings.name);
   const themeVariants = useProjectStore((s) => s.settings.themes);
   const customPresets = useProjectStore((s) => s.customPresets);
   const setProjectTheme = useProjectStore((s) => s.setProjectTheme);
@@ -688,107 +694,62 @@ export default function ThemeEditor({
     (themeItem) => themeItem.mode === editingMode,
   );
 
-  const tabs: { id: ThemeTab; label: string }[] = [
-    { id: "presets", label: "Presets" },
-    { id: "colors", label: "Colors" },
-    { id: "fonts", label: "Fonts" },
-    { id: "spacing", label: "Spacing" },
-    { id: "borders", label: "Borders" },
-    { id: "customCss", label: "Custom CSS" },
+  const tabs: SettingsSection<ThemeTab>[] = [
+    { id: "presets", label: "Presets", description: "Choose a starting point for your website's design.", icon: <Palette size={20} />, tutorial: "theme-presets-tab" },
+    { id: "colors", label: "Colors", description: "Customize the colors of your website.", icon: <Droplet size={20} />, tutorial: "theme-colors-tab" },
+    { id: "fonts", label: "Typography", description: "Choose typefaces and manage your project's fonts.", icon: <Type size={20} /> },
+    { id: "spacing", label: "Spacing", description: "Set the rhythm and spacing of your website.", icon: <Scaling size={20} /> },
+    { id: "borders", label: "Borders", description: "Refine corners, borders, and shadows.", icon: <Square size={20} /> },
+    { id: "customCss", label: "Custom CSS", description: "Extend this theme with your own styles.", icon: <Code size={20} />, tutorial: "theme-custom-css-tab" },
   ];
 
   return (
     <div className="theme-editor-overlay" onClick={onClose}>
-      <div
+      <SettingsWorkspace
         className="theme-editor-dialog"
-        data-tutorial="theme-editor-dialog"
-        onClick={(e) => e.stopPropagation()}
+        closeClassName="theme-editor-close"
+        tutorial="theme-editor-dialog"
+        title="Theme Editor"
+        subtitle={`Website theme · ${projectName}`}
+        icon={<Palette size={28} />}
+        scope="project"
+        sections={tabs}
+        activeSection={activeTab}
+        onSectionChange={setActiveTab}
+        onClose={onClose}
+        footer={<>
+          <div className="theme-editor-footer-left">
+            <button className="theme-btn" onClick={handleImportTheme}><Upload size={14} /> Import</button>
+            <button className="theme-btn" onClick={handleExportTheme}><Download size={14} /> Export</button>
+          </div>
+          <div className="theme-editor-footer-right">
+            <button className="theme-btn" onClick={handleReset}><RotateCcw size={14} /> Reset</button>
+            <button className="theme-btn theme-btn-primary" onClick={onClose}>Done</button>
+          </div>
+        </>}
       >
-        <div className="theme-editor-header">
-          <h2>
-            <Palette size={18} /> Theme Editor — {selectedTheme.name}
-          </h2>
-          <button
-            className="theme-editor-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="theme-editor-tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`theme-editor-tab ${activeTab === tab.id ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-              data-tutorial={
-                tab.id === "colors"
-                  ? "theme-colors-tab"
-                  : tab.id === "customCss"
-                    ? "theme-custom-css-tab"
-                    : tab.id === "presets"
-                      ? "theme-presets-tab"
-                      : undefined
-              }
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         <div className="theme-editor-mode-bar">
           <div className="theme-editor-mode-group">
             <span className="theme-editor-mode-label">Editing</span>
             <button
               className={`theme-btn theme-btn-small ${editingMode === "light" ? "theme-btn-primary" : ""}`}
+              aria-pressed={editingMode === "light"}
               onClick={() => setEditingMode("light")}
             >
               Light Page
             </button>
             <button
               className={`theme-btn theme-btn-small ${editingMode === "dark" ? "theme-btn-primary" : ""}`}
+              aria-pressed={editingMode === "dark"}
               onClick={() => setEditingMode("dark")}
             >
               Dark Page
             </button>
           </div>
 
-          <label className="theme-editor-transition" title="Smoothly blend page colors when switching light and dark, including exported sites. Respects reduced motion.">
-            <input
-              type="checkbox"
-              aria-label="Smooth transition"
-              checked={themeVariants?.transitionEnabled ?? false}
-              onChange={(event) => themeVariants && updateSettings({themes: {...themeVariants, transitionEnabled: event.currentTarget.checked}})}
-            />
-            Smooth transition
-          </label>
-
-          <div className="theme-editor-mode-group">
-            <span className="theme-editor-mode-label">Page Preview</span>
-            <button
-              className={`theme-btn theme-btn-small ${themeVariants?.previewMode === "device" ? "theme-btn-primary" : ""}`}
-              onClick={() => setThemePreviewMode("device")}
-            >
-              Device
-            </button>
-            <button
-              className={`theme-btn theme-btn-small ${themeVariants?.previewMode === "light" ? "theme-btn-primary" : ""}`}
-              onClick={() => setThemePreviewMode("light")}
-            >
-              Light
-            </button>
-            <button
-              className={`theme-btn theme-btn-small ${themeVariants?.previewMode === "dark" ? "theme-btn-primary" : ""}`}
-              onClick={() => setThemePreviewMode("dark")}
-            >
-              Dark
-            </button>
-          </div>
         </div>
 
-        <div className="theme-editor-content">
+        <div className="theme-editor-section-content">
           {activeTab === "presets" && (
             <PresetsTab
               currentTheme={selectedTheme}
@@ -833,25 +794,27 @@ export default function ThemeEditor({
           )}
         </div>
 
-        <div className="theme-editor-footer">
-          <div className="theme-editor-footer-left">
-            <button className="theme-btn" onClick={handleImportTheme}>
-              <Upload size={14} /> Import
-            </button>
-            <button className="theme-btn" onClick={handleExportTheme}>
-              <Download size={14} /> Export
-            </button>
-          </div>
-          <div className="theme-editor-footer-right">
-            <button className="theme-btn" onClick={handleReset}>
-              <RotateCcw size={14} /> Reset
-            </button>
-            <button className="theme-btn theme-btn-primary" onClick={onClose}>
-              Done
-            </button>
+        <section className="theme-workspace-behavior">
+          <h4 className="theme-workspace-group-title">Theme behavior</h4>
+          <label className="theme-editor-transition" title="Smoothly blend page colors when switching light and dark, including exported sites. Respects reduced motion.">
+            <input type="checkbox" aria-label="Smooth transition"
+              checked={themeVariants?.transitionEnabled ?? false}
+              onChange={(event) => themeVariants && updateSettings({themes: {...themeVariants, transitionEnabled: event.currentTarget.checked}})} />
+            <span>Smooth transition<small>Blend colors when switching light and dark. Respects reduced motion.</small></span>
+          </label>
+        </section>
+        <div className="theme-workspace-preview">
+          <span className="theme-editor-mode-label">Page preview</span>
+          <div className="theme-editor-mode-group">
+            {(["device", "light", "dark"] as const).map((mode) => (
+              <button key={mode} className={`theme-btn theme-btn-small ${themeVariants?.previewMode === mode ? "theme-btn-primary" : ""}`}
+                aria-pressed={themeVariants?.previewMode === mode} onClick={() => setThemePreviewMode(mode)}>
+                {mode === "device" ? "Device" : mode === "light" ? "Light" : "Dark"}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      </SettingsWorkspace>
     </div>
   );
 }

@@ -9,8 +9,7 @@ import {
     RefreshCw,
     Settings,
     Sparkles,
-    Sun,
-    X
+    Sun
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useAppSettingsStore } from '../../store/appSettingsStore'
@@ -20,6 +19,7 @@ import type { EditorLayout } from '../../store/types'
 import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
 import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
+import SettingsWorkspace, { type SettingsSection } from '../SettingsWorkspace/SettingsWorkspace'
 import './SettingsDialog.css'
 
 const DANGEROUS_CLI_PROVIDERS: AiProvider[] = ['junie-cli']
@@ -43,6 +43,13 @@ interface SettingsDialogProps {
 }
 
 type TabType = 'general' | 'keys' | 'ai' | 'media'
+
+const SETTINGS_SECTIONS: readonly SettingsSection<TabType>[] = [
+    { id: 'general', label: 'General', description: 'Personalize your editing workspace.', icon: <Monitor size={18} /> },
+    { id: 'keys', label: 'Credentials', description: 'Manage credentials for AI, multimedia, and publishing.', icon: <KeyRound size={18} /> },
+    { id: 'ai', label: 'AI Assistant', description: 'Choose the provider and model for your assistant.', icon: <Sparkles size={18} /> },
+    { id: 'media', label: 'Media Search', description: 'Choose where to search for images and videos.', icon: <ImageIcon size={18} /> }
+]
 
 export default function SettingsDialog({
     open,
@@ -151,13 +158,13 @@ export default function SettingsDialog({
     }, [aiConfig])
 
     useEffect(() => {
-        if (!open) return
+        if (!open || modalOpen) return
         const handler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose()
+            if (e.key === 'Escape' && !e.defaultPrevented) onClose()
         }
         document.addEventListener('keydown', handler)
         return () => document.removeEventListener('keydown', handler)
-    }, [open, onClose])
+    }, [open, modalOpen, onClose])
 
     useEffect(() => {
         if (!open || (!aiProvider.endsWith('-cli') && aiProvider !== 'opencode')) return
@@ -273,53 +280,27 @@ export default function SettingsDialog({
     return (
         <>
             <div className="settings-dialog-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-                <div className="settings-dialog settings-dialog--wide" data-tutorial="settings-dialog">
-                    <div className="settings-dialog-header">
-                        <div className="settings-dialog-title">
-                            <Settings size={18} />
-                            <span>Global Settings</span>
-                        </div>
-                        <button className="settings-dialog-close" onClick={onClose} title="Close">
-                            <X size={18} />
-                        </button>
-                    </div>
-
-                    <div className="settings-dialog-layout">
-                        <div className="settings-dialog-sidebar">
-                            <button
-                                className={`settings-dialog-tab ${activeTab === 'general' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('general')}
-                            >
-                                <Monitor size={16} />
-                                <span>General</span>
-                            </button>
-                            <button
-                                className={`settings-dialog-tab ${activeTab === 'keys' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('keys')}
-                            >
-                                <KeyRound size={16} />
-                                <span>Credentials</span>
-                            </button>
-                            <button
-                                className={`settings-dialog-tab ${activeTab === 'ai' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('ai')}
-                            >
-                                <Sparkles size={16} />
-                                <span>AI Assistant</span>
-                            </button>
-                            <button
-                                className={`settings-dialog-tab ${activeTab === 'media' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('media')}
-                            >
-                                <ImageIcon size={16} />
-                                <span>Media Search</span>
-                            </button>
-                        </div>
-
-                        <div className="settings-dialog-content">
+                <SettingsWorkspace
+                    title="App Settings"
+                    subtitle="Applies across projects"
+                    icon={<Settings size={28} />}
+                    scope="application"
+                    className="settings-dialog settings-dialog--wide"
+                    closeClassName="settings-dialog-close"
+                    tutorial="settings-dialog"
+                    sections={SETTINGS_SECTIONS}
+                    activeSection={activeTab}
+                    onSectionChange={setActiveTab}
+                    onClose={onClose}
+                    footer={(
+                        <>
+                            <span className="settings-preferences-note">Preferences apply immediately</span>
+                            <button type="button" className="settings-btn-primary" onClick={onClose}>Done</button>
+                        </>
+                    )}
+                >
                             {activeTab === 'general' && (
-                                <div className="settings-section animate-fade-in">
-                                    <h3>Appearance & Layout</h3>
+                                <div className="settings-section settings-section--general animate-fade-in">
                                     <div className="settings-row">
                                         <div className="settings-label">
                                             <span className="settings-label-title">Theme</span>
@@ -330,12 +311,14 @@ export default function SettingsDialog({
                                             <div className="theme-toggle">
                                                 <button
                                                     className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
+                                                    aria-pressed={theme === 'light'}
                                                     onClick={() => setTheme('light')}
                                                 >
                                                     <Sun size={14} /> Light
                                                 </button>
                                                 <button
                                                     className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
+                                                    aria-pressed={theme === 'dark'}
                                                     onClick={() => setTheme('dark')}
                                                 >
                                                     <Moon size={14} /> Dark
@@ -353,6 +336,7 @@ export default function SettingsDialog({
                                             <div className="select-wrapper">
                                                 <LayoutPanelLeft size={14} className="select-icon" />
                                                 <select
+                                                    aria-label="Default Layout"
                                                     value={defaultLayout}
                                                     onChange={(e) => setDefaultLayout(e.target.value as EditorLayout)}
                                                     className="settings-select"
@@ -377,6 +361,7 @@ export default function SettingsDialog({
                                             <label className="settings-toggle">
                                                 <input
                                                     type="checkbox"
+                                                    aria-label="Tab Child Selection Warning"
                                                     checked={showTabChildSelectionWarning}
                                                     onChange={(e) => setShowTabChildSelectionWarning(e.target.checked)}
                                                 />
@@ -394,6 +379,7 @@ export default function SettingsDialog({
                                             <label className="settings-toggle">
                                                 <input
                                                     type="checkbox"
+                                                    aria-label="Show Tutorial on Startup"
                                                     checked={tutorialEnabled}
                                                     onChange={(e) => setTutorialEnabled(e.target.checked)}
                                                 />
@@ -411,6 +397,7 @@ export default function SettingsDialog({
                                             <label className="settings-toggle">
                                                 <input
                                                     type="checkbox"
+                                                    aria-label="Show Restart Tutorial Button"
                                                     checked={showRestartTutorialButton}
                                                     onChange={(e) => setShowRestartTutorialButton(e.target.checked)}
                                                 />
@@ -442,11 +429,6 @@ export default function SettingsDialog({
                             {activeTab === 'keys' && (
                                 <div className="settings-section animate-fade-in">
                                     <div className="settings-heading-row">
-                                        <div>
-                                            <h3>Credentials</h3>
-                                            <p className="settings-subcopy">A single inventory for AI, multimedia, and
-                                                publisher credentials.</p>
-                                        </div>
                                         <button className="settings-btn-primary" onClick={openCreateModal}>
                                             Add Credential
                                         </button>
@@ -525,11 +507,11 @@ export default function SettingsDialog({
 
                             {activeTab === 'ai' && (
                                 <div className="settings-section animate-fade-in">
-                                    <h3>AI Assistant</h3>
                                     <div className="settings-card">
                                         <div className="settings-field">
                                             <label>Provider</label>
                                             <select
+                                                aria-label="AI Provider"
                                                 value={aiProvider}
                                                 onChange={(e) => {
                                                     const nextProvider = e.target.value as AiProvider
@@ -604,6 +586,7 @@ export default function SettingsDialog({
                                                 <label>Base URL</label>
                                                 <input
                                                     type="text"
+                                                    aria-label="Base URL"
                                                     placeholder="http://localhost:11434"
                                                     value={aiOllamaUrl}
                                                     onChange={(e) => setAiOllamaUrl(e.target.value)}
@@ -618,6 +601,7 @@ export default function SettingsDialog({
                                             <label>Model</label>
                                             <div className="settings-inline-row">
                                                 <select
+                                                    aria-label="Model"
                                                     value={selectedAiModel}
                                                     onChange={(e) => {
                                                         const nextModel = e.target.value
@@ -699,6 +683,7 @@ export default function SettingsDialog({
                                             <label className="settings-toggle">
                                                 <input
                                                     type="checkbox"
+                                                    aria-label="Enable Dangerous Features"
                                                     checked={enableDangerousFeatures}
                                                     onChange={(e) => {
                                                         const next = e.target.checked
@@ -726,11 +711,11 @@ export default function SettingsDialog({
 
                             {activeTab === 'media' && (
                                 <div className="settings-section animate-fade-in">
-                                    <h3>Media Search</h3>
                                     <div className="settings-card">
                                         <div className="settings-field">
                                             <label>Default Provider</label>
                                             <select
+                                                aria-label="Default Provider"
                                                 value={mediaProvider}
                                                 onChange={(e) => {
                                                     const nextProvider = e.target.value
@@ -753,9 +738,7 @@ export default function SettingsDialog({
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
+                </SettingsWorkspace>
             </div>
 
             <CredentialEditModal

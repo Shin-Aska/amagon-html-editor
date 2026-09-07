@@ -112,6 +112,16 @@ All spacing derives from 4px.
 
 ## 5. Components
 
+### Settings Workspace
+
+- Theme Editor and App Settings share a fixed frame: 960px maximum width, 848px maximum height, and 24px viewport clearance. Header, navigation, scope label, and footer never resize when sections change; only the content pane scrolls, retaining each section's scroll position while open.
+- Use the approved settings-workspace concept's sidebar, blue selection rail, outline icons, quiet dividers, and grouped fields, expressed with the existing `--color-*` and `--space-*` tokens. Desktop sidebar is 184px; body padding is 32px. Below 700px, use a horizontal navigation strip and 16px body padding; below 480px, stack fields and control rows.
+- The shared stylesheet owns local `--settings-*` type, frame/control geometry, divider, focus, selection-rail, and shadow tokens; routine spacing and corner radii reuse the application tokens. Custom CSS stacks its file list above its editor below 820px. Font dropdowns keep keyboard focus within the popup until a choice or Escape, then restore focus to their trigger.
+- Header identifies scope: “Theme Editor / Website theme · [project]” versus “App Settings / Applies across projects”. Sidebar scope is “Saved with this project” versus “This application”. Done closes the live editor; it does not claim the project was saved to disk.
+- Theme sections: Presets, Colors, Typography, Spacing, Borders, Custom CSS. Editing target remains distinct from Page preview. Group all existing colors into Brand, Page, and Feedback; retain Secondary, Success, Warning, and Danger even though the concept omits them. Keep Reset rather than introducing a nonfunctional Undo action.
+- App sections retain General, Credentials, AI Assistant, and Media Search, including credential deep links and immediate persistence. Density, app-wide reduced motion, text size, storage, and about controls in the concept are illustrative, not new functionality in this layout pass.
+- Native buttons expose selected state; the dialog has an accessible name, initial focus, keyboard focus containment, and focus restoration. Existing nested dialogs and portalled font/color pickers remain operable. No content-size animation or decorative background from the concept board is used.
+
 ### Inspector Group
 
 - **Structure**: uppercase `h4` title, optional circular help marker, then a compact control stack.

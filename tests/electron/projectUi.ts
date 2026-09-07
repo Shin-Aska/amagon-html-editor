@@ -173,7 +173,7 @@ export const importMediaThroughUi = async (request: MediaUiRequest): Promise<voi
 export const importFontThroughUi = async (request: ProjectUiRequest): Promise<void> => {
   await queueNativeDialogs(request.harness.app, { opens: [[request.filePath]] });
   await request.harness.page.getByTitle("Theme Editor").click();
-  await request.harness.page.getByRole("button", { name: "Fonts" }).click();
+  await request.harness.page.getByRole("button", { name: "Typography", exact: true }).click();
   await request.harness.page.getByRole("button", { name: /Import Font File/u }).click();
   await expect(request.harness.page.getByText(/Imported 1 font file/u)).toBeVisible();
   await request.harness.page.getByRole("button", { name: "Close" }).click();

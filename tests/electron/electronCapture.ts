@@ -35,7 +35,7 @@ export const capture = async (
 ): Promise<string> => {
   await mkdir(EVIDENCE_ROOT, { recursive: true });
   const outputPath = path.join(EVIDENCE_ROOT, name);
-  const bytes = await harness.page.screenshot({ path: outputPath, fullPage: true });
+  const bytes = await harness.page.screenshot({ path: outputPath, fullPage: false });
   const viewport = await harness.page.evaluate(() => ({
     width: window.innerWidth,
     height: window.innerHeight,
