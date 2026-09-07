@@ -7,7 +7,7 @@
  * - Each option renders its name in its own typeface
  * - No clearing required — trigger is never an input
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import ReactDOM from "react-dom";
 import { useProjectStore } from "../../store/projectStore";
 import "./TypographyFontPicker.css";
@@ -263,10 +263,32 @@ export default function TypographyFontPicker({
     onChange(v);
     setOpen(false);
     setSearch("");
+    triggerRef.current?.focus();
+  };
+
+  const handleDropdownKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
+      setSearch("");
+      triggerRef.current?.focus();
+    } else if (event.key === "Tab") {
+      const controls = [...event.currentTarget.querySelectorAll<HTMLElement>("input:not(:disabled), button:not(:disabled)")];
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
   };
 
   const dropdown = (
-    <div id="tfp-dropdown-portal" className="tfp-dropdown" style={portalStyle}>
+    <div id="tfp-dropdown-portal" className="tfp-dropdown" style={portalStyle} onKeyDown={handleDropdownKeyDown}>
       {/* Search — separate from trigger, always shows all fonts when empty */}
       <div className="tfp-search-bar">
         <svg
@@ -297,12 +319,6 @@ export default function TypographyFontPicker({
           placeholder="Search fonts…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setOpen(false);
-              setSearch("");
-            }
-          }}
         />
         {search && (
           <button
@@ -334,8 +350,8 @@ export default function TypographyFontPicker({
                   style={{ fontFamily: option.value || "inherit" }}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    commit(option.value);
                   }}
+                  onClick={() => commit(option.value)}
                 >
                   <span className="tfp-option-name">{option.label}</span>
                   {isActive && (
