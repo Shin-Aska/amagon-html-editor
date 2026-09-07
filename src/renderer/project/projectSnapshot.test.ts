@@ -180,4 +180,46 @@ describe("project snapshot", () => {
     if (!reopened.ok) return;
     expect(reopened.project.customCss).toBe("legacy top-level css");
   });
+
+  it("converts a project-owned legacy system font into a portable imported font", () => {
+    // Given: old metadata marks a copied project font as system-sourced.
+    const project = projectFixture();
+    project.projectSettings.fonts = [{
+      id: "font-impact",
+      name: "Impact",
+      fileName: "impact.ttf",
+      relativePath: `app-media://project-asset/${SESSION_A}/assets/fonts/impact.ttf`,
+      format: "ttf",
+      weight: "400",
+      style: "normal",
+      source: "system",
+    }];
+
+    // When: the legacy project is prepared for Save As to AMG.
+    const snapshot = buildProjectSnapshot({
+      project,
+      currentPageId: null,
+      flushedBlocks: [],
+      customCss: "",
+      sessionId: SESSION_A,
+      sessionKind: "legacy-json",
+      operation: "save-as",
+      availableAssetPaths: ["assets/fonts/impact.ttf"],
+    });
+
+    // Then: the bundled copy is reclassified and can reopen as an AMG project.
+    expect(snapshot.ok).toBe(true);
+    if (!snapshot.ok) return;
+    expect(snapshot.project.projectSettings.fonts?.[0]).toMatchObject({
+      relativePath: "assets/fonts/impact.ttf",
+      source: "imported",
+    });
+    const reopened = materializeProjectSnapshot({
+      project: snapshot.project,
+      sessionId: SESSION_B,
+      sessionKind: "amg",
+      availableAssetPaths: ["assets/fonts/impact.ttf"],
+    });
+    expect(reopened.ok).toBe(true);
+  });
 });

@@ -60,7 +60,29 @@ const transform = (
   context: ProjectSnapshotContext,
   mode: ProjectPortabilityMode,
 ): ProjectSnapshotResult => {
-  const result = transformProjectPortability(project, {
+  let candidate = project;
+  if (mode === "conversion-durable") {
+    const legacy = transformProjectPortability(project, {
+      mode: "legacy-durable",
+      sessionId: context.sessionId,
+      availableAssetPaths: context.availableAssetPaths,
+      approvedExternalReferences: context.approvedExternalReferences,
+    });
+    if (!legacy.ok) return legacy;
+    const fonts = legacy.project.projectSettings.fonts;
+    candidate = fonts === undefined ? legacy.project : {
+      ...legacy.project,
+      projectSettings: {
+        ...legacy.project.projectSettings,
+        fonts: fonts.map((font) => (
+          font.source === "system" && font.relativePath.startsWith("assets/fonts/")
+            ? { ...font, source: "imported" as const }
+            : font
+        )),
+      },
+    };
+  }
+  const result = transformProjectPortability(candidate, {
     mode,
     sessionId: context.sessionId,
     availableAssetPaths: context.availableAssetPaths,
