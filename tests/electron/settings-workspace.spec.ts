@@ -31,6 +31,7 @@ test('settings dialogs keep a stable frame across every section', async () => {
             const bounds = await theme.boundingBox();
             for (const section of themeSections) {
                 await theme.getByRole('navigation').getByRole('button', { name: section, exact: true }).click();
+                await expect(theme.getByRole('checkbox', { name: 'Smooth transition', exact: true })).toHaveCount(section === 'Colors' ? 1 : 0);
                 await expect.poll(() => theme.boundingBox()).toEqual(bounds);
                 const content = theme.locator('.settings-workspace-content');
                 await expect.poll(() => content.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);

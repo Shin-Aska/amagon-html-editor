@@ -794,7 +794,7 @@ export default function ThemeEditor({
           )}
         </div>
 
-        <section className="theme-workspace-behavior">
+        {activeTab === "colors" && <section className="theme-workspace-behavior">
           <h4 className="theme-workspace-group-title">Theme behavior</h4>
           <label className="theme-editor-transition" title="Smoothly blend page colors when switching light and dark, including exported sites. Respects reduced motion.">
             <input type="checkbox" aria-label="Smooth transition"
@@ -802,7 +802,7 @@ export default function ThemeEditor({
               onChange={(event) => themeVariants && updateSettings({themes: {...themeVariants, transitionEnabled: event.currentTarget.checked}})} />
             <span>Smooth transition<small>Blend colors when switching light and dark. Respects reduced motion.</small></span>
           </label>
-        </section>
+        </section>}
         <div className="theme-workspace-preview">
           <span className="theme-editor-mode-label">Page preview</span>
           <div className="theme-editor-mode-group">
