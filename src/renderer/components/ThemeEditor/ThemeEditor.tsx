@@ -29,6 +29,7 @@ type ThemeTab =
   | "fonts";
 
 type BuiltInPresetTheme = {
+  readonly id: string;
   name: string;
   theme: ProjectTheme;
   category: string;
@@ -312,7 +313,7 @@ function PresetsTab({
 
               return (
                 <div
-                  key={`built-in-${preset.mode}-${preset.theme.name}`}
+                  key={`built-in-${preset.mode}-${preset.id}`}
                   className={`theme-preset-card theme-preset-card-built-in ${isActive ? "active" : ""}`}
                   onClick={() => onApplyPreset(preset.theme)}
                 >
@@ -537,7 +538,6 @@ export default function ThemeEditor({
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
-    setEditingMode("light");
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
       if (e.key === "Escape") onClose();
