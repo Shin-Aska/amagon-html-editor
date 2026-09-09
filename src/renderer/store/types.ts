@@ -1,5 +1,8 @@
 // ─── Core Data Types ─────────────────────────────────────────────────────────
 
+import {PAGE_THEME_TRANSITION_CSS} from '../themes/pageThemeTransition'
+import type {MotionPreviewMode} from '../utils/motionPreview'
+
 export interface FontAsset {
     id: string
     name: string           // Display/family name
@@ -193,6 +196,7 @@ export interface ProjectThemeVariants {
     light: ProjectTheme
     dark: ProjectTheme
     previewMode: PageThemePreviewMode
+    readonly transitionEnabled?: boolean
 }
 
 export function createDefaultTheme(): ProjectTheme {
@@ -346,7 +350,7 @@ export function themeToCSS(
     theme: ProjectTheme,
     variants?: ProjectThemeVariants,
     fonts?: FontAsset[],
-    options?: { fontUrlPrefix?: string; componentTokens?: ComponentTokens }
+    options?: { fontUrlPrefix?: string; componentTokens?: ComponentTokens; motionPreviewMode?: MotionPreviewMode }
 ): string {
     const lines: string[] = [];
 
@@ -402,6 +406,8 @@ export function themeToCSS(
         pushThemeVariableBlock(lines, 'html:not([data-page-theme]), html[data-page-theme="device"]', darkTheme, '  ');
         lines.push('}')
     }
+
+    if (variants?.transitionEnabled) lines.push(PAGE_THEME_TRANSITION_CSS[options?.motionPreviewMode ?? 'system']);
 
     // Base body styles using theme variables
     lines.push('');
@@ -805,6 +811,7 @@ export interface PublisherConfig {
 }
 
 export interface ProjectData {
+    customCss: string
     projectSettings: ProjectSettings
     pages: Page[]
     folders?: PageFolder[]

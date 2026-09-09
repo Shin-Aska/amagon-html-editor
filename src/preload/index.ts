@@ -1,4 +1,25 @@
 import * as electron from 'electron'
+import type { FontAsset } from '../renderer/store/types'
+import type {
+    ProjectCloseRequest,
+    ProjectCloseResult,
+    ProjectNewRequest,
+    ProjectOpenRecentRequest,
+    ProjectProgress,
+    ProjectSaveRequest,
+    ProjectSessionResult,
+    ProjectTransitionRequest,
+    RecentProjectsResult,
+    RecentProjectId,
+    RemoveRecentResult,
+    SessionRequest,
+    MutationResult,
+    AssetInfo,
+    MediaDownloadId,
+    MediaSearchResult,
+} from '../shared/projects/projectIpcContract'
+import type {LifecycleRequest, LifecycleResult} from '../main/projects/projectLifecycle'
+import {MENU_ACTION_CHANNEL, type MenuAction} from '../shared/menuContract'
 
 const {contextBridge, ipcRenderer} = electron;
 
@@ -9,16 +30,17 @@ const {contextBridge, ipcRenderer} = electron;
 
 const api = {
     project: {
-        save: (data: { filePath?: string; content: string }) =>
+        save: (data: ProjectSaveRequest): Promise<ProjectSessionResult> =>
             ipcRenderer.invoke('project:save', data),
 
-        saveAs: (data: { content: string }) =>
+        saveAs: (data: ProjectSaveRequest): Promise<ProjectSessionResult> =>
             ipcRenderer.invoke('project:saveAs', data),
 
-        load: () => ipcRenderer.invoke('project:load'),
+        load: (data: ProjectTransitionRequest): Promise<ProjectSessionResult> =>
+            ipcRenderer.invoke('project:load', data),
 
-        loadFile: (filePath: string) =>
-            ipcRenderer.invoke('project:loadFile', filePath),
+        openRecent: (data: ProjectOpenRecentRequest): Promise<ProjectSessionResult> =>
+            ipcRenderer.invoke('project:openRecent', data),
 
         exportHtml: (data: { html: string; defaultPath?: string }) =>
             ipcRenderer.invoke('project:exportHtml', data),
@@ -40,37 +62,56 @@ const api = {
             return () => ipcRenderer.removeListener('project:exportProgress', handler)
         },
 
-        getRecent: () => ipcRenderer.invoke('project:getRecent'),
+        getRecent: (): Promise<RecentProjectsResult> => ipcRenderer.invoke('project:getRecent'),
 
-        removeRecent: (projectPath: string) =>
-            ipcRenderer.invoke('project:removeRecent', projectPath),
+        removeRecent: (recentId: RecentProjectId): Promise<RemoveRecentResult> =>
+            ipcRenderer.invoke('project:removeRecent', recentId),
 
-        new: (data: { name: string; framework: string; directory?: string }) =>
+        new: (data: ProjectNewRequest): Promise<ProjectSessionResult> =>
             ipcRenderer.invoke('project:new', data),
+
+        close: (data: ProjectCloseRequest): Promise<ProjectCloseResult> =>
+            ipcRenderer.invoke('project:close', data),
+
+        onProgress: (callback: (progress: ProjectProgress) => void) => {
+            const handler = (_event: electron.IpcRendererEvent, progress: ProjectProgress) => callback(progress)
+            ipcRenderer.on('project:progress', handler)
+            return () => ipcRenderer.removeListener('project:progress', handler)
+        },
+
+        onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => {
+            const handler = (_event: electron.IpcRendererEvent, request: LifecycleRequest) => callback(request)
+            ipcRenderer.on('project:lifecycle-close-request', handler)
+            return () => ipcRenderer.removeListener('project:lifecycle-close-request', handler)
+        },
+
+        finishLifecycleClose: (result: LifecycleResult): Promise<boolean> =>
+            ipcRenderer.invoke('project:finish-lifecycle-close', result),
 
         getDir: () => ipcRenderer.invoke('project:getDir')
     },
 
     assets: {
-        selectImage: () => ipcRenderer.invoke('assets:selectImage'),
+        selectImage: (data: SessionRequest): Promise<MutationResult<readonly AssetInfo[]>> =>
+            ipcRenderer.invoke('assets:selectImage', data),
 
-        selectSingleImage: () => ipcRenderer.invoke('assets:selectSingleImage'),
+        selectSingleImage: (data: SessionRequest): Promise<MutationResult<AssetInfo>> =>
+            ipcRenderer.invoke('assets:selectSingleImage', data),
 
-        selectVideo: () => ipcRenderer.invoke('assets:selectVideo'),
+        selectVideo: (data: SessionRequest): Promise<MutationResult<readonly AssetInfo[]>> =>
+            ipcRenderer.invoke('assets:selectVideo', data),
 
         list: () => ipcRenderer.invoke('assets:list'),
 
-        delete: (relativePath: string) =>
-            ipcRenderer.invoke('assets:delete', relativePath),
+        delete: (data: SessionRequest & { readonly relativePath: string }): Promise<MutationResult<null>> =>
+            ipcRenderer.invoke('assets:delete', data),
 
-        readAsset: (assetPath: string) =>
-            ipcRenderer.invoke('assets:readAsset', assetPath),
+        readAsset: (reference: string) =>
+            ipcRenderer.invoke('assets:readAsset', reference),
 
-        readFileAsBase64: (filePath: string) =>
-            ipcRenderer.invoke('assets:readFileAsBase64', filePath),
+        readFileAsBase64: (reference: string) =>
+            ipcRenderer.invoke('assets:readFileAsBase64', reference),
 
-        import: (srcPath: string) =>
-            ipcRenderer.invoke('assets:import', srcPath)
     },
 
     autosave: {
@@ -89,12 +130,12 @@ const api = {
         setProjectLoaded: (isLoaded: boolean) =>
             ipcRenderer.invoke('menu:setProjectLoaded', isLoaded),
 
-        onAction: (callback: (action: string) => void) => {
-            const handler = (_event: any, action: string) => {
+        onAction: (callback: (action: MenuAction) => void) => {
+            const handler = (_event: electron.IpcRendererEvent, action: MenuAction) => {
                 callback(action)
             };
-            ipcRenderer.on('menu:action', handler);
-            return () => ipcRenderer.removeListener('menu:action', handler)
+            ipcRenderer.on(MENU_ACTION_CHANNEL, handler);
+            return () => ipcRenderer.removeListener(MENU_ACTION_CHANNEL, handler)
         }
     },
 
@@ -185,12 +226,18 @@ const api = {
     fonts: {
         listSystem: () => ipcRenderer.invoke('fonts:listSystem'),
 
-        importFile: () => ipcRenderer.invoke('fonts:importFile'),
+        importFile: (data: SessionRequest): Promise<MutationResult<readonly FontAsset[]>> =>
+            ipcRenderer.invoke('fonts:importFile', data),
 
-        downloadGoogleFont: (args: { family: string; variants: { weight: string; style: string }[] }) =>
+        downloadGoogleFont: (args: SessionRequest & {
+            readonly family: string
+            readonly variants: readonly { readonly weight: string; readonly style: string }[]
+        }): Promise<MutationResult<readonly FontAsset[]>> =>
             ipcRenderer.invoke('fonts:downloadGoogleFont', args),
 
-        copySystemFont: (args: { familyName: string; filePaths: string[] }) =>
+        copySystemFont: (args: SessionRequest & {
+            readonly familyName: string
+        }): Promise<MutationResult<readonly FontAsset[]>> =>
             ipcRenderer.invoke('fonts:copySystemFont', args),
 
         fetchGoogleFontCss: (args: { family: string; weight: string; style: string }) =>
@@ -199,7 +246,7 @@ const api = {
         fetchGoogleFontFile: (args: { url: string }) =>
             ipcRenderer.invoke('fonts:fetchGoogleFontFile', args),
 
-        deleteFont: (args: { relativePath: string }) =>
+        deleteFont: (args: SessionRequest & { readonly relativePath: string }): Promise<MutationResult<null>> =>
             ipcRenderer.invoke('fonts:deleteFont', args),
 
         checkFileExists: (args: { relativePath: string }) =>
@@ -213,10 +260,14 @@ const api = {
 
         setConfig: (config: any) => ipcRenderer.invoke('mediaSearch:setConfig', config),
 
-        search: (options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }) =>
+        search: (options: { query: string; perPage?: number; page?: number; type?: 'image' | 'video' }): Promise<{
+            readonly results: readonly MediaSearchResult[]
+            readonly error?: string
+        }> =>
             ipcRenderer.invoke('mediaSearch:search', options),
 
-        downloadAndImport: (url: string) => ipcRenderer.invoke('mediaSearch:downloadAndImport', url)
+        downloadAndImport: (data: SessionRequest & { readonly downloadId: MediaDownloadId }): Promise<MutationResult<AssetInfo>> =>
+            ipcRenderer.invoke('mediaSearch:downloadAndImport', data)
     }
 };
 

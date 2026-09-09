@@ -13,12 +13,10 @@ import { useProjectStore } from "../../store/projectStore";
 import { useToastStore } from "../../store/toastStore";
 import type { FontAsset, ThemeTypography } from "../../store/types";
 import { type GoogleFontMeta, googleFontsCatalog } from "../../data/googleFontsCatalog";
-import {
-  applyGoogleFontPreviewStyle,
-  fetchGoogleFontPreviewCss,
-  getPreviewFontIdForFamily,
-} from "../../utils/googleFontCss";
+import { InternetFontPreview } from "./InternetFontPreview";
 import TypographyFontPicker from "./TypographyFontPicker";
+import { projectCommands, useProjectCommandState } from "../../project/projectCommands";
+import { projectFontUrl } from "../../utils/projectFontUrl";
 import "./FontManager.css";
 
 type FilterTab = "all" | "imported" | "system" | "internet";
@@ -51,6 +49,7 @@ export default function FontManager({
   onTypographyChange: (patch: Partial<ThemeTypography>) => void;
 }): JSX.Element {
   const fonts = useProjectStore((s) => s.fonts);
+  const sessionId = useProjectCommandState().session?.sessionId;
   const systemFonts = useProjectStore((s) => s.systemFonts);
   const addFonts = useProjectStore((s) => s.addFonts);
   const removeFontStore = useProjectStore((s) => s.removeFont);
@@ -205,68 +204,16 @@ export default function FontManager({
     setPage(1);
   }, [filter, searchQuery]);
 
-  useEffect(() => {
-    const cancellation = { cancelled: false };
-    const cleanups: Array<() => void> = [];
-
-    const internetItems = pageItems.filter(
-      (i): i is typeof i & { internetMeta: NonNullable<typeof i.internetMeta> } =>
-        i.source === "internet" && i.internetMeta != null,
-    );
-
-    internetItems.forEach((item) => {
-      const meta = item.internetMeta;
-      const regularVariant =
-        meta.variants.find((v) => v.weight === "400" && v.style === "normal") ||
-        meta.variants[0];
-      const previewId = getPreviewFontIdForFamily(meta.family);
-
-      if (document.getElementById(previewId)) return;
-
-      fetchGoogleFontPreviewCss(
-        {
-          family: meta.family,
-          weight: regularVariant.weight,
-          style: regularVariant.style,
-        },
-        {
-          fetchGoogleFontCss: (req) => window.api.fonts.fetchGoogleFontCss(req),
-          fetchGoogleFontFile: (url) =>
-            window.api.fonts.fetchGoogleFontFile({ url }),
-        },
-      ).then((result) => {
-        if (!result.success || typeof result.css !== "string") {
-          console.warn(
-            `Failed to load font preview for ${meta.family}:`,
-            result.error || "Unknown error",
-          );
-          return;
-        }
-        const cleanup = applyGoogleFontPreviewStyle(
-          meta.family,
-          result.css,
-          cancellation,
-        );
-        if (cleanup) cleanups.push(cleanup);
-      });
-    });
-
-    return () => {
-      cancellation.cancelled = true;
-      cleanups.forEach((cleanup) => cleanup());
-    };
-  }, [pageItems]);
-
   const handleImportFile = async () => {
     try {
-      const res = await window.api.fonts.importFile();
-      if (res.success && res.fonts && res.fonts.length > 0) {
-        addFonts(res.fonts);
+      const res = await projectCommands.importFonts();
+      if (res.ok && res.value.length > 0) {
+        addFonts([...res.value]);
         showToast(
-          `Imported ${res.fonts.length} font file${res.fonts.length > 1 ? "s" : ""}`,
+          `Imported ${res.value.length} font file${res.value.length > 1 ? "s" : ""}`,
           "success",
         );
-      } else if (!res.canceled) {
+      } else if (res.ok) {
         showToast("No fonts were imported", "info");
       }
     } catch {
@@ -276,11 +223,9 @@ export default function FontManager({
 
   const handleDeleteFont = async (font: FontAsset) => {
     try {
-      removeFontStore(font.id);
-      const res = await window.api.fonts.deleteFont({
-        relativePath: font.relativePath,
-      });
-      if (res.success) {
+      const res = await projectCommands.deleteFont(font.relativePath);
+      if (res.ok) {
+        removeFontStore(font.id);
         showToast(`Deleted "${font.name}"`, "success");
       } else {
         showToast("Failed to delete font file", "error");
@@ -297,13 +242,10 @@ export default function FontManager({
 
   const handleImportSystemFont = async (name: string) => {
     try {
-      const res = await window.api.fonts.copySystemFont({
-        familyName: name,
-        filePaths: [],
-      });
-      if (res.success && res.fonts && res.fonts.length > 0) {
-        const hasPhysicalFile = res.fonts.some((f) => f.relativePath);
-        addFonts(res.fonts);
+      const res = await projectCommands.copySystemFont(name);
+      if (res.ok && res.value.length > 0) {
+        const hasPhysicalFile = res.value.some((f) => f.relativePath);
+        addFonts([...res.value]);
         if (hasPhysicalFile) {
           showToast(`Imported system font "${name}"`, "success");
         } else {
@@ -313,7 +255,7 @@ export default function FontManager({
           );
         }
       } else {
-        showToast(res.error || `Failed to import "${name}"`, "error");
+        showToast(res.ok ? `Failed to import "${name}"` : res.message.detail, "error");
       }
     } catch {
       showToast(`Error importing "${name}"`, "error");
@@ -337,15 +279,12 @@ export default function FontManager({
     });
 
     try {
-      const res = await window.api.fonts.downloadGoogleFont({
-        family: meta.family,
-        variants: [variant],
-      });
-      if (res.success && res.fonts) {
-        addFonts(res.fonts);
+      const res = await projectCommands.downloadGoogleFont(meta.family, [variant]);
+      if (res.ok) {
+        addFonts([...res.value]);
         showToast(`Downloaded "${meta.family}"`, "success");
       } else {
-        showToast(res.errors?.[0] || "Download failed", "error");
+        showToast(res.message.detail, "error");
       }
     } catch {
       showToast("Error downloading font", "error");
@@ -365,13 +304,13 @@ export default function FontManager({
         .map(
           (font) => `@font-face {
   font-family: "${font.name}";
-  src: url("app-media://project-asset/${font.relativePath}");
+  src: url("${projectFontUrl(font.relativePath, sessionId)}");
   ${font.weight ? `font-weight: ${font.weight};` : ""}
   ${font.style ? `font-style: ${font.style};` : ""}
 }`,
         )
         .join("\n"),
-    [fonts],
+    [fonts, sessionId],
   );
 
   const sourceBadge = (source: UnifiedFont["source"]) => {
@@ -393,9 +332,6 @@ export default function FontManager({
   );
 
   const previewFamily = (item: UnifiedFont): string => {
-    if (item.source === "internet" && item.internetMeta) {
-      return `"${getPreviewFontIdForFamily(item.name)}", sans-serif`;
-    }
     return `"${item.name}", sans-serif`;
   };
 
@@ -545,12 +481,12 @@ export default function FontManager({
                 pageItems.map((item) => (
                   <tr key={item.id}>
                     <td className="col-preview">
-                      <span
+                      {item.internetMeta ? <InternetFontPreview font={item.internetMeta} /> : <span
                         className="theme-font-preview-text"
                         style={{ fontFamily: previewFamily(item) }}
                       >
                         {item.name}
-                      </span>
+                      </span>}
                     </td>
                     <td className="col-name">{item.name}</td>
                     <td className="col-source">{sourceBadge(item.source)}</td>

@@ -36,6 +36,7 @@ export default function ColorField({
                 <div className="theme-color-swatch" style={{backgroundColor: value}}>
                     <input
                         type="color"
+                        aria-label={`${label} color`}
                         value={value}
                         onChange={(e) => {
                             setHex(e.target.value);
@@ -45,6 +46,7 @@ export default function ColorField({
                 </div>
                 <input
                     className="theme-color-hex"
+                    aria-label={`${label} hex`}
                     value={hex}
                     onChange={handleHexChange}
                     onBlur={handleHexBlur}

@@ -121,12 +121,17 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
+    isolation: isolate;
     user-select: none;
 }
 
 .welcome-background {
     position: absolute;
     inset: 0;
+    z-index: 0;
+    contain: paint;
+    isolation: isolate;
+    overflow: hidden;
     pointer-events: none;
 }
 

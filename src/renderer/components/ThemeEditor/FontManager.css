@@ -173,6 +173,59 @@
   max-width: 140px;
 }
 
+.theme-font-preview {
+  --font-preview-pulse-duration: 1400ms;
+  --font-preview-reveal-duration: 120ms;
+}
+
+.theme-font-preview-slot {
+  display: flex;
+  align-items: center;
+  width: 140px;
+  max-width: 100%;
+  height: var(--space-6);
+}
+
+.theme-font-preview .theme-font-preview-text {
+  line-height: 1.5;
+  animation: font-preview-reveal var(--font-preview-reveal-duration) ease-out;
+}
+
+.theme-font-preview-skeleton {
+  display: block;
+  width: 70%;
+  height: var(--space-3);
+  border-radius: var(--space-1);
+  background: var(--color-text-muted);
+  animation: font-preview-pulse var(--font-preview-pulse-duration) ease-in-out infinite;
+}
+
+.theme-font-preview-error {
+  display: inline-flex;
+  color: var(--color-warning);
+}
+
+@keyframes font-preview-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+}
+
+@keyframes font-preview-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-font-preview-skeleton {
+    animation: none;
+    opacity: 0.55;
+  }
+
+  .theme-font-preview .theme-font-preview-text {
+    animation: none;
+  }
+}
+
 .theme-font-tag {
   display: inline-flex;
   align-items: center;

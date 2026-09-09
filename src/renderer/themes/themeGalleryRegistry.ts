@@ -382,6 +382,7 @@ export const builtInThemeGalleryItemMap: Record<string, ThemeGalleryItem> = buil
 )
 
 export const builtInGalleryThemes: Array<{
+    readonly id: string
     name: string
     theme: ProjectTheme
     category: string
@@ -403,6 +404,7 @@ export const builtInGalleryThemes: Array<{
 
     return [
         {
+            id: item.id,
             name: item.name,
             theme: lightTheme,
             category: primaryCategory,
@@ -410,6 +412,7 @@ export const builtInGalleryThemes: Array<{
             mode: 'light' as const
         },
         {
+            id: item.id,
             name: item.name,
             theme: darkTheme,
             category: primaryCategory,

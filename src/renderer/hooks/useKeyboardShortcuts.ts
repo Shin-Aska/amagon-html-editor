@@ -4,6 +4,7 @@ import {cloneBlockTree} from '../templates/templateFactories'
 import {type Block, createBlock} from '../store/types'
 
 interface UseKeyboardShortcutsOptions {
+    enabled?: boolean
     onSave: () => void
     onSaveAs: () => void
     onOpen: () => void
@@ -79,6 +80,7 @@ function findParentFromRoot(blocks: Block[], targetId: string): Block | null {
 
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void {
     const {
+        enabled = true,
         onSave,
         onSaveAs,
         onOpen,
@@ -260,6 +262,21 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
             closestMonacoEditor !== null;
 
         const isCtrl = e.ctrlKey || e.metaKey;
+
+        if (!enabled) {
+            if (isInputElement || !isCtrl) return
+
+            const key = e.key.toLowerCase();
+            if (key === 'n' || key === 'o') {
+                e.preventDefault();
+                if (key === 'n') {
+                    onNewProject()
+                } else {
+                    onOpen()
+                }
+            }
+            return
+        }
 
         const isBackslash =
             e.code === 'Backslash' ||
@@ -447,6 +464,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     }, [
         isDragging,
         isTypingCode,
+        enabled,
         setIsDragging,
         selectBlock,
         onSave,

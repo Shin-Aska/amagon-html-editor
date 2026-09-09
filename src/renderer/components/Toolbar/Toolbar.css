@@ -65,6 +65,13 @@
     color: var(--color-text-primary);
 }
 
+.toolbar-btn:disabled,
+.toolbar-btn:disabled:hover {
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+}
+
 .toolbar-btn.active {
     background: var(--color-bg-surface);
     color: var(--color-accent);
@@ -341,6 +348,11 @@
 
     .toolbar-collapsible .toolbar-center {
         justify-content: flex-start;
+    }
+
+    .toolbar-collapsible .toolbar-group {
+        max-width: 100%;
+        flex-wrap: wrap;
     }
 
     .toolbar-collapsible .toolbar-right {

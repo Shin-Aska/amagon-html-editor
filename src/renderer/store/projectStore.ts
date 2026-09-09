@@ -29,6 +29,7 @@ import { setOnExitTabEditModeCallback, useEditorStore } from "./editorStore";
 // ─── Project State ───────────────────────────────────────────────────────────
 
 interface ProjectState {
+  customCss: string;
   settings: ProjectSettings;
   pages: Page[];
   folders: PageFolder[];
@@ -227,6 +228,7 @@ function normalizeThemeVariants(
     light: cloneTheme(variants.light ?? fallbackTheme),
     dark: cloneTheme(variants.dark ?? createDefaultDarkTheme()),
     previewMode: variants.previewMode ?? "device",
+    transitionEnabled: variants.transitionEnabled ?? false,
   };
 }
 
@@ -295,6 +297,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
   const initialMetaCounts = buildMetaKeyCounts([defaultPage]);
 
   return {
+    customCss: "",
     settings: createDefaultSettings(),
     pages: [defaultPage],
     folders: [],
@@ -372,6 +375,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       const counts = buildMetaKeyCounts(nextPages);
 
       set({
+        customCss: data.customCss,
         settings: normalizedSettings,
         pages: nextPages,
         folders: data.folders || [],
@@ -397,6 +401,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       const newDefault = createDefaultPage();
       const counts = buildMetaKeyCounts([newDefault]);
       set({
+        customCss: "",
         settings: createDefaultSettings(),
         pages: [newDefault],
         folders: [],
@@ -454,6 +459,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     getProjectData: () => {
       const state = get();
       return {
+        customCss: state.customCss,
         projectSettings: {
           ...syncLegacyTheme(state.settings),
           fonts: state.fonts,

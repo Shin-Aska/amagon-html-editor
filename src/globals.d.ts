@@ -1,8 +1,16 @@
 // React 19 removed the global JSX namespace from @types/react.
 // Re-declare it here so existing JSX.Element return-type annotations continue to compile.
 import type {JSX as ReactJSX} from 'react'
-import {type IpcResult} from './renderer/utils/api'
 import {type FontAsset} from './renderer/store/types'
+import type {
+    AssetMutationBridge,
+    FontMutationBridge,
+    MediaMutationBridge,
+    ProjectBridge,
+} from './shared/projects/projectIpcContract'
+import type {IpcResult} from './renderer/utils/api'
+import type {LifecycleRequest, LifecycleResult} from './main/projects/projectLifecycle'
+import type {MenuAction} from './shared/menuContract'
 
 export {}
 
@@ -12,11 +20,7 @@ declare global {
     }
 
     interface ElectronApi {
-        project: {
-            save: (data: { filePath?: string; content: string }) => Promise<IpcResult>
-            saveAs: (data: { content: string }) => Promise<IpcResult>
-            load: () => Promise<IpcResult>
-            loadFile: (filePath: string) => Promise<IpcResult>
+        project: ProjectBridge & {
             exportHtml: (data: { html: string; defaultPath?: string }) => Promise<IpcResult>
             exportSite: (data: {
                 files: { path: string, content: string | Uint8Array }[],
@@ -24,50 +28,34 @@ declare global {
                 previewFile?: string
             }) => Promise<IpcResult>
             openInBrowser: (filePath: string) => Promise<IpcResult>
-            getRecent: () => Promise<IpcResult>
-            removeRecent: (projectPath: string) => Promise<IpcResult>
-            new: (data: { name: string, framework: string, directory?: string }) => Promise<IpcResult>
-            getDir: () => Promise<IpcResult>
             onExportProgress: (callback: (data: {
                 written: number,
                 total: number,
                 path?: string
             }) => void) => () => void,
+            onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => () => void
+            finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
-        assets: {
-            selectImage: () => Promise<IpcResult>
-            selectSingleImage: () => Promise<IpcResult>
-            selectVideo: () => Promise<IpcResult>
+        assets: AssetMutationBridge & {
             list: () => Promise<IpcResult>
-            delete: (relativePath: string) => Promise<IpcResult>
-            readFileAsBase64: (filePath: string) => Promise<IpcResult>
-            readAsset: (assetPath: string) => Promise<IpcResult>
-            import: (srcPath: string) => Promise<IpcResult>
+            readFileAsBase64: (reference: string) => Promise<IpcResult>
+            readAsset: (reference: string) => Promise<IpcResult>
         }
         autosave: {
             start: (intervalMs?: number) => Promise<IpcResult>
             stop: () => Promise<IpcResult>
             onTick: (callback: () => void) => () => void
         },
-        fonts: {
+        fonts: FontMutationBridge<FontAsset> & {
             listSystem: () => Promise<IpcResult & { fonts: string[] }>
-            importFile: () => Promise<IpcResult & { fonts: FontAsset[] }>
-            downloadGoogleFont: (args: {
-                family: string;
-                variants: { weight: string; style: string }[]
-            }) => Promise<IpcResult & { fonts: FontAsset[]; errors?: string[] }>
-            copySystemFont: (args: { familyName: string; filePaths: string[] }) => Promise<IpcResult & {
-                fonts: FontAsset[]
-            }>
             fetchGoogleFontCss: (args: { family: string; weight: string; style: string }) => Promise<IpcResult & { css: string }>
             fetchGoogleFontFile: (args: { url: string }) => Promise<IpcResult & { dataUri: string }>
-            deleteFont: (args: { relativePath: string }) => Promise<IpcResult>
             checkFileExists: (args: { relativePath: string }) => Promise<{ exists: boolean }>
             listProject: () => Promise<IpcResult & { fonts: FontAsset[] }>
         }
         menu: {
             setProjectLoaded: (isLoaded: boolean) => Promise<any>
-            onAction: (callback: (action: string) => void) => () => void
+            onAction: (callback: (action: MenuAction) => void) => () => void
         }
         publish: {
             getProviders: () => Promise<any>
@@ -117,7 +105,7 @@ declare global {
             getModels: () => Promise<any>
             fetchModelsForProvider: (data: { provider: string, apiKey: string, ollamaUrl?: string }) => Promise<any>
         },
-        mediaSearch: {
+        mediaSearch: MediaMutationBridge & {
             getConfig: () => Promise<any>
             setConfig: (config: any) => Promise<any>
             search: (options: {
@@ -126,7 +114,6 @@ declare global {
                 page?: number,
                 type?: 'image' | 'video'
             }) => Promise<any>
-            downloadAndImport: (url: string) => Promise<any>
         }
     }
 

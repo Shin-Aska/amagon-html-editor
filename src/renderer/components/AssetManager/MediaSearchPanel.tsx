@@ -2,16 +2,9 @@ import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {getApi} from '../../utils/api'
 import './MediaSearchPanel.css'
 import {AlertTriangle, Image, Play, Search, Settings} from 'lucide-react'
+import type {MediaSearchResult} from '../../../shared/projects/projectIpcContract'
 
-export interface MediaSearchResult {
-    id: string
-    url: string
-    thumbUrl: string
-    previewUrl: string
-    alt: string
-    photographer?: string
-    sourceUrl?: string
-}
+export type {MediaSearchResult} from '../../../shared/projects/projectIpcContract'
 
 export type MediaSearchMode = 'image' | 'video'
 

@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import {getApi} from '../../utils/api'
+import {projectCommands} from '../../project/projectCommands'
 import type {Asset} from './AssetManager'
 import MediaSearchPanel, {type MediaSearchResult} from './MediaSearchPanel'
 import './AssetManager.css'
@@ -50,9 +51,9 @@ export default function AssetPicker({mode, onSelect, onCancel, initialSelection 
 
         for (const result of results) {
             try {
-                const downloadResult = await api.mediaSearch.downloadAndImport(result.url);
-                if (downloadResult.success && downloadResult.path) {
-                    importedUrls.push(downloadResult.path)
+                const downloadResult = await projectCommands.downloadMedia(result.downloadId);
+                if (downloadResult.ok) {
+                    importedUrls.push(downloadResult.value.path)
                 }
             } catch (err) {
                 console.error('Failed to download media:', err)

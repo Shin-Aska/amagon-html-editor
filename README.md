@@ -19,6 +19,12 @@ Amagon is an offline desktop HTML editor for building block-based pages visually
 - **Publish to web**: Publish directly to GitHub Pages, Cloudflare Pages, Neocities, or AWS S3, or add your own provider through `PublisherExtension`.
 - **Project workflow**: Manage multi-page projects, assets, reusable blocks, and exports, with an interactive tutorial for first-time users.
 
+## Project files
+
+New desktop projects use the portable `.amg` format: one ZIP64-capable file containing the project document and its imported assets. Existing `.json` projects remain supported and Save in place; use Save As to convert one explicitly after importing any external local references. Conversion never silently replaces the legacy source.
+
+Browser development continues to use legacy JSON projects. Version 1 intentionally does not add OS file association, double-click/command-line opening, browser-side `.amg` reading, signing, or encryption. See [the AMG v1 format specification](docs/amg-format-v1.md) for package layout, hashes, limits, migration rules, errors, and security boundaries.
+
 ## Getting Started
 
 ```bash

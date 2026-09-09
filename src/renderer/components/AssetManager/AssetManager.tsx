@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import {createPortal} from 'react-dom'
 import {getApi} from '../../utils/api'
+import {projectCommands, useProjectCommandState} from '../../project/projectCommands'
 import MediaSearchPanel, {type MediaSearchResult} from './MediaSearchPanel'
 import './AssetManager.css'
 import {Play} from 'lucide-react'
@@ -28,6 +29,7 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
     const [downloading, setDownloading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const api = getApi();
+    const projectCommandState = useProjectCommandState();
 
     const refreshAssets = useCallback(async () => {
         setLoading(true);
@@ -50,8 +52,10 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
     const handleAddMedia = async (type: 'image' | 'video') => {
         setLoading(true);
         try {
-            const result = type === 'image' ? await api.assets.selectImage() : await api.assets.selectVideo();
-            if (result.success && (result.filePaths || result.filePath)) {
+            const result = type === 'image'
+                ? await projectCommands.selectImages()
+                : await projectCommands.selectVideos();
+            if (result.ok) {
                 await refreshAssets()
             }
         } catch (err) {
@@ -66,12 +70,12 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
         if (!confirm(`Delete "${asset.name}"? This cannot be undone.`)) return;
 
         try {
-            const result = await api.assets.delete(asset.relativePath);
-            if (result.success) {
+            const result = await projectCommands.deleteAsset(asset.relativePath);
+            if (result.ok) {
                 setAssets(prev => prev.filter(a => a.path !== asset.path));
                 if (selectedAsset === asset.path) setSelectedAsset(null)
             } else {
-                console.error('Failed to delete asset:', result.error)
+                console.error('Failed to delete asset:', result.message.detail)
             }
         } catch (err) {
             console.error('Failed to delete asset', err)
@@ -93,9 +97,9 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
 
         for (const result of results) {
             try {
-                const downloadResult = await api.mediaSearch.downloadAndImport(result.url);
-                if (downloadResult.success && downloadResult.path) {
-                    importedUrls.push(downloadResult.path)
+                const downloadResult = await projectCommands.downloadMedia(result.downloadId);
+                if (downloadResult.ok) {
+                    importedUrls.push(downloadResult.value.path)
                 }
             } catch (err) {
                 console.error('Failed to download media:', err)
@@ -192,7 +196,7 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
                 <div className="asset-manager-toolbar">
                     {activeTab === 'project' && (
                         <div className="am-dropdown">
-                            <button className="am-btn-primary" disabled={loading || downloading}>
+                            <button className="am-btn-primary" disabled={loading || downloading || projectCommandState.busy !== null}>
                                 {loading ? 'Adding...' : '+ Add Media'}
                             </button>
                             <div className="am-dropdown-content">

@@ -5,6 +5,7 @@ import {buildAnimationStylesCss} from './animationPresets'
 import {buildHoverEffectStylesCss} from './hoverEffects'
 import {buildActionEffectRuntimeScript, buildActionEffectStylesCss} from './actionEffects'
 import {getApi} from './api'
+import {isRelativePathTraversalReference} from '../../shared/projects/assetReference'
 
 export interface ExportFile {
     path: string
@@ -997,8 +998,8 @@ function escapeAttrValue(value: string): string {
 
 function createDefaultAssetResolver(): (url: string) => Promise<ResolvedAsset | null> {
     return async (url: string) => {
-        // Prefer Electron IPC bridge if this is an app-media URL
-        if (url.startsWith('app-media://')) {
+        // Route local references through the main-owned authorization boundary.
+        if (/^(?:app-media:|file:|[a-z]:[\\/]|\\\\|\/)/iu.test(url)) {
             const api = getApi();
             const result = await api.assets.readAsset(url);
             if (!result.success || !result.data) return null;
@@ -1041,7 +1042,7 @@ async function buildAssetFiles(
 
     for (const token of ctx.assetsToFetch) {
         const url = ctx.assetTokenToUrl.get(token);
-        if (!url) continue;
+        if (!url || isRelativePathTraversalReference(url)) continue;
 
         const preferredName = ctx.assetTokenToPreferredName.get(token) || 'asset';
         const resolved = await resolveAsset(url);

@@ -120,6 +120,7 @@ describe('Integration: Save/Load Round-trip', () => {
 
     it('imports project and restores state', () => {
         const projectData: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Imported',
                 framework: 'bootstrap-5',
@@ -153,6 +154,7 @@ describe('Integration: Save/Load Round-trip', () => {
 describe('Integration: Export Engine', () => {
     it('exports clean HTML without editor artifacts', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'Export Test',
                 framework: 'vanilla',
@@ -194,6 +196,7 @@ describe('Integration: Export Engine', () => {
 
     it('handles custom CSS in export', async () => {
         const project: ProjectData = {
+            customCss: '',
             projectSettings: {
                 name: 'CSS Test',
                 framework: 'vanilla',
