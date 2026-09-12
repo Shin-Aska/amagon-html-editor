@@ -13,6 +13,12 @@
 }
 
 .context-menu-item {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     display: flex;
     align-items: center;
     padding: 6px 12px;
@@ -20,7 +26,7 @@
     gap: 8px;
 }
 
-.context-menu-item:hover {
+.context-menu-item:hover, .context-menu-item:focus-visible {
     background-color: var(--color-bg-hover);
 }
 

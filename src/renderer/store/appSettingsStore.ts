@@ -11,6 +11,8 @@ export interface AppSettings {
     tutorialCompleted: boolean
     enableDangerousFeatures: boolean
     showRestartTutorialButton: boolean
+    libraryPreviewMode: 'live' | 'classic'
+    libraryPreviewCacheSlots: number
     motionPreviewMode: MotionPreviewMode
 }
 
@@ -41,8 +43,15 @@ const DEFAULT_SETTINGS: AppSettings = {
     tutorialCompleted: false,
     enableDangerousFeatures: false,
     showRestartTutorialButton: true,
+    libraryPreviewMode: 'live',
+    libraryPreviewCacheSlots: 64,
     motionPreviewMode: 'system'
 };
+
+const normalizePreviewCacheSlots = (value: unknown): number => (
+    typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+        ? value : DEFAULT_SETTINGS.libraryPreviewCacheSlots
+);
 
 export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
     ...DEFAULT_SETTINGS,
@@ -56,7 +65,9 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
                 const motionPreviewMode = isMotionPreviewMode(result.settings.motionPreviewMode)
                     ? result.settings.motionPreviewMode
                     : DEFAULT_SETTINGS.motionPreviewMode;
-                set({...DEFAULT_SETTINGS, ...result.settings, motionPreviewMode, loaded: true})
+                const libraryPreviewMode = result.settings.libraryPreviewMode === 'classic' ? 'classic' : 'live';
+                const libraryPreviewCacheSlots = normalizePreviewCacheSlots(result.settings.libraryPreviewCacheSlots);
+                set({...DEFAULT_SETTINGS, ...result.settings, motionPreviewMode, libraryPreviewMode, libraryPreviewCacheSlots, loaded: true})
             } else {
                 set({...DEFAULT_SETTINGS, loaded: true})
             }
@@ -83,6 +94,8 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
             tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
             enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures,
             showRestartTutorialButton: patch.showRestartTutorialButton ?? current.showRestartTutorialButton,
+            libraryPreviewMode: patch.libraryPreviewMode ?? current.libraryPreviewMode,
+            libraryPreviewCacheSlots: normalizePreviewCacheSlots(patch.libraryPreviewCacheSlots ?? current.libraryPreviewCacheSlots),
             motionPreviewMode: patch.motionPreviewMode ?? current.motionPreviewMode
         };
         set({...nextSettings});

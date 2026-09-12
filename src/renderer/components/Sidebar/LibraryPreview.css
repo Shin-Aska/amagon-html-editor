@@ -1,0 +1,99 @@
+.sidebar {
+    --library-preview-ratio: 2 / 1;
+    --library-control-height: 28px;
+    --library-grid-gap: var(--space-3);
+    --library-caption-size: 11px;
+    --library-page-name-size: 13px;
+    --library-control-size: 12px;
+}
+.library-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--library-preview-ratio);
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-secondary);
+    contain: strict;
+    pointer-events: none;
+}
+.library-preview-frame {
+    display: block;
+    position: absolute;
+    inset: 0;
+    border: 0;
+    transform-origin: top left;
+    pointer-events: none;
+}
+.sidebar-live .widget-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--library-grid-gap); }
+.sidebar-live .widget-category { margin-bottom: var(--space-3); }
+.sidebar-live .category-title { padding: var(--space-3) 0 var(--space-2); }
+.sidebar-live .widget-item {
+    min-width: 0;
+    padding: 0;
+    align-items: stretch;
+    gap: var(--space-1);
+    color: var(--color-text-secondary);
+    background: transparent;
+    border-radius: var(--radius-sm);
+}
+.sidebar-live .widget-item .library-preview { border: 1px solid var(--color-border); }
+.sidebar-live .widget-item:hover .library-preview,
+.sidebar-live .widget-item:focus-visible .library-preview { border-color: var(--color-accent); }
+.sidebar-live .widget-item > span {
+    font-size: var(--library-caption-size);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sidebar-live .sidebar-content { padding-inline: var(--space-4); }
+.sidebar-content:has(.pages-panel) { overflow: hidden; }
+.pages-panel { min-height: 0; }
+.pages-list { min-height: 0; }
+.sidebar-live .pages-panel { padding: 0 0 var(--space-4); }
+.library-pages-heading { display: flex; align-items: center; justify-content: space-between; padding-bottom: var(--space-2); }
+.library-pages-heading .category-title { margin: 0; }
+.library-add-page, .page-menu-button {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    padding: var(--space-1);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+.library-add-page:hover, .page-menu-button:hover { color: var(--color-accent); background: var(--color-bg-hover); }
+.sidebar-live .page-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+}
+.sidebar-live .page-item.active { border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent); }
+.sidebar-live .page-item:hover { border-color: var(--color-accent); }
+.sidebar-live .page-item.drop-above { border-top-width: 3px; }
+.sidebar-live .page-item.drop-below { border-bottom-width: 3px; }
+.sidebar-live .page-item.indented { margin-left: var(--space-2); }
+.page-caption { display: contents; }
+.sidebar-live .page-caption { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); flex-wrap: wrap; }
+.sidebar-live .page-info { flex-basis: 45%; gap: var(--space-2); }
+.sidebar-live .page-name { font-size: var(--library-page-name-size); }
+.sidebar-live .page-slug { flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-live .page-item.active .page-slug { color: var(--color-text-muted); }
+.sidebar-live .page-tags { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+.sidebar-live .page-tag { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.sidebar-live .page-item.active .page-tag { background: var(--color-accent); color: var(--color-bg-secondary); }
+.sidebar-live .page-item.active .page-tag.inherited { color: var(--color-text-secondary); border-color: var(--color-border); background: transparent; }
+.page-item:focus-visible, .page-menu-button:focus-visible, .library-add-page:focus-visible, .sidebar-tab:focus-visible {
+    outline: 2px solid var(--color-accent); outline-offset: -2px;
+}
+.sidebar-tab { background: transparent; border-top: 0; border-left: 0; border-right: 0; }
+
+.page-info { text-align: left; background: transparent; border: 0; padding: 0; color: inherit; cursor: pointer; }
+.page-info:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

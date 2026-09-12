@@ -42,6 +42,17 @@ export default function ContextMenu({x, y, items, onClose}: ContextMenuProps): J
         }
     }, [onClose]);
 
+    useEffect(() => {
+        const previousFocus = document.activeElement;
+        const menu = menuRef.current;
+        menu?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({preventScroll: true});
+        return () => {
+            if (previousFocus instanceof HTMLElement && (document.activeElement === document.body || menu?.contains(document.activeElement))) {
+                previousFocus.focus({preventScroll: true})
+            }
+        }
+    }, []);
+
     // Adjust position to stay in viewport
     const style = {
         top: y,
@@ -51,14 +62,29 @@ export default function ContextMenu({x, y, items, onClose}: ContextMenuProps): J
     // Simple adjustment logic could be added here or via useLayoutEffect to measure ref
 
     return (
-        <div className="context-menu" style={style} ref={menuRef}>
+        <div className="context-menu" role="menu" aria-label="Actions" style={style} ref={menuRef}
+            onKeyDown={event => {
+                if (event.key === 'Escape' || event.key === 'Tab') {
+                    if (event.key === 'Escape') event.preventDefault();
+                    onClose();
+                    return
+                }
+                if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+                event.preventDefault();
+                const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+                const current = buttons.findIndex(button => button === document.activeElement);
+                const index = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+                    : (current + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+                buttons[index]?.focus({preventScroll: true})
+            }}>
             {items.map((item, index) => {
                 if (item.divider) {
                     return <div key={index} className="context-menu-divider"/>
                 }
 
                 return (
-                    <div
+                    <button
+                        type="button" role="menuitem" tabIndex={-1} disabled={item.disabled}
                         key={index}
                         className={`context-menu-item ${item.disabled ? 'disabled' : ''} ${item.danger ? 'danger' : ''}`}
                         onClick={() => {
@@ -68,10 +94,10 @@ export default function ContextMenu({x, y, items, onClose}: ContextMenuProps): J
                             }
                         }}
                     >
-                        <div className="context-menu-item-icon">{item.icon}</div>
-                        <div className="context-menu-item-label">{item.label}</div>
-                        {item.shortcut && <div className="context-menu-item-shortcut">{item.shortcut}</div>}
-                    </div>
+                        <span className="context-menu-item-icon">{item.icon}</span>
+                        <span className="context-menu-item-label">{item.label}</span>
+                        {item.shortcut && <span className="context-menu-item-shortcut">{item.shortcut}</span>}
+                    </button>
                 )
             })}
         </div>

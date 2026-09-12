@@ -249,13 +249,14 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
     // Main keyboard handler
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        // Ignore if typing in an input, textarea, contenteditable, or Monaco editor
+        // Leave input, select, textarea, contenteditable, and Monaco keys to their controls.
         const target = e.target as HTMLElement;
         // If e.target is the Window (e.g. from artificial window.dispatchEvent bubbling from Canvas), these properties will be undefined
         const closestContentEditable = target?.closest?.('[contenteditable="true"]') ?? null;
         const closestMonacoEditor = target?.closest?.('.monaco-editor') ?? null;
         const isInputElement =
             target?.tagName === 'INPUT' ||
+            target?.tagName === 'SELECT' ||
             target?.tagName === 'TEXTAREA' ||
             target?.contentEditable === 'true' ||
             closestContentEditable !== null ||

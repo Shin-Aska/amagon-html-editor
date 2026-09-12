@@ -63,6 +63,10 @@ export default function SettingsDialog({
     const setTheme = useAppSettingsStore((s) => s.setTheme);
     const defaultLayout = useAppSettingsStore((s) => s.defaultLayout);
     const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout);
+    const libraryPreviewMode = useAppSettingsStore((s) => s.libraryPreviewMode);
+    const libraryPreviewCacheSlots = useAppSettingsStore((s) => s.libraryPreviewCacheSlots);
+    const saveSettings = useAppSettingsStore((s) => s.saveSettings);
+    const [previewCacheSlotsDraft, setPreviewCacheSlotsDraft] = useState(String(libraryPreviewCacheSlots));
     const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning);
     const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning);
     const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled);
@@ -73,6 +77,19 @@ export default function SettingsDialog({
     const showRestartTutorialButton = useAppSettingsStore((s) => s.showRestartTutorialButton);
     const setShowRestartTutorialButton = useAppSettingsStore((s) => s.setShowRestartTutorialButton);
     const startTutorial = useTutorialStore((s) => s.startTutorial);
+
+    useEffect(() => {
+        setPreviewCacheSlotsDraft(String(libraryPreviewCacheSlots))
+    }, [libraryPreviewCacheSlots, open]);
+
+    const applyPreviewCacheSlots = (): void => {
+        const value = Number(previewCacheSlotsDraft);
+        if (previewCacheSlotsDraft.trim() && Number.isSafeInteger(value) && value >= 0) {
+            if (value !== libraryPreviewCacheSlots) void saveSettings({libraryPreviewCacheSlots: value})
+        } else {
+            setPreviewCacheSlotsDraft(String(libraryPreviewCacheSlots))
+        }
+    };
 
     const aiConfig = useAiStore((s) => s.config);
     const providerModels = useAiStore((s) => s.providerModels);
@@ -349,6 +366,48 @@ export default function SettingsDialog({
                                                     <option value="zen">Zen Mode</option>
                                                 </select>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="settings-row">
+                                        <div className="settings-label">
+                                            <label className="settings-label-title" htmlFor="library-preview-mode">Preview mode</label>
+                                            <span className="settings-label-desc" id="library-preview-mode-description">Choose how pages and widgets appear in the sidebar</span>
+                                        </div>
+                                        <div className="settings-control">
+                                            <select
+                                                id="library-preview-mode"
+                                                aria-describedby="library-preview-mode-description"
+                                                value={libraryPreviewMode}
+                                                onChange={(e) => void saveSettings({libraryPreviewMode: e.target.value === 'classic' ? 'classic' : 'live'})}
+                                                className="settings-select"
+                                            >
+                                                <option value="live">Live</option>
+                                                <option value="classic">Classic</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="settings-row">
+                                        <div className="settings-label">
+                                            <label className="settings-label-title" htmlFor="library-preview-cache-slots">Preview cache slots</label>
+                                            <span className="settings-label-desc" id="library-preview-cache-description">Keep this many recent previews ready. Set 0 to turn off caching.</span>
+                                        </div>
+                                        <div className="settings-control">
+                                            <input
+                                                id="library-preview-cache-slots"
+                                                type="number"
+                                                min={0}
+                                                step={1}
+                                                aria-describedby="library-preview-cache-description"
+                                                className="settings-input settings-input--cache-slots"
+                                                value={previewCacheSlotsDraft}
+                                                onChange={(event) => setPreviewCacheSlotsDraft(event.target.value)}
+                                                onBlur={applyPreviewCacheSlots}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter') event.currentTarget.blur()
+                                                }}
+                                            />
                                         </div>
                                     </div>
 

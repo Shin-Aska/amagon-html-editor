@@ -112,6 +112,18 @@ All spacing derives from 4px.
 
 ## 5. Components
 
+### Pages and Widgets Library (1.9.2)
+
+- Approved references: `exec-2028e82c-c899-4e7b-819b-94ad430cf810.png` (Widgets) and `exec-01c6b9bf-78b8-46c4-9bed-04e349f040ca.png` (Pages), generated September 12, 2026. Preserve the existing editor shell; reference page content is illustrative, not seeded project data.
+- App Settings → General contains the “Preview mode” select with “Live” and “Classic” options for both pages and widgets. Live is the default; the preference persists with application settings, across projects. The sidebar has no mode control, preview-status text, or resource-use footer text.
+- Live widget tiles use a two-column grid with real rendered component samples, a bordered thumbnail, and a separate name below. Live page cards use one column with a rendered page viewport above a caption containing name, slug, tags, and an accessible menu button. Classic retains compact widget icons and page rows.
+- Local `--library-*` tokens define geometry: widget preview aspect ratio 2 / 1, page preview aspect ratio 2 / 1, 28px mode controls, 12px grid gaps, 4px preview radius, and 11px widget captions / 13px page names. Reuse `--space-*`, `--radius-*`, and `--color-*` for spacing, corners, color, and focus. Match the current project theme inside previews; editor controls retain the application theme.
+- Previews are passive, isolated HTML frames, rendered by the existing block renderer. Names and actions stay outside the frames and remain keyboard accessible. Empty layout widgets use sample children or dashed boundaries to show their structure. Saved blocks and templates show their actual content.
+- The sidebar owns library scrolling; page creation actions stay pinned. Thumbnails scale with the resizable panel, with a 240px minimum sidebar width to keep two-column samples legible on compact desktops. Long names truncate with full titles available; tags wrap within the caption. Selection uses an accent border with a quiet surface rather than filling the screenshot.
+- Only viewed previews render. App Settings → General has “Preview cache slots”, default 64; 0 disables retention. Keep recently viewed rendered frames in RAM with least-recently-used eviction, shared between Pages and Widgets. Visible frames stay usable even below the visible count; evicted active frames release when hidden. Classic and project close/switch clear the cache. Cache contents last for the project session; the slot-count preference persists across restarts. No cache-status footer in the sidebar.
+- Reuse cached documents without navigation when their content and styling are unchanged. Edits coalesce over 150ms; stale cached previews refresh when shown, while visible previews update live. No autoplay, embedded third-party frames, project scripts, or editor-selection overlays run in thumbnails. No decorative preview animation.
+- Validate current-page edits, nested-tab edits, theme and custom CSS updates, search, page switching, folders/reordering, saved blocks/templates, persistence, and complete frame teardown in Classic. Test the running desktop editor at normal and compact sizes plus resized sidebar widths.
+
 ### Settings Workspace
 
 - Theme Editor and App Settings share a fixed frame: 960px maximum width, 848px maximum height, and 24px viewport clearance. Header, navigation, scope label, and footer never resize when sections change; only the content pane scrolls, retaining each section's scroll position while open.

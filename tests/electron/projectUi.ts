@@ -65,6 +65,14 @@ export const createProjectThroughUi = async (request: NewProjectUiRequest): Prom
   await settleEditor(request.harness);
 };
 
+export const setLibraryPreviewModeThroughUi = async (page: Page, mode: "live" | "classic"): Promise<void> => {
+  await page.getByTitle("Global Settings", { exact: true }).click();
+  const settings = page.locator(".settings-dialog");
+  await settings.getByLabel("Preview mode", { exact: true }).selectOption(mode);
+  await expect(settings.getByLabel("Preview mode", { exact: true })).toHaveValue(mode);
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
+};
+
 export const openProjectThroughUi = async (request: ProjectUiRequest): Promise<void> => {
   await queueNativeDialogs(request.harness.app, { opens: [[request.filePath]] });
   const welcomeOpen = request.harness.page.getByRole("button", { name: /Open Project/u });
