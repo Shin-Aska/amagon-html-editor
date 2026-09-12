@@ -607,7 +607,7 @@ function App(): JSX.Element {
                             <>
                                 <Panel
                                     defaultSize="20%"
-                                    minSize="15%"
+                                    minSize="240px"
                                     maxSize="40%"
                                     className="panel panel-left"
                                     id="panel-left"

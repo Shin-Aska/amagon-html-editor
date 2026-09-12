@@ -11,6 +11,7 @@ export interface AppSettings {
     tutorialCompleted: boolean
     enableDangerousFeatures: boolean
     showRestartTutorialButton: boolean
+    libraryPreviewMode: 'live' | 'classic'
     motionPreviewMode: MotionPreviewMode
 }
 
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     tutorialCompleted: false,
     enableDangerousFeatures: false,
     showRestartTutorialButton: true,
+    libraryPreviewMode: 'live',
     motionPreviewMode: 'system'
 };
 
@@ -56,7 +58,8 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
                 const motionPreviewMode = isMotionPreviewMode(result.settings.motionPreviewMode)
                     ? result.settings.motionPreviewMode
                     : DEFAULT_SETTINGS.motionPreviewMode;
-                set({...DEFAULT_SETTINGS, ...result.settings, motionPreviewMode, loaded: true})
+                const libraryPreviewMode = result.settings.libraryPreviewMode === 'classic' ? 'classic' : 'live';
+                set({...DEFAULT_SETTINGS, ...result.settings, motionPreviewMode, libraryPreviewMode, loaded: true})
             } else {
                 set({...DEFAULT_SETTINGS, loaded: true})
             }
@@ -83,6 +86,7 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
             tutorialCompleted: patch.tutorialCompleted ?? current.tutorialCompleted,
             enableDangerousFeatures: patch.enableDangerousFeatures ?? current.enableDangerousFeatures,
             showRestartTutorialButton: patch.showRestartTutorialButton ?? current.showRestartTutorialButton,
+            libraryPreviewMode: patch.libraryPreviewMode ?? current.libraryPreviewMode,
             motionPreviewMode: patch.motionPreviewMode ?? current.motionPreviewMode
         };
         set({...nextSettings});

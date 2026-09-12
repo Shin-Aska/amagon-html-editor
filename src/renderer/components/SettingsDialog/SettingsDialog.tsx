@@ -63,6 +63,8 @@ export default function SettingsDialog({
     const setTheme = useAppSettingsStore((s) => s.setTheme);
     const defaultLayout = useAppSettingsStore((s) => s.defaultLayout);
     const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout);
+    const libraryPreviewMode = useAppSettingsStore((s) => s.libraryPreviewMode);
+    const saveSettings = useAppSettingsStore((s) => s.saveSettings);
     const showTabChildSelectionWarning = useAppSettingsStore((s) => s.showTabChildSelectionWarning);
     const setShowTabChildSelectionWarning = useAppSettingsStore((s) => s.setShowTabChildSelectionWarning);
     const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled);
@@ -349,6 +351,25 @@ export default function SettingsDialog({
                                                     <option value="zen">Zen Mode</option>
                                                 </select>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="settings-row">
+                                        <div className="settings-label">
+                                            <label className="settings-label-title" htmlFor="library-preview-mode">Preview mode</label>
+                                            <span className="settings-label-desc" id="library-preview-mode-description">Choose how pages and widgets appear in the sidebar</span>
+                                        </div>
+                                        <div className="settings-control">
+                                            <select
+                                                id="library-preview-mode"
+                                                aria-describedby="library-preview-mode-description"
+                                                value={libraryPreviewMode}
+                                                onChange={(e) => void saveSettings({libraryPreviewMode: e.target.value === 'classic' ? 'classic' : 'live'})}
+                                                className="settings-select"
+                                            >
+                                                <option value="live">Live</option>
+                                                <option value="classic">Classic</option>
+                                            </select>
                                         </div>
                                     </div>
 

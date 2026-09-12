@@ -1,10 +1,12 @@
-import {useDraggable} from '@dnd-kit/core'
-import {ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderOpen, FolderPlus, LayoutTemplate, Search, X} from 'lucide-react'
+import {ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderOpen, FolderPlus, LayoutTemplate, MoreHorizontal, Plus, Search, X} from 'lucide-react'
 import './Sidebar.css'
+import './LibraryPreview.css'
+import {LibraryPreview} from './LibraryPreview'
+import {WidgetCategory} from './WidgetCategory'
+import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {useEditorStore} from '../../store/editorStore'
 import {useProjectStore} from '../../store/projectStore'
 import {type BlockDefinition, componentRegistry} from '../../registry/ComponentRegistry'
-import BlockIcon from '../BlockIcon/BlockIcon'
 import BlockTree from '../BlockTree/BlockTree'
 import AiAssistant from '../AiAssistant/AiAssistant'
 import {type MouseEvent, useMemo, useRef, useState} from 'react'
@@ -18,89 +20,8 @@ import type {PageTemplate} from '../../templates/templateTypes'
 import {createBlock} from '../../store/types'
 import type {Block} from '../../store/types'
 
-function WidgetItem({widget, onContextMenu}: {
-    widget: BlockDefinition;
-    onContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void
-}): JSX.Element {
-    const isTypingCode = useEditorStore((s) => s.isTypingCode);
-    const {attributes, listeners, setNodeRef, transform, isDragging} = useDraggable({
-        id: `widget:${widget.type}`,
-        disabled: isTypingCode,
-        data: {widgetType: widget.type, label: widget.label, icon: widget.icon}
-    });
-
-    const iconString = typeof widget.icon === 'string' ? widget.icon.trim() : '';
-    const isBadIconGlyph = (s: string): boolean => {
-        if (!s) return true;
-        if (s.startsWith('lucide:')) return false;
-        if (/^[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]$/.test(s)) return true;
-        return (
-            s === '☐' ||
-            s === '☑' ||
-            s === '▢' ||
-            s === '▣' ||
-            s === '▭' ||
-            s === '🔲' ||
-            s === '🔳'
-        )
-    };
-
-    const isTemplateWidget = widget.type.startsWith('template:');
-    const shouldUseExplicitIcon = widget.type.startsWith('user:') || isTemplateWidget;
-
-    const style = transform ? {} : undefined;
-
-    return (
-        <div
-            ref={setNodeRef}
-            className={`widget-item ${widget.type.startsWith('user:') ? 'custom' : ''} ${isDragging ? 'dragging' : ''}`}
-            style={style}
-            {...attributes}
-            {...listeners}
-            onContextMenu={(e) => onContextMenu?.(e, widget)}
-        >
-            <div className="widget-icon">
-                {shouldUseExplicitIcon ? (
-                    iconString && iconString.startsWith('lucide:') ? (
-                        <BlockIcon name={iconString.replace(/^lucide:/, '')}/>
-                    ) : iconString && !isBadIconGlyph(iconString) ? (
-                        iconString
-                    ) : (
-                        <BlockIcon name={isTemplateWidget ? 'layout-template' : 'user-block'}/>
-                    )
-                ) : (
-                    <BlockIcon name={widget.type}/>
-                )}
-            </div>
-            <span>{widget.label}</span>
-        </div>
-    )
-}
-
-function WidgetCategory({
-                            title,
-                            widgets,
-                            onWidgetContextMenu
-                        }: {
-    title: string
-    widgets: BlockDefinition[]
-    onWidgetContextMenu?: (e: MouseEvent, widget: BlockDefinition) => void
-}): JSX.Element {
-    if (widgets.length === 0) return <></>;
-
-    return (
-        <div className="widget-category">
-            <div className="category-title">{title}</div>
-            <div className="widget-grid">
-                {widgets.map((w) => (
-                    <WidgetItem key={w.type} widget={w} onContextMenu={onWidgetContextMenu}/>
-                ))}
-            </div>
-        </div>
-    )
-}
-
 function Sidebar(): JSX.Element {
+    const libraryMode = useAppSettingsStore(s => s.libraryPreviewMode);
     const categories = componentRegistry.getCategories();
     const userBlocks = useProjectStore((s) => s.userBlocks);
     const removeUserBlock = useProjectStore((s) => s.removeUserBlock);
@@ -541,11 +462,13 @@ function Sidebar(): JSX.Element {
                     }
                 }}
             >
-                <div className="page-info">
-                    <FileText size={14} className="page-icon"/>
+                {libraryMode === 'live' && <LibraryPreview kind="page" page={page}/>}
+                <div className="page-caption">
+                <button type="button" className="page-info" title={page.title} aria-label={`Open ${page.title}`} aria-current={page.id === currentPageId ? 'page' : undefined}>
+                    {libraryMode === 'classic' && <FileText size={14} className="page-icon"/>}
                     <span className="page-name">{page.title}</span>
-                    {page.slug !== 'index' && <span className="page-slug">/{page.slug}</span>}
-                </div>
+                    {(libraryMode === 'live' || page.slug !== 'index') && <span className="page-slug">{libraryMode === 'live' ? page.slug : `/${page.slug}`}</span>}
+                </button>
                 {effectiveTags.length > 0 && (
                     <div className="page-tags">
                         {ownTags.map((tag) => (
@@ -556,6 +479,14 @@ function Sidebar(): JSX.Element {
                         ))}
                     </div>
                 )}
+                {libraryMode === 'live' && <button type="button" className="page-menu-button"
+                    aria-label={`Page options for ${page.title}`} aria-haspopup="menu" aria-expanded={pageContextMenu?.pageId === page.id}
+                    onClick={event => {
+                        event.stopPropagation();
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setPageContextMenu({x: rect.left, y: rect.bottom, pageId: page.id})
+                    }}><MoreHorizontal size={14}/></button>}
+                </div>
             </div>
         )
     };
@@ -609,39 +540,39 @@ function Sidebar(): JSX.Element {
     };
 
     return (
-        <div className="sidebar">
+        <div className={`sidebar ${libraryMode === 'live' ? 'sidebar-live' : 'sidebar-classic'}`}>
             <div className="sidebar-header">
                 <h3>Design</h3>
             </div>
             <div className="sidebar-tabs">
-                <div
+                <button type="button"
                     className={`sidebar-tab ${activeTab === 'pages' ? 'active' : ''}`}
                     onClick={() => setActiveTab('pages')}
                     data-tutorial="sidebar-tab-pages"
                 >
                     Pages
-                </div>
-                <div
+                </button>
+                <button type="button"
                     className={`sidebar-tab ${activeTab === 'widgets' ? 'active' : ''}`}
                     onClick={() => setActiveTab('widgets')}
                     data-tutorial="sidebar-tab-widgets"
                 >
                     Widgets
-                </div>
-                <div
+                </button>
+                <button type="button"
                     className={`sidebar-tab ${activeTab === 'layers' ? 'active' : ''}`}
                     onClick={() => setActiveTab('layers')}
                     data-tutorial="sidebar-tab-layers"
                 >
                     Layers
-                </div>
-                <div
+                </button>
+                <button type="button"
                     className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
                     onClick={() => setActiveTab('ai')}
                     data-tutorial="sidebar-tab-ai"
                 >
                     AI
-                </div>
+                </button>
             </div>
             <div className="sidebar-content" style={{display: 'flex', flexDirection: 'column'}}>
                 {activeTab === 'pages' && (
@@ -651,6 +582,11 @@ function Sidebar(): JSX.Element {
                         onDropCapture={handleBackgroundDrop}
                         onDragLeaveCapture={handleBackgroundDragLeave}
                     >
+                        {libraryMode === 'live' && <div className="library-pages-heading">
+                            <span className="category-title">Site pages</span>
+                            <button type="button" className="library-add-page" aria-label="Add page"
+                                onClick={() => setPageModal({mode: 'create'})}><Plus size={16}/></button>
+                        </div>}
                         <div className="pages-list">
                             {/* Folders */}
                             {folders.map((folder) => {
