@@ -1,12 +1,14 @@
-import {memo, useEffect, useMemo, useRef, useState} from 'react'
+import {memo, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {useEditorStore} from '../../store/editorStore'
 import {useProjectStore} from '../../store/projectStore'
 import {themeToCSS, type Block, type Page} from '../../store/types'
-import type {BlockDefinition} from '../../registry/ComponentRegistry'
+import {buildDefaultBlockProps, type BlockDefinition} from '../../registry/ComponentRegistry'
+import {getTemplateByWidgetType} from '../../templates/templateWidgets'
 import {useProjectCommandState} from '../../project/projectCommands'
 import {projectFontUrl} from '../../utils/projectFontUrl'
 import {widgetPreviewBlocks} from './libraryPreviewSamples'
 import {libraryPreviewDocument} from './libraryPreviewDocument'
+import {useLibraryPreviewCache} from './LibraryPreviewCacheProvider'
 
 type PreviewSource =
     | {readonly kind: 'page'; readonly page: Page}
@@ -17,7 +19,12 @@ const UPDATE_DELAY = 150
 const WIDGET_WIDTH = 220
 const PAGE_WIDTH = 1024
 
-function PreviewContent({source, width}: {readonly source: PreviewSource; readonly width: number}): JSX.Element {
+function PreviewContent({source, width, target}: {
+    readonly source: PreviewSource
+    readonly width: number
+    readonly target: HTMLDivElement
+}): null {
+    const cache = useLibraryPreviewCache()
     const settings = useProjectStore(s => s.settings)
     const fonts = useProjectStore(s => s.fonts)
     const pages = useProjectStore(s => s.pages)
@@ -32,37 +39,48 @@ function PreviewContent({source, width}: {readonly source: PreviewSource; readon
     const customCss = useEditorStore(s => s.customCss)
     const sessionId = useProjectCommandState().session?.sessionId
     const blocks = useMemo(() => {
-        if (source.kind === 'widget') return widgetPreviewBlocks(source.widget, saved)
+        if (source.kind === 'widget') return EMPTY_BLOCKS
         return isCurrent ? useEditorStore.getState().getFullBlocks() : source.page.blocks
-    }, [source, saved, isCurrent, editedBlocks, pageBackup, activeTabIndex])
+    }, [source, isCurrent, editedBlocks, pageBackup, activeTabIndex])
     const themeCss = useMemo(() => themeToCSS(settings.theme, settings.themes,
         fonts.map(font => ({...font, relativePath: projectFontUrl(font.relativePath, sessionId)})),
         {componentTokens: settings.componentTokens, motionPreviewMode: 'reduced'}),
     [settings.theme, settings.themes, settings.componentTokens, fonts, sessionId])
-    const input = useMemo(() => ({
-        blocks, themeCss, customCss, kind: source.kind,
-        themeMode: settings.themes?.previewMode ?? 'device',
-        renderOptions: {
-            framework: settings.framework, pages, folders,
-            fullWidthFormControls: source.kind === 'page' ? source.page.fullWidthFormControls : true
-        },
-        frameworkBase: window.location.protocol === 'file:' ? 'app-framework://asset/'
-            : new URL('./frameworks/', window.location.href).href
-    }), [blocks, themeCss, customCss, source, settings.framework, settings.themes?.previewMode, pages, folders])
+    const input = useMemo(() => {
+        const widget = source.kind === 'widget' ? source.widget : undefined
+        const content = widget ? saved?.content ?? getTemplateByWidgetType(widget.type)?.blocks ?? {
+            type: widget.type, props: buildDefaultBlockProps(widget),
+            classes: widget.defaultClasses, styles: widget.defaultStyles, children: widget.defaultChildren
+        } : blocks
+        const options = {
+            blocks, themeCss, customCss, kind: source.kind,
+            themeMode: settings.themes?.previewMode ?? 'device',
+            renderOptions: {
+                framework: settings.framework, pages, folders,
+                fullWidthFormControls: source.kind === 'page' ? source.page.fullWidthFormControls : true
+            },
+            frameworkBase: window.location.protocol === 'file:' ? 'app-framework://asset/'
+                : new URL('./frameworks/', window.location.href).href
+        }
+        return {options, widget, saved, revision: JSON.stringify({...options, blocks: content})}
+    }, [blocks, themeCss, customCss, source, saved, settings.framework, settings.themes?.previewMode, pages, folders])
     const [settled, setSettled] = useState(input)
     useEffect(() => {
         const timer = window.setTimeout(() => setSettled(input), UPDATE_DELAY)
         return () => window.clearTimeout(timer)
     }, [input])
-    const srcDoc = useMemo(() => libraryPreviewDocument(settled), [settled])
     const viewport = source.kind === 'page' || (source.kind === 'widget'
         && (source.widget.type.startsWith('template:') || source.widget.type.startsWith('user:')))
         ? PAGE_WIDTH : WIDGET_WIDTH
     const title = source.kind === 'page' ? source.page.title : source.widget.label
-    return <iframe className="library-preview-frame" title={`${title} preview`}
-        srcDoc={srcDoc} sandbox={settings.framework === 'tailwind' ? 'allow-scripts' : ''}
-        tabIndex={-1} aria-hidden="true" referrerPolicy="no-referrer"
-        style={{width: viewport, height: viewport / 2, transform: `scale(${width / viewport})`}}/>
+    const key = source.kind === 'page' ? `page:${source.page.id}` : `widget:${source.widget.type}`
+    const sandbox = settled.options.renderOptions.framework === 'tailwind' ? 'allow-scripts' : ''
+    useLayoutEffect(() => cache.show(key, target, {
+        title: `${title} preview`, width, viewport, sandbox, revision: settled.revision,
+        render: () => libraryPreviewDocument({...settled.options,
+            blocks: settled.widget ? widgetPreviewBlocks(settled.widget, settled.saved) : settled.options.blocks})
+    }), [cache, key, target, title, width, viewport, sandbox, settled])
+    return null
 }
 
 export const LibraryPreview = memo(function LibraryPreview(source: PreviewSource): JSX.Element {
@@ -86,6 +104,6 @@ export const LibraryPreview = memo(function LibraryPreview(source: PreviewSource
         }
     }, [])
     return <div className="library-preview" ref={ref} aria-hidden="true">
-        {visible && width > 0 && <PreviewContent source={source} width={width}/>}
+        {visible && width > 0 && ref.current && <PreviewContent source={source} width={width} target={ref.current}/>}
     </div>
 })

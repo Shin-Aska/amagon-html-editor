@@ -11,7 +11,7 @@ const commands = vi.hoisted(() => ({
     save: vi.fn(async () => ({ok: true, value: undefined}))
 }))
 
-vi.mock('../../../project/projectCommands', () => ({projectCommands: commands}))
+vi.mock('../../../project/projectCommands', () => ({projectCommands: commands, useProjectCommandState: () => ({session: null})}))
 
 const reusableBlock: UserBlock = {
     id: 'reusable-hero',

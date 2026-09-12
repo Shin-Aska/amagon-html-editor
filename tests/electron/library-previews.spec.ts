@@ -9,7 +9,7 @@ async function waitForThumbnails(page: Page): Promise<void> {
     await page.locator('.sidebar-tabs').evaluate(async node => {
         await Promise.all(node.getAnimations({subtree: true}).map(animation => animation.finished))
     })
-    for (const frame of await page.locator('.library-preview-frame').all()) {
+    for (const frame of await page.locator('.sidebar .library-preview-frame').all()) {
         await expect(frame.contentFrame().locator('body > :not(style)').first()).toBeAttached()
         await expect.poll(() => frame.contentFrame().locator('body').evaluate(body => body.ownerDocument.readyState)).toBe('complete')
     }
@@ -28,7 +28,7 @@ test('live libraries update real content and Classic releases previews across ta
         await page.getByRole('button', {name: 'Done', exact: true}).click()
         await settleEditor(harness)
         await expect(page.frameLocator('.canvas-iframe').getByRole('heading', {name: 'Welcome to Test Site'})).toBeVisible()
-        const previews = page.locator('.library-preview-frame')
+        const previews = page.locator('.sidebar .library-preview-frame')
         await page.getByTitle('Global Settings', {exact: true}).click()
         const settings = page.locator('.settings-dialog')
         const mode = settings.getByLabel('Preview mode', {exact: true})
@@ -41,6 +41,7 @@ test('live libraries update real content and Classic releases previews across ta
         await expect(mode).toHaveValue('classic')
         await expect(previews).toHaveCount(0)
         await capture(harness, 'library-settings-classic.png', {actions: ['Choose Classic with keyboard'], state: 'Classic applies immediately while App Settings is open'})
+        await expect(page.locator('.library-preview-cache, .library-preview-frame')).toHaveCount(0)
         await page.keyboard.press('ArrowUp')
         await expect(mode).toHaveValue('live')
         await settings.getByRole('button', {name: 'Done', exact: true}).click()
@@ -79,7 +80,7 @@ test('live libraries update real content and Classic releases previews across ta
 
         // When: enabling Live and editing the current canvas heading.
         await setLibraryPreviewModeThroughUi(page, 'live')
-        const homePreview = page.frameLocator('.library-preview-frame').first()
+        const homePreview = page.frameLocator('.sidebar .library-preview-frame').first()
         await expect(homePreview.getByRole('heading', {name: 'Welcome to Test Site'})).toBeVisible()
         await page.frameLocator('.canvas-iframe').getByRole('heading', {name: 'Welcome to Test Site'}).click()
         await page.locator('.inspector input.inspector-input').first().fill('Updated live without saving')
@@ -124,7 +125,7 @@ test('live libraries update real content and Classic releases previews across ta
         await page.getByPlaceholder('Search widgets...').fill('Heading')
         // Then: only the matching tile is rendered and has real heading content.
         await expect(page.locator('.widget-item')).toHaveCount(1)
-        await expect(page.frameLocator('.library-preview-frame').getByRole('heading', {name: 'Hello world'})).toBeVisible()
+        await expect(page.frameLocator('.sidebar .library-preview-frame').getByRole('heading', {name: 'Hello world'})).toBeVisible()
         // The preview remains a draggable widget and inserts its real default content.
         const headingCount = await page.frameLocator('.canvas-iframe').locator('h1, h2, h3, h4, h5, h6').count()
         await page.locator('.widget-item').dragTo(page.locator('.canvas-iframe'), {targetPosition: {x: 60, y: 160}})
@@ -220,12 +221,12 @@ for (const framework of ['tailwind', 'vanilla'] as const) {
             await capture(harness, `library-${framework}-dark-widget.png`, {actions: ['Create project', 'Search Button', 'Set page preview to Dark'], state: 'Bundled framework and project theme applied to passive widget'})
 
             await page.getByRole('button', {name: 'Pages', exact: true}).click()
-            const home = page.frameLocator('.library-preview-frame')
+            const home = page.frameLocator('.sidebar .library-preview-frame')
             await expect(home.getByRole('heading', {name: 'Welcome to Framework Preview'})).toBeVisible()
             await expect(home.locator('html')).toHaveAttribute('data-page-theme', 'dark')
             await waitForThumbnails(page)
             await capture(harness, `library-${framework}-dark-page.png`, {actions: ['Open Pages'], state: 'Live page uses selected framework and dark project theme'})
-            await expect(page.locator('.library-preview-frame')).not.toHaveAttribute('sandbox', /allow-same-origin/)
+            await expect(page.locator('.sidebar .library-preview-frame')).not.toHaveAttribute('sandbox', /allow-same-origin/)
             expect(harness.pageErrors).toEqual([])
             await closeProjectThroughUi(harness)
             await harness.app.close()

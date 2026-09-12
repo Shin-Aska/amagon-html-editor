@@ -2,6 +2,7 @@ import {ChevronDown, ChevronRight, FilePlus, FileText, Folder, FolderOpen, Folde
 import './Sidebar.css'
 import './LibraryPreview.css'
 import {LibraryPreview} from './LibraryPreview'
+import {LibraryPreviewCacheProvider} from './LibraryPreviewCacheProvider'
 import {WidgetCategory} from './WidgetCategory'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
 import {useEditorStore} from '../../store/editorStore'
@@ -20,7 +21,7 @@ import type {PageTemplate} from '../../templates/templateTypes'
 import {createBlock} from '../../store/types'
 import type {Block} from '../../store/types'
 
-function Sidebar(): JSX.Element {
+function SidebarContent(): JSX.Element {
     const libraryMode = useAppSettingsStore(s => s.libraryPreviewMode);
     const categories = componentRegistry.getCategories();
     const userBlocks = useProjectStore((s) => s.userBlocks);
@@ -964,4 +965,6 @@ function Sidebar(): JSX.Element {
     )
 }
 
-export default Sidebar
+export default function Sidebar(): JSX.Element {
+    return <LibraryPreviewCacheProvider><SidebarContent/></LibraryPreviewCacheProvider>
+}

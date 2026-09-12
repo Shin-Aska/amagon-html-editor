@@ -2,6 +2,8 @@ import {act} from 'react'
 import {createRoot} from 'react-dom/client'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {LibraryPreview} from '../LibraryPreview'
+import {LibraryPreviewCacheProvider} from '../LibraryPreviewCacheProvider'
+import {useAppSettingsStore} from '../../../store/appSettingsStore'
 import {useEditorStore} from '../../../store/editorStore'
 import {useProjectStore} from '../../../store/projectStore'
 import {createBlock, type Page} from '../../../store/types'
@@ -17,6 +19,7 @@ describe('live page preview lifecycle', () => {
     const page: Page = {id: 'live-page', title: 'Home', slug: 'index', meta: {}, blocks: [heading]}
 
     beforeEach(() => {
+        useAppSettingsStore.setState({libraryPreviewMode: 'live', libraryPreviewCacheSlots: 0})
         vi.useFakeTimers()
         vi.stubGlobal('ResizeObserver', class {
             observe(): void {}
@@ -35,7 +38,7 @@ describe('live page preview lifecycle', () => {
         container = document.createElement('div')
         document.body.append(container)
         root = createRoot(container)
-        act(() => root.render(<LibraryPreview kind="page" page={page}/>))
+        act(() => root.render(<LibraryPreviewCacheProvider><LibraryPreview kind="page" page={page}/></LibraryPreviewCacheProvider>))
     })
 
     afterEach(() => {
@@ -51,7 +54,7 @@ describe('live page preview lifecycle', () => {
         return new DOMParser().parseFromString(srcDoc, 'text/html').body.textContent ?? ''
     }
 
-    it('does not mount offscreen frames and releases them when scrolled away', () => {
+    it('does not mount offscreen frames and releases them when caching is disabled', () => {
         // Given
         expect(container.querySelector('iframe')).toBeNull()
         // When
