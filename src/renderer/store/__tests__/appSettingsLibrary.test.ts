@@ -30,4 +30,24 @@ describe('library preview preference', () => {
         // Then
         expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({libraryPreviewMode: 'classic'}))
     })
+
+    it.each([undefined, null, -1, 1.5, '64', Infinity, NaN])('defaults invalid cache capacity %j to 64', async value => {
+        api.getSettings.mockResolvedValue({success: true, settings: {libraryPreviewCacheSlots: value}})
+        await useAppSettingsStore.getState().loadSettings()
+        expect(useAppSettingsStore.getState().libraryPreviewCacheSlots).toBe(64)
+    })
+
+    it.each([0, 16, 64, 128])('restores and preserves a cache capacity of %i', async value => {
+        api.getSettings.mockResolvedValue({success: true, settings: {libraryPreviewCacheSlots: value}})
+        await useAppSettingsStore.getState().loadSettings()
+        await useAppSettingsStore.getState().saveSettings({theme: 'light'})
+        expect(useAppSettingsStore.getState().libraryPreviewCacheSlots).toBe(value)
+        expect(api.saveSettings).toHaveBeenLastCalledWith(expect.objectContaining({libraryPreviewCacheSlots: value}))
+    })
+
+    it('persists capacity changes immediately', async () => {
+        await useAppSettingsStore.getState().saveSettings({libraryPreviewCacheSlots: 32})
+        expect(useAppSettingsStore.getState().libraryPreviewCacheSlots).toBe(32)
+        expect(api.saveSettings).toHaveBeenLastCalledWith(expect.objectContaining({libraryPreviewCacheSlots: 32}))
+    })
 })

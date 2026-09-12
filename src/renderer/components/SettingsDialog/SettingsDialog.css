@@ -215,6 +215,10 @@
   width: auto;
 }
 
+.settings-input--cache-slots {
+  width: 6rem;
+}
+
 .settings-input,
 .settings-select,
 .settings-btn-primary,
