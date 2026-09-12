@@ -45,6 +45,19 @@ afterEach(() => {
 });
 
 describe('useKeyboardShortcuts', () => {
+    it.each(['ArrowDown', 'ArrowUp', 'Tab'])('leaves native %s navigation alone inside a select', (key) => {
+        const unmount = renderHarness({enabled: true, onNewProject: vi.fn(), onOpen: vi.fn()});
+        const select = document.createElement('select');
+        document.body.appendChild(select);
+        select.focus();
+        const event = new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true});
+
+        act(() => select.dispatchEvent(event));
+
+        expect(event.defaultPrevented).toBe(false);
+        unmount()
+    });
+
     it('keeps New and Open shortcuts active when editor shortcuts are disabled', () => {
         const onNewProject = vi.fn();
         const onOpen = vi.fn();
