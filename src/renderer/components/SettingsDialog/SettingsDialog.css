@@ -270,6 +270,42 @@ body.dark .settings-select:focus {
   color: var(--color-error, #ef4444);
 }
 
+.settings-provider-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.settings-provider-removal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-provider-removal-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.settings-provider-removal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 .settings-cli-status {
   display: inline-flex;
   align-items: center;
@@ -421,6 +457,11 @@ body.dark .settings-select:focus {
 
 .settings-btn-danger:hover {
   background: rgba(220, 53, 69, 0.14);
+}
+
+.settings-btn-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .settings-btn-block {
@@ -729,10 +770,15 @@ body.dark .settings-danger-tooltip strong {
 
 @media (max-width: 480px) {
   .settings-dialog .settings-row,
-  .settings-dialog .settings-inline-row {
+  .settings-dialog .settings-inline-row,
+  .settings-dialog .settings-provider-removal {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-3);
+  }
+
+  .settings-dialog .settings-provider-removal-actions {
+    justify-content: flex-start;
   }
 
   .settings-dialog .settings-label {
