@@ -21,6 +21,7 @@ import Toast from './components/Toast/Toast'
 import BlockIcon from './components/BlockIcon/BlockIcon'
 import {useEditorStore} from './store/editorStore'
 import {useProjectStore} from './store/projectStore'
+import {useAiStore} from './store/aiStore'
 import {useToastStore} from './store/toastStore'
 import {useAppSettingsStore} from './store/appSettingsStore'
 import {useTutorialStore} from './store/tutorialStore'
@@ -28,7 +29,7 @@ import {useKeyboardShortcuts} from './hooks/useKeyboardShortcuts'
 import type {Block} from './store/types'
 import {createBlock} from './store/types'
 import {buildDefaultBlockProps, componentRegistry} from './registry/ComponentRegistry'
-import WelcomeScreen from './components/WelcomeScreen/WelcomeScreen'
+import WelcomeStartupGate from './components/WelcomeScreen/WelcomeStartupGate'
 import {getApi} from './utils/api'
 import {projectCommands, useProjectCommandState} from './project/projectCommands'
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp/KeyboardShortcutsHelp'
@@ -37,6 +38,7 @@ import TutorialOverlay from './components/Tutorial/TutorialOverlay'
 import {tutorialSteps} from './components/Tutorial/tutorialSteps'
 import {OPEN_KEYBOARD_SHORTCUTS_EVENT} from './constants/tutorialEvents'
 import {getTemplateByWidgetType, isTemplateWidgetType} from './templates/templateWidgets'
+import MissingAiProviderNotice from './components/AiAssistant/MissingAiProviderNotice'
 
 // Lazy load heavy components for performance
 const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'));
@@ -90,6 +92,8 @@ function App(): JSX.Element {
     const setEditorLayout = useEditorStore((s) => s.setEditorLayout);
     const userBlocks = useProjectStore((s) => s.userBlocks);
     const isProjectLoaded = useProjectStore((s) => s.isProjectLoaded);
+    const aiInitializing = useAiStore((state) => !state.configLoaded || !state.modelsLoaded);
+    const welcomeInitializing = !isProjectLoaded && aiInitializing;
     const currentPageId = useProjectStore((s) => s.currentPageId);
     const settingsLoaded = useAppSettingsStore((s) => s.loaded);
     const tutorialEnabled = useAppSettingsStore((s) => s.tutorialEnabled);
@@ -196,8 +200,9 @@ function App(): JSX.Element {
 
     // Handlers for keyboard shortcuts - direct API calls
     const handleNewProject = useCallback(() => {
+        if (welcomeInitializing) return
         setShowNewProject(true)
-    }, []);
+    }, [welcomeInitializing]);
 
     const ensureBackendReadyAndFlushEdits = useCallback(async (): Promise<boolean> => {
         const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
@@ -230,8 +235,9 @@ function App(): JSX.Element {
     }, [ensureBackendReadyAndFlushEdits]);
 
     const handleLoad = useCallback(async () => {
+        if (welcomeInitializing) return
         await projectCommands.openProject()
-    }, []);
+    }, [welcomeInitializing]);
 
     const handleExport = useCallback(() => {
         setShowExport(true)
@@ -287,6 +293,7 @@ function App(): JSX.Element {
     // Command palette keyboard handler
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (welcomeInitializing) return
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 setCommandPaletteOpen(prev => !prev)
@@ -299,20 +306,22 @@ function App(): JSX.Element {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, []);
+    }, [welcomeInitializing]);
 
     useEffect(() => {
         const handleOpenKeyboardShortcuts = () => {
+            if (welcomeInitializing) return
             setShowKeyboardShortcuts(true)
         };
 
         window.addEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts);
         return () => window.removeEventListener(OPEN_KEYBOARD_SHORTCUTS_EVENT, handleOpenKeyboardShortcuts)
-    }, []);
+    }, [welcomeInitializing]);
 
     // Electron menu action listener
     useEffect(() => {
         return api.menu.onAction((action: string) => {
+            if (welcomeInitializing) return
             switch (action) {
                 case 'new-project':
                     handleNewProject();
@@ -370,7 +379,7 @@ function App(): JSX.Element {
                     break
             }
         })
-    }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector]);
+    }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector, welcomeInitializing]);
 
     const [activeWidget, setActiveWidget] = useState<{
         widgetType: string;
@@ -578,7 +587,7 @@ function App(): JSX.Element {
 
     const renderEditorContent = () => {
         if (!isProjectLoaded) {
-            return <WelcomeScreen/>
+            return <WelcomeStartupGate/>
         }
 
         return (
@@ -674,6 +683,7 @@ function App(): JSX.Element {
             {renderEditorContent()}
 
             <Toast/>
+            {isProjectLoaded && <MissingAiProviderNotice/>}
 
             {(projectCommandState.progress?.busy || projectCommandState.message?.tone === 'error') && (
                 <div className="project-command-feedback">
