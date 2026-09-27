@@ -6,8 +6,8 @@ import { fileURLToPath } from "url";
 import { execFile } from "child_process";
 import { randomUUID } from "crypto";
 import { getFonts } from "font-list";
-import { buildSystemPrompt, chat as aiChat, fetchAvailableModels, fetchModelsForProvider, loadApiKeyForProvider, loadConfig as aiLoadConfig, maskApiKey, MASKED_KEY_PREFIX, PROVIDER_MODELS, saveConfig as aiSaveConfig } from "./aiService";
-import { CLI_BINARY_NAMES, detectCliProvider } from "./cliHelpers";
+import { buildSystemPrompt, chat as aiChat, fetchAvailableModels, fetchModelsForProvider, loadApiKeyForProvider, loadConfig as aiLoadConfig, maskApiKey, MASKED_KEY_PREFIX, PROVIDER_MODELS, removeProvider as aiRemoveProvider, saveConfig as aiSaveConfig } from "./aiService";
+import { CLI_BINARY_NAMES, detectCli, detectCliProvider } from "./cliHelpers";
 import { isEncryptionSecure } from "./cryptoHelpers";
 import { buildAppMenu } from "./menu";
 import "../publish/providers/index";
@@ -195,12 +195,11 @@ function registerIpcHandlers(): void {
     chat: aiChat,
     cliBinaryNames: CLI_BINARY_NAMES,
     detectCliProvider,
-    createOpenCodeClient: async () => {
-      const { createOpencodeClient } = await import("@opencode-ai/sdk");
-      return createOpencodeClient({ baseUrl: "http://127.0.0.1:4096" });
-    },
+    detectOpenCodeExecutable: () => detectCli("opencode"),
+    createOpenCodeClient: async () => (await import("@opencode-ai/sdk")).createOpencodeClient({ baseUrl: "http://127.0.0.1:4096" }),
     loadConfig: aiLoadConfig,
     saveConfig: aiSaveConfig,
+    removeProvider: aiRemoveProvider,
     maskApiKey,
     maskedKeyPrefix: MASKED_KEY_PREFIX,
     fetchAvailableModels,
