@@ -404,7 +404,7 @@ const SUGGESTIONS = [
 ];
 
 export default function AiAssistant(): JSX.Element {
-    const {messages, isLoading, configLoaded, modelsLoaded, sendMessage, clearChat, loadConfig} = useAiStore();
+    const {messages, isLoading, configLoaded, modelsLoaded, sendMessage, clearChat} = useAiStore();
     const {hasConfiguredAiProvider} = useAiAvailability();
     const addBlock = useEditorStore((s) => s.addBlock);
     const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
@@ -424,13 +424,6 @@ export default function AiAssistant(): JSX.Element {
         const newHeight = Math.min(textarea.scrollHeight, 100);
         textarea.style.height = `${newHeight}px`
     }, []);
-
-    // Load config on mount
-    useEffect(() => {
-        if (!configLoaded) {
-            loadConfig()
-        }
-    }, [configLoaded, loadConfig]);
 
     // Auto-scroll to bottom
     useEffect(() => {
