@@ -6,7 +6,7 @@ import * as path from 'path'
 import {pathToFileURL} from 'url'
 
 type CliProvider = 'codex-cli' | 'github-cli' | 'junie-cli'
-type CliBinary = 'codex' | 'copilot' | 'junie'
+type CliBinary = 'codex' | 'copilot' | 'junie' | 'opencode'
 
 const LOOKUP_TIMEOUT_MS = 10_000;
 const DEFAULT_CHAT_TIMEOUT_MS = 120_000;
@@ -547,6 +547,7 @@ export async function detectCli(
 
     const versionArgs = CLI_VERSION_ARGS[name] ?? ['--version'];
     const versionResult = await runProcess(binaryPath, versionArgs, undefined, CLI_VERSION_TIMEOUTS[name] ?? LOOKUP_TIMEOUT_MS).catch(() => null);
+    if (versionResult?.exitCode !== 0) return {available: false};
     const versionLine = versionResult
         ? getNonEmptyLines(versionResult.stdout)[0] ?? getNonEmptyLines(versionResult.stderr)[0]
         : undefined;
