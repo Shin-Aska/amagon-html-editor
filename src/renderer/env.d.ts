@@ -111,12 +111,13 @@ declare global {
                 success: boolean
                 availability?: Record<
                     'codex-cli' | 'github-cli' | 'junie-cli' | 'opencode',
-                    { available: boolean; path?: string; version?: string }
+                    { available: boolean; path?: string; version?: string; serviceRunning?: boolean }
                 >
                 error?: string
             }>
             getConfig: () => Promise<any>
             setConfig: (config: any) => Promise<any>
+            removeProvider: (provider: 'openai' | 'anthropic' | 'google' | 'ollama' | 'mistral' | 'codex-cli' | 'github-cli' | 'junie-cli' | 'opencode') => Promise<any>
             getModels: () => Promise<any>
             fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) => Promise<any>
         }
