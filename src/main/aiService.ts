@@ -6,8 +6,9 @@
 import * as path from 'path'
 import * as fs from 'fs/promises'
 import {app, net} from 'electron'
+import {z} from 'zod'
 import {decryptApiKey, encryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
-import {CLI_BINARY_NAMES, fetchCliModels, spawnCliChat} from './cliHelpers'
+import {CLI_BINARY_NAMES, detectCli, fetchCliModels, spawnCliChat} from './cliHelpers'
 import {createOpencode, createOpencodeClient} from '@opencode-ai/sdk'
 
 // ---------------------------------------------------------------------------
@@ -35,6 +36,8 @@ export interface AiConfig {
     model: string
     apiKey: string
     ollamaUrl: string // e.g. http://localhost:11434
+    dismissedMissingProviders: AiProvider[]
+    removedProviders: AiProvider[]
 }
 
 interface ProviderResponse {
@@ -52,6 +55,8 @@ interface PersistedAiConfig {
     encryptedApiKey?: string   // legacy single key — auto-migrated on first load
     apiKey?: string            // legacy plaintext — auto-migrated on first load
     ollamaUrl: string
+    dismissedMissingProviders?: AiProvider[]
+    removedProviders?: AiProvider[]
 }
 
 // ---------------------------------------------------------------------------
@@ -62,8 +67,14 @@ const DEFAULT_CONFIG: AiConfig = {
     provider: 'openai',
     model: 'gpt-4o',
     apiKey: '',
-    ollamaUrl: 'http://localhost:11434'
+    ollamaUrl: 'http://localhost:11434',
+    dismissedMissingProviders: [],
+    removedProviders: []
 };
+
+const AI_PROVIDER_IDS = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'github-cli', 'junie-cli', 'opencode'] as const;
+export const aiProviderSchema = z.enum(AI_PROVIDER_IDS);
+const providerListSchema = z.array(aiProviderSchema).catch([]);
 
 // Re-export crypto helpers so existing imports from aiService still work
 export {encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
@@ -100,9 +111,8 @@ function getDefaultModelForProvider(provider: AiProvider, preferredModel?: strin
     return providerModels[0] ?? ''
 }
 
-function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>): AiProvider | null {
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'github-cli', 'junie-cli', 'opencode'];
-    return providers.find((provider) => Boolean(encryptedApiKeys[provider])) ?? null
+function getFirstConfiguredAiProvider(encryptedApiKeys: Record<string, string>, removedProviders: readonly AiProvider[]): AiProvider | null {
+    return AI_PROVIDER_IDS.find((provider) => Boolean(encryptedApiKeys[provider]) && !removedProviders.includes(provider)) ?? null
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +129,8 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
         const raw = await fs.readFile(getConfigPath(), 'utf-8');
         const parsed = JSON.parse(raw) as PersistedAiConfig;
         const provider = parsed.provider ?? DEFAULT_CONFIG.provider;
+        parsed.dismissedMissingProviders = providerListSchema.parse(parsed.dismissedMissingProviders);
+        parsed.removedProviders = providerListSchema.parse(parsed.removedProviders);
 
         let encryptedApiKeys: Record<string, string> = {...(parsed.encryptedApiKeys ?? {})};
 
@@ -135,7 +147,9 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
                     provider,
                     model: parsed.model ?? DEFAULT_CONFIG.model,
                     encryptedApiKeys,
-                    ollamaUrl: parsed.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+                    ollamaUrl: parsed.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl,
+                    dismissedMissingProviders: parsed.dismissedMissingProviders,
+                    removedProviders: parsed.removedProviders
                 };
                 await fs.writeFile(getConfigPath(), JSON.stringify(migrated, null, 2), 'utf-8');
                 console.log('[AI Service] Migrated legacy API key to per-provider encrypted storage.');
@@ -162,7 +176,9 @@ async function loadPersistedRaw(): Promise<{ persisted: PersistedAiConfig; encry
             provider: DEFAULT_CONFIG.provider,
             model: DEFAULT_CONFIG.model,
             encryptedApiKeys: {},
-            ollamaUrl: DEFAULT_CONFIG.ollamaUrl
+            ollamaUrl: DEFAULT_CONFIG.ollamaUrl,
+            dismissedMissingProviders: [],
+            removedProviders: []
         };
         return {persisted: empty, encryptedApiKeys: {}}
     }
@@ -184,7 +200,9 @@ export async function loadConfig(): Promise<AiConfig> {
         provider,
         model: persisted.model ?? DEFAULT_CONFIG.model,
         apiKey,
-        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl,
+        dismissedMissingProviders: persisted.dismissedMissingProviders ?? [],
+        removedProviders: persisted.removedProviders ?? []
     }
 }
 
@@ -206,11 +224,12 @@ export async function loadAllProviderCredentials(): Promise<{
     hasKey: boolean;
     maskedKey: string
 }[]> {
-    const {encryptedApiKeys} = await loadPersistedRaw();
-    const providers: AiProvider[] = ['openai', 'anthropic', 'google', 'ollama', 'mistral', 'codex-cli', 'github-cli', 'junie-cli', 'opencode'];
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
+    const providers: AiProvider[] = [...AI_PROVIDER_IDS];
     const result: { provider: AiProvider; hasKey: boolean; maskedKey: string }[] = [];
 
     for (const provider of providers) {
+        if (persisted.removedProviders?.includes(provider)) continue;
         if (isCliProvider(provider)) {
             result.push({provider, hasKey: true, maskedKey: ''});
             continue
@@ -235,7 +254,7 @@ export async function clearApiKeyForProvider(provider: AiProvider): Promise<void
     const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider;
     delete updatedKeys[provider];
     const nextProvider = currentProvider === provider
-        ? (getFirstConfiguredAiProvider(updatedKeys) ?? DEFAULT_CONFIG.provider)
+        ? (getFirstConfiguredAiProvider(updatedKeys, persisted.removedProviders ?? []) ?? DEFAULT_CONFIG.provider)
         : currentProvider;
     const nextModel = nextProvider === currentProvider
         ? (persisted.model ?? DEFAULT_CONFIG.model)
@@ -245,7 +264,9 @@ export async function clearApiKeyForProvider(provider: AiProvider): Promise<void
         provider: nextProvider,
         model: nextModel,
         encryptedApiKeys: updatedKeys,
-        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl,
+        dismissedMissingProviders: persisted.dismissedMissingProviders,
+        removedProviders: persisted.removedProviders
     }, null, 2), 'utf-8')
 }
 
@@ -263,6 +284,9 @@ export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string
     const nextModel = shouldPromoteProvider
         ? getDefaultModelForProvider(nextProvider, currentProvider === provider ? currentModel : undefined)
         : currentModel;
+    const removedProviders = apiKey
+        ? (persisted.removedProviders ?? []).filter((removedProvider) => removedProvider !== provider)
+        : persisted.removedProviders;
 
     if (apiKey) {
         updatedKeys[provider] = encryptApiKey(apiKey)
@@ -274,7 +298,9 @@ export async function saveApiKeyForProvider(provider: AiProvider, apiKey: string
         provider: nextProvider,
         model: nextModel,
         encryptedApiKeys: updatedKeys,
-        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl,
+        dismissedMissingProviders: persisted.dismissedMissingProviders,
+        removedProviders
     }, null, 2), 'utf-8')
 }
 
@@ -285,10 +311,23 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
         provider: persisted.provider ?? DEFAULT_CONFIG.provider,
         model: persisted.model ?? DEFAULT_CONFIG.model,
         apiKey: '',
-        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl
+        ollamaUrl: persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl,
+        dismissedMissingProviders: persisted.dismissedMissingProviders ?? [],
+        removedProviders: persisted.removedProviders ?? []
     };
-    const merged: AiConfig = {...current, ...config};
+    const merged: AiConfig = {
+        ...current,
+        ...config,
+        dismissedMissingProviders: providerListSchema.parse(config.dismissedMissingProviders ?? current.dismissedMissingProviders),
+        removedProviders: providerListSchema.parse(config.removedProviders ?? current.removedProviders)
+    };
     const activeProvider = merged.provider;
+    if (config.provider !== undefined) {
+        merged.removedProviders = merged.removedProviders.filter((provider) => provider !== config.provider);
+        if (config.model === undefined && activeProvider !== current.provider) {
+            merged.model = getDefaultModelForProvider(activeProvider);
+        }
+    }
 
     // Preserve existing per-provider keys; only update the active provider's key if explicitly set
     const newEncryptedApiKeys = {...encryptedApiKeys};
@@ -300,7 +339,9 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
         provider: merged.provider,
         model: merged.model,
         encryptedApiKeys: newEncryptedApiKeys,
-        ollamaUrl: merged.ollamaUrl
+        ollamaUrl: merged.ollamaUrl,
+        dismissedMissingProviders: merged.dismissedMissingProviders,
+        removedProviders: merged.removedProviders
     };
 
     await fs.writeFile(getConfigPath(), JSON.stringify(newPersisted, null, 2), 'utf-8');
@@ -317,6 +358,46 @@ export async function saveConfig(config: Partial<AiConfig>): Promise<AiConfig> {
     }
 
     return {...merged, apiKey: activeApiKey}
+}
+
+export async function removeProvider(provider: AiProvider): Promise<AiConfig> {
+    const {persisted, encryptedApiKeys} = await loadPersistedRaw();
+    const updatedKeys = {...encryptedApiKeys};
+    delete updatedKeys[provider];
+
+    let removedProviders = [...new Set([...(persisted.removedProviders ?? []), provider])];
+    const dismissedMissingProviders = (persisted.dismissedMissingProviders ?? [])
+        .filter((dismissedProvider) => dismissedProvider !== provider);
+    const currentProvider = persisted.provider ?? DEFAULT_CONFIG.provider;
+    const nextProvider = currentProvider === provider
+        ? (getFirstConfiguredAiProvider(updatedKeys, removedProviders)
+            ?? AI_PROVIDER_IDS.find((candidate) => !removedProviders.includes(candidate))
+            ?? DEFAULT_CONFIG.provider)
+        : currentProvider;
+    removedProviders = removedProviders.filter((removedProvider) => removedProvider !== nextProvider);
+    const model = nextProvider === currentProvider
+        ? (persisted.model ?? DEFAULT_CONFIG.model)
+        : getDefaultModelForProvider(nextProvider);
+    const ollamaUrl = persisted.ollamaUrl ?? DEFAULT_CONFIG.ollamaUrl;
+
+    await fs.writeFile(getConfigPath(), JSON.stringify({
+        provider: nextProvider,
+        model,
+        encryptedApiKeys: updatedKeys,
+        ollamaUrl,
+        dismissedMissingProviders,
+        removedProviders
+    }, null, 2), 'utf-8');
+
+    let apiKey = '';
+    if (updatedKeys[nextProvider]) {
+        try {
+            apiKey = decryptApiKey(updatedKeys[nextProvider]);
+        } catch (error) {
+            console.warn('[AI Service] Stored API key could not be decrypted:', error instanceof Error ? error.message : String(error));
+        }
+    }
+    return {provider: nextProvider, model, apiKey, ollamaUrl, dismissedMissingProviders, removedProviders}
 }
 
 // ---------------------------------------------------------------------------
@@ -988,10 +1069,11 @@ async function fetchOpencodeModels(): Promise<string[]> {
         if (models.length > 0) {
             return uniqueNonEmpty(models)
         }
-    } catch (err: any) {
-        console.error('[AI Service] fetchOpencodeModels failed:', err);
+    } catch (error) {
+        console.error('[AI Service] fetchOpencodeModels failed:', error);
     }
-    return [...FALLBACK_MODELS.opencode]
+    const executable = await detectCli('opencode');
+    return executable.available ? [...FALLBACK_MODELS.opencode] : []
 }
 
 export async function fetchModelsForProvider(
