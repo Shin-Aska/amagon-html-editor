@@ -217,6 +217,8 @@ const api = {
 
         setConfig: (config: any) => ipcRenderer.invoke('ai:setConfig', config),
 
+        removeProvider: (provider: string) => ipcRenderer.invoke('ai:removeProvider', provider),
+
         getModels: () => ipcRenderer.invoke('ai:getModels'),
 
         fetchModelsForProvider: (data: { provider: string; apiKey: string; ollamaUrl?: string }) =>
