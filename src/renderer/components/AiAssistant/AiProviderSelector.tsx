@@ -1,6 +1,7 @@
 import {useEffect} from 'react'
 import {type AiProvider, useAiStore} from '../../store/aiStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
+import {preloadAiModels} from '../../aiBootstrap'
 import './AiProviderSelector.css'
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
@@ -20,16 +21,12 @@ export default function AiProviderSelector(): JSX.Element {
     const configLoaded = useAiStore((s) => s.configLoaded);
     const modelsLoaded = useAiStore((s) => s.modelsLoaded);
     const providerModels = useAiStore((s) => s.providerModels);
-    const loadConfig = useAiStore((s) => s.loadConfig);
-    const loadModels = useAiStore((s) => s.loadModels);
     const saveConfig = useAiStore((s) => s.saveConfig);
     const enableDangerousFeatures = useAppSettingsStore((s) => s.enableDangerousFeatures);
 
     useEffect(() => {
-        if (!configLoaded) {
-            loadConfig().then(() => loadModels())
-        }
-    }, [configLoaded, loadConfig, loadModels]);
+        if (!modelsLoaded) void preloadAiModels()
+    }, [modelsLoaded]);
 
     const DANGEROUS_PROVIDERS: AiProvider[] = ['junie-cli'];
 
@@ -42,6 +39,7 @@ export default function AiProviderSelector(): JSX.Element {
     // Dangerous providers are hidden unless the flag is on.
     const visibleProviders = (Object.keys(PROVIDER_LABELS) as AiProvider[]).filter((p) => {
         if (DANGEROUS_PROVIDERS.includes(p) && !enableDangerousFeatures) return false;
+        if (config.removedProviders.includes(p)) return false;
         return p === config.provider || (providerModels[p] && providerModels[p].length > 0)
     });
 
