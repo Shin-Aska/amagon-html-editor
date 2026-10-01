@@ -1,6 +1,7 @@
 import {defineConfig, externalizeDepsPlugin} from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import {resolve} from 'path'
+import {frameworkFontCors} from './scripts/frameworkFontCors'
 
 export default defineConfig({
   main: {
@@ -21,7 +22,7 @@ export default defineConfig({
         }
       }
     },
-    plugins: [react()],
+    plugins: [react(), frameworkFontCors()],
     server: {
       host: process.env.HTML_EDITOR_DEV_HOST || undefined,
       port: process.env.HTML_EDITOR_DEV_PORT ? Number(process.env.HTML_EDITOR_DEV_PORT) : undefined

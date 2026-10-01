@@ -1,4 +1,4 @@
-import type { AiConfig, AiProvider, ChatMessage } from "./aiService";
+import { aiProviderSchema, type AiConfig, type AiProvider, type ChatMessage } from "./aiService";
 import { assertTrustedMainFrame } from "./projects/projectIpcSecurity";
 
 type CliProvider = Extract<AiProvider, "codex-cli" | "github-cli" | "junie-cli">;
@@ -32,9 +32,11 @@ export interface AiIpcContext {
   readonly chat: (messages: ChatMessage[], config?: Partial<AiConfig>) => Promise<{ content: string; error?: string }>;
   readonly cliBinaryNames: Readonly<Record<CliProvider, string>>;
   readonly detectCliProvider: (provider: CliProvider) => Promise<CliAvailability>;
+  readonly detectOpenCodeExecutable: () => Promise<CliAvailability>;
   readonly createOpenCodeClient: () => Promise<OpenCodeClient>;
   readonly loadConfig: () => Promise<AiConfig>;
   readonly saveConfig: (config: Partial<AiConfig>) => Promise<AiConfig>;
+  readonly removeProvider: (provider: AiProvider) => Promise<AiConfig>;
   readonly maskApiKey: (apiKey: string) => string;
   readonly maskedKeyPrefix: string;
   readonly fetchAvailableModels: () => Promise<ModelCatalog>;
@@ -76,19 +78,22 @@ export const registerAiIpc = (context: AiIpcContext): void => {
       const entries = await Promise.all(providerIds.map(async (providerId) => (
         [providerId, await context.detectCliProvider(providerId)] as const
       )));
-      let openCodeAvailable = false;
+      let openCodeServiceRunning = false;
       try {
         const client = await context.createOpenCodeClient();
         await client.provider.list();
-        openCodeAvailable = true;
+        openCodeServiceRunning = true;
       } catch {
-        openCodeAvailable = false;
+        openCodeServiceRunning = false;
       }
+      const openCodeAvailability = openCodeServiceRunning
+        ? { available: true, serviceRunning: true }
+        : { ...await context.detectOpenCodeExecutable(), serviceRunning: false };
       return {
         success: true,
         availability: {
           ...Object.fromEntries(entries),
-          opencode: { available: openCodeAvailable },
+          opencode: openCodeAvailability,
         },
       };
     } catch (error) {
@@ -138,6 +143,16 @@ export const registerAiIpc = (context: AiIpcContext): void => {
       return { success: true, models };
     } catch (error) {
       return { success: false, error: errorMessage(error), models: [] };
+    }
+  });
+
+  context.handle<AiProvider>("ai:removeProvider", async (event, provider) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    try {
+      const removed = await context.removeProvider(aiProviderSchema.parse(provider));
+      return { success: true, config: { ...removed, apiKey: context.maskApiKey(removed.apiKey) } };
+    } catch (error) {
+      return { success: false, error: errorMessage(error) };
     }
   });
 };

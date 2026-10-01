@@ -37,6 +37,36 @@ export interface AiConfig {
     model: string
     apiKey: string
     ollamaUrl: string
+    dismissedMissingProviders: AiProvider[]
+    removedProviders: AiProvider[]
+}
+
+type DetectableLocalProvider = Extract<AiProvider, 'codex-cli' | 'github-cli' | 'junie-cli' | 'opencode'>
+
+function isDetectableLocalProvider(provider: AiProvider): provider is DetectableLocalProvider {
+    return provider === 'codex-cli' || provider === 'github-cli' || provider === 'junie-cli' || provider === 'opencode'
+}
+
+async function findMissingProvider(config: AiConfig): Promise<DetectableLocalProvider | null> {
+    const provider = config.provider
+    if (!isDetectableLocalProvider(provider)
+        || config.dismissedMissingProviders.includes(provider)
+        || config.removedProviders.includes(provider)) return null
+
+    try {
+        const result = await getApi().ai.checkCliAvailability()
+        if (!result.success || !result.availability) return null
+        return result.availability[provider]?.available === false ? provider : null
+    } catch {
+        return null
+    }
+}
+
+class AiProviderUpdateError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = 'AiProviderUpdateError'
+    }
 }
 
 interface AiState {
@@ -47,6 +77,7 @@ interface AiState {
     configLoaded: boolean
     modelsLoaded: boolean
     showSettings: boolean
+    missingProvider: DetectableLocalProvider | null
 }
 
 interface AiActions {
@@ -57,6 +88,8 @@ interface AiActions {
     loadModels: () => Promise<void>
     fetchModelsForProvider: (provider: string, apiKey: string, ollamaUrl?: string) => Promise<string[]>
     setShowSettings: (show: boolean) => void
+    keepMissingProvider: () => Promise<void>
+    removeProvider: (provider: AiProvider) => Promise<void>
 }
 
 type AiStore = AiState & AiActions
@@ -94,7 +127,9 @@ const DEFAULT_CONFIG: AiConfig = {
     provider: 'openai',
     model: 'gpt-4o',
     apiKey: '',
-    ollamaUrl: 'http://localhost:11434'
+    ollamaUrl: 'http://localhost:11434',
+    dismissedMissingProviders: [],
+    removedProviders: []
 };
 
 export const useAiStore = create<AiStore>((set, get) => ({
@@ -106,6 +141,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
     configLoaded: false,
     modelsLoaded: false,
     showSettings: false,
+    missingProvider: null,
 
     // ─── Actions ───────────────────────────────────────────────────────
 
@@ -124,7 +160,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
         try {
             const api = getApi();
-            const {messages} = get();
+            const {messages, config} = get();
 
             const projectTheme = useProjectStore.getState().settings.theme;
             const uiTheme = useEditorStore.getState().theme;
@@ -156,6 +192,15 @@ export const useAiStore = create<AiStore>((set, get) => ({
                 messages: [...state.messages, assistantMessage],
                 isLoading: false
             }))
+
+            if (!result.success && isDetectableLocalProvider(config.provider)) {
+                const missingProvider = await findMissingProvider(config)
+                const currentConfig = get().config
+                if (missingProvider
+                    && currentConfig.provider === config.provider
+                    && !currentConfig.dismissedMissingProviders.includes(missingProvider)
+                    && !currentConfig.removedProviders.includes(missingProvider)) set({missingProvider})
+            }
         } catch (error: any) {
             const errorMessage: ChatMessage = {
                 id: generateId(),
@@ -181,7 +226,15 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const api = getApi();
             const result = await (api as any).ai.getConfig();
             if (result.success && result.config) {
-                set({config: result.config, configLoaded: true})
+                const config: AiConfig = result.config
+                set({config, configLoaded: true, missingProvider: null})
+                const missingProvider = await findMissingProvider(config)
+                const currentConfig = get().config
+                if (currentConfig.provider === config.provider
+                    && !currentConfig.dismissedMissingProviders.includes(config.provider)
+                    && !currentConfig.removedProviders.includes(config.provider)) set({missingProvider})
+            } else {
+                set({configLoaded: true})
             }
         } catch {
             set({configLoaded: true})
@@ -195,11 +248,14 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
         try {
             const api = getApi();
-            const result = await (api as any).ai.setConfig(merged);
+            const result = await (api as any).ai.setConfig(partial);
             if (result.success && result.config) {
                 // Update state with masked config from main process so the
                 // raw API key isn't retained in renderer memory.
-                set({config: result.config});
+                set({
+                    config: result.config,
+                    missingProvider: result.config.provider === get().missingProvider ? get().missingProvider : null
+                });
                 dispatchAiAvailabilityChanged()
             }
         } catch {
@@ -212,7 +268,12 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const api = getApi();
             const result = await (api as any).ai.getModels();
             if (result.success && result.models) {
-                set({providerModels: result.models, modelsLoaded: true});
+                const removedProviders = get().config.removedProviders
+                const fetchedModels: Record<string, string[]> = result.models
+                const providerModels = Object.fromEntries(
+                    Object.entries(fetchedModels).filter(([provider]) => !removedProviders.some((removed) => removed === provider))
+                )
+                set({providerModels, modelsLoaded: true});
                 return
             }
         } catch {
@@ -227,9 +288,9 @@ export const useAiStore = create<AiStore>((set, get) => ({
             const result = await (api as any).ai.fetchModelsForProvider({provider, apiKey, ollamaUrl});
             if (result.success && result.models) {
                 // Merge into providerModels so the dropdown can use them
-                set((state) => ({
-                    providerModels: {...state.providerModels, [provider]: result.models}
-                }));
+                set((state) => state.config.removedProviders.some((removedProvider) => removedProvider === provider)
+                    ? {}
+                    : {providerModels: {...state.providerModels, [provider]: result.models}});
                 return result.models as string[]
             }
         } catch {
@@ -240,5 +301,29 @@ export const useAiStore = create<AiStore>((set, get) => ({
 
     setShowSettings: (show: boolean) => {
         set({showSettings: show})
+    },
+
+    keepMissingProvider: async () => {
+        const provider = get().missingProvider
+        if (!provider) return
+        const dismissedMissingProviders = [...new Set([...get().config.dismissedMissingProviders, provider])]
+        const result = await getApi().ai.setConfig({dismissedMissingProviders})
+        if (!result.success || !result.config) {
+            throw new AiProviderUpdateError(result.error || 'Could not save the reminder choice.')
+        }
+        set({config: result.config, missingProvider: null})
+    },
+
+    removeProvider: async (provider: AiProvider) => {
+        const result = await getApi().ai.removeProvider(provider)
+        if (!result.success || !result.config) {
+            throw new AiProviderUpdateError(result.error || 'Could not remove the AI provider.')
+        }
+        set((state) => {
+            const providerModels = {...state.providerModels}
+            delete providerModels[provider]
+            return {config: result.config, missingProvider: null, providerModels}
+        })
+        dispatchAiAvailabilityChanged()
     }
 }));

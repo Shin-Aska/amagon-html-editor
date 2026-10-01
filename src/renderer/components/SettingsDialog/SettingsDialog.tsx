@@ -17,6 +17,7 @@ import { type AiProvider, useAiStore } from '../../store/aiStore'
 import { useTutorialStore } from '../../store/tutorialStore'
 import type { EditorLayout } from '../../store/types'
 import { dispatchAiAvailabilityChanged } from '../../hooks/useAiAvailability'
+import { preloadAiModels } from '../../aiBootstrap'
 import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import SettingsWorkspace, { type SettingsSection } from '../SettingsWorkspace/SettingsWorkspace'
@@ -24,11 +25,31 @@ import './SettingsDialog.css'
 
 const DANGEROUS_CLI_PROVIDERS: AiProvider[] = ['junie-cli']
 const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((provider) => `ai:${provider}`)
+const PROVIDER_LABELS: Record<AiProvider, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    ollama: 'Ollama',
+    mistral: 'Mistral',
+    'codex-cli': 'Codex CLI',
+    'github-cli': 'GitHub Copilot CLI',
+    'junie-cli': 'Junie CLI',
+    opencode: 'OpenCode'
+} as const
+
+const LOCAL_PROVIDER_LABELS: Partial<Record<AiProvider, string>> = {
+    ollama: 'Ollama',
+    'codex-cli': 'Codex CLI',
+    'github-cli': 'GitHub Copilot CLI',
+    'junie-cli': 'Junie CLI',
+    opencode: 'OpenCode'
+} as const
 
 type CliAvailability = Record<string, {
     available: boolean
     path?: string
     version?: string
+    serviceRunning?: boolean
 }>
 
 type ModelRefreshStatus = {
@@ -95,6 +116,7 @@ export default function SettingsDialog({
     const providerModels = useAiStore((s) => s.providerModels);
     const loadAiConfig = useAiStore((s) => s.loadConfig);
     const saveAiConfig = useAiStore((s) => s.saveConfig);
+    const removeAiProvider = useAiStore((s) => s.removeProvider);
     const loadAiModels = useAiStore((s) => s.loadModels);
     const fetchModelsForProvider = useAiStore((s) => s.fetchModelsForProvider);
 
@@ -103,6 +125,11 @@ export default function SettingsDialog({
     const [aiOllamaUrl, setAiOllamaUrl] = useState(aiConfig?.ollamaUrl || 'http://localhost:11434')
     const [refreshingModels, setRefreshingModels] = useState(false)
     const [modelRefreshStatus, setModelRefreshStatus] = useState<ModelRefreshStatus | null>(null)
+    const [confirmRemoveProvider, setConfirmRemoveProvider] = useState<AiProvider | null>(null)
+    const [lastRemovedProvider, setLastRemovedProvider] = useState<AiProvider | null>(null)
+    const [removingProvider, setRemovingProvider] = useState(false)
+    const [providerRemovalError, setProviderRemovalError] = useState<string | null>(null)
+    const pendingRemovalProviderRef = useRef<AiProvider | null>(null)
 
     const [cliAvailability, setCliAvailability] = useState<CliAvailability>({})
     const [checkingCli, setCheckingCli] = useState(false)
@@ -146,8 +173,13 @@ export default function SettingsDialog({
 
     const refreshFeatureConfigs = async (): Promise<void> => {
         const api = getApi()
-        await loadAiConfig()
-        await loadAiModels()
+        const aiState = useAiStore.getState()
+        if (!aiState.configLoaded || !aiState.modelsLoaded) {
+            await preloadAiModels()
+        } else {
+            await loadAiConfig()
+            await loadAiModels()
+        }
 
         const result = await api.mediaSearch.getConfig()
         if (result.success && result.config) {
@@ -162,6 +194,9 @@ export default function SettingsDialog({
     useEffect(() => {
         if (open) {
             setActiveTab(initialTab)
+            setConfirmRemoveProvider(null)
+            setLastRemovedProvider(null)
+            setProviderRemovalError(null)
             void refreshCredentialsAndFeatureConfigs()
         }
     }, [open, initialTab])
@@ -189,6 +224,10 @@ export default function SettingsDialog({
         let cancelled = false
         fetchModelsForProvider(aiProvider, '', aiOllamaUrl).then((models) => {
             if (cancelled || models.length === 0) return
+            const currentConfig = useAiStore.getState().config
+            if (currentConfig.provider !== aiProvider
+                || currentConfig.removedProviders.includes(aiProvider)
+                || pendingRemovalProviderRef.current === aiProvider) return
             if (aiModel && models.includes(aiModel)) return
 
             const nextModel = models[0]
@@ -213,6 +252,10 @@ export default function SettingsDialog({
 
         try {
             const models = await fetchModelsForProvider(provider, '', aiOllamaUrl)
+            const currentConfig = useAiStore.getState().config
+            if (currentConfig.provider !== provider
+                || currentConfig.removedProviders.includes(provider)
+                || pendingRemovalProviderRef.current === provider) return models
             if (models.length === 0) {
                 setModelRefreshStatus({
                     type: 'error',
@@ -242,6 +285,23 @@ export default function SettingsDialog({
         const nextModel = aiModel || (providerModels[aiProvider]?.[0] ?? '')
         await saveAiConfig({ provider: aiProvider as AiProvider, model: nextModel, apiKey: '', ollamaUrl: aiOllamaUrl })
         void handleRefreshModels(aiProvider, nextModel)
+    }
+
+    const handleRemoveProvider = async (provider: AiProvider): Promise<void> => {
+        pendingRemovalProviderRef.current = provider
+        setRemovingProvider(true)
+        setProviderRemovalError(null)
+        try {
+            await removeAiProvider(provider)
+            setLastRemovedProvider(provider)
+            setConfirmRemoveProvider(null)
+            setModelRefreshStatus(null)
+        } catch (error) {
+            setProviderRemovalError(error instanceof Error ? error.message : 'Could not remove this provider.')
+        } finally {
+            pendingRemovalProviderRef.current = null
+            setRemovingProvider(false)
+        }
     }
 
     const handleSaveMedia = async (provider = mediaProvider) => {
@@ -293,6 +353,8 @@ export default function SettingsDialog({
     const isOpenCode = aiProvider === 'opencode'
     const showStatusCheck = isCliProvider || isOpenCode
     const cliStatus = cliAvailability[aiProvider]
+    const localProviderLabel = LOCAL_PROVIDER_LABELS[aiProvider]
+    const isRemovedProvider = (provider: AiProvider): boolean => aiConfig.removedProviders.includes(provider)
 
     return (
         <>
@@ -576,6 +638,9 @@ export default function SettingsDialog({
                                                     const nextProvider = e.target.value as AiProvider
                                                     setAiProvider(nextProvider)
                                                     setAiModel('')
+                                                    setConfirmRemoveProvider(null)
+                                                    setLastRemovedProvider(null)
+                                                    setProviderRemovalError(null)
                                                     void saveAiConfig({
                                                         provider: nextProvider,
                                                         model: '',
@@ -593,18 +658,75 @@ export default function SettingsDialog({
                                                     <option value="mistral">Mistral</option>
                                                 </optgroup>
                                                 <optgroup label="Local / CLI">
-                                                    <option value="ollama">Ollama (Local)</option>
-                                                    <option value="codex-cli">Codex CLI</option>
-                                                    <option value="github-cli">GitHub Copilot CLI</option>
-                                                    <option value="opencode">OpenCode</option>
+                                                    <option value="ollama">Ollama (Local){isRemovedProvider('ollama') ? ' (add again)' : ''}</option>
+                                                    <option value="codex-cli">Codex CLI{isRemovedProvider('codex-cli') ? ' (add again)' : ''}</option>
+                                                    <option value="github-cli">GitHub Copilot CLI{isRemovedProvider('github-cli') ? ' (add again)' : ''}</option>
+                                                    <option value="opencode">OpenCode{isRemovedProvider('opencode') ? ' (add again)' : ''}</option>
                                                     {enableDangerousFeatures && (
                                                         <>
-                                                            <option value="junie-cli">Junie CLI</option>
+                                                            <option value="junie-cli">Junie CLI{isRemovedProvider('junie-cli') ? ' (add again)' : ''}</option>
                                                         </>
                                                     )}
                                                 </optgroup>
                                             </select>
                                         </div>
+
+                                        {lastRemovedProvider && (
+                                            <div className="settings-provider-feedback" role="status">
+                                                <span>{PROVIDER_LABELS[lastRemovedProvider]} was removed from Amagon.</span>
+                                                <span>Active provider: {PROVIDER_LABELS[aiConfig.provider]}</span>
+                                            </div>
+                                        )}
+
+                                        {localProviderLabel && (
+                                            <div className="settings-provider-removal">
+                                                <div className="settings-provider-removal-copy">
+                                                    <span className="settings-label-title">
+                                                        {confirmRemoveProvider === aiProvider
+                                                            ? `Remove ${localProviderLabel} from Amagon?`
+                                                            : `${localProviderLabel} integration`}
+                                                    </span>
+                                                    <span className="settings-label-desc">
+                                                        {confirmRemoveProvider === aiProvider
+                                                            ? 'This removes the provider from Amagon settings. It does not uninstall the app or CLI.'
+                                                            : 'Remove this local provider from Amagon. You can add it again from the Provider menu.'}
+                                                    </span>
+                                                </div>
+                                                <div className="settings-provider-removal-actions">
+                                                    {confirmRemoveProvider === aiProvider ? (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                className="settings-btn-danger"
+                                                                onClick={() => void handleRemoveProvider(aiProvider)}
+                                                                disabled={removingProvider}
+                                                            >
+                                                                {removingProvider ? 'Removing…' : 'Remove provider'}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="settings-btn-secondary"
+                                                                onClick={() => setConfirmRemoveProvider(null)}
+                                                                disabled={removingProvider}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="settings-btn-danger"
+                                                            onClick={() => setConfirmRemoveProvider(aiProvider)}
+                                                        >
+                                                            Remove {localProviderLabel}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {providerRemovalError && (
+                                            <div className="settings-error" role="alert">{providerRemovalError}</div>
+                                        )}
 
                                         {showStatusCheck && (
                                             <div className="settings-field">
@@ -614,7 +736,9 @@ export default function SettingsDialog({
                                                         <span className="settings-cli-status settings-cli-status--muted">Checking...</span>
                                                     ) : cliStatus?.available ? (
                                                         <span className="settings-cli-status settings-cli-status--success">
-                                                            ✓ {isOpenCode ? 'Connected' : `Installed (${cliStatus.version || 'Unknown version'})`}
+                                                            ✓ {isOpenCode
+                                                                ? (cliStatus.serviceRunning ? 'Connected' : 'Installed (service stopped)')
+                                                                : `Installed (${cliStatus.version || 'Unknown version'})`}
                                                         </span>
                                                     ) : (
                                                         <span className="settings-cli-status settings-cli-status--error">
@@ -633,8 +757,13 @@ export default function SettingsDialog({
                                                 {!cliStatus?.available && !checkingCli && (
                                                     <span className="settings-hint settings-hint--error">
                                                         {isOpenCode
-                                                            ? 'OpenCode service is not running. Please start the OpenCode background service.'
+                                                            ? 'OpenCode was not found on this machine. Install it or remove it from Amagon settings.'
                                                             : 'This CLI tool is required. Please install it to use this provider.'}
+                                                    </span>
+                                                )}
+                                                {isOpenCode && cliStatus?.available && !cliStatus.serviceRunning && !checkingCli && (
+                                                    <span className="settings-hint">
+                                                        OpenCode is installed, but its service is stopped. Start it to load models.
                                                     </span>
                                                 )}
                                             </div>

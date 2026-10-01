@@ -8,6 +8,7 @@ import {useEditorStore} from '../../store/editorStore'
 import {useAppSettingsStore} from '../../store/appSettingsStore'
 import NewProjectWizard from '../NewProjectWizard/NewProjectWizard'
 import SettingsDialog from '../SettingsDialog/SettingsDialog'
+import MissingAiProviderNotice from '../AiAssistant/MissingAiProviderNotice'
 import {WelcomeSignature} from './WelcomeSignature'
 import {
     commandErrorMessage,
@@ -127,6 +128,8 @@ export default function WelcomeScreen(): JSX.Element {
                 <div className="dot-pulse dot-pulse-three"/>
                 <div className="dot-pulse dot-pulse-four"/>
             </div>
+
+            <MissingAiProviderNotice/>
 
             <div className="welcome-content">
                 <header className="welcome-header">

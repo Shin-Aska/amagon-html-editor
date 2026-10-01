@@ -4,6 +4,7 @@
 
 import packageJson from '../../../package.json'
 import {createDefaultTheme, type FontAsset} from '../store/types'
+import type {AiConfig, AiProvider} from '../store/aiStore'
 import {createWelcomeBlocks} from '../../shared/welcomeBlocks'
 import type {MediaDownloadId, ProjectProgress, RecentProjectId, ProjectSessionId} from '../../shared/projects/projectIpcContract'
 
@@ -54,6 +55,15 @@ function upsertMockAssets(newAssets: MockAsset[]): void {
     existing.forEach((a) => byPath.set(a.path, a));
     newAssets.forEach((a) => byPath.set(a.path, a));
     saveMockAssets(Array.from(byPath.values()))
+}
+
+let mockAiConfig: AiConfig = {
+    provider: 'openai',
+    model: 'gpt-4o',
+    apiKey: '',
+    ollamaUrl: 'http://localhost:11434',
+    dismissedMissingProviders: [],
+    removedProviders: []
 }
 
 const mockApi = {
@@ -765,7 +775,7 @@ const mockApi = {
                     'codex-cli': {available: false},
                     'github-cli': {available: false},
                     'junie-cli': {available: false},
-                    opencode: {available: false}
+                    opencode: {available: false, serviceRunning: false}
                 }
             }
         },
@@ -773,19 +783,33 @@ const mockApi = {
         getConfig: async (): Promise<any> => {
             return {
                 success: true,
-                config: {
-                    provider: 'openai',
-                    model: 'gpt-4o',
-                    apiKey: '',
-                    ollamaUrl: 'http://localhost:11434'
-                }
+                config: {...mockAiConfig}
             }
         },
 
-        setConfig: async (_config: any): Promise<any> => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const {apiKey: _, ...rest} = _config;
-            return {success: true, config: {...rest, apiKey: ''}}
+        setConfig: async (config: Partial<AiConfig>): Promise<IpcResult & {config?: AiConfig}> => {
+            mockAiConfig = {
+                ...mockAiConfig,
+                ...config,
+                apiKey: '',
+                removedProviders: config.provider === undefined
+                    ? (config.removedProviders ?? mockAiConfig.removedProviders)
+                    : (config.removedProviders ?? mockAiConfig.removedProviders).filter((provider) => provider !== config.provider)
+            }
+            return {success: true, config: {...mockAiConfig}}
+        },
+
+        removeProvider: async (provider: AiProvider): Promise<IpcResult & {config?: AiConfig}> => {
+            const activeProviderRemoved = mockAiConfig.provider === provider;
+            mockAiConfig = {
+                ...mockAiConfig,
+                provider: activeProviderRemoved ? 'openai' : mockAiConfig.provider,
+                model: activeProviderRemoved ? 'gpt-4o' : mockAiConfig.model,
+                apiKey: activeProviderRemoved ? '' : mockAiConfig.apiKey,
+                dismissedMissingProviders: mockAiConfig.dismissedMissingProviders.filter((item) => item !== provider),
+                removedProviders: [...new Set([...mockAiConfig.removedProviders, provider])]
+            }
+            return {success: true, config: {...mockAiConfig}}
         },
 
         getModels: async (): Promise<any> => {

@@ -38,7 +38,10 @@ export const registerAppProtocols = (context: AppProtocolContext): void => {
     if (!context.exists(filePath)) return new Response("File not found", { status: 404 });
     try {
       const data = await context.readFile(filePath);
-      return new Response(new Uint8Array(data), { headers: { "Content-Type": context.getMimeType(filePath) } });
+      return new Response(new Uint8Array(data), { headers: {
+        "Content-Type": context.getMimeType(filePath),
+        "Access-Control-Allow-Origin": "*",
+      } });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return new Response(`Error reading file: ${message}`, { status: 500 });

@@ -11,6 +11,13 @@ vi.mock('@opencode-ai/sdk', () => ({
     createOpencode: opencodeMocks.createServer
 }))
 
+const cliMocks = vi.hoisted(() => ({detectCli: vi.fn(async () => ({available: true}))}))
+
+vi.mock('../cliHelpers', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('../cliHelpers')>()),
+    detectCli: cliMocks.detectCli
+}))
+
 vi.mock('electron', () => ({
     app: { getPath: vi.fn(() => 'C:\\amagon-test-user-data') },
     net: { fetch: vi.fn() },
@@ -26,6 +33,7 @@ import { fetchModelsForProvider, PROVIDER_MODELS } from '../aiService'
 describe('fetchModelsForProvider', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        cliMocks.detectCli.mockResolvedValue({available: true})
         opencodeMocks.createClient.mockReturnValue({
             provider: { list: opencodeMocks.listProviders }
         })
@@ -49,5 +57,17 @@ describe('fetchModelsForProvider', () => {
         // Then: discovery uses fallbacks without spawning a background service.
         expect(models).toEqual(PROVIDER_MODELS.opencode)
         expect(opencodeMocks.createServer).not.toHaveBeenCalled()
+    })
+
+    it('returns no OpenCode fallback models when the service and executable are absent', async () => {
+        // Given neither a running service nor an installed executable.
+        cliMocks.detectCli.mockResolvedValue({available: false})
+
+        // When Settings requests OpenCode models.
+        const models = await fetchModelsForProvider('opencode', '')
+
+        // Then the removed provider has no stale choices.
+        expect(models).toEqual([])
+        expect(cliMocks.detectCli).toHaveBeenCalledWith('opencode')
     })
 })

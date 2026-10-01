@@ -49,12 +49,17 @@
     --welcome-beacon-page-height: 84px;
     --welcome-beacon-page-compact-height: 64px;
     --font-size-tiny: 10px;
+    --font-size-control: 13px;
+    --font-size-field-label: 12px;
+    --font-size-panel-title: 14px;
+    --welcome-initialization-title-size: 18px;
     --welcome-beacon-code-size: 9px;
     --welcome-beacon-label-size: 8px;
 
     --radius-sm: 4px;
     --radius-md: 6px;
     --radius-lg: 8px;
+    --focus-ring-width: 2px;
     --z-notification: 10000;
 
     /* Legacy editor token aliases retained for older component stylesheets */

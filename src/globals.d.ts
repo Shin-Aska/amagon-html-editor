@@ -11,6 +11,7 @@ import type {
 import type {IpcResult} from './renderer/utils/api'
 import type {LifecycleRequest, LifecycleResult} from './main/projects/projectLifecycle'
 import type {MenuAction} from './shared/menuContract'
+import type {AiConfig, AiProvider} from './renderer/store/aiStore'
 
 export {}
 
@@ -102,6 +103,7 @@ declare global {
             checkCliAvailability: () => Promise<any>
             getConfig: () => Promise<any>
             setConfig: (config: any) => Promise<any>
+            removeProvider: (provider: AiProvider) => Promise<IpcResult & {config?: AiConfig}>
             getModels: () => Promise<any>
             fetchModelsForProvider: (data: { provider: string, apiKey: string, ollamaUrl?: string }) => Promise<any>
         },

@@ -24,13 +24,17 @@ const defaultConfig = (): AiConfig => ({
   model: "gpt-test",
   apiKey: "secret",
   ollamaUrl: "http://localhost:11434",
+  dismissedMissingProviders: [],
+  removedProviders: [],
 });
 
 const setup = (overrides: Partial<TestContext> = {}) => {
   const handlers = new Map<string, TestHandler>();
   const chat = vi.fn(async () => ({ content: "reply" }));
   const detectCliProvider = vi.fn(async () => ({ available: false }));
+  const detectOpenCodeExecutable = vi.fn(async () => ({ available: false }));
   const saveConfig = vi.fn(async (config: Partial<AiConfig>) => ({ ...defaultConfig(), ...config }));
+  const removeProvider = vi.fn(async () => ({ ...defaultConfig(), provider: "google" as const, apiKey: "replacement-key", removedProviders: ["opencode" as const] }));
   const loadApiKeyForProvider = vi.fn(async () => "stored-key");
   const fetchModelsForProvider = vi.fn(async () => ["remote-model"]);
   const context: TestContext = {
@@ -42,9 +46,11 @@ const setup = (overrides: Partial<TestContext> = {}) => {
     chat,
     cliBinaryNames: { "codex-cli": "codex", "github-cli": "copilot", "junie-cli": "junie" },
     detectCliProvider,
+    detectOpenCodeExecutable,
     createOpenCodeClient: vi.fn(async () => ({ provider: { list: vi.fn(async () => ({})) } })),
     loadConfig: vi.fn(async () => defaultConfig()),
     saveConfig,
+    removeProvider,
     maskApiKey: (key) => `masked:${key}`,
     maskedKeyPrefix: "masked:",
     fetchAvailableModels: vi.fn(async () => modelCatalog("dynamic")),
@@ -54,7 +60,7 @@ const setup = (overrides: Partial<TestContext> = {}) => {
     ...overrides,
   };
   registerAiIpc(context);
-  return { handlers, chat, detectCliProvider, saveConfig, loadApiKeyForProvider, fetchModelsForProvider };
+  return { handlers, chat, detectCliProvider, detectOpenCodeExecutable, saveConfig, removeProvider, loadApiKeyForProvider, fetchModelsForProvider };
 };
 
 const invoke = (handlers: ReadonlyMap<string, TestHandler>, channel: string, argument?: unknown, event: unknown = ipc.trustedEvent): unknown => {
@@ -69,6 +75,7 @@ describe("AI IPC registration", () => {
     const argumentsByChannel = new Map<string, unknown>([
       ["ai:chat", { messages: [] }],
       ["ai:setConfig", { provider: "openai" }],
+      ["ai:removeProvider", "opencode"],
       ["ai:fetchModelsForProvider", { provider: "openai", apiKey: "direct" }],
     ]);
     for (const [event, getMainWindow] of [
@@ -83,6 +90,7 @@ describe("AI IPC registration", () => {
         detectCliProvider: async () => { sink(); return { available: false }; },
         loadConfig: async () => { sink(); return defaultConfig(); },
         saveConfig: async () => { sink(); return defaultConfig(); },
+        removeProvider: async () => { sink(); return defaultConfig(); },
         fetchAvailableModels: async () => { sink(); return modelCatalog(); },
         fetchModelsForProvider: async () => { sink(); return []; },
       });
@@ -140,19 +148,30 @@ describe("AI IPC registration", () => {
         "codex-cli": { available: true, path: "codex-cli.exe" },
         "github-cli": { available: false, path: "github-cli.exe" },
         "junie-cli": { available: false, path: "junie-cli.exe" },
-        opencode: { available: true },
+        opencode: { available: true, serviceRunning: true },
       },
     });
     expect(createOpenCodeClient).toHaveBeenCalledOnce();
   });
 
-  it("marks OpenCode unavailable when its existing endpoint probe fails", async () => {
+  it("reports OpenCode installed when its endpoint is offline but its executable exists", async () => {
     const current = setup({
       createOpenCodeClient: vi.fn(async () => ({ provider: { list: vi.fn(async () => { throw new Error("offline"); }) } })),
+      detectOpenCodeExecutable: vi.fn(async () => ({ available: true, path: "opencode.exe" })),
     });
     const result = await invoke(current.handlers, "ai:checkCliAvailability");
     expect(result).toEqual(expect.objectContaining({ success: true }));
-    expect(result).toEqual(expect.objectContaining({ availability: expect.objectContaining({ opencode: { available: false } }) }));
+    expect(result).toEqual(expect.objectContaining({ availability: expect.objectContaining({ opencode: { available: true, path: "opencode.exe", serviceRunning: false } }) }));
+  });
+
+  it("marks OpenCode unavailable when neither service nor executable is present", async () => {
+    const current = setup({
+      createOpenCodeClient: vi.fn(async () => ({ provider: { list: vi.fn(async () => { throw new Error("offline"); }) } })),
+    });
+    await expect(invoke(current.handlers, "ai:checkCliAvailability")).resolves.toEqual(expect.objectContaining({
+      availability: expect.objectContaining({ opencode: { available: false, serviceRunning: false } }),
+    }));
+    expect(current.detectOpenCodeExecutable).toHaveBeenCalledOnce();
   });
 
   it("returns a failure when a CLI availability probe rejects", async () => {
@@ -168,6 +187,21 @@ describe("AI IPC registration", () => {
       config: { ...defaultConfig(), provider: "google", apiKey: "masked:secret" },
     });
     expect(current.saveConfig).toHaveBeenCalledWith({ provider: "google" });
+  });
+
+  it("removes a provider through trusted IPC and masks the returned active key", async () => {
+    const current = setup();
+    await expect(invoke(current.handlers, "ai:removeProvider", "opencode")).resolves.toEqual({
+      success: true,
+      config: { ...defaultConfig(), provider: "google", apiKey: "masked:replacement-key", removedProviders: ["opencode"] },
+    });
+    expect(current.removeProvider).toHaveBeenCalledWith("opencode");
+  });
+
+  it("rejects an unknown provider before removing anything", async () => {
+    const current = setup();
+    await expect(invoke(current.handlers, "ai:removeProvider", "unknown")).resolves.toEqual(expect.objectContaining({ success: false }));
+    expect(current.removeProvider).not.toHaveBeenCalled();
   });
 
   it("returns dynamic models and static models on fallback", async () => {

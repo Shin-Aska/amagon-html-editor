@@ -47,7 +47,7 @@ Amagon is a compact visual editor: dense, practical, and calm. The signature is 
 | Beacon code | 9px | 500 | 1.2 | 0 | Decorative code strip and live state |
 | Beacon annotation | 8px | 700 | 1.2 | 0 | Decorative selection and inspector labels |
 
-CSS type primitives: `--font-size-tiny`, `--welcome-beacon-code-size`, and `--welcome-beacon-label-size` expose the 10px, 9px, and 8px launcher levels to components.
+CSS type primitives: `--font-size-panel-title`, `--font-size-control`, and `--font-size-field-label` expose the 14px, 13px, and 12px application levels. `--font-size-tiny`, `--welcome-beacon-code-size`, and `--welcome-beacon-label-size` expose the 10px, 9px, and 8px launcher levels.
 
 ### Font Stack
 
@@ -119,6 +119,7 @@ All spacing derives from 4px.
 - Live widget tiles use a two-column grid with real rendered component samples, a bordered thumbnail, and a separate name below. Live page cards use one column with a rendered page viewport above a caption containing name, slug, tags, and an accessible menu button. Classic retains compact widget icons and page rows.
 - Local `--library-*` tokens define geometry: widget preview aspect ratio 2 / 1, page preview aspect ratio 2 / 1, 28px mode controls, 12px grid gaps, 4px preview radius, and 11px widget captions / 13px page names. Reuse `--space-*`, `--radius-*`, and `--color-*` for spacing, corners, color, and focus. Match the current project theme inside previews; editor controls retain the application theme.
 - Previews are passive, isolated HTML frames, rendered by the existing block renderer. Names and actions stay outside the frames and remain keyboard accessible. Empty layout widgets use sample children or dashed boundaries to show their structure. Saved blocks and templates show their actual content.
+- Widget thumbnails fit the complete visible content inside the existing 2:1 tile and center it on both axes, with a 16px inset in the virtual preview viewport. Use 220px layout width for simple controls, 480px for composite panels, and 1024px for desktop sections/templates; saved blocks follow their underlying block type. Cap magnification at the equivalent of the 220px control viewport so small icons do not fill a tile. Refit after styles, images, and fonts load. Page thumbnails retain their desktop viewport and top alignment. A nonce-authorized sizing script may run inside opaque widget frames; authored scripts, navigation, forms, and embedded frames remain disabled.
 - The sidebar owns library scrolling; page creation actions stay pinned. Thumbnails scale with the resizable panel, with a 240px minimum sidebar width to keep two-column samples legible on compact desktops. Long names truncate with full titles available; tags wrap within the caption. Selection uses an accent border with a quiet surface rather than filling the screenshot.
 - Only viewed previews render. App Settings → General has “Preview cache slots”, default 64; 0 disables retention. Keep recently viewed rendered frames in RAM with least-recently-used eviction, shared between Pages and Widgets. Visible frames stay usable even below the visible count; evicted active frames release when hidden. Classic and project close/switch clear the cache. Cache contents last for the project session; the slot-count preference persists across restarts. No cache-status footer in the sidebar.
 - Reuse cached documents without navigation when their content and styling are unchanged. Edits coalesce over 150ms; stale cached previews refresh when shown, while visible previews update live. No autoplay, embedded third-party frames, project scripts, or editor-selection overlays run in thumbnails. No decorative preview animation.
@@ -172,6 +173,22 @@ All spacing derives from 4px.
 - **Accessibility**: every row is a native button; labels describe the action and helper text never replaces the accessible name.
 - **Motion**: explicit transform, border, surface, and shadow transitions only; pressed feedback stays under 2% scale change.
 - **Layout**: the three equal-size rows form a compact 16px cascade from New Project through Settings, while the Beacon and Recent Projects surfaces remain precisely column-aligned. The primary action is visually dominant at rest; Settings uses a quiet contained surface so it remains recognizable as an action without competing with creation.
+
+### Missing Local AI Provider Notice
+
+- **Structure**: a compact notification anchored at the lower right with the provider name, a short explanation, and Keep and Remove actions. On a narrow welcome screen it enters the page flow above the launcher card so it cannot cover project actions. It appears only after the selected local provider fails an installation check.
+- **Tokens**: elevated background, default border, primary and secondary text, warning status, the control/field-label/panel-title type sizes, and the shared notification surface shadow. The card uses the 4px spacing grid and does not add a new palette.
+- **States**: available, saving choice with visible progress text, and action error. Keep suppresses later reminders; Remove updates the selected provider and the AI picker. App Settings → AI Assistant keeps a confirmation row and a way to reselect a removed provider.
+- **Accessibility**: status announcement, named native buttons, visible focus rings, and a persistent error message if saving fails. The notice does not trap focus or block editor work.
+- **Motion**: no decorative animation; a short opacity reveal is allowed unless reduced motion is requested.
+
+### Welcome AI Initialization Modal
+
+- **Structure**: a centered, non-dismissible dialog over the visible welcome launcher while AI configuration and the model catalog initialize. The welcome content is inert and global project/menu shortcuts are deferred until both loads settle; returning to the launcher after initialization does not show the dialog again.
+- **Tokens**: use the existing elevated surface, border, accent, primary text, spacing, radius, and welcome width tokens. Small copy uses primary text to meet light and dark theme contrast. `--welcome-initialization-title-size: 18px` gives the startup message a clear heading without adopting the launcher display scale.
+- **States**: loading shows “App is initializing (AI engine)…” and a short description of the provider and model load. The dialog closes once the preload settles, including recoverable provider errors; the existing provider notice handles a missing installation.
+- **Accessibility**: the dialog has a name and description, receives focus, and keeps the welcome controls outside the accessibility and keyboard interaction trees while open. Focus moves to New Project after initialization; the status text carries the meaning of the loader. No dismissal action interrupts initialization.
+- **Motion**: adapt beui.dev's loader dots to three staggered transform and opacity pulses using `--welcome-initialization-pulse-duration: 1400ms`. The card enters with the standard 200ms transition. Reduced motion freezes the dots and removes the entrance motion while retaining the status text.
 
 ## 6. Motion & Interaction
 

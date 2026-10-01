@@ -1,6 +1,6 @@
 {
   "name": "hoarses-html-editor",
-  "version": "1.9.2",
+  "version": "1.10.1",
   "description": "Amagon — Offline Visual HTML Editor (Pingendo/Mobirise Alternative)",
   "homepage": "https://www.amagon.app/",
   "author": "Shin-Aska <Orillarichard@pm.me>",
@@ -9,12 +9,13 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "node scripts/electron-vite-dev.mjs",
-    "dev:web": "vite",
+    "dev:web": "vite --config vite.config.ts",
     "build": "electron-vite build",
-    "build:web": "tsc -b && vite build",
+    "build:web": "tsc -b && vite build --config vite.config.ts",
     "preview": "electron-vite preview",
     "test": "vitest run",
     "test:e2e:electron": "playwright test --config playwright.electron.config.ts",
+    "test:e2e:browser": "playwright test --config playwright.browser.config.ts",
     "test:watch": "vitest",
     "generate:fonts": "npx tsx scripts/generate-google-fonts-catalog.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",

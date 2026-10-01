@@ -45,6 +45,13 @@ export function widgetPreviewBlocks(widget: BlockDefinition, saved?: UserBlock):
                 createBlock('paragraph', {props: {text: 'A section of content.'}, styles: {margin: '0', fontSize: '14px'}})
             ]
             break
+        case 'form':
+            block.styles = {display: 'grid', gap: '8px'}
+            block.children = [
+                createBlock('input', {props: {type: 'email', placeholder: 'Email address'}, classes: ['form-control']}),
+                createBlock('button', {props: {text: 'Submit', type: 'submit'}, classes: ['btn', 'btn-primary']})
+            ]
+            break
         case 'heading':
             block.props = {...block.props, text: 'Hello world'}
             block.styles = {...block.styles, margin: '0'}

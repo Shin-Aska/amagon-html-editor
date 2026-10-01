@@ -1,4 +1,5 @@
 import {blockToHtml, type BlockToHtmlOptions} from '../../utils/blockToHtml'
+import {fitLibraryWidget} from './libraryPreviewLayout'
 
 export interface LibraryDocumentOptions {
     readonly blocks: Parameters<typeof blockToHtml>[0]
@@ -89,11 +90,24 @@ export function libraryPreviewDocument(options: LibraryDocumentOptions): string 
         img, video { max-width: 100%; }
         *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }
         .library-embed { display: grid; place-items: center; min-height: 100px; border: 1px solid var(--theme-border); background: var(--theme-surface); color: var(--theme-text-muted); }
-        ${options.kind === 'widget' ? 'body { padding: 16px; }' : ''}
+        ${options.kind === 'widget' ? `
+            [data-library-widget] { position: absolute; top: 0; left: 0; display: flow-root; width: 100%; transform-origin: 0 0; }
+        ` : ''}
     `)
     const content = passiveContent(blockToHtml(options.blocks, {
         ...options.renderOptions, includeAnimation: false, includeHoverEffects: false
     }))
-    doc.body.append(...Array.from(content.childNodes))
+    if (options.kind === 'widget') {
+        const root = doc.createElement('div')
+        root.dataset.libraryWidget = ''
+        root.append(...Array.from(content.childNodes))
+        doc.body.append(root)
+        const sizing = doc.createElement('script')
+        sizing.setAttribute('nonce', nonce)
+        sizing.textContent = `(${fitLibraryWidget.toString()})()`
+        doc.body.append(sizing)
+    } else {
+        doc.body.append(...Array.from(content.childNodes))
+    }
     return '<!doctype html>' + doc.documentElement.outerHTML
 }
