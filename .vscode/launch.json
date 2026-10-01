@@ -3,36 +3,20 @@
   "configurations": [
     {
       "name": "Dev: Electron",
-      "type": "pwa-node",
+      "type": "node-terminal",
       "request": "launch",
       "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev",
-        "--"
-      ],
-      "console": "integratedTerminal",
+      "command": "npm run dev",
       "internalConsoleOptions": "neverOpen",
       "outputCapture": "std",
       "skipFiles": ["<node_internals>/**"]
     },
     {
       "name": "Dev: Vite only",
-      "type": "pwa-node",
+      "type": "node-terminal",
       "request": "launch",
       "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:web",
-        "--",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "5173"
-      ],
-      "console": "integratedTerminal",
+      "command": "npm run dev:web -- --host 127.0.0.1 --port 5173",
       "internalConsoleOptions": "neverOpen",
       "outputCapture": "std",
       "skipFiles": ["<node_internals>/**"]
