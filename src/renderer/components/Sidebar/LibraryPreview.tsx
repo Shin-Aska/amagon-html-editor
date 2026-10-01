@@ -9,6 +9,7 @@ import {projectFontUrl} from '../../utils/projectFontUrl'
 import {widgetPreviewBlocks} from './libraryPreviewSamples'
 import {libraryPreviewDocument} from './libraryPreviewDocument'
 import {useLibraryPreviewCache} from './LibraryPreviewCacheProvider'
+import {widgetPreviewViewport} from './libraryPreviewLayout'
 
 type PreviewSource =
     | {readonly kind: 'page'; readonly page: Page}
@@ -16,7 +17,6 @@ type PreviewSource =
 
 const EMPTY_BLOCKS: Block[] = []
 const UPDATE_DELAY = 150
-const WIDGET_WIDTH = 220
 const PAGE_WIDTH = 1024
 
 function PreviewContent({source, width, target}: {
@@ -69,12 +69,12 @@ function PreviewContent({source, width, target}: {
         const timer = window.setTimeout(() => setSettled(input), UPDATE_DELAY)
         return () => window.clearTimeout(timer)
     }, [input])
-    const viewport = source.kind === 'page' || (source.kind === 'widget'
-        && (source.widget.type.startsWith('template:') || source.widget.type.startsWith('user:')))
-        ? PAGE_WIDTH : WIDGET_WIDTH
+    const viewport = source.kind === 'page' ? PAGE_WIDTH
+        : widgetPreviewViewport(settled.saved?.content.type ?? source.widget.type)
     const title = source.kind === 'page' ? source.page.title : source.widget.label
     const key = source.kind === 'page' ? `page:${source.page.id}` : `widget:${source.widget.type}`
-    const sandbox = settled.options.renderOptions.framework === 'tailwind' ? 'allow-scripts' : ''
+    const sandbox = source.kind === 'widget' || settled.options.renderOptions.framework === 'tailwind'
+        ? 'allow-scripts' : ''
     useLayoutEffect(() => cache.show(key, target, {
         title: `${title} preview`, width, viewport, sandbox, revision: settled.revision,
         render: () => libraryPreviewDocument({...settled.options,

@@ -31,6 +31,7 @@ describe("app protocol registration", () => {
     const response = await framework(new Request("app-framework://asset/bootstrap.css"));
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("text/css");
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
     await expect(response.text()).resolves.toBe("body");
   });
 

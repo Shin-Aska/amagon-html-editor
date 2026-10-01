@@ -64,7 +64,7 @@ test('imported font files load in opaque widget and page previews and Classic re
             const heading = body.getByRole('heading', {name: kind === 'widget' ? 'Hello world' : 'Welcome to Library Fonts'})
             await expect(heading).toBeVisible()
             await expect(heading).toHaveCSS('font-family', imported.name)
-            await expect(frame).toHaveAttribute('sandbox', '')
+            await expect(frame).toHaveAttribute('sandbox', kind === 'widget' ? 'allow-scripts' : '')
             await expect.poll(() => body.evaluate((body, family) =>
                 [...body.ownerDocument.fonts].some(face => face.family.replace(/^["']|["']$/g, '') === family),
             imported.name)).toBe(true)

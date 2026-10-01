@@ -23,8 +23,9 @@ describe('passive library document', () => {
         // When / Then
         for (const widget of definitions) {
             const doc = parse(libraryPreviewDocument({...options, blocks: widgetPreviewBlocks(widget), kind: 'widget'}))
-            expect(doc.body.querySelector(':scope > :not(style)'), widget.type).not.toBeNull()
-            expect(doc.querySelector('script, iframe, audio, video[src]'), widget.type).toBeNull()
+            expect(doc.querySelector('[data-library-widget] > :not(style)'), widget.type).not.toBeNull()
+            expect(doc.querySelector('[data-library-widget] script, iframe, audio, video[src]'), widget.type).toBeNull()
+            expect(doc.scripts, widget.type).toHaveLength(1)
         }
         expect(JSON.stringify(definitions)).toBe(before)
     })
@@ -39,6 +40,20 @@ describe('passive library document', () => {
         expect(doc.documentElement.dataset.pageTheme).toBe('dark')
         expect(doc.body.textContent).toContain('h1 { color: tomato; }')
         expect(doc.querySelector('link')?.href).toBe('app-framework://asset/bootstrap/5.3.3/css/bootstrap.min.css')
+    })
+
+    it('shows a useful form sample without adding fields to an authored empty form', () => {
+        // Given
+        const widget = componentRegistry.getAll().find(definition => definition.type === 'form')
+        if (!widget) throw new Error('Form definition is missing')
+        const saved = {id: 'empty-form', label: 'Empty', icon: '', content: createBlock('form')}
+        // When
+        const sample = parse(libraryPreviewDocument({...options, blocks: widgetPreviewBlocks(widget), kind: 'widget'}))
+        const authored = parse(libraryPreviewDocument({...options, blocks: widgetPreviewBlocks(widget, saved), kind: 'widget'}))
+        // Then
+        expect(sample.querySelector('form input[type="email"]')).not.toBeNull()
+        expect(sample.querySelector('form button')).not.toBeNull()
+        expect(authored.querySelector('form')?.children).toHaveLength(0)
     })
 
     it('removes active content, navigation metadata, and automatic media loads', () => {
@@ -91,5 +106,21 @@ describe('passive library document', () => {
         expect(doc.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content'))
             .toContain("script-src 'nonce-" + nonce + "'")
         expect(doc.body.querySelector('[nonce], script, [onclick]')).toBeNull()
+    })
+
+    it.each(['bootstrap-5', 'tailwind', 'vanilla'] as const)('only authorizes the sizing runtime and framework for %s widgets', framework => {
+        // Given
+        const blocks = [createBlock('raw-html', {content: '<script nonce="copied">alert(1)</script><button onclick="alert(2)" nonce="copied">My control</button>'})]
+        // When
+        const doc = parse(libraryPreviewDocument({...options, blocks, kind: 'widget', renderOptions: {framework}}))
+        // Then
+        const sizing = doc.body.querySelector(':scope > script')
+        const nonce = sizing?.getAttribute('nonce')
+        expect(nonce).toMatch(/^[a-f0-9]{32}$/)
+        expect(doc.scripts).toHaveLength(framework === 'tailwind' ? 2 : 1)
+        expect([...doc.scripts].every(script => script.getAttribute('nonce') === nonce)).toBe(true)
+        expect(doc.querySelector('[data-library-widget] script, [data-library-widget] [nonce], [onclick]')).toBeNull()
+        expect(doc.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content'))
+            .toContain("script-src 'nonce-" + nonce + "'")
     })
 })

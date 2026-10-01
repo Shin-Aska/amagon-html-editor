@@ -82,6 +82,22 @@ describe('live page preview lifecycle', () => {
         expect(text(container)).not.toContain('First edit')
     })
 
+    it('frames a saved button as a control while preserving its authored appearance', () => {
+        // Given
+        const content = createBlock('button', {props: {text: 'Save my work'}, styles: {background: 'orange'}})
+        useProjectStore.setState({userBlocks: [{id: 'saved-button', label: 'My button', category: 'User Blocks', icon: '', content}]})
+        // When
+        act(() => root.render(<LibraryPreviewCacheProvider><LibraryPreview kind="widget"
+            widget={{type: 'user:saved-button', label: 'My button', category: 'User Blocks', icon: '', propsSchema: {}}}/></LibraryPreviewCacheProvider>))
+        act(() => visibility(true))
+        // Then
+        const frame = container.querySelector('iframe')
+        expect(frame?.style.width).toBe('220px')
+        const button = new DOMParser().parseFromString(frame?.srcdoc ?? '', 'text/html').querySelector('button')
+        expect(button?.textContent).toBe('Save my work')
+        expect(button?.style.background).toBe('orange')
+    })
+
     it('keeps the surrounding page when editing the contents of a nested tab', () => {
         // Given
         const nested = createBlock('heading', {props: {text: 'Nested original', level: 2}})
