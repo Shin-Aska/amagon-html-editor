@@ -1,3 +1,4 @@
+import {PROJECT_ASSETS_REPAIRED_EVENT} from "../../project/legacyConversionPrompt";
 import {REVEAL_CANVAS_BLOCK_EVENT, notifyCanvasSelection} from '../../utils/canvasNavigation'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {Layers} from 'lucide-react'
@@ -103,8 +104,15 @@ function findParentAndIndex(
 }
 
 function Canvas(): JSX.Element {
+    const [assetRevision, setAssetRevision] = useState(0);
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [runtimeReady, setRuntimeReady] = useState(false);
+    useEffect(() => {
+        const refresh = () => { setRuntimeReady(false); setAssetRevision(value => value + 1); };
+        window.addEventListener(PROJECT_ASSETS_REPAIRED_EVENT, refresh);
+        return () => window.removeEventListener(PROJECT_ASSETS_REPAIRED_EVENT, refresh);
+    }, []);
+
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
     const [tabWarningVisible, setTabWarningVisible] = useState(false);
 
@@ -464,7 +472,7 @@ function Canvas(): JSX.Element {
                     }}
                 >
                     <iframe
-                        key={framework}
+                        key={`${framework}:${assetRevision}`}
                         ref={iframeRef}
                         className="canvas-iframe"
                         src={canvasDocumentUrl}

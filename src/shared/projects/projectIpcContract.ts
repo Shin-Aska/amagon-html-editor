@@ -220,7 +220,12 @@ export type MediaSearchResult = {
     readonly sourceUrl?: string
 }
 
+export type AssetInventoryResult =
+    | {readonly success: true; readonly sessionId: ProjectSessionId; readonly paths: readonly string[]}
+    | {readonly success: false; readonly error: string};
+
 export interface AssetMutationBridge {
+    readonly repairMissing: (request: SessionRequest & {readonly relativePath: string}) => Promise<MutationResult<AssetInfo>>
     readonly selectImage: (request: SessionRequest) => Promise<MutationResult<readonly AssetInfo[]>>
     readonly selectSingleImage: (request: SessionRequest) => Promise<MutationResult<AssetInfo>>
     readonly selectVideo: (request: SessionRequest) => Promise<MutationResult<readonly AssetInfo[]>>

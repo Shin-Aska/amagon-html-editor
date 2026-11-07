@@ -115,3 +115,23 @@ it('leaves resize-handle arrow and tab keys to the panel library',()=>{
         }
     }finally{divider.remove();unmount()}
 });
+
+it.each([
+    {key: 'Escape', ctrlKey: false},
+    {key: 'Delete', ctrlKey: false},
+    {key: 'o', ctrlKey: true},
+])('leaves $key to an open native dialog', ({key, ctrlKey}) => {
+    const onOpen = vi.fn();
+    const unmount = renderHarness({enabled: true, onNewProject: vi.fn(), onOpen});
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('open', '');
+    const button = document.createElement('button');
+    dialog.append(button);
+    document.body.append(dialog);
+    try {
+        const event = new KeyboardEvent('keydown', {key, ctrlKey, bubbles: true, cancelable: true});
+        act(() => button.dispatchEvent(event));
+        expect(event.defaultPrevented).toBe(false);
+        expect(onOpen).not.toHaveBeenCalled();
+    } finally { dialog.remove(); unmount(); }
+});

@@ -1,3 +1,4 @@
+import type {ProjectSnapshotResult} from "./projectSnapshot";
 import type {
   AssetInfo,
   AssetMutationBridge,
@@ -42,7 +43,7 @@ type SnapshotSource = {
 };
 
 export type AssetCommands = AssetMutationBridge & {
-  readonly listPaths: () => Promise<readonly string[]>;
+  readonly listPaths: (sessionId?: ProjectSession["sessionId"]) => Promise<readonly string[]>;
 };
 
 export type ProjectCommandDependencies = {
@@ -57,6 +58,7 @@ export type ProjectCommandDependencies = {
   readonly markDirty: () => void;
   readonly subscribeRendererEdits: (listener: () => void) => () => void;
   readonly notify: (message: ProjectCommandMessage) => void;
+  readonly prepareLegacyConversion?: (session: ProjectSession) => Promise<boolean>;
   readonly chooseDirtyTransition?: () => DirtyTransitionChoice;
 };
 
@@ -72,6 +74,8 @@ export interface ProjectCommands {
   readonly close: (choice?: DirtyTransitionChoice) => Promise<ProjectCommandResult>;
   readonly getRecent: ProjectBridge["getRecent"];
   readonly removeRecent: ProjectBridge["removeRecent"];
+  readonly inspectConversion: () => Promise<ProjectSnapshotResult>;
+  readonly repairAsset: (relativePath: string) => Promise<ProjectCommandResult<AssetInfo>>;
   readonly selectImages: () => Promise<ProjectCommandResult<readonly AssetInfo[]>>;
   readonly selectSingleImage: () => Promise<ProjectCommandResult<AssetInfo>>;
   readonly selectVideos: () => Promise<ProjectCommandResult<readonly AssetInfo[]>>;

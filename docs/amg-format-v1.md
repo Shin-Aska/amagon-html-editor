@@ -70,7 +70,7 @@ Limits are checked against declared metadata and actual streamed writes. The rea
 ## Compatibility and migration
 
 - Desktop New Project and Save As write `.amg`; a conflicting extension is rejected and the save dialog is shown again.
-- Existing legacy `.json` projects still open and Save atomically in place. They are never converted silently.
+- Existing legacy `.json` projects still open. Desktop manual Save and Save As explain conversion in an interactive dialog and require missing assets to be repaired before choosing an `.amg` destination. The original JSON is not replaced. Low-level legacy Save remains atomic for compatibility and autosave; conversion is never silent.
 - Save As from legacy JSON creates a new `.amg` and switches sessions only after the archive and recent-project record commit.
 - Browser development remains legacy-JSON-only. Version 1 adds no browser bundle reader, OS file association, command-line/open-file routing, recovery UI, encryption, or signing.
 

@@ -1,3 +1,4 @@
+import type {AssetInventoryResult} from "../shared/projects/projectIpcContract";
 import * as electron from 'electron'
 import type { FontAsset } from '../renderer/store/types'
 import type {
@@ -92,6 +93,9 @@ const api = {
     },
 
     assets: {
+        listPaths: (data: SessionRequest): Promise<AssetInventoryResult> => ipcRenderer.invoke("assets:listPaths", data),
+        repairMissing: (data: SessionRequest & {readonly relativePath: string}): Promise<MutationResult<AssetInfo>> =>
+            ipcRenderer.invoke("assets:repairMissing", data),
         selectImage: (data: SessionRequest): Promise<MutationResult<readonly AssetInfo[]>> =>
             ipcRenderer.invoke('assets:selectImage', data),
 

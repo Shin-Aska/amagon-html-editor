@@ -63,7 +63,7 @@ type Harness = {
   readonly selectImage: ReturnType<typeof vi.fn>;
 };
 
-const harness = (initial = project()): Harness => {
+const harness = (initial = project(), overrides: Partial<ProjectCommandDependencies> = {}): Harness => {
   let editListener: () => void = () => undefined;
   let progressListener: (value: ProjectProgress) => void = () => undefined;
   const installed: ProjectData[] = [];
@@ -96,6 +96,7 @@ const harness = (initial = project()): Harness => {
       },
     },
     assets: {
+      repairMissing: vi.fn(),
       listPaths,
       selectImage,
       selectSingleImage: vi.fn(),
@@ -126,7 +127,7 @@ const harness = (initial = project()): Harness => {
     notify: vi.fn(),
   };
   return {
-    commands: createProjectCommands(dependencies),
+    commands: createProjectCommands({...dependencies, ...overrides}),
     edits: () => editListener(),
     progress: (value) => progressListener(value),
     installed,
@@ -140,6 +141,80 @@ const harness = (initial = project()): Harness => {
 };
 
 describe("project commands", () => {
+  it("converts a repaired legacy project on manual Save and installs its new AMG session", async () => {
+    const prepareLegacyConversion = vi.fn(async () => true);
+    const test = harness(project(), {prepareLegacyConversion});
+    test.load.mockResolvedValueOnce({success: true, session: {...session(project()), kind: "legacy-json", displayPath: "legacy.json"}});
+    await test.commands.openProject();
+    test.edits();
+    expect((await test.commands.save()).ok).toBe(true);
+    expect(prepareLegacyConversion).toHaveBeenCalledOnce();
+    expect(test.commands.state.session?.kind).toBe("amg");
+    expect(test.installed).toHaveLength(2);
+  });
+
+  it("converts after a legacy autosave has committed imported asset changes", async () => {
+    const test = harness(project(), {prepareLegacyConversion: async () => true});
+    test.load.mockResolvedValueOnce({success: true, session: {...session(project(), 0, 0), kind: "legacy-json"}});
+    await test.commands.openProject();
+    await test.commands.selectImages();
+    test.save.mockResolvedValueOnce({success: true, session: {...session(project(), 0, 1), kind: "legacy-json"}});
+    expect((await test.commands.autosave()).ok).toBe(true);
+    const nextId = parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
+    test.save.mockResolvedValueOnce({success: true, session: {...session(project(), 0, 0), sessionId: nextId}});
+    const converted = await test.commands.save();
+    expect(converted).toEqual({ok: true, value: undefined});
+    expect(test.commands.state.session?.sessionId).toBe(nextId);
+    expect(test.commands.state.session?.kind).toBe("amg");
+    expect(test.commands.state.dirty).toBe(false);
+  });
+
+  it("keeps edits and the legacy session when conversion is canceled", async () => {
+    const test = harness(project(), {prepareLegacyConversion: async () => false});
+    test.load.mockResolvedValueOnce({success: true, session: {...session(project()), kind: "legacy-json"}});
+    await test.commands.openProject();
+    test.edits();
+    expect(await test.commands.save()).toMatchObject({ok: false, canceled: true});
+    expect(test.save).not.toHaveBeenCalled();
+    expect(test.commands.state.session?.kind).toBe("legacy-json");
+    expect(test.commands.state.dirty).toBe(true);
+  });
+
+  it("allows repairs but suppresses autosave and session switches while the dialog is pending", async () => {
+    let proceed: (result: boolean) => void = () => undefined;
+    const test = harness(project(), {prepareLegacyConversion: () => new Promise(resolve => {proceed = resolve;})});
+    test.load.mockResolvedValueOnce({success: true, session: {...session(project()), kind: "legacy-json"}});
+    await test.commands.openProject();
+    test.edits();
+    const pending = test.commands.save();
+    expect((await test.commands.autosave()).ok).toBe(true);
+    expect((await test.commands.close("discard")).ok).toBe(false);
+    expect((await test.commands.openProject()).ok).toBe(false);
+    expect((await test.commands.selectImages()).ok).toBe(true);
+    expect(test.save).not.toHaveBeenCalled();
+    proceed(false);
+    await pending;
+  });
+
+  it("rechecks assets restored outside the application before conversion", async () => {
+    const test = harness(project("app-media://project-asset/assets/Missing Image.png"));
+    test.load.mockResolvedValueOnce({success: true, session: {...session(project("app-media://project-asset/assets/Missing Image.png")), kind: "legacy-json"}});
+    await test.commands.openProject();
+    expect(await test.commands.inspectConversion()).toMatchObject({ok: false, offenders: [{code: "missing-asset", reference: "assets/Missing Image.png"}]});
+    test.listPaths.mockResolvedValue(["assets/Missing Image.png"]);
+    expect((await test.commands.inspectConversion()).ok).toBe(true);
+  });
+
+  it("keeps the project open when closing with Save cancels conversion", async () => {
+    const test = harness(project(), {prepareLegacyConversion: async () => false});
+    test.load.mockResolvedValueOnce({success: true, session: {...session(project()), kind: "legacy-json"}});
+    await test.commands.openProject();
+    test.edits();
+    expect(await test.commands.close("save")).toMatchObject({ok: false, canceled: true});
+    expect(test.close).not.toHaveBeenCalled();
+    expect(test.commands.state.dirty).toBe(true);
+  });
+
   it("installs legacy projects with missing assets and reports the filenames", async () => {
     const initial = project("app-media://project-asset/assets/Absent Image.png");
     const test = harness(initial);
@@ -336,6 +411,7 @@ describe("project commands", () => {
     const commands = createProjectCommands({
       project: bridge,
       assets: {
+        repairMissing: vi.fn(),
         listPaths: async () => [], selectImage: vi.fn(), selectSingleImage: vi.fn(), selectVideo: vi.fn(), delete: vi.fn(),
       },
       fonts: { importFile: vi.fn(), downloadGoogleFont: vi.fn(), copySystemFont: vi.fn(), deleteFont: vi.fn() },

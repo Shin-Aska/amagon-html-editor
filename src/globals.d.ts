@@ -4,6 +4,8 @@ import type {JSX as ReactJSX} from 'react'
 import {type FontAsset} from './renderer/store/types'
 import type {
     AssetMutationBridge,
+    AssetInventoryResult,
+    SessionRequest,
     FontMutationBridge,
     MediaMutationBridge,
     ProjectBridge,
@@ -38,6 +40,7 @@ declare global {
             finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
         assets: AssetMutationBridge & {
+            listPaths: (request: SessionRequest) => Promise<AssetInventoryResult>
             list: () => Promise<IpcResult>
             readFileAsBase64: (reference: string) => Promise<IpcResult>
             readAsset: (reference: string) => Promise<IpcResult>

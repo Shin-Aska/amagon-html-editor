@@ -72,6 +72,7 @@ const setup = (choice: "save" | "discard" | "cancel" = "cancel") => {
       onProgress: () => () => undefined,
     },
     assets: {
+      repairMissing: vi.fn(),
       listPaths: vi.fn(async () => []), selectImage, selectSingleImage: vi.fn(),
       selectVideo: vi.fn(), delete: vi.fn(),
     },

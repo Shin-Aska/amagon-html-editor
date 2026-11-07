@@ -44,7 +44,7 @@ export class ProjectCommandSessionInstaller {
 
   async install(session: ProjectSession): Promise<ProjectCommandResult> {
     try {
-      this.runtime.availableAssetPaths = await this.dependencies.assets.listPaths();
+      this.runtime.availableAssetPaths = await this.dependencies.assets.listPaths(session.sessionId);
       const materialized = materializeProjectSnapshot({
         project: RendererProjectSchema.parse(session.data),
         sessionId: session.sessionId,
@@ -95,7 +95,9 @@ export class ProjectCommandSessionInstaller {
             success: true,
             sessionId: invocation.kind === "save-as" ? invocation.expectedSessionId : result.session.sessionId,
             rendererGeneration: result.session.committedRendererGeneration,
-            workspaceGeneration: result.session.committedWorkspaceGeneration,
+            // Save As replaces the session and resets its workspace counter.
+            // Acknowledge the originating workspace here; install() adopts the new counters.
+            workspaceGeneration: invocation.kind === "save-as" ? invocation.workspaceGeneration : result.session.committedWorkspaceGeneration,
           };
         },
       });
@@ -107,7 +109,7 @@ export class ProjectCommandSessionInstaller {
         tone: "info",
         title: "Project opened with missing assets",
         persistent: true,
-        detail: `Restore or replace: ${missingAssets.join(", ")}. You can continue editing this legacy project.`,
+        detail: `Restore or replace: ${missingAssets.join(", ")}. You can continue editing. Save will help repair missing assets before converting to .amg.`,
         locations: [],
       };
       this.hooks.publish({ session, dirty: false, message });

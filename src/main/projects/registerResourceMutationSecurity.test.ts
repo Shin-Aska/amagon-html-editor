@@ -80,6 +80,74 @@ afterEach(async () => {
 });
 
 describe("resource mutation security", () => {
+  it("inventories nested media, fonts and other assets for the current session", async () => {
+    const fixture = await createContext();
+    const paths = ["assets/nested/hero.png", "assets/fonts/nested/font.woff2", "assets/theme.css"];
+    for (const relativePath of paths) {
+      await mkdir(path.dirname(path.join(fixture.workspacePath, relativePath)), {recursive: true});
+      await writeFile(path.join(fixture.workspacePath, relativePath), "fixture");
+    }
+    const {createDefaultProjectServiceFiles} = await import("./projectServiceFiles");
+    registerAssetMutationIpc({...fixture.context, projectFiles: createDefaultProjectServiceFiles()});
+    expect(await invoke("assets:listPaths", {expectedSessionId: fixture.sessionId})).toEqual({success: true, sessionId: fixture.sessionId, paths: [...paths].sort()});
+    expect(await invoke("assets:listPaths", {expectedSessionId: parseProjectSessionId("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")})).toMatchObject({success: false});
+  });
+
+  it("repairs an exact missing filename through a picker without replacing existing assets", async () => {
+    const fixture = await createContext();
+    const source = path.join(fixture.root, "replacement.png");
+    await writeFile(source, "replacement bytes");
+    const {createDefaultProjectServiceFiles} = await import("./projectServiceFiles");
+    registerAssetMutationIpc({...fixture.context, projectFiles: createDefaultProjectServiceFiles()});
+    electronState.showOpenDialog.mockResolvedValue({canceled: false, filePaths: [source]});
+    const relativePath = "assets/nested/Missing %20.png";
+    const result = await invoke("assets:repairMissing", {expectedSessionId: fixture.sessionId, relativePath});
+    expect(result).toMatchObject({success: true, changed: true, workspaceGeneration: 1, value: {
+      relativePath, path: `app-media://project-asset/${fixture.sessionId}/assets/nested/Missing%20%2520.png`,
+    }});
+    expect(await readFile(path.join(fixture.workspacePath, relativePath), "utf8")).toBe("replacement bytes");
+    await writeFile(source, "different bytes");
+    expect(await invoke("assets:repairMissing", {expectedSessionId: fixture.sessionId, relativePath})).toMatchObject({success: false, changed: false});
+    expect(await readFile(path.join(fixture.workspacePath, relativePath), "utf8")).toBe("replacement bytes");
+    expect(electronState.showOpenDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["../outside.png", "assets/../outside.png", "other/file.png"])("rejects a repair target outside assets: %s", async relativePath => {
+    const fixture = await createContext();
+    registerAssetMutationIpc(fixture.context);
+    expect(await invoke("assets:repairMissing", {expectedSessionId: fixture.sessionId, relativePath})).toMatchObject({success: false, changed: false});
+    expect(electronState.showOpenDialog).not.toHaveBeenCalled();
+  });
+
+  it("cancels repair without changing the workspace", async () => {
+    const fixture = await createContext();
+    registerAssetMutationIpc(fixture.context);
+    expect(await invoke("assets:repairMissing", {expectedSessionId: fixture.sessionId, relativePath: "assets/missing.png"})).toMatchObject({success: false, canceled: true, changed: false});
+    expect(await readdir(fixture.workspacePath)).toEqual([]);
+  });
+
+  it("does not repair a retired session after the file picker returns", async () => {
+    const fixture = await createContext();
+    registerAssetMutationIpc(fixture.context);
+    electronState.showOpenDialog.mockImplementationOnce(async () => {
+      fixture.sessions.activate(ProjectSession.createLegacyJson({sourcePath: path.join(fixture.root, "other.json"), workspacePath: fixture.workspacePath}));
+      return {canceled: false, filePaths: [path.join(fixture.root, "replacement.png")]};
+    });
+    expect(await invoke("assets:repairMissing", {expectedSessionId: fixture.sessionId, relativePath: "assets/missing.png"})).toMatchObject({success: false, changed: false, error: {code: "STALE_SESSION"}});
+    expect(await readdir(fixture.workspacePath)).toEqual([]);
+  });
+
+  it("refuses repair through a workspace junction", async () => {
+    const fixture = await createContext();
+    const outside = path.join(fixture.root, "outside");
+    await mkdir(outside);
+    await symlink(outside, path.join(fixture.workspacePath, "assets"), "junction");
+    registerAssetMutationIpc(fixture.context);
+    expect(await invoke("assets:repairMissing", {expectedSessionId: fixture.sessionId, relativePath: "assets/missing.png"})).toMatchObject({success: false, changed: false});
+    expect(await readdir(outside)).toEqual([]);
+    expect(electronState.showOpenDialog).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["with space.png", "with%20space.png"],
     ["100%.png", "100%25.png"],

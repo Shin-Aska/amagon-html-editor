@@ -89,62 +89,125 @@ test("literal media filenames display and survive a portable project round trip"
   }
 });
 
-test("legacy missing assets stay repairable while portable conversion requires their bytes", async () => {
+test("legacy Save repairs missing assets interactively before conversion and preserves edits and source JSON", async ({}, testInfo) => {
+  test.setTimeout(180_000);
   const root = await mkdtemp(path.join(os.tmpdir(), "amagon-legacy-repair-"));
   const harness = await launchPortableEditor(root);
-  const { page } = harness;
+  const {page} = harness;
   try {
     const bytes = await readFile(path.resolve("docs/images/logo.png"));
     const legacyPath = path.join(root, "project.json");
     const target = path.join(root, "repaired.amg");
-    await mkdir(path.join(root, "assets"));
-    await writeFile(path.join(root, "assets", "Existing Image.png"), bytes);
-    const { projectSchemaVersion: ignoredVersion, ...legacy } = structuredClone(TEST_PROJECT);
+    await mkdir(path.join(root, "assets", "nested"), {recursive: true});
+    await writeFile(path.join(root, "assets", "nested", "Existing Image.png"), bytes);
+    await writeFile(path.join(root, "assets", "unused-library.png"), bytes);
+    const {projectSchemaVersion: ignoredVersion, ...legacy} = structuredClone(TEST_PROJECT);
     void ignoredVersion;
-    const project = {
-      ...legacy,
-      pages: [{ id: "home", title: "Home", slug: "index", meta: {}, blocks: [
-        { id: "existing", type: "image", props: { src: "app-media://project-asset/assets/Existing Image.png", alt: "Existing image" }, styles: {}, classes: [], children: [] },
-        { id: "missing", type: "image", props: { src: "app-media://project-asset/assets/Missing Image.png", alt: "Missing image" }, styles: {}, classes: [], children: [] },
-      ] }],
-    };
-    await writeFile(legacyPath, JSON.stringify(project));
-    await expect(page.getByRole("button", { name: /Open Project/u })).toBeVisible();
-    await openProjectThroughUi({ harness, filePath: legacyPath });
-    await expect(page.locator(".toast")).toContainText("Project opened with missing assets");
+    const project = {...legacy, pages: [{id: "home", title: "Home", slug: "index", meta: {}, blocks: [
+      {id: "existing", type: "image", props: {src: "app-media://project-asset/assets/nested/Existing Image.png", alt: "Existing image"}, styles: {}, classes: [], children: []},
+      {id: "missing", type: "image", props: {src: "app-media://project-asset/assets/Missing Image.png", alt: "Missing image"}, styles: {}, classes: [], children: []},
+    ]}]};
+    const originalJson = JSON.stringify(project);
+    await writeFile(legacyPath, originalJson);
+    await openProjectThroughUi({harness, filePath: legacyPath});
     await expect(page.locator(".toast")).toContainText("assets/Missing Image.png");
-    await page.locator(".toast").getByRole("button", { name: "Dismiss", exact: true }).click();
-    await expect(page.locator(".toast")).toHaveCount(0);
     const canvas = page.frameLocator(".canvas-iframe");
     await expect.poll(() => canvas.getByAltText("Existing image").evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-    await page.getByRole("button", { name: "Save project", exact: true }).click();
-    await expect.poll(() => readFile(legacyPath, "utf8")).toContain("assets/Missing%20Image.png");
-    await expect(page.getByRole("button", { name: "Save project", exact: true })).toBeEnabled();
-    await closeProjectThroughUi(harness);
-    await openProjectThroughUi({ harness, filePath: legacyPath });
-    const savedLegacy = await readFile(legacyPath, "utf8");
-    await saveAsThroughMenu(harness, target);
-    await expect(page.locator(".toast-error")).toContainText("Project contains non-portable references");
-    expect(await access(target).then(() => true, () => false)).toBe(false);
-    await expect(page.locator("#html-editor-layout")).toBeVisible();
+    await canvas.getByAltText("Existing image").click();
+    await page.locator(".inspector").getByRole("tab", {name: "Content", exact: true}).click();
+    await page.locator(".inspector").getByRole("textbox", {name: "Alt Text", exact: true}).fill("Edited legacy image");
+    await page.getByRole("button", {name: "Save project", exact: true}).click();
+    const dialog = page.getByRole("dialog", {name: "Save legacy project as .amg", exact: true});
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Conversion will not replace your original JSON file");
+    await expect(dialog.getByRole("button", {name: /^Locate /})).toHaveCount(1);
+    await expect(dialog.getByRole("button", {name: "Save as .amg", exact: true})).toBeDisabled();
+    await page.screenshot({path: testInfo.outputPath("legacy-repair-dialog.png")});
+    await dialog.screenshot({path: testInfo.outputPath("legacy-repair-dialog-detail.png")});
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Save project", exact: true})).toBeFocused();
+    expect(await readFile(legacyPath, "utf8")).toBe(originalJson);
+    await expect(canvas.getByAltText("Edited legacy image")).toBeVisible();
 
-    // Repair through the real picker, then repeat the same conversion.
-    const replacement = path.join(root, "Missing Image.png");
+    await page.keyboard.press("Control+s");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", {name: "Recheck assets", exact: true}).click();
+    await queueNativeDialogs(harness.app, {opens: [[]]});
+    await dialog.getByRole("button", {name: "Locate assets/Missing Image.png", exact: true}).click();
+    await expect(dialog.getByRole("button", {name: "Save as .amg", exact: true})).toBeDisabled();
+    const replacement = path.join(root, "different-replacement.png");
     await writeFile(replacement, bytes);
-    await importMediaThroughUi({ harness, filePaths: [replacement], kind: "image" });
-    await saveAsThroughMenu(harness, target);
+    await queueNativeDialogs(harness.app, {opens: [[replacement]]});
+    await dialog.getByRole("button", {name: "Locate assets/Missing Image.png", exact: true}).click();
+    await expect(dialog).toContainText("All referenced assets are available");
+    await expect(dialog.getByRole("button", {name: "Save as .amg", exact: true})).toBeEnabled();
+    await canvas.getByAltText("Missing image").evaluate((image: HTMLImageElement) => {image.loading = "eager";});
+    await expect.poll(() => canvas.getByAltText("Missing image").evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    expect(await readFile(path.join(root, "assets", "Missing Image.png"))).toEqual(bytes);
+    expect(await readFile(legacyPath, "utf8")).toBe(originalJson);
+    await queueNativeDialogs(harness.app, {saves: [null]});
+    await dialog.getByRole("button", {name: "Save as .amg", exact: true}).click();
+    await expect(page.locator(".toast")).toContainText("Save canceled");
+    await expect(page.locator(".toast-error")).toHaveCount(0);
+    await page.keyboard.press("Control+s");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("All referenced assets are available");
+    await queueNativeDialogs(harness.app, {saves: [target]});
+    await dialog.getByRole("button", {name: "Save as .amg", exact: true}).click();
     await expect.poll(() => access(target).then(() => true, () => false)).toBe(true);
-    await expect(page.getByRole("button", { name: "Save project", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", {name: "Save project", exact: true})).toBeEnabled();
+    await expect(dialog).toHaveCount(0);
+    await expect.poll(() => canvas.getByAltText("Missing image").evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     await closeProjectThroughUi(harness);
-    await openProjectThroughUi({ harness, filePath: target });
+    await openProjectThroughUi({harness, filePath: target});
+    await expect(canvas.getByAltText("Edited legacy image")).toBeVisible();
     await canvas.getByAltText("Missing image").scrollIntoViewIfNeeded();
     await expect.poll(() => canvas.getByAltText("Missing image").evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
-    expect(await readFile(legacyPath, "utf8")).toBe(savedLegacy);
-    expect(await readFile(path.join(root, "assets", "Existing Image.png"))).toEqual(bytes);
+    await page.getByTitle("Asset Manager", {exact: true}).click();
+    await expectLoadedImage(page, "unused-library.png");
+    expect(await readFile(legacyPath, "utf8")).toBe(originalJson);
     expect(harness.pageErrors).toEqual([]);
   } finally {
     await stopPortableEditor(harness);
-    await rm(root, { recursive: true, force: true });
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+test("legacy conversion succeeds after autosave commits an imported asset", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "amagon-legacy-autosave-convert-"));
+  const harness = await launchPortableEditor(root);
+  const {page} = harness;
+  try {
+    const {projectSchemaVersion: ignoredVersion, ...legacy} = structuredClone(TEST_PROJECT);
+    void ignoredVersion;
+    const source = path.join(root, "project.json");
+    const target = path.join(root, "converted.amg");
+    await writeFile(source, JSON.stringify({...legacy, pages: [{id: "home", title: "Home", slug: "index", meta: {}, blocks: []}]}));
+    const input = path.join(root, "imported.png");
+    await writeFile(input, await readFile(path.resolve("docs/images/logo.png")));
+    await openProjectThroughUi({harness, filePath: source});
+    await importMediaThroughUi({harness, filePaths: [input], kind: "image"});
+    await harness.app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0]?.webContents.send("auto-save-tick"));
+    await expect(page.locator(".status-icon").filter({hasText: /^Saved$/})).toBeVisible();
+    const savedLegacy = await readFile(source);
+    await page.getByRole("button", {name: "Save project", exact: true}).click();
+    const dialog = page.getByRole("dialog", {name: "Save legacy project as .amg"});
+    await expect(dialog).toContainText("All referenced assets are available");
+    await queueNativeDialogs(harness.app, {saves: [target]});
+    await dialog.getByRole("button", {name: "Save as .amg", exact: true}).click();
+    await expect(page.locator(".toast")).toContainText("Project saved as .amg");
+    await expect(page.locator(".toast-error")).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Save project", exact: true})).toBeEnabled();
+    await closeProjectThroughUi(harness);
+    await openProjectThroughUi({harness, filePath: target});
+    await page.getByTitle("Asset Manager", {exact: true}).click();
+    await expectLoadedImage(page, "imported.png");
+    expect(await readFile(source)).toEqual(savedLegacy);
+    expect(harness.pageErrors).toEqual([]);
+  } finally {
+    await stopPortableEditor(harness);
+    await rm(root, {recursive: true, force: true});
   }
 });
 

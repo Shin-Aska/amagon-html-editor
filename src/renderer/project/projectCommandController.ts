@@ -29,6 +29,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   let state: ProjectCommandState = { session: null, busy: null, progress: null, dirty: false, message: null };
   const sessionRuntime: ProjectCommandSessionRuntime = { coordinator: null, installing: false, latestSaveSession: null, availableAssetPaths: [] };
   let mutating = false;
+  let preparingConversion = false;
   let runSave: (kind: CoordinatorSaveKind) => Promise<ProjectCommandResult>;
   const getLatestSaveSession = (): ProjectSession | null => sessionRuntime.latestSaveSession;
 
@@ -76,6 +77,20 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     operation: ProjectOperation,
     request: (transition: ProjectTransitionRequest) => ReturnType<ProjectCommandDependencies["project"]["load"]>,
   ): Promise<ProjectCommandResult> => {
+    if (preparingConversion) return fail({tone: "info", title: "Finish saving this project first", detail: "Complete or cancel the conversion dialog.", locations: []});
+    if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
+    let selectedChoice: DirtyTransitionChoice | undefined;
+    if (state.session?.kind === "legacy-json" && state.dirty && dependencies.prepareLegacyConversion && dependencies.chooseDirtyTransition) {
+      const choice = dependencies.chooseDirtyTransition();
+      selectedChoice = choice;
+      if (choice === "cancel") return cancel();
+      if (choice === "save") {
+        const saved = await runSave("save");
+        if (!saved.ok) return saved;
+      }
+      // The saved project may now have a new session; it is already clean.
+      if (choice === "save") selectedChoice = "discard";
+    }
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
     let transition: ProjectTransitionRequest;
     if (state.session === null || sessionRuntime.coordinator === null) {
@@ -87,7 +102,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
         dirtyChoice: "discard",
       };
     } else {
-      const dirtyChoice = state.dirty ? dependencies.chooseDirtyTransition?.() ?? "cancel" : "discard";
+      const dirtyChoice = selectedChoice ?? (state.dirty ? dependencies.chooseDirtyTransition?.() ?? "cancel" : "discard");
       if (dirtyChoice === "save") {
         const built = createSnapshot("save");
         if (!built.ok) return fail({
@@ -131,6 +146,19 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   runSave = async (kind: CoordinatorSaveKind): Promise<ProjectCommandResult> => {
     if (sessionRuntime.coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
+    if (preparingConversion) {
+      if (kind === "autosave") return {ok: true, value: undefined};
+      return fail({tone: "info", title: "Finish saving this project first", detail: "Complete or cancel the conversion dialog.", locations: []});
+    }
+    if (kind !== "autosave" && state.session.kind === "legacy-json" && dependencies.prepareLegacyConversion) {
+      preparingConversion = true;
+      let proceed: boolean;
+      try { proceed = await dependencies.prepareLegacyConversion(state.session); }
+      catch (error) { return unexpected(error); }
+      finally { preparingConversion = false; }
+      if (!proceed) return fail({tone: "info", title: "Conversion canceled", detail: "Your edits and repaired assets remain available. The legacy JSON was not replaced.", locations: []}, true);
+      kind = "save-as";
+    }
     if (kind === "autosave" && !sessionRuntime.coordinator.state.dirty) return { ok: true, value: undefined };
     const operation = kind === "save-as" ? "save-as" : "save";
     sessionRuntime.latestSaveSession = null;
@@ -138,12 +166,19 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     try {
       const result = kind === "autosave" ? await sessionRuntime.coordinator.requestAutosave() : kind === "save-as" ? await sessionRuntime.coordinator.requestSaveAs() : await sessionRuntime.coordinator.requestSave();
       if (!result.success) {
-        if ("error" in result) return fail({ tone: "error", title: "Save did not complete", detail: result.error.message ?? result.error.code, locations: [] }, result.error.code === "CANCELED");
+        if ("error" in result) {
+          if (result.error.code === "CANCELED") return fail({tone: "info", title: "Save canceled", detail: "No file was saved. Your edits and repaired assets remain available.", locations: []}, true);
+          return fail({ tone: "error", title: "Save did not complete", detail: result.error.message ?? result.error.code, locations: [] });
+        }
         if (result.code === "portability") return fail({ tone: "error", title: "Project contains non-portable references", detail: "Fix the listed locations before saving.", locations: result.offenders.map((item) => item.location) });
         return fail({ tone: "error", title: "Save did not complete", detail: result.message ?? result.code, locations: [] });
       }
       const savedSession = getLatestSaveSession();
-      if (savedSession !== null && kind === "save-as") return await installSession(savedSession);
+      if (savedSession !== null && kind === "save-as") {
+        const installed = await installSession(savedSession);
+        if (installed.ok) dependencies.notify({tone: "success", title: "Project saved as .amg", detail: savedSession.displayPath, locations: []});
+        return installed;
+      }
       if (savedSession !== null) publish({ session: savedSession });
       const dirty = sessionRuntime.coordinator.state.dirty;
       if (!dirty) dependencies.markSaved();
@@ -168,7 +203,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
         dependencies.markDirty();
         publish({ dirty: sessionRuntime.coordinator.state.dirty });
         try {
-          sessionRuntime.availableAssetPaths = await dependencies.assets.listPaths();
+          sessionRuntime.availableAssetPaths = await dependencies.assets.listPaths(state.session?.sessionId);
         } catch {
           return fail({ tone: "error", title: "Project files changed but the file index did not refresh", detail: "Retry Save after reopening the asset or font manager.", locations: [] });
         }
@@ -186,8 +221,14 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
 
   const close = async (choice?: DirtyTransitionChoice): Promise<ProjectCommandResult> => {
     if (sessionRuntime.coordinator === null || state.session === null) return { ok: true, value: undefined };
+    if (preparingConversion) return fail({tone: "info", title: "Finish saving this project first", detail: "Complete or cancel the conversion dialog.", locations: []});
     if (state.busy !== null || mutating) return fail({ tone: "info", title: "Project operation in progress", detail: "Wait for the current operation before closing.", locations: [] });
     const dirtyChoice = choice ?? (state.dirty ? dependencies.chooseDirtyTransition?.() ?? "cancel" : "discard");
+    if (dirtyChoice === "save" && state.session.kind === "legacy-json" && dependencies.prepareLegacyConversion) {
+      const saved = await runSave("save");
+      if (!saved.ok) return saved;
+      return close("discard");
+    }
     publish({ busy: "close", message: null });
     try {
       let request: Parameters<ProjectCommandDependencies["project"]["close"]>[0];
@@ -244,6 +285,11 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     newProject: (request) => activate("new", (transition) => dependencies.project.new({ ...transition, ...request })),
     save: () => runSave("save"), saveAs: () => runSave("save-as"), autosave: () => runSave("autosave"), close,
     getRecent: dependencies.project.getRecent, removeRecent: dependencies.project.removeRecent,
+    inspectConversion: async () => {
+      sessionRuntime.availableAssetPaths = await dependencies.assets.listPaths(state.session?.sessionId);
+      return createSnapshot("save-as");
+    },
+    repairAsset: (relativePath) => runMutation(expectedSessionId => dependencies.assets.repairMissing({expectedSessionId, relativePath})),
     selectImages: () => runMutation((expectedSessionId) => dependencies.assets.selectImage({ expectedSessionId })),
     selectSingleImage: () => runMutation((expectedSessionId) => dependencies.assets.selectSingleImage({ expectedSessionId })),
     selectVideos: () => runMutation((expectedSessionId) => dependencies.assets.selectVideo({ expectedSessionId })),

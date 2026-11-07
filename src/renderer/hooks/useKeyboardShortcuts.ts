@@ -249,6 +249,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
     // Main keyboard handler
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        // Native modal dialogs own keyboard input, including Escape and Save.
+        if (document.querySelector('dialog[open]')) return;
         // Leave input, select, textarea, contenteditable, resize-handle, and Monaco keys to their controls.
         const target = e.target as HTMLElement;
         // If e.target is the Window (e.g. from artificial window.dispatchEvent bubbling from Canvas), these properties will be undefined

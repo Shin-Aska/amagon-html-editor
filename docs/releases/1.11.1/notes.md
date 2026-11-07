@@ -34,11 +34,15 @@ Compatible upstream updates refresh the editor and its bundled preview/export as
 
 Archive loading now supports older Node 22 runtimes consistently. Cross-platform fixture and network-test improvements keep archive checks compatible across supported systems.
 
-## Keep working on legacy projects
+## Repair and save legacy projects
 
-Legacy JSON projects now open and Save even when a referenced project asset is missing. A notice identifies the missing file and stays until dismissed, so you can restore it or replace its reference while continuing to edit the rest of the project.
+Legacy JSON projects open even when a referenced asset is missing. Choosing **Save** or **Save As** opens a guided conversion dialog that explains the `.amg` format and lists any missing files.
 
-Converting to a portable `.amg` project still requires the referenced assets to exist. Unsafe paths and invalid asset references remain blocked.
+Use **Locate file** to choose a replacement—even one with a different filename—or restore files yourself and choose **Recheck assets**. Conversion stays disabled until all references are valid. Then choose where to save the `.amg`; conversion preserves your original JSON and includes the full asset library, including unused imports. Cancel keeps your edits and repaired files available.
+
+![Guided legacy asset repair and AMG conversion](legacy-repair.png)
+
+Save validation now inventories nested media, fonts, and other project assets correctly. Conversion after an asset import and legacy autosave also adopts the new bundle without falsely reporting a stale save.
 
 ## Reliable image and video imports
 

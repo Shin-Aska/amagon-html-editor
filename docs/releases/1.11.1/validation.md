@@ -1,3 +1,5 @@
+> Guided legacy Save changes are undergoing a fresh gated rebuild. The earlier installer evidence below applies to application commit `152c599`; it is not evidence for the new repair dialog. New verification results and checksums will replace this notice after the rebuild.
+
 # Amagon 1.11.1 release validation
 
 Prepared 7 November 2026. Both npm manifests identify **1.11.1**. Application source: `152c599363582910ee74ce48d960b9536edc717f`. The replacement draft combines all widget, theme, and code-editor improvements with the asset fixes, complete feature notes, and four public screenshots. The 1.11.0 release and tag were withdrawn. Version 1.11.1 remains unpublished.
@@ -42,3 +44,17 @@ The same downloaded application's `resources/app.asar` passed **two additional d
 Windows runtime workflows pass in CI; the downloaded Windows installer was integrity-checked on Linux. A Windows installer installation was not performed on this machine. The release remains a draft for owner review.
 
 The private reproduction archive and screenshots are excluded from the repository, release, and CI. Packaged-app checks use fresh temporary copies; the original archive remains untouched. Release illustrations are the four public feature screenshots under this directory.
+
+## Guided legacy Save follow-up
+
+Manual desktop Save and Save As now explain conversion in an interactive dialog. Users can locate a same-type replacement with any filename, recheck restored files, cancel without discarding edits, and create a new `.amg` only after all references validate. The original JSON is not replaced by conversion. Missing-path repair is session-bound, excludes workspace links, and cannot overwrite an existing file. Autosave and project switches are held while the dialog is active.
+
+The renderer now uses the main-owned complete asset inventory instead of inferring completeness from filtered top-level media/font listings. Nested assets and non-media assets are recognized, and conversion retains unreferenced library assets as well as referenced files.
+
+A new regression reproduced the actual `stale-workspace-generation` Save error after an import and legacy autosave. Save As starts a new workspace with reset counters; its acknowledgement now refers to the originating workspace until the new session is installed. The same regression passes after the fix.
+
+The desktop repair case edits an image before Save, tests Escape/focus restoration, cancellation of a file picker and destination picker, a differently named replacement, immediate preview refresh, source JSON preservation, saved edits, and retained library assets. A second case converts successfully after an imported asset was autosaved. Keyboard tests keep editor shortcuts out of native modal dialogs. The Linux release gate now includes both theme-transition cases as well.
+
+Local verification: 1,191 of 1,192 tests passed in the broad run; the one timeout occurred while a build was running concurrently. All 11 tests in that preview file pass on an isolated rerun, alongside the updated controller checks. Three additional keyboard cases and the committed-workspace regression pass separately. Build/type checks and final native checks are in progress; CI will run the complete updated suite sequentially on both platforms before packaging.
+
+The final native checks pass: both new legacy desktop cases (interactive repair/cancellation and conversion after an imported asset was autosaved), keyboard ownership for native dialogs, and Escape/focus restoration. Fresh copies of all four supplied projects were edited, repaired as needed, converted, and reopened. Their JSON sources were preserved; all 22 asset files matched byte-for-byte after bundling, with zero renderer errors. Private files and evidence remain outside the repository. The new dialog illustration is a synthetic public fixture.

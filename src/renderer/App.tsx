@@ -1,3 +1,4 @@
+import {useLegacyConversionPrompt} from "./project/legacyConversionPrompt";
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {Group as PanelGroup, Panel, Separator as PanelResizeHandle, useGroupRef} from 'react-resizable-panels'
 import {
@@ -41,6 +42,7 @@ import {getTemplateByWidgetType, isTemplateWidgetType} from './templates/templat
 import MissingAiProviderNotice from './components/AiAssistant/MissingAiProviderNotice'
 
 // Lazy load heavy components for performance
+const LegacyProjectDialog = lazy(() => import("./components/LegacyProjectDialog/LegacyProjectDialog"));
 const CodeEditor = lazy(() => import('./components/CodeEditor/CodeEditor'));
 const AssetManager = lazy(() => import('./components/AssetManager/AssetManager'));
 const NewProjectWizard = lazy(() => import('./components/NewProjectWizard/NewProjectWizard'));
@@ -67,6 +69,7 @@ const DialogLoader = () => (
 );
 
 function App(): JSX.Element {
+    const legacyConversionRequest = useLegacyConversionPrompt(state => state.request);
     const api = getApi();
     const projectCommandState = useProjectCommandState();
 
@@ -704,6 +707,7 @@ function App(): JSX.Element {
         <>
             {renderEditorContent()}
 
+            {legacyConversionRequest && <Suspense fallback={<DialogLoader/>}><LegacyProjectDialog/></Suspense>}
             <Toast/>
             {isProjectLoaded && <MissingAiProviderNotice/>}
 

@@ -21,7 +21,7 @@ Amagon is an offline desktop HTML editor for building block-based pages visually
 
 ## Project files
 
-New desktop projects use the portable `.amg` format: one ZIP64-capable file containing the project document and its imported assets. Existing `.json` projects remain supported and Save in place; use Save As to convert one explicitly after importing any external local references. Conversion never silently replaces the legacy source.
+New desktop projects use the portable `.amg` format: one ZIP64-capable file containing the project document and its imported assets. Existing `.json` projects remain supported. On desktop, Save or Save As opens a guided `.amg` conversion dialog: repair any missing assets with Locate file or Recheck assets, then choose where to save the bundle. The original JSON is not replaced. Conversion never silently replaces the legacy source.
 
 Legacy projects with missing images still open for editing and identify the missing asset paths in a notice that stays until dismissed. Restore the files or replace their references before converting to `.amg`. Media imports preserve filenames containing spaces, Unicode, `#`, and literal `%` characters.
 

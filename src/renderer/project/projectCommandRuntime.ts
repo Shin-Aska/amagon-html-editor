@@ -1,3 +1,4 @@
+import {requestLegacyConversion} from "./legacyConversionPrompt";
 import {flushCodeEdits} from '../utils/codeEditingSession';
 import { LegacyProjectDocumentSchema, parseLegacyProjectDocument } from "../../shared/projects/projectDocumentSchema";
 import type { AssetInfo, FontMutationBridge, MutationResult, ProjectBridge, ProjectSession, SessionRequest } from "../../shared/projects/projectIpcContract";
@@ -148,6 +149,7 @@ export const createLegacyBrowserProjectBridge = (legacy: LegacyBrowserProjectFac
 };
 
 const unavailableAssets: AssetCommands = {
+  repairMissing: async request => missingMutation<AssetInfo>(request),
   listPaths: async () => [],
   selectImage: async (request) => missingMutation<readonly AssetInfo[]>(request),
   selectSingleImage: async (request) => missingMutation<AssetInfo>(request),
@@ -167,11 +169,18 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
   const commands = createProjectCommands({
     project: electron?.project ?? createLegacyBrowserProjectBridge(getLegacyBrowserProjectApi()),
     assets: {
-      listPaths: async () => {
+      listPaths: async (expectedSessionId) => {
+        if (electron && expectedSessionId) {
+          const inventory = await electron.assets.listPaths({expectedSessionId});
+          if (!inventory.success) throw new Error(inventory.error);
+          if (inventory.sessionId !== expectedSessionId) throw new Error("Project changed while checking assets. Try again.");
+          return inventory.paths;
+        }
         const api = getApi();
         const [assets, fonts] = await Promise.all([api.assets.list(), api.fonts.listProject()]);
         return mergeRuntimeAssetPaths(assets, fonts);
       },
+      repairMissing: electron?.assets.repairMissing ?? unavailableAssets.repairMissing,
       selectImage: electron?.assets.selectImage ?? unavailableAssets.selectImage,
       selectSingleImage: electron?.assets.selectSingleImage ?? unavailableAssets.selectSingleImage,
       selectVideo: electron?.assets.selectVideo ?? unavailableAssets.selectVideo,
@@ -221,6 +230,7 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
         } : undefined,
       );
     },
+    ...(electron ? {prepareLegacyConversion: requestLegacyConversion} : {}),
     chooseDirtyTransition: () => window.confirm("Save changes before closing?") ? "save" : window.confirm("Discard unsaved changes?") ? "discard" : "cancel",
   });
   electron?.project.onLifecycleCloseRequest((request) => {

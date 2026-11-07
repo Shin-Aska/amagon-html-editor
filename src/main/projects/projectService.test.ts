@@ -1009,6 +1009,7 @@ describe("project persistence service", () => {
       const external = "file:///C:/legacy/outside.png";
       await writeFile(sourcePath, JSON.stringify(legacyProject(external)));
       await writeFile(sourceAsset, "legacy asset bytes");
+      await writeFile(path.join(sourceRoot, "assets", "unused-library.png"), "unreferenced library bytes");
       const saves: Array<{ readonly canceled: boolean; readonly filePath?: string }> = [];
       const opens = [{ canceled: false, filePaths: [sourcePath] }];
       const service = createProjectService({
@@ -1070,6 +1071,7 @@ describe("project persistence service", () => {
       const extracted = await extractAmgArchive({ archive, userDataPath });
       await archive.close();
       expect(await readFile(path.join(extracted.workspace.path, "assets", "photo.txt"), "utf8")).toBe("converted mutation");
+      expect(await readFile(path.join(extracted.workspace.path, "assets", "unused-library.png"), "utf8")).toBe("unreferenced library bytes");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

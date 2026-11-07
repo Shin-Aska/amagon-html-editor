@@ -2,7 +2,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { capture, launchAmagon, queueNativeDialogs, stopAmagon } from './electronHarness';
+import { capture, queueNativeDialogs } from './electronHarness';
+import {launchPortableEditor as launchAmagon, stopPortableEditor as stopAmagon} from './portableEditorHarness';
 import { closeProjectThroughUi, createProjectThroughUi, openProjectThroughUi } from './projectUi';
 import { inspectAmgArchive } from './archiveAssertions';
 import { parseLegacyProjectDocument } from '../../src/shared/projects/projectDocumentSchema';
@@ -39,15 +40,20 @@ for (const format of ['amg', 'json'] as const) {
             await capture(harness, `transition-${format}-settings.png`, { actions: ['Enable Smooth transition with Space'], state: 'Checked checkbox in the existing theme mode bar' });
             await harness.page.getByRole('button', { name: 'Light', exact: true }).click();
             await harness.page.locator('.theme-editor-close').click();
+            const savedPath = format === 'json' ? path.join(root, 'transition-converted.amg') : filePath;
             await harness.page.getByRole('button', { name: 'Save project', exact: true }).click();
+            if (format === 'json') {
+                const conversion = harness.page.getByRole('dialog', {name: 'Save legacy project as .amg'});
+                await expect(conversion).toContainText('All referenced assets are available');
+                await queueNativeDialogs(harness.app, {saves: [savedPath]});
+                await conversion.getByRole('button', {name: 'Save as .amg', exact: true}).click();
+            }
             await expect(harness.page.getByText('Saved', { exact: true })).toBeVisible();
-            const serialized = format === 'amg'
-                ? (await inspectAmgArchive(filePath, 'transition-archive.json')).projectText
-                : await readFile(filePath, 'utf8');
+            const serialized = (await inspectAmgArchive(savedPath, 'transition-archive.json')).projectText;
             const saved = parseLegacyProjectDocument(JSON.parse(serialized));
             expect(saved.projectSettings.themes?.transitionEnabled).toBe(true);
             await closeProjectThroughUi(harness);
-            await openProjectThroughUi({ harness, filePath });
+            await openProjectThroughUi({ harness, filePath: savedPath });
             await harness.page.getByTitle('Theme Editor', { exact: true }).click();
             await expect(checkbox).toBeChecked();
             await harness.app.evaluate(({ BrowserWindow }, url) => {
@@ -55,7 +61,9 @@ for (const format of ['amg', 'json'] as const) {
                 if (!window) throw new TypeError('Missing editor window');
                 window.setSize(1000, 800);
             }, harness.page.url());
-            await expect.poll(() => harness.page.evaluate(() => window.innerWidth)).toBe(984);
+            const contentWidth = await harness.app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0]!.getContentSize()[0]);
+            expect(contentWidth).toBeLessThanOrEqual(1000);
+            await expect.poll(() => harness.page.evaluate(() => window.innerWidth)).toBe(contentWidth);
             await capture(harness, `transition-${format}-compact.png`, { actions: ['Save and reopen', 'Resize to compact desktop'], state: 'Persisted checkbox and readable wrapped controls' });
             await harness.page.locator('.theme-editor-close').click();
 

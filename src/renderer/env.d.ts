@@ -1,4 +1,6 @@
 /// <reference types="vite/client" />
+import type {AssetInventoryResult} from "../shared/projects/projectIpcContract";
+
 
 import type {
     CredentialField,
@@ -63,6 +65,7 @@ declare global {
             finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
         assets: AssetMutationBridge & {
+            listPaths: (request: {readonly expectedSessionId: import("../shared/projects/projectIpcContract").ProjectSessionId}) => Promise<AssetInventoryResult>
             list: () => Promise<any>
             readAsset: (reference: string) => Promise<any>
             readFileAsBase64: (reference: string) => Promise<any>

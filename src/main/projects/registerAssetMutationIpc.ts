@@ -1,3 +1,6 @@
+import {ProjectSessionIdSchema} from "../../shared/projects/projectIpcContract";
+import path from "node:path";
+import {repairMissingAsset} from "./repairMissingAsset";
 import * as fs from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dialog, ipcMain } from "electron";
@@ -21,6 +24,22 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
     ipcMain.removeHandler(channel);
     ipcMain.handle(channel, handler);
   };
+
+  install("assets:listPaths", async (event, request: unknown) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    try {
+      if (typeof request !== "object" || request === null || !("expectedSessionId" in request)) throw new TypeError("expectedSessionId is required");
+      const sessionId = ProjectSessionIdSchema.parse(request.expectedSessionId);
+      const lease = context.sessions.acquireReadLease(sessionId);
+      try {
+        const workspace = context.sessions.active.workspacePath;
+        if (workspace === null) throw new TypeError("No project workspace is active");
+        return {success: true, sessionId, paths: await context.projectFiles.listAssetPaths(workspace)};
+      } finally { lease.release(); }
+    } catch (error) {
+      return {success: false, error: error instanceof Error ? error.message : "Could not inspect project assets"};
+    }
+  });
 
   install("assets:selectImage", async (event, request: unknown) => {
     assertTrustedMainFrame(event, context.getMainWindow());
@@ -87,6 +106,37 @@ export const registerAssetMutationIpc = (context: ProjectResourceContext): void 
       return runProjectMutation(mutation.context, async () => (
         await copyFilesAtomically(mutation.workspacePath, "assets", selected.filePaths)
       ).map((file) => importedAsset(expectedSessionId, file, "video")));
+    });
+  });
+
+  install("assets:repairMissing", async (event, request: unknown) => {
+    assertTrustedMainFrame(event, context.getMainWindow());
+    return runMutationBoundary(context.sessions, request, async (expectedSessionId) => {
+      if (typeof request !== "object" || request === null || !("relativePath" in request) || typeof request.relativePath !== "string") throw new TypeError("relativePath is required");
+      const relativePath = canonicalizePortablePath(request.relativePath);
+      if (!relativePath.startsWith("assets/")) throw new TypeError("Only missing project assets can be repaired");
+      const mutation = resourceMutationContext(context, expectedSessionId);
+      const target = await resolveMutationPath(mutation.workspacePath, relativePath);
+      const exists = await fs.lstat(target).then(() => true, (error: unknown) => {
+        if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+        throw error;
+      });
+      if (exists) throw new TypeError("This asset already exists. Recheck the missing assets list.");
+      const mainWindow = context.getMainWindow();
+      if (mainWindow === null) throw new TypeError("Main window not available");
+      const extension = path.extname(relativePath).slice(1);
+      const selected = await dialog.showOpenDialog(mainWindow, {
+        title: `Locate replacement for ${path.posix.basename(relativePath)}`,
+        filters: [{name: extension ? `${extension.toUpperCase()} file` : "All files", extensions: extension ? [extension] : ["*"]}],
+        properties: ["openFile"],
+      });
+      const source = selected.filePaths[0];
+      if (selected.canceled || source === undefined) return canceledMutation(context.sessions, expectedSessionId);
+      if (extension && path.extname(source).slice(1).toLowerCase() !== extension.toLowerCase()) throw new TypeError(`Choose a .${extension} replacement file`);
+      return runProjectMutation(mutation.context, async () => {
+        await repairMissingAsset(mutation.workspacePath, relativePath, source);
+        return importedAsset(expectedSessionId, {fileName: path.posix.basename(relativePath), relativePath});
+      });
     });
   });
 

@@ -12,19 +12,28 @@ import {
 export async function launchPortableEditor(
   root: string,
 ): Promise<AmagonHarness> {
-  if (process.platform === "win32") return launchAmagon(root);
+  const executablePath = process.env.AMAGON_E2E_EXECUTABLE;
+  if (process.platform === "win32" && !executablePath) return launchAmagon(root);
   const profilePath = path.join(root, "profile");
   const launchToken = randomUUID();
   const env = { ...process.env, NODE_ENV: "test" };
   delete env.ELECTRON_RENDERER_URL;
   const app = await _electron.launch({
+    ...(executablePath ? {executablePath} : {}),
     args: [
-      path.resolve("out/main/index.js"),
+      ...(executablePath ? [] : [path.resolve("out/main/index.js")]),
       `--user-data-dir=${profilePath}`,
       "--disable-gpu",
     ],
     env,
   });
+  if (process.env.AMAGON_E2E_PACKAGED_VERSION) {
+    const build = await app.evaluate(({app}) => ({packaged: app.isPackaged, version: app.getVersion()}));
+    if (!build.packaged || build.version !== process.env.AMAGON_E2E_PACKAGED_VERSION) {
+      await app.close();
+      throw new Error(`Unexpected packaged build: ${JSON.stringify(build)}`);
+    }
+  }
   const child = app.process();
   if (!child.pid) throw new Error("Electron process did not start");
   const page = await app.firstWindow();
@@ -45,7 +54,7 @@ export async function launchPortableEditor(
 export async function stopPortableEditor(
   harness: AmagonHarness,
 ): Promise<void> {
-  if (process.platform === "win32") return stopAmagon(harness);
+  if (process.platform === "win32" && harness.processTree.length > 0) return stopAmagon(harness);
   const child = harness.process;
   const exited = new Promise<void>((resolve) => {
     if (child.exitCode !== null) resolve();

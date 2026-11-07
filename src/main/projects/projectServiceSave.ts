@@ -101,12 +101,12 @@ export const saveActiveProjectAs = async (
   const expectedSessionId = request.expectedSessionId;
   state.session.assertTransition(expectedSessionId, request.rendererGeneration, request.workspaceGeneration);
   const project = parseProjectDocumentV1(request.snapshot);
-  const referencedAssets = await validateStoredProject(state, runtime, project, "bundle-stored");
+  await validateStoredProject(state, runtime, project, "bundle-stored");
   const sourceWorkspacePath = requireWorkspace(state);
   const candidate = state.session.kind === "legacy-json"
     ? await runtime.files.createWorkspace(runtime.userDataPath, project, {
         sourceWorkspacePath,
-        assetPaths: referencedAssets,
+        assetPaths: await runtime.files.listAssetPaths(sourceWorkspacePath),
       })
     : undefined;
   const workspacePath = candidate?.path ?? sourceWorkspacePath;
