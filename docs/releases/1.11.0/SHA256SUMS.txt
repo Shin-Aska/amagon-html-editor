@@ -1,0 +1,6 @@
+5bfbee9433ca68145f2d9c924c6d77a3dbbfc3d84539d2e29123b2520b9e990d  Amagon-HTML-Editor-1.11.0.AppImage
+4bb6feb576f4bb6330414e49c4e8db97ea1c30b013ed61756a28aa6ff68fbbe5  Amagon-HTML-Editor-Setup-1.11.0.exe
+19715e9afddbc68b6a2e778c21fdf6b5812e9a9bd28e4e31488da08877ecc153  Amagon-HTML-Editor-Setup-1.11.0.exe.blockmap
+c84501aee8943fc3388bad6ccdbf50297c264f864c0f86a6e13d4a44ccf71620  hoarses-html-editor_1.11.0_amd64.deb
+23624a8daac73ffa5c7a690e9961f44218a1057e2151b994ce7e2062e12b1e7d  latest-linux.yml
+db191c7dcc6c9bb25cd98d08b6f959546920f257f3f7dd5cc11aba9a219865c1  latest.yml

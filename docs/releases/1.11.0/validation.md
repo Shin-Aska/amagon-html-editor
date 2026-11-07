@@ -84,7 +84,17 @@ The 266 feature-focused checks are green, including every new renderer test file
 
 ### Installer preparation
 
-The release workflow performs clean npm installs, production builds, TypeScript checks, and Windows/Linux packaging. It explicitly uploads to a **draft** release. Packaging status, the exact workflow run, and downloads are recorded in the GitHub draft PR/release; the [workflow history](https://github.com/Shin-Aska/amagon-html-editor/actions/workflows/release.yml) remains available for inspection.
+[GitHub Actions run 42325429867](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42325429867) **succeeded on Windows and Linux**: clean npm installs, production builds, TypeScript checks, packaging, and draft asset uploads. The artifacts were built from application commit `d0d81719f67acccbf443c285156c4500b4968cd1`; the follow-up verification commit changes release documentation only.
+
+The [draft release](https://github.com/Shin-Aska/amagon-html-editor/releases/tag/untagged-43b7a8467192e783c491) contains:
+
+- Windows x64 installer, blockmap, and `latest.yml`.
+- Linux x64 AppImage, Debian package, and `latest-linux.yml`.
+- [SHA256SUMS.txt](SHA256SUMS.txt), using GitHub's upload digests for all six build files.
+
+The downloaded AppImage's SHA-256 matches its recorded upload digest. A smoke check of the extracted **packaged** application confirms `app.isPackaged === true`, version `1.11.0`, project creation, actual bundled-font loading, the canvas/code layout, selected widget HTML highlighting, locally loaded editor workers, and no renderer page errors. Windows packaging is verified by CI; a Windows runtime launch was not performed on this Linux machine.
+
+[Draft PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20) contains the review summary and known full-suite limitations. No merge, public release, or version-tag push is part of this preparation.
 
 ## Review and publication
 

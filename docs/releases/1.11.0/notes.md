@@ -35,6 +35,10 @@ Compatible upstream updates refresh the editor and its bundled preview/export as
 | Windows x64 | [Windows installer](https://github.com/Shin-Aska/amagon-html-editor/releases/download/v1.11.0/Amagon-HTML-Editor-Setup-1.11.0.exe) |
 | Linux x64 | [AppImage](https://github.com/Shin-Aska/amagon-html-editor/releases/download/v1.11.0/Amagon-HTML-Editor-1.11.0.AppImage) · [Debian / Ubuntu](https://github.com/Shin-Aska/amagon-html-editor/releases/download/v1.11.0/hoarses-html-editor_1.11.0_amd64.deb) |
 
+[SHA-256 checksums](https://github.com/Shin-Aska/amagon-html-editor/releases/download/v1.11.0/SHA256SUMS.txt)
+
 macOS binaries are not included in this release.
 
 **Full changelog:** [v1.10.1 → v1.11.0](https://github.com/Shin-Aska/amagon-html-editor/compare/v1.10.1...v1.11.0)
+
+**Release review:** [Draft PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20)
