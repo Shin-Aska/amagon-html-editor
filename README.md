@@ -23,7 +23,7 @@ Amagon is an offline desktop HTML editor for building block-based pages visually
 
 New desktop projects use the portable `.amg` format: one ZIP64-capable file containing the project document and its imported assets. Existing `.json` projects remain supported and Save in place; use Save As to convert one explicitly after importing any external local references. Conversion never silently replaces the legacy source.
 
-Legacy projects with missing images still open for editing and identify the missing asset paths. Restore the files or replace their references before converting to `.amg`. Media imports preserve filenames containing spaces, Unicode, `#`, and literal `%` characters.
+Legacy projects with missing images still open for editing and identify the missing asset paths in a notice that stays until dismissed. Restore the files or replace their references before converting to `.amg`. Media imports preserve filenames containing spaces, Unicode, `#`, and literal `%` characters.
 
 Browser development continues to use legacy JSON projects. Version 1 intentionally does not add OS file association, double-click/command-line opening, browser-side `.amg` reading, signing, or encryption. See [the AMG v1 format specification](docs/amg-format-v1.md) for package layout, hashes, limits, migration rules, errors, and security boundaries.
 
@@ -166,6 +166,8 @@ The **Canvas + Code** layout places a resizable canvas on the left and code edit
 Canvas widget clicks switch an open code editor to HTML, scroll to the widget’s opening tag, and highlight its complete markup. Re-clicking the same widget reveals it again. Source-only widget identities preserve export markup; a single-version source-range cache uses the existing HTML parser and preserves code drafts.
 
 
-Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](docs/releases/1.11.0/validation.md).
+Release 1.11.1 combines the widget, theme, and code-editor improvements with the legacy-project and media-import corrections. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](docs/releases/1.11.1/validation.md).
 
 Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
+
+Release builds run the full regression suite and desktop workflow checks before packaging. Use `npm test -- --maxWorkers=1` and `npm run test:e2e:release` to run these checks locally after building the app.

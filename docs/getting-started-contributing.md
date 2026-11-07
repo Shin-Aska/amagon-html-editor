@@ -135,7 +135,7 @@ The **Canvas + Code** layout places a resizable canvas on the left and code edit
 Canvas widget clicks switch an open code editor to HTML, scroll to the widget’s opening tag, and highlight its complete markup. Re-clicking the same widget reveals it again. Source-only widget identities preserve export markup; a single-version source-range cache uses the existing HTML parser and preserves code drafts.
 
 
-Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](releases/1.11.0/validation.md).
+Release 1.11.1 combines the widget, theme, and code-editor improvements with the legacy-project and media-import corrections. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](releases/1.11.1/validation.md).
 
 Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
 
@@ -144,3 +144,5 @@ Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol,
 Legacy JSON projects may open and Save with missing-asset warnings so their references can be repaired. Conversion to `.amg` requires the referenced files to exist. `projectPortability` keeps strict validation by default; only legacy open/save callers request `allowMissingLegacyAssets`, and bundle modes ignore that option.
 
 Import results use encoded runtime URLs while retaining raw filesystem-relative paths. Exercise spaces, Unicode, `#`, literal `%`, `%20`, and `%2F` filenames through image, single-image, and video IPC handlers. Regressions belong in `registerResourceMutationSecurity.test.ts`, `legacySessionlessAssetCompatibility.test.ts`, and the renderer snapshot/command tests. Keep personal reproduction projects outside the repository and use copies when testing Save.
+
+Regression prevention: `.github/workflows/regression.yml` runs the complete Node 22 suite and TypeScript checks on Windows/Linux for code changes on main and pull requests. Release packaging also runs the complete Windows desktop suite and the portable Linux `npm run test:e2e:release` checks, covering asset filename round trips, legacy missing-file repair/conversion, widget controls, application themes, code editing, canvas layouts, and selection. Keep checks sequential and use one worker on memory-limited machines.

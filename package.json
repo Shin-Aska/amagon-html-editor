@@ -18,6 +18,8 @@
     "preview": "electron-vite preview",
     "test": "vitest run",
     "test:e2e:electron": "playwright test --config playwright.electron.config.ts",
+    "test:e2e:ownership": "node --import tsx --test tests/electron/processOwnership.test.ts",
+    "test:e2e:release": "playwright test --config playwright.electron.config.ts project-assets.spec.ts widget-experience.spec.ts app-appearance-code.spec.ts canvas-code-layout.spec.ts canvas-code-selection.spec.ts",
     "test:e2e:browser": "playwright test --config playwright.browser.config.ts",
     "test:watch": "vitest",
     "generate:fonts": "npx tsx scripts/generate-google-fonts-catalog.ts",

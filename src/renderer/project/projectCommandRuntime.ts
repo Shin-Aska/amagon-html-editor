@@ -210,10 +210,17 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
       });
       return () => { editor(); project(); };
     },
-    notify: (message) => useToastStore.getState().showToast(
-      `${message.title}: ${message.detail}${message.locations.length > 0 ? ` (${message.locations.join(", ")})` : ""}`,
-      message.tone,
-    ),
+    notify: (message) => {
+      const toast = useToastStore.getState();
+      toast.showToast(
+        `${message.title}: ${message.detail}${message.locations.length > 0 ? ` (${message.locations.join(", ")})` : ""}`,
+        message.tone,
+        message.persistent ? {
+          autoCloseMs: null,
+          actions: [{ label: "Dismiss", onClick: toast.clearToast }],
+        } : undefined,
+      );
+    },
     chooseDirtyTransition: () => window.confirm("Save changes before closing?") ? "save" : window.confirm("Discard unsaved changes?") ? "discard" : "cancel",
   });
   electron?.project.onLifecycleCloseRequest((request) => {

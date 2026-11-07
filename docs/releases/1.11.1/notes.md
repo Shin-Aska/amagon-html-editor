@@ -1,10 +1,40 @@
-![Amagon canvas and code editor in Ocean](../1.11.0/canvas-code-ocean.png)
+![Canvas and code in Ocean, with selected widget HTML highlighted](canvas-code-ocean.png)
 
-Amagon 1.11.1 fixes legacy project loading and media imports, so a missing image or a filename containing spaces no longer interrupts your work.
+Amagon 1.11.1 brings clearer controls for every widget, built-in and custom app themes, a canvas that connects directly to your code, and reliable project asset handling.
+
+## Make every widget yours
+
+All 63 widgets now share a searchable **Content / Design / Advanced** inspector. Start with a design preset, adjust spacing, typography, colors and layout, then reset individual values or style overrides without losing your content. Collapsible sections keep the controls manageable on smaller screens.
+
+![Widget design controls and presets](widget-design.png)
+
+## Six themes, plus your own
+
+Choose **Classic, Graphite, Ocean, Forest, Rose, or Sandstone** in App Settings → Appearance. Each has a light and dark palette, and the code editor follows along. Your website’s colors remain independent.
+
+![Built-in app themes](app-themes.png)
+
+Create a theme from any starting palette, preview changes live, check text contrast, and adjust advanced interface and syntax colors. Save, duplicate, rename, import, or export your themes as JSON.
+
+![Custom app theme creator](theme-creator.png)
+
+## Canvas on the left, code on the right
+
+The new **Canvas + Code** layout gives both views their own resizable space. Click a widget in the canvas to switch to HTML, scroll to its opening tag, and highlight its complete markup—even when you click the same widget again.
+
+The code editor also gains local, offline loading; HTML and CSS formatting; find and replace; clickable diagnostics; editor preferences; and page-specific drafts that survive switching tabs. A small model cache and an off-by-default minimap keep the experience light.
+
+## Updated dependencies
+
+Compatible upstream updates refresh the editor and its bundled preview/export assets. Bundled fonts and icons also load correctly through the desktop asset protocol. The npm audit is clear for both development and production dependencies, and font catalog generation no longer installs an unused CLI dependency chain.
+
+## Archive compatibility
+
+Archive loading now supports older Node 22 runtimes consistently. Cross-platform fixture and network-test improvements keep archive checks compatible across supported systems.
 
 ## Keep working on legacy projects
 
-Legacy JSON projects now open and Save even when a referenced project asset is missing. A notice identifies the missing file so you can restore it or replace its reference while continuing to edit the rest of the project.
+Legacy JSON projects now open and Save even when a referenced project asset is missing. A notice identifies the missing file and stays until dismissed, so you can restore it or replace its reference while continuing to edit the rest of the project.
 
 Converting to a portable `.amg` project still requires the referenced assets to exist. Unsafe paths and invalid asset references remain blocked.
 
@@ -25,6 +55,6 @@ The correction applies to Asset Manager imports and the image, single-image, and
 
 macOS binaries are not included in this release.
 
-**Full changelog:** [v1.11.0 → v1.11.1](https://github.com/Shin-Aska/amagon-html-editor/compare/v1.11.0...v1.11.1)
+**Full changelog:** [v1.10.1 → v1.11.1](https://github.com/Shin-Aska/amagon-html-editor/compare/v1.10.1...v1.11.1)
 
-**Validation:** [Hotfix verification](https://github.com/Shin-Aska/amagon-html-editor/blob/main/docs/releases/1.11.1/validation.md)
+**Feature review:** [PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20) · [Validation report](https://github.com/Shin-Aska/amagon-html-editor/blob/main/docs/releases/1.11.1/validation.md)

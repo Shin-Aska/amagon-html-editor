@@ -589,7 +589,7 @@ The **Canvas + Code** layout places a resizable canvas on the left and code edit
 Canvas widget clicks switch an open code editor to HTML, scroll to the widget’s opening tag, and highlight its complete markup. Re-clicking the same widget reveals it again. Source-only widget identities preserve export markup; a single-version source-range cache uses the existing HTML parser and preserves code drafts.
 
 
-Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](docs/releases/1.11.0/validation.md).
+Release 1.11.1 combines the widget, theme, and code-editor improvements with the legacy-project and media-import corrections. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](docs/releases/1.11.1/validation.md).
 
 Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
 
@@ -601,3 +601,5 @@ Backend archive streams must keep ArrayBuffer-backed `Uint8Array` chunks when ca
 Filesystem-relative paths and encoded asset references are distinct: pass raw imported filenames through `encodeDurableAssetReference` before `buildRuntimeAssetUrl`. Keep `AssetInfo.relativePath` raw for filesystem mutations; encode literal `%` characters once, including names containing `%20` or `%2F`.
 
 Legacy JSON open and ordinary Save opt into `allowMissingLegacyAssets`, preserving unresolved project references and reporting warnings so users can repair them. The option only affects missing files in legacy modes. Invalid paths, stale sessions, external-file restrictions, `.amg` validation, and Save As conversion remain strict. Cover backend staging/save, renderer materialization, and all three media pickers when changing these boundaries.
+
+Regression prevention: `.github/workflows/regression.yml` runs the complete Node 22 suite and TypeScript checks on Windows/Linux for code changes on main and pull requests. Release packaging also runs the complete Windows desktop suite and the portable Linux `npm run test:e2e:release` checks, covering asset filename round trips, legacy missing-file repair/conversion, widget controls, application themes, code editing, canvas layouts, and selection. Keep checks sequential and use one worker on memory-limited machines.

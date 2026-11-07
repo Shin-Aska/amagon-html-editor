@@ -16,6 +16,7 @@ import type { FontAsset, ProjectData } from "../store/types";
 
 export type ProjectCommandMessage = {
   readonly tone: "error" | "info" | "success";
+  readonly persistent?: boolean;
   readonly title: string;
   readonly detail: string;
   readonly locations: readonly string[];

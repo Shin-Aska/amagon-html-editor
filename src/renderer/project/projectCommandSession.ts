@@ -106,6 +106,7 @@ export class ProjectCommandSessionInstaller {
       const message: ProjectCommandMessage | null = missingAssets.length === 0 ? null : {
         tone: "info",
         title: "Project opened with missing assets",
+        persistent: true,
         detail: `Restore or replace: ${missingAssets.join(", ")}. You can continue editing this legacy project.`,
         locations: [],
       };

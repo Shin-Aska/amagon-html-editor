@@ -148,6 +148,7 @@ describe("project commands", () => {
     expect(test.installed).toHaveLength(1);
     expect(test.commands.state.message).toMatchObject({
       tone: "info", title: "Project opened with missing assets",
+      persistent: true,
       detail: expect.stringContaining("assets/Absent Image.png"),
     });
     test.edits();

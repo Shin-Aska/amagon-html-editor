@@ -8,6 +8,41 @@ const RAW_HTML_BG_URL = 'app-media://project/bg.png';
 const RAW_HTML_INNER_URL = 'app-media://project/inner.png';
 
 describe('exportEngine', () => {
+    it('exports encoded filename variants with matching portable HTML references and bytes', async () => {
+        const cases = [
+            ['with%20space.png', 'with_space.png'],
+            ['100%25.png', '100_.png'],
+            ['literal%2520name.png', 'literal_20name.png'],
+            ['literal%252Fname.png', 'literal_2Fname.png'],
+            ['caf%C3%A9.png', 'caf_.png'],
+            ['hash%23name.png', 'hash_name.png'],
+        ] as const;
+        const urls = cases.map(([encoded]) => `app-media://project-asset/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/assets/${encoded}`);
+        const payloads = new Map(urls.map((url, index) => [url, new Uint8Array([index + 1, 20, 30])]));
+        const resolved: string[] = [];
+        const project: ProjectData = {
+            customCss: '',
+            projectSettings: {name: 'Filename export', framework: 'vanilla', theme: createDefaultTheme(), globalStyles: {}},
+            pages: [{id: 'home', title: 'Home', slug: 'index', meta: {}, blocks: urls.map((src) => createBlock('image', {props: {src}}))}],
+            userBlocks: [],
+        };
+        const files = await exportProject(project, {
+            resolveAsset: async (url) => {
+                resolved.push(url);
+                const bytes = payloads.get(url);
+                return bytes === undefined ? null : {bytes, mimeType: 'image/png'};
+            },
+        });
+        const html = files.find(file => file.path === 'index.html')?.content;
+        expect(typeof html).toBe('string');
+        expect(html).not.toContain('app-media://');
+        for (const [index, [, filename]] of cases.entries()) {
+            expect(html).toContain(`src="./assets/${filename}"`);
+            expect(files.find(file => file.path === `assets/${filename}`)?.content).toEqual(payloads.get(urls[index]));
+        }
+        expect(resolved.sort()).toEqual([...urls].sort());
+    });
+
     it('consolidates app-media assets into assets/ and rewrites HTML refs to ./assets/...', async () => {
         const project: ProjectData = {
             customCss: '',

@@ -4,6 +4,7 @@ const evidenceRoot = ".omo/evidence/amg-bundled-project-format/task-13-amg-bundl
 
 export default defineConfig({
   testDir: "./tests/electron",
+  testMatch: "**/*.spec.ts",
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,
