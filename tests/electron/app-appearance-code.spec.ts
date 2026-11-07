@@ -33,9 +33,15 @@ async function editorValue(page: Page): Promise<string> {
   });
 }
 async function replaceCode(page: Page, text: string): Promise<void> {
-  await page
-    .locator(".code-editor .monaco-editor")
-    .click({ position: { x: 100, y: 30 } });
+  const body = page.locator(".code-editor-body");
+  const bounds = await body.boundingBox();
+  if (!bounds || bounds.height < 8) throw new Error("Code editor has no usable viewport");
+  // Compact windows can expose less than 30px of code while options are open.
+  await body.click({position: {x: Math.min(100, bounds.width / 2), y: Math.min(8, bounds.height / 2)}});
+  await expect.poll(() => page.evaluate(() => {
+    const monaco = Reflect.get(window, "monaco") as typeof Monaco;
+    return monaco.editor.getEditors().find(editor => editor.getDomNode()?.closest(".code-editor"))?.hasTextFocus();
+  })).toBe(true);
   await page.keyboard.press("Control+A");
   // Use Monaco's real paste path: insertText emulates typing and invokes selection-surround shortcuts.
   await page.evaluate((text) => {
@@ -53,6 +59,7 @@ test("app themes and code editing stay independent, reliable and bounded", async
   const harness = await launchPortableEditor(root),
     { page } = harness;
   try {
+    await harness.app.evaluate(({BrowserWindow}) => BrowserWindow.getAllWindows()[0]?.setContentSize(1008, 660));
     await createProjectThroughUi({
       harness,
       filePath: path.join(root, "studio.amg"),

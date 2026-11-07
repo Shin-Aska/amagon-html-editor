@@ -154,8 +154,11 @@ test('live libraries update real content and Classic releases previews across ta
                 await content.evaluate(node => { node.scrollTop = node.scrollHeight })
                 await capture(harness, 'library-settings-1000-bottom.png', {actions: ['Scroll General settings to bottom'], state: 'Remaining preferences and Done remain accessible'})
                 await content.evaluate(node => { node.scrollTop = 0 })
+                await settings.getByRole('button', {name: 'Appearance', exact: true}).click()
                 await settings.getByRole('button', {name: 'Light', exact: true}).click()
+                await settings.getByRole('button', {name: 'General', exact: true}).click()
                 await capture(harness, 'library-settings-1000-light.png', {actions: ['Choose Light app appearance'], state: 'Preview mode uses the shared light theme styles'})
+                await settings.getByRole('button', {name: 'Appearance', exact: true}).click()
                 await settings.getByRole('button', {name: 'Dark', exact: true}).click()
                 await settings.getByRole('button', {name: 'Done', exact: true}).click()
             }
