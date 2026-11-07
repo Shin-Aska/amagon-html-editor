@@ -120,7 +120,7 @@ test("legacy Save repairs missing assets interactively before conversion and pre
     const dialog = page.getByRole("dialog", {name: "Save legacy project as .amg", exact: true});
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("Conversion will not replace your original JSON file");
-    await expect(dialog.getByRole("button", {name: /^Locate /})).toHaveCount(1);
+    await expect(dialog.getByRole("button", {name: /^Locate assets\//})).toHaveCount(1);
     await expect(dialog.getByRole("button", {name: "Save as .amg", exact: true})).toBeDisabled();
     await page.screenshot({path: testInfo.outputPath("legacy-repair-dialog.png")});
     await dialog.screenshot({path: testInfo.outputPath("legacy-repair-dialog-detail.png")});
@@ -204,6 +204,96 @@ test("legacy conversion succeeds after autosave commits an imported asset", asyn
     await page.getByTitle("Asset Manager", {exact: true}).click();
     await expectLoadedImage(page, "imported.png");
     expect(await readFile(source)).toEqual(savedLegacy);
+    expect(harness.pageErrors).toEqual([]);
+  } finally {
+    await stopPortableEditor(harness);
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+test('legacy batch repair and unused cleanup support review, Undo and portable conversion', async ({}, testInfo) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'amagon-batch-repair-cleanup-'));
+  const harness = await launchPortableEditor(root);
+  const {page} = harness;
+  try {
+    const bytes = await readFile(path.resolve('docs/images/logo.png'));
+    await mkdir(path.join(root, 'assets'));
+    await mkdir(path.join(root, 'replacements'));
+    await writeFile(path.join(root, 'assets/used.png'), bytes);
+    await writeFile(path.join(root, 'assets/unused.png'), bytes);
+    const inputs = await Promise.all(Array.from({length: 50}, async (_, index) => {
+      const file = path.join(root, 'replacements', `image-${index}.png`);
+      await writeFile(file, bytes);
+      return file;
+    }));
+    const {projectSchemaVersion: ignoredVersion, ...legacy} = structuredClone(TEST_PROJECT);
+    void ignoredVersion;
+    const source = path.join(root, 'legacy.json');
+    const target = path.join(root, 'repaired.amg');
+    const original = JSON.stringify({...legacy,
+      customCss: inputs.map((_, index) => `.fixture-${index} {background:url(assets/image-${index}.png)}`).join('\n'),
+      projectSettings: {...legacy.projectSettings, fonts: [{id: 'unused-font', name: 'Unapplied Family', fileName: 'unapplied.woff2', relativePath: 'assets/fonts/unapplied.woff2', format: 'woff2', source: 'imported'}]},
+      pages: [{id: 'home', title: 'Home', slug: 'index', meta: {}, blocks: [{id: 'used-image', type: 'image', props: {src: 'assets/used.png', alt: 'Used image'}, styles: {}, classes: [], children: []}]}],
+    });
+    await writeFile(source, original);
+    await openProjectThroughUi({harness, filePath: source});
+    await page.getByRole('button', {name: 'Save project', exact: true}).click();
+    const dialog = page.getByRole('dialog', {name: 'Save legacy project as .amg', exact: true});
+    await expect(dialog.getByRole('button', {name: 'Save as .amg', exact: true})).toBeDisabled();
+    const missing = dialog.getByRole('region', {name: 'Missing assets', exact: true});
+    await expect(missing.locator('li')).toHaveCount(25);
+    await missing.getByRole('searchbox').fill('image-49.png');
+    await expect(missing.locator('li')).toHaveCount(1);
+    await expect(missing).toContainText('image-49.png');
+    await missing.getByRole('searchbox').fill('');
+    await queueNativeDialogs(harness.app, {opens: [[]]});
+    await dialog.getByRole('button', {name: 'Locate multiple files…', exact: true}).click();
+    await expect(missing.locator('li')).toHaveCount(25);
+    await queueNativeDialogs(harness.app, {opens: [inputs]});
+    await dialog.getByRole('button', {name: 'Locate multiple files…', exact: true}).click();
+    await expect(dialog).toContainText('Repaired 50 files.');
+    await expect(dialog.getByRole('button', {name: 'Missing assets (1)', exact: true})).toBeEnabled();
+    await dialog.getByRole('button', {name: 'Unused assets (2)', exact: true}).click();
+    const cleanup = dialog.getByRole('region', {name: 'Unused asset cleanup', exact: true});
+    await expect(cleanup).not.toContainText('assets/used.png');
+    await cleanup.getByRole('button', {name: 'Select all', exact: true}).click();
+    await cleanup.getByRole('button', {name: 'Review cleanup…', exact: true}).click();
+    await page.screenshot({path: testInfo.outputPath('asset-cleanup-review.png')});
+    await cleanup.getByRole('button', {name: 'Keep assets', exact: true}).click();
+    expect(await readFile(path.join(root, 'assets/unused.png'))).toEqual(bytes);
+    await cleanup.getByRole('button', {name: 'Review cleanup…', exact: true}).click();
+    await cleanup.getByRole('button', {name: 'Confirm cleanup', exact: true}).click();
+    await expect(dialog.getByRole('button', {name: 'Save as .amg', exact: true})).toBeEnabled();
+    await expect(cleanup).toContainText('0 unused files and missing entries');
+    await expect(readFile(path.join(root, 'assets/unused.png'))).rejects.toMatchObject({code: 'ENOENT'});
+    await cleanup.getByRole('button', {name: 'Undo cleanup', exact: true}).click();
+    await expect(dialog.getByRole('button', {name: 'Save as .amg', exact: true})).toBeDisabled();
+    await expect(cleanup).toContainText('2 unused files and missing entries');
+    expect(await readFile(path.join(root, 'assets/unused.png'))).toEqual(bytes);
+    await cleanup.getByRole('button', {name: 'Select all', exact: true}).click();
+    await cleanup.getByRole('button', {name: 'Review cleanup…', exact: true}).click();
+    await cleanup.getByRole('button', {name: 'Confirm cleanup', exact: true}).click();
+    await expect(dialog.getByRole('button', {name: 'Save as .amg', exact: true})).toBeEnabled();
+    await queueNativeDialogs(harness.app, {saves: [target]});
+    await dialog.getByRole('button', {name: 'Save as .amg', exact: true}).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole('button', {name: 'Save project', exact: true})).toBeEnabled();
+    expect(await readFile(source, 'utf8')).toBe(original);
+    await closeProjectThroughUi(harness);
+    await openProjectThroughUi({harness, filePath: target});
+    await expect(page.frameLocator('.canvas-iframe').getByAltText('Used image')).toBeVisible();
+    const {createDefaultProjectServiceFiles} = await import('../../src/main/projects/projectServiceFiles');
+    const files = createDefaultProjectServiceFiles();
+    const inspected = await files.openAmg(target, path.join(root, 'inspection'));
+    expect(inspected.project.projectSettings.fonts).toEqual([]);
+    const paths = await files.listAssetPaths(inspected.workspace.path);
+    expect(paths).toHaveLength(51);
+    expect(paths).not.toContain('assets/unused.png');
+    await page.getByTitle('Asset Manager', {exact: true}).click();
+    await page.getByRole('button', {name: 'Review unused assets', exact: true}).click();
+    const review = page.getByRole('dialog', {name: 'Review project assets', exact: true});
+    await expect(review).toContainText('0 unused files and missing entries');
+    await review.getByRole('button', {name: 'Done', exact: true}).click();
     expect(harness.pageErrors).toEqual([]);
   } finally {
     await stopPortableEditor(harness);

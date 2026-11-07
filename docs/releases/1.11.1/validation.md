@@ -1,60 +1,34 @@
-> Guided legacy Save changes are undergoing a fresh gated rebuild. The earlier installer evidence below applies to application commit `152c599`; it is not evidence for the new repair dialog. New verification results and checksums will replace this notice after the rebuild.
-
 # Amagon 1.11.1 release validation
 
-Prepared 7 November 2026. Both npm manifests identify **1.11.1**. Application source: `152c599363582910ee74ce48d960b9536edc717f`. The replacement draft combines all widget, theme, and code-editor improvements with the asset fixes, complete feature notes, and four public screenshots. The 1.11.0 release and tag were withdrawn. Version 1.11.1 remains unpublished.
+Prepared 7 November 2026. Both npm manifests identify **1.11.1**. The release remains an unpublished draft; 1.11.0's release and tag have been withdrawn.
 
-## Reproduction and fixes
+> A fresh Windows/Linux regression and installer build is required for the batch repair and cleanup changes. Final artifact identifiers and checksums will be recorded after the gates pass. The existing checksum manifest still describes the earlier installers.
 
-The packaged 1.11.0 application reproduced both reported failures. One supplied legacy project referenced a genuinely absent in-project image; missing-file diagnostics prevented the entire project from opening. Media import copied files before interpreting raw filesystem filenames as encoded references, causing errors for spaces and percent characters and incorrect URLs for literal `%20` names.
+## Reproduction and corrections
 
-Legacy open and ordinary Save now report missing-file warnings while retaining references for repair. The notice persists until dismissed. Bundle open/save and conversion remain strict about missing bytes. Unsafe paths, traversal, and stale session references remain blocked. Legacy external strings can be preserved without granting local-file read authority; conversion requires explicit import.
+The packaged 1.11.0 application reproduced the reported legacy loading and media import failures. One supplied legacy project genuinely lacked a referenced image, but strict missing-file validation blocked the whole project. Import results also interpreted raw filesystem filenames as encoded references, causing errors or incorrect URLs for spaces and literal percent sequences.
 
-Import results encode raw filesystem paths once when constructing session URLs. Font imports now receive the same treatment at the renderer persistence boundary. Font existence checks and deletion convert only current-session font URLs back to raw paths. Export retains the original scoped source URL for reading bytes and uses safe, distinct output filenames, including when sanitized names collide.
+Legacy open and low-level autosave now retain missing references with a persistent warning; bundle validation remains strict. Desktop manual Save and Save As open a guided repair/conversion dialog. Conversion requires repairing referenced missing assets, choosing a destination, and saving a portable `.amg`. The original JSON is preserved, and the full remaining asset library is copied. A separate Save As acknowledgement fix prevents a newly converted workspace's reset generation from falsely appearing stale after an import/autosave.
 
-The broader desktop gate also reproduced unhandled Monaco 0.54 word-highlighter cancellation during rapid model switching. A scoped Vite transform attaches Monaco's cancellation-aware error handler to the affected promises in production and development prebundling. Highlighting remains enabled and unexpected errors remain reportable. Tests execute the installed highlighter and Delayer code, verify real-error reporting, and guard against unreviewed upstream source changes. See [upstream issue #5294](https://github.com/microsoft/monaco-editor/issues/5294).
+The review renders at most 25 entries and supports searching, pagination, and filename/folder-suffix batch repair with up to 10,000 replacements. Ambiguous matches remain unresolved and existing files cannot be overwritten. Large opening notices show a bounded summary instead of thousands of filenames.
 
-Empty layout-widget preview documents now fill the iframe viewport. Desktop test helpers wait for the welcome screen before opening projects, reload tests await recent-project entries, and settings tests use the current Appearance tab. No failing test was removed or uncaught renderer error filtered out.
+Unused cleanup covers both unused files and missing, unapplied font entries. Usage checks consider all pages, themes, presets, saved blocks, templates and custom CSS. Linked resources, dynamic code and uncertain font usage are retained. Cleanup rechecks current references and workspace generation before moving selected files outside `assets/` into project trash. Associated unused font metadata is removed; session-scoped Undo restores the last cleanup without overwriting reimported files. Trash is excluded from bundles. The same review is available from Asset Manager.
 
-## Regression evidence
+Import, font persistence/export, archive compatibility, Monaco cancellation handling, widget previews, app themes and code-editor improvements remain covered. No dependency or background index was added.
 
-- [Cross-platform regression run 42354517381](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42354517381): **1,179 tests across 122 files passed on both Windows and Linux**, plus **five process-ownership checks per platform** and both application/build-configuration TypeScript checks.
-- The local production build and TypeScript checks pass. All **44 focused font, snapshot, and export tests** pass; seven font failures were reproduced before their fixes.
-- All **seven portable desktop workflows pass locally and in Linux CI**: themes/code editing with rapid model switching and bounded model count; canvas/code layout; canvas-to-HTML selection; widget content/design/reset; eight literal media filenames; legacy missing-file repair/conversion; and font import/save/reopen/export/delete.
-- Media coverage includes spaces, Unicode, `#`, literal `%`, `%20`, and `%2F`. Deleting a literal `%20` filename preserves its space-named neighbour through another saved round trip.
-- The font desktop workflow exports through the real native bridge and compares the emitted font bytes with the original public font fixture, then deletes the reopened font and verifies another saved round trip.
-- A fresh full npm audit reports **zero vulnerabilities**. No dependency was added for these fixes.
+## Completed local verification
 
-## Release gates
+- Production build and both application/build-configuration TypeScript checks passed.
+- **70 focused checks passed**, including 10,000-entry matching/review/notification coverage, conservative usage detection, stale sessions/workspaces, exclusive repair, cleanup and Undo, metadata-only cleanup, and module architecture.
+- The broad local run passed 1,218 tests and caught a newly added quoted-space-filename case before the final scan correction. The corrected scan and all focused checks then passed; a fresh complete Windows/Linux run is required below.
+- **All 11 portable desktop workflows passed**: guided legacy repair, 50-file batch repair with reviewed cleanup/Undo/conversion/reopening, literal media filename round trips, conversion after autosave, imported font round trips/export/deletion, app themes/code editing, canvas/code layout and selection, both theme-transition formats, and widget controls.
+- Edited copies of **all four supplied legacy projects converted and reopened**, preserving edits and original JSON bytes. **22 asset files were checked byte-for-byte**; the one genuinely absent image was repaired using a public replacement in a test copy. No private content was uploaded, and no renderer exceptions were observed.
+- A fresh full npm audit reported **zero vulnerabilities**.
 
-Code changes on main and all pull requests run the complete regression suite, ownership checks, and both TypeScript checks on Windows and Linux. Release packaging additionally requires **all 38 Windows desktop workflows and all seven portable Linux workflows**. Both platforms must finish verification before either packaging job can upload installers. Each test run uses one worker; failures retain synthetic-fixture screenshots and traces for diagnosis.
+## Required release gates
 
-[Release workflow 42354525667](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42354525667) **passed both platform gates and both installer builds**, using the exact application commit above. Windows passed all **38 desktop workflows**; Linux passed all **seven**. Both jobs used clean dependency installs, production builds, TypeScript checks, packaging, and draft uploads.
+The complete suite, process ownership checks and both TypeScript checks run on Windows and Linux. Release packaging additionally requires all Windows desktop cases and the 11 portable Linux cases; both verification jobs must pass before either platform uploads installers.
 
-The compact editor case now runs at 1008 × 660 and verifies real text focus after clicking the measured code viewport. Its local run passes. Mouse and keyboard divider resizing were independently reproduced successfully. The complete preview preference/restart workflow also passes locally through the portable harness.
+After packaging, download and independently verify all six installer/feed assets, validate update-feed SHA-512 hashes, replace the checksum manifest, and test the actual packaged AppImage (including version/packaged-state assertions, batch repair/cleanup, and all four private legacy project copies). Keep the release unpublished for owner review.
 
-## Installer verification
-
-The draft contains **seven fresh assets**: the Windows x64 installer, blockmap, and update feed; the Linux x64 AppImage, Debian package, and update feed; and [SHA256SUMS.txt](SHA256SUMS.txt). All seven asset IDs differ from the initial draft build. Every downloaded build file independently matches its SHA-256 upload digest and declared size, including the Debian package. Both feeds identify version 1.11.1; all referenced installer/package SHA-512 digests and sizes match the downloaded files. The uploaded checksum manifest also matches the committed file.
-
-The downloaded, extracted AppImage reports `app.isPackaged === true` and version `1.11.1`. Fresh temporary copies of **all four supplied legacy projects opened, Saved, and reopened**. Nine existing local images loaded successfully; the one genuinely absent image remained a repairable warning. Image references survived saving and reopening. Imports named `plain.png`, `with space.png`, `100%.png`, and `literal%20name.png` displayed correctly and survived an actual `.amg` save/close/reopen round trip. All of these checks recorded zero renderer errors.
-
-The same downloaded application's `resources/app.asar` passed **two additional desktop workflows** with packaged/version/path assertions: the complete compact theme/code-editor case (including rapid model switching, bounded model count, recovery, formatting, undo, and saved-code reopening), and the font import/save/reopen/export/delete case. The latter compares exported font bytes with the original fixture and verifies that deletion survives another saved round trip. Both recorded zero renderer errors.
-
-Windows runtime workflows pass in CI; the downloaded Windows installer was integrity-checked on Linux. A Windows installer installation was not performed on this machine. The release remains a draft for owner review.
-
-The private reproduction archive and screenshots are excluded from the repository, release, and CI. Packaged-app checks use fresh temporary copies; the original archive remains untouched. Release illustrations are the four public feature screenshots under this directory.
-
-## Guided legacy Save follow-up
-
-Manual desktop Save and Save As now explain conversion in an interactive dialog. Users can locate a same-type replacement with any filename, recheck restored files, cancel without discarding edits, and create a new `.amg` only after all references validate. The original JSON is not replaced by conversion. Missing-path repair is session-bound, excludes workspace links, and cannot overwrite an existing file. Autosave and project switches are held while the dialog is active.
-
-The renderer now uses the main-owned complete asset inventory instead of inferring completeness from filtered top-level media/font listings. Nested assets and non-media assets are recognized, and conversion retains unreferenced library assets as well as referenced files.
-
-A new regression reproduced the actual `stale-workspace-generation` Save error after an import and legacy autosave. Save As starts a new workspace with reset counters; its acknowledgement now refers to the originating workspace until the new session is installed. The same regression passes after the fix.
-
-The desktop repair case edits an image before Save, tests Escape/focus restoration, cancellation of a file picker and destination picker, a differently named replacement, immediate preview refresh, source JSON preservation, saved edits, and retained library assets. A second case converts successfully after an imported asset was autosaved. Keyboard tests keep editor shortcuts out of native modal dialogs. The Linux release gate now includes both theme-transition cases as well.
-
-Local verification: 1,191 of 1,192 tests passed in the broad run; the one timeout occurred while a build was running concurrently. All 11 tests in that preview file pass on an isolated rerun, alongside the updated controller checks. Three additional keyboard cases and the committed-workspace regression pass separately. Build/type checks and final native checks are in progress; CI will run the complete updated suite sequentially on both platforms before packaging.
-
-The final native checks pass: both new legacy desktop cases (interactive repair/cancellation and conversion after an imported asset was autosaved), keyboard ownership for native dialogs, and Escape/focus restoration. Fresh copies of all four supplied projects were edited, repaired as needed, converted, and reopened. Their JSON sources were preserved; all 22 asset files matched byte-for-byte after bundling, with zero renderer errors. Private files and evidence remain outside the repository. The new dialog illustration is a synthetic public fixture.
+Public screenshots contain only synthetic fixtures: [canvas and code](canvas-code-ocean.png), [widget controls](widget-design.png), [app themes](app-themes.png), [theme creation](theme-creator.png), [legacy repair](legacy-repair.png), and [unused asset cleanup](asset-cleanup.png).

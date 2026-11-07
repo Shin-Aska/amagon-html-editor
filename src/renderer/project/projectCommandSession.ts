@@ -109,7 +109,7 @@ export class ProjectCommandSessionInstaller {
         tone: "info",
         title: "Project opened with missing assets",
         persistent: true,
-        detail: `Restore or replace: ${missingAssets.join(", ")}. You can continue editing. Save will help repair missing assets before converting to .amg.`,
+        detail: `Restore or replace: ${missingAssets.slice(0, 3).map(asset => asset.length > 160 ? `${asset.slice(0, 157)}…` : asset).join(", ")}${missingAssets.length > 3 ? `, and ${(missingAssets.length - 3).toLocaleString()} more` : ""}. You can continue editing. Save will help repair all ${missingAssets.length.toLocaleString()} missing ${missingAssets.length === 1 ? "asset" : "assets"} before converting to .amg.`,
         locations: [],
       };
       this.hooks.publish({ session, dirty: false, message });

@@ -14,6 +14,7 @@ import type {
   RecentProjectId,
 } from "../../shared/projects/projectIpcContract";
 import type { FontAsset, ProjectData } from "../store/types";
+import type {AssetMaintenanceBridge, AssetUsageReview, AssetCleanupResult, AssetCleanupUndoResult, BatchRepairResult} from '../../shared/projects/assetMaintenanceContract';
 
 export type ProjectCommandMessage = {
   readonly tone: "error" | "info" | "success";
@@ -59,6 +60,9 @@ export type ProjectCommandDependencies = {
   readonly subscribeRendererEdits: (listener: () => void) => () => void;
   readonly notify: (message: ProjectCommandMessage) => void;
   readonly prepareLegacyConversion?: (session: ProjectSession) => Promise<boolean>;
+  readonly prepareAssetCleanup?: (session: ProjectSession) => Promise<boolean>;
+  readonly maintenance?: AssetMaintenanceBridge;
+  readonly setFonts?: (fonts: FontAsset[]) => void;
   readonly chooseDirtyTransition?: () => DirtyTransitionChoice;
 };
 
@@ -75,6 +79,12 @@ export interface ProjectCommands {
   readonly getRecent: ProjectBridge["getRecent"];
   readonly removeRecent: ProjectBridge["removeRecent"];
   readonly inspectConversion: () => Promise<ProjectSnapshotResult>;
+  readonly reviewUnusedAssets: () => Promise<ProjectCommandResult>;
+  readonly inspectUnusedAssets: () => Promise<AssetUsageReview>;
+  readonly repairAssets: (paths: readonly string[]) => Promise<ProjectCommandResult<BatchRepairResult>>;
+  readonly cleanupAssets: (keys: readonly string[]) => Promise<ProjectCommandResult<AssetCleanupResult>>;
+  readonly undoAssetCleanup: () => Promise<ProjectCommandResult<AssetCleanupUndoResult>>;
+  readonly hasAssetCleanup: () => boolean;
   readonly repairAsset: (relativePath: string) => Promise<ProjectCommandResult<AssetInfo>>;
   readonly selectImages: () => Promise<ProjectCommandResult<readonly AssetInfo[]>>;
   readonly selectSingleImage: () => Promise<ProjectCommandResult<AssetInfo>>;

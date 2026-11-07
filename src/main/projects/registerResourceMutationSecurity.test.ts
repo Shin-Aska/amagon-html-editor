@@ -32,6 +32,8 @@ vi.mock("../mediaDownload", () => ({ downloadAndImportMedia: electronState.downl
 import { BrowserWindow } from "electron";
 import { parseProjectSessionId } from "../../shared/projects/projectIpcContract";
 import { registerAssetMutationIpc } from "./registerAssetMutationIpc";
+import {registerAssetMaintenanceIpc} from './registerAssetMaintenanceIpc';
+import {TEST_PROJECT} from './amgArchiveFixtures';
 import { registerFontMutationIpc } from "./registerFontMutationIpc";
 import type { ProjectResourceContext } from "./projectResourceContext";
 import { ProjectSession, ProjectSessionRegistry } from "./projectSession";
@@ -80,6 +82,46 @@ afterEach(async () => {
 });
 
 describe("resource mutation security", () => {
+  it('rechecks cleanup usage and workspace generation before moving files, then supports Undo', async () => {
+    const fixture = await createContext();
+    const {createDefaultProjectServiceFiles} = await import('./projectServiceFiles');
+    registerAssetMaintenanceIpc({...fixture.context, projectFiles: createDefaultProjectServiceFiles()});
+    await mkdir(path.join(fixture.workspacePath, 'assets'));
+    await writeFile(path.join(fixture.workspacePath, 'assets/used.png'), 'used');
+    await writeFile(path.join(fixture.workspacePath, 'assets/unused.png'), 'unused');
+    const snapshot = {...TEST_PROJECT, customCss: '.used {background:url(assets/used.png)}'};
+    const request = {expectedSessionId: fixture.sessionId, snapshot, workspaceGeneration: 0};
+    expect(await invoke('assets:cleanupUnused', {...request, keys: ['file:assets/used.png']})).toMatchObject({success: false, changed: false});
+    expect(await invoke('assets:cleanupUnused', {...request, workspaceGeneration: 1, keys: ['file:assets/unused.png']})).toMatchObject({success: false, changed: false});
+    const result = await invoke('assets:cleanupUnused', {...request, keys: ['file:assets/unused.png']});
+    expect(result).toMatchObject({success: true, changed: true, workspaceGeneration: 1, value: {paths: ['assets/unused.png'], fontIds: [], failed: []}});
+    if (typeof result !== 'object' || result === null || !('value' in result) || typeof result.value !== 'object' || result.value === null || !('token' in result.value)) throw new Error('Missing cleanup token');
+    expect(await invoke('assets:undoCleanup', {expectedSessionId: fixture.sessionId, token: result.value.token})).toMatchObject({success: true, changed: true, workspaceGeneration: 2, value: {paths: ['assets/unused.png'], remaining: 0}});
+    expect(await readFile(path.join(fixture.workspacePath, 'assets/unused.png'), 'utf8')).toBe('unused');
+    expect(await readFile(path.join(fixture.workspacePath, 'assets/used.png'), 'utf8')).toBe('used');
+  });
+
+  it('rejects stale batch repair after the picker and does not write to a retired workspace', async () => {
+    const fixture = await createContext();
+    registerAssetMaintenanceIpc(fixture.context);
+    const source = path.join(fixture.root, 'missing.png');
+    await writeFile(source, 'replacement');
+    electronState.showOpenDialog.mockImplementationOnce(async () => {
+      fixture.sessions.activate(ProjectSession.createLegacyJson({sourcePath: path.join(fixture.root, 'other.json'), workspacePath: fixture.workspacePath}));
+      return {canceled: false, filePaths: [source]};
+    });
+    expect(await invoke('assets:repairMany', {expectedSessionId: fixture.sessionId, relativePaths: ['assets/missing.png']})).toMatchObject({success: false, changed: false, error: {code: 'STALE_SESSION'}});
+    await expect(readFile(path.join(fixture.workspacePath, 'assets/missing.png'))).rejects.toMatchObject({code: 'ENOENT'});
+  });
+
+  it('cancels batch repair and rejects traversal before opening a picker', async () => {
+    const fixture = await createContext();
+    registerAssetMaintenanceIpc(fixture.context);
+    expect(await invoke('assets:repairMany', {expectedSessionId: fixture.sessionId, relativePaths: ['assets/../outside.png']})).toMatchObject({success: false, changed: false});
+    expect(electronState.showOpenDialog).not.toHaveBeenCalled();
+    expect(await invoke('assets:repairMany', {expectedSessionId: fixture.sessionId, relativePaths: ['assets/missing.png']})).toMatchObject({success: false, canceled: true, changed: false});
+  });
+
   it("inventories nested media, fonts and other assets for the current session", async () => {
     const fixture = await createContext();
     const paths = ["assets/nested/hero.png", "assets/fonts/nested/font.woff2", "assets/theme.css"];

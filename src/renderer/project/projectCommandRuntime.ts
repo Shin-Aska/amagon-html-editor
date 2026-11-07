@@ -1,4 +1,4 @@
-import {requestLegacyConversion} from "./legacyConversionPrompt";
+import {requestAssetCleanup, requestLegacyConversion} from "./legacyConversionPrompt";
 import {flushCodeEdits} from '../utils/codeEditingSession';
 import { LegacyProjectDocumentSchema, parseLegacyProjectDocument } from "../../shared/projects/projectDocumentSchema";
 import type { AssetInfo, FontMutationBridge, MutationResult, ProjectBridge, ProjectSession, SessionRequest } from "../../shared/projects/projectIpcContract";
@@ -230,7 +230,7 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
         } : undefined,
       );
     },
-    ...(electron ? {prepareLegacyConversion: requestLegacyConversion} : {}),
+    ...(electron ? {prepareLegacyConversion: requestLegacyConversion, prepareAssetCleanup: requestAssetCleanup, maintenance: electron.assets, setFonts: (fonts: FontAsset[]) => useProjectStore.getState().setFonts(fonts)} : {}),
     chooseDirtyTransition: () => window.confirm("Save changes before closing?") ? "save" : window.confirm("Discard unsaved changes?") ? "discard" : "cancel",
   });
   electron?.project.onLifecycleCloseRequest((request) => {

@@ -25,6 +25,8 @@ New desktop projects use the portable `.amg` format: one ZIP64-capable file cont
 
 Legacy projects with missing images still open for editing and identify the missing asset paths in a notice that stays until dismissed. Restore the files or replace their references before converting to `.amg`. Media imports preserve filenames containing spaces, Unicode, `#`, and literal `%` characters.
 
+For large projects, **Locate multiple files** repairs matching filenames in batches, and searchable lists show 25 entries at a time. The conversion dialog and **Asset Manager → Review unused assets** offer cleanup of unused files and unused missing font entries. Review the selection, confirm, and use **Undo cleanup** to restore it before leaving or converting the project. Files move to project trash and are excluded from the saved bundle; assets with uncertain usage are kept.
+
 Browser development continues to use legacy JSON projects. Version 1 intentionally does not add OS file association, double-click/command-line opening, browser-side `.amg` reading, signing, or encryption. See [the AMG v1 format specification](docs/amg-format-v1.md) for package layout, hashes, limits, migration rules, errors, and security boundaries.
 
 ## Getting Started

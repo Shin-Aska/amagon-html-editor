@@ -206,6 +206,7 @@ export default function AssetManager({onClose, onSelect}: AssetManagerProps): JS
                         </div>
                     )}
 
+                    {activeTab === 'project' && window.api && <button className="am-filter-btn" disabled={loading || downloading || projectCommandState.busy !== null} onClick={() => void projectCommands.reviewUnusedAssets().then(() => refreshAssets())}>Review unused assets</button>}
                     <div className="am-filters">
                         {activeTab === 'project' && (
                             <button

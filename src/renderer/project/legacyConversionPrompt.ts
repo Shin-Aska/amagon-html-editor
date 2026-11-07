@@ -5,6 +5,7 @@ import type { ProjectSessionId } from "../../shared/projects/projectIpcContract"
 type Request = {
   readonly sessionId: ProjectSessionId;
   readonly displayPath: string;
+  readonly mode?: 'convert' | 'cleanup';
 };
 type PromptState = {
   request: Request | null;
@@ -32,3 +33,4 @@ export function requestLegacyConversion(request: Request): Promise<boolean> {
   );
 }
 export const PROJECT_ASSETS_REPAIRED_EVENT = "amagon:project-assets-repaired";
+export const requestAssetCleanup = (request: Request): Promise<boolean> => requestLegacyConversion({...request, mode: 'cleanup'});

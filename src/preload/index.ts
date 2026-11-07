@@ -1,3 +1,4 @@
+import type {AssetMaintenanceBridge} from "../shared/projects/assetMaintenanceContract";
 import type {AssetInventoryResult} from "../shared/projects/projectIpcContract";
 import * as electron from 'electron'
 import type { FontAsset } from '../renderer/store/types'
@@ -93,6 +94,9 @@ const api = {
     },
 
     assets: {
+        repairMany: (data: Parameters<AssetMaintenanceBridge["repairMany"]>[0]) => ipcRenderer.invoke("assets:repairMany", data) as ReturnType<AssetMaintenanceBridge["repairMany"]>,
+        cleanupUnused: (data: Parameters<AssetMaintenanceBridge["cleanupUnused"]>[0]) => ipcRenderer.invoke("assets:cleanupUnused", data) as ReturnType<AssetMaintenanceBridge["cleanupUnused"]>,
+        undoCleanup: (data: Parameters<AssetMaintenanceBridge["undoCleanup"]>[0]) => ipcRenderer.invoke("assets:undoCleanup", data) as ReturnType<AssetMaintenanceBridge["undoCleanup"]>,
         listPaths: (data: SessionRequest): Promise<AssetInventoryResult> => ipcRenderer.invoke("assets:listPaths", data),
         repairMissing: (data: SessionRequest & {readonly relativePath: string}): Promise<MutationResult<AssetInfo>> =>
             ipcRenderer.invoke("assets:repairMissing", data),

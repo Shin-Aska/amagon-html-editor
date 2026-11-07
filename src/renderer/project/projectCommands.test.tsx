@@ -141,6 +141,42 @@ const harness = (initial = project(), overrides: Partial<ProjectCommandDependenc
 };
 
 describe("project commands", () => {
+  it('pauses autosave and project transitions while the unused asset review is open', async () => {
+    let finish: (value: boolean) => void = () => undefined;
+    const prepareAssetCleanup = vi.fn(() => new Promise<boolean>(resolve => {finish = resolve;}));
+    const test = harness(project(), {prepareAssetCleanup});
+    await test.commands.openProject();
+    test.edits();
+    const reviewing = test.commands.reviewUnusedAssets();
+    expect((await test.commands.autosave()).ok).toBe(true);
+    expect(test.save).not.toHaveBeenCalled();
+    expect((await test.commands.openProject()).ok).toBe(false);
+    expect((await test.commands.close('discard')).ok).toBe(false);
+    finish(false);
+    expect((await reviewing).ok).toBe(true);
+    expect(test.commands.state.dirty).toBe(true);
+  });
+
+  it('removes unused missing font metadata and restores it on Undo without losing renderer edits', async () => {
+    let current = project();
+    current.projectSettings.fonts = [{id: 'unused', name: 'Unapplied', fileName: 'unapplied.woff2', relativePath: 'assets/fonts/unapplied.woff2', format: 'woff2', source: 'imported'}];
+    const font = current.projectSettings.fonts[0];
+    const setFonts = vi.fn((fonts: NonNullable<ProjectData['projectSettings']['fonts']>) => {current = {...current, projectSettings: {...current.projectSettings, fonts}}; test.edits();});
+    const cleanupUnused = vi.fn(async () => ({success: true as const, changed: false, sessionId: SESSION, workspaceGeneration: parseWorkspaceGeneration(0), value: {token: 'cleanup', paths: [], fontIds: ['unused'], failed: []}}));
+    const undoCleanup = vi.fn(async () => ({success: true as const, changed: false, sessionId: SESSION, workspaceGeneration: parseWorkspaceGeneration(0), value: {paths: [], fontIds: ['unused'], remaining: 0}}));
+    const test = harness(current, {readProject: () => ({project: current, currentPageId: 'home', blocks: current.pages[0]?.blocks ?? [], customCss: current.customCss}), setFonts, maintenance: {repairMany: vi.fn(), cleanupUnused, undoCleanup}});
+    test.load.mockResolvedValueOnce({success: true, session: {...session(current), kind: 'legacy-json', displayPath: 'legacy.json'}});
+    await test.commands.openProject();
+    expect((await test.commands.inspectUnusedAssets()).candidates.map(item => item.kind)).toEqual(['missing-entry']);
+    expect((await test.commands.cleanupAssets(['missing:assets/fonts/unapplied.woff2'])).ok).toBe(true);
+    expect(current.projectSettings.fonts).toEqual([]);
+    expect(test.commands.state.dirty).toBe(true);
+    expect(test.commands.hasAssetCleanup()).toBe(true);
+    expect((await test.commands.undoAssetCleanup()).ok).toBe(true);
+    expect(current.projectSettings.fonts).toEqual([font]);
+    expect(test.commands.hasAssetCleanup()).toBe(false);
+  });
+
   it("converts a repaired legacy project on manual Save and installs its new AMG session", async () => {
     const prepareLegacyConversion = vi.fn(async () => true);
     const test = harness(project(), {prepareLegacyConversion});
@@ -231,6 +267,22 @@ describe("project commands", () => {
     expect(test.save).toHaveBeenCalledOnce();
     expect((await test.commands.saveAs()).ok).toBe(false);
     expect(test.save).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the opening notice bounded for 10,000 missing assets', async () => {
+    const initial = project();
+    const block = initial.pages[0]?.blocks[0];
+    if (!block) throw new Error('Missing fixture block');
+    block.props.images = Array.from({length: 10000}, (_, index) => `assets/missing-${index}.png`);
+    const test = harness(initial);
+    test.load.mockResolvedValueOnce({success: true, session: {...session(initial), kind: 'legacy-json'}});
+    expect((await test.commands.openProject()).ok).toBe(true);
+    expect(test.commands.state.message?.detail).toContain('10,000 missing assets');
+    expect(test.commands.state.message?.detail.length).toBeLessThan(1000);
+    const inspection = await test.commands.inspectConversion();
+    expect(inspection.ok).toBe(false);
+    if (inspection.ok) throw new Error('Missing references incorrectly passed conversion');
+    expect(inspection.offenders).toHaveLength(10000);
   });
 
   it("merges canonical font paths into the runtime portability inventory", () => {

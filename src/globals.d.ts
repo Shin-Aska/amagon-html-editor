@@ -1,5 +1,6 @@
 // React 19 removed the global JSX namespace from @types/react.
 // Re-declare it here so existing JSX.Element return-type annotations continue to compile.
+import type {AssetMaintenanceBridge} from "./shared/projects/assetMaintenanceContract";
 import type {JSX as ReactJSX} from 'react'
 import {type FontAsset} from './renderer/store/types'
 import type {
@@ -39,7 +40,7 @@ declare global {
             onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => () => void
             finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
-        assets: AssetMutationBridge & {
+        assets: AssetMutationBridge & AssetMaintenanceBridge & {
             listPaths: (request: SessionRequest) => Promise<AssetInventoryResult>
             list: () => Promise<IpcResult>
             readFileAsBase64: (reference: string) => Promise<IpcResult>

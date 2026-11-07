@@ -89,3 +89,24 @@
   background: var(--color-accent);
   color: var(--color-bg-primary);
 }
+.asset-review-tabs, .asset-review-actions, .asset-review-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.asset-review-tabs [aria-pressed="true"] { border-color: var(--color-accent); }
+.asset-review-search { display: grid; gap: 6px; margin-top: 12px; }
+.asset-review-search input {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px;
+  font: inherit;
+}
+.asset-review-entry { display: flex; gap: 10px; align-items: center; cursor: pointer; }
+.asset-review-entry small { display: block; color: var(--color-text-muted); margin-top: 4px; }
+.asset-review-pagination { font-size: 12px; }
+.asset-review-confirm { border: 1px solid var(--color-border); padding: 12px; border-radius: 8px; }

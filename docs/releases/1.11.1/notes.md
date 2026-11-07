@@ -40,6 +40,12 @@ Legacy JSON projects open even when a referenced asset is missing. Choosing **Sa
 
 Use **Locate file** to choose a replacement—even one with a different filename—or restore files yourself and choose **Recheck assets**. Conversion stays disabled until all references are valid. Then choose where to save the `.amg`; conversion preserves your original JSON and includes the full asset library, including unused imports. Cancel keeps your edits and repaired files available.
 
+Large missing-asset sets now have searchable, paginated lists and **Locate multiple files** for batches of up to 10,000 replacements. Matching folder suffixes or unique filenames are repaired without overwriting existing assets; ambiguous names stay available for manual repair.
+
+**Unused assets** reviews both unused files and missing font entries that were never applied. Select what to clean up, review the counts, and confirm. Files move into project trash, and **Undo cleanup** restores files and metadata before you leave or convert the project. The same review is available in **Asset Manager**. Usage checks cover all pages, themes, saved blocks, templates, and CSS, while uncertain dynamic references are kept.
+
+![Reviewing unused files and missing entries before cleanup](asset-cleanup.png)
+
 ![Guided legacy asset repair and AMG conversion](legacy-repair.png)
 
 Save validation now inventories nested media, fonts, and other project assets correctly. Conversion after an asset import and legacy autosave also adopts the new bundle without falsely reporting a stale save.

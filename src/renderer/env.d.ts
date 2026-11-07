@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import type {AssetMaintenanceBridge} from "../shared/projects/assetMaintenanceContract";
 import type {AssetInventoryResult} from "../shared/projects/projectIpcContract";
 
 
@@ -64,7 +65,7 @@ declare global {
             onLifecycleCloseRequest: (callback: (request: LifecycleRequest) => void) => () => void
             finishLifecycleClose: (result: LifecycleResult) => Promise<boolean>
         }
-        assets: AssetMutationBridge & {
+        assets: AssetMutationBridge & AssetMaintenanceBridge & {
             listPaths: (request: {readonly expectedSessionId: import("../shared/projects/projectIpcContract").ProjectSessionId}) => Promise<AssetInventoryResult>
             list: () => Promise<any>
             readAsset: (reference: string) => Promise<any>

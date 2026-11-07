@@ -10,6 +10,7 @@ import {
   type ProjectTransitionRequest,
 } from "../../shared/projects/projectIpcContract";
 import { buildProjectSnapshot } from "./projectSnapshot";
+import {createAssetMaintenanceCommands} from './projectAssetMaintenance';
 import {
   type CoordinatorSaveKind,
 } from "./projectSaveCoordinator";
@@ -78,7 +79,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     request: (transition: ProjectTransitionRequest) => ReturnType<ProjectCommandDependencies["project"]["load"]>,
   ): Promise<ProjectCommandResult> => {
     if (preparingConversion) return fail({tone: "info", title: "Finish saving this project first", detail: "Complete or cancel the conversion dialog.", locations: []});
-    if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
+    if (state.busy !== null || mutating) return fromError({ code: "BUSY", operation: state.busy ?? operation });
     let selectedChoice: DirtyTransitionChoice | undefined;
     if (state.session?.kind === "legacy-json" && state.dirty && dependencies.prepareLegacyConversion && dependencies.chooseDirtyTransition) {
       const choice = dependencies.chooseDirtyTransition();
@@ -278,6 +279,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   const unsubscribeProgress = dependencies.project.onProgress((progress) => publish({ progress, busy: progress.busy ? progress.operation : state.busy }));
 
   return {
+    ...createAssetMaintenanceCommands({dependencies, getSession: () => state.session, getGenerations: () => sessionRuntime.coordinator?.state, runMutation}),
     get state() { return state; },
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); },
     openProject: () => activate("open", dependencies.project.load),
@@ -288,6 +290,14 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     inspectConversion: async () => {
       sessionRuntime.availableAssetPaths = await dependencies.assets.listPaths(state.session?.sessionId);
       return createSnapshot("save-as");
+    },
+    reviewUnusedAssets: async () => {
+      if (!state.session || !dependencies.prepareAssetCleanup) return fail({tone: 'info', title: 'Open a desktop project', detail: 'Asset cleanup is available for desktop projects.', locations: []});
+      if (state.busy !== null || mutating || preparingConversion) return fail({tone: 'info', title: 'Project operation in progress', detail: 'Finish the current operation first.', locations: []});
+      preparingConversion = true;
+      try { await dependencies.prepareAssetCleanup(state.session); return {ok: true, value: undefined}; }
+      catch (error) { return unexpected(error); }
+      finally { preparingConversion = false; }
     },
     repairAsset: (relativePath) => runMutation(expectedSessionId => dependencies.assets.repairMissing({expectedSessionId, relativePath})),
     selectImages: () => runMutation((expectedSessionId) => dependencies.assets.selectImage({ expectedSessionId })),
