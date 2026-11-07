@@ -1,6 +1,12 @@
 # Amagon 1.11.1 release validation
 
-Prepared 7 November 2026. Both npm manifests identify **1.11.1**. Application source and tag: `8d51ac932ad30f252e0ffc7e8539360b8d5b0160`. This is an **unpublished draft** containing all widget, theme, code-editor and asset improvements. The 1.11.0 release and tag were withdrawn.
+Prepared 8 November 2026. Both npm manifests identify **1.11.1**. Application source and tag: `6be612cbfe9dde26826cf4f9d617e362b5ff378e`. The release is an **unpublished draft** containing all widget, theme, code-editor, asset and AI-provider improvements. The 1.11.0 release and tag remain withdrawn.
+
+## AI-provider corrections
+
+Codex completion requests now run outside Git repositories with `--skip-git-repo-check` and a read-only sandbox. They retain an explicit selected model or use the CLI's configured default when none is selected. No Git initialization or user trust-configuration change is required.
+
+OpenAI discovery accepts modern GPT and reasoning families, removes duplicates and malformed/specialized model entries, and respects announced shutdown dates. Manual model refresh surfaces authentication, permission, timeout and malformed-response errors in Settings with API keys redacted. Modern GPT and o-series generation use Responses; older GPT models retain Chat Completions compatibility. Text extraction preserves multiple output parts and refusals and reports empty/incomplete output. Credential replacement preserves a valid selected model; discovery repairs an unavailable saved OpenAI selection so the picker and subsequent requests agree. No dependency or background service was added.
 
 ## Reproduction and corrections
 
@@ -14,16 +20,13 @@ Unused cleanup covers unused files and missing, unapplied font entries. It check
 
 Autosave ticks received during imports or save acknowledgements coalesce into one pending tick, scoped to the original project. It runs after the current operation and importer metadata updates settle. Completed native progress cannot strand the controller in a busy state. The queue uses no idle polling timer. Import, font persistence/export, archive compatibility, Monaco cancellation handling, widget previews, themes, code editing and canvas layouts remain covered.
 
-## Regression evidence
+## Current regression evidence
 
-- [Windows/Linux regression run 42379724372](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42379724372): **1,231 tests across 127 files passed on each platform**, plus **six process-ownership checks per platform** and both application/build-configuration TypeScript checks.
-- [Release gate and packaging run 42381825689](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42381825689): repeated the complete regression checks and passed **all 40 Windows desktop cases and all 12 portable Linux desktop cases** before packaging began.
-- For the Linux icon update, the local production build, both TypeScript checks and **11 focused icon/window/architecture checks** passed. Earlier maintenance verification passed **100 focused checks**. Coverage includes 10,000-entry matching, bounded rendering/notices, ambiguous matches, quoted and percent filenames, all project usage scopes, stale sessions/workspaces, exclusive repair, cleanup, metadata-only cleanup and Undo conflicts. The new quoted-space-path regression test failed before its scan correction and then passed.
-- **All 12 portable desktop workflows passed locally during the preceding maintenance verification**: guided legacy repair; 50-file batch repair with reviewed cleanup, Undo, conversion and reopening; literal media filename round trips; conversion after autosave; imported font round trips/export/deletion; themes/code editing; canvas/code layout and selection; both theme-transition formats; and widget controls.
-- Edited copies of **all four supplied legacy projects converted and reopened**, preserving edits and original JSON bytes. **22 asset files matched byte-for-byte**. The one genuinely absent image was repaired using a public replacement in a test copy. Original user files were untouched, no private content was uploaded, and there were no renderer exceptions.
-- A fresh full npm audit reported **zero vulnerabilities**.
-
-The first icon-build attempt, [run 42379754364](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42379754364), stalled in the Windows desktop step and was cancelled. GitHub did not provide that job’s log archive. The final release run above used the same application commit and passed all gates on fresh runners.
+- [Windows/Linux regression run 42392467617](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42392467617): **1,252 tests across 128 files on each platform**, **six process-ownership checks per platform**, and both application/build-configuration TypeScript checks passed.
+- [Release and packaging run 42392502489](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42392502489): repeated the complete checks and passed **41 Windows desktop cases and 13 portable Linux desktop cases** before building installers. The Linux packaging job also checked the actual Debian archive's icons and desktop identity.
+- Local verification passed **1,252 tests across 128 files**, both TypeScript checks, the production build, and the new real-Settings desktop workflow. That workflow uses fake credentials and intercepted model responses to check modern models, recovery from an unavailable saved model, a rejected key with redacted error feedback, and a successful refresh afterward. The final local checks ran sequentially for memory use on the development laptop.
+- Live verification used a key entered directly in the app: **46 OpenAI models loaded**, the picker selected an available model, and a Responses request returned `AMAGON_OK`. Codex returned `AMAGON_CODEX_OK` through Amagon, including from an application launched in a non-Git working directory. No key was copied into source, screenshots, logs or release assets.
+- A fresh full npm audit reported **zero vulnerabilities**. Package dependencies and the lockfile were unchanged by the AI correction; both manifests remain at 1.11.1.
 
 ## Linux launcher correction
 
@@ -35,12 +38,14 @@ The freshly downloaded draft Debian package was extracted and launched with an i
 
 ## Installer verification
 
-All six newly uploaded installer/feed assets were downloaded independently. Their sizes and SHA-256 digests match GitHub's metadata; every asset ID differs from the previous draft build. Windows and Linux update-feed SHA-512 values also match their downloaded installer payloads, including the Debian package. See [SHA256SUMS.txt](SHA256SUMS.txt).
+All six newly uploaded installer/feed files were downloaded independently with two bounded download workers. Their sizes and SHA-256 digests match GitHub's metadata, and each asset ID differs from the preceding draft build. Windows and Linux updater SHA-512 values match their downloaded installers, including the Debian package. See [SHA256SUMS.txt](SHA256SUMS.txt).
 
-The downloaded AppImage was extracted and launched as the actual packaged application, with `app.isPackaged` and version **1.11.1** asserted. **Six packaged desktop workflows passed**, covering asset/font autosave, themes/code editing, guided legacy Save, batch repair/cleanup/Undo/conversion, conversion after autosave, and font import/save/reopen/export/delete. Edited copies of **all four private legacy projects** also passed conversion/reopening in that packaged binary; **22 asset files matched**, original JSON bytes were preserved, and there were no renderer exceptions.
+The downloaded AppImage was extracted and launched as the actual packaged application, with `app.isPackaged` and version **1.11.1** asserted. The new Settings model-discovery/error-recovery workflow passed against that binary. It covers modern model options, unavailable-selection repair, rejected credentials with redaction, and recovery without using a real API key or incurring generation requests. The downloaded Debian archive passed static checks and a native window smoke check with all 13 requested icon sizes, expected WM_CLASS, a 512px window icon, and no renderer exceptions. Temporary installer-test applications were closed and their extracted working directories removed.
 
-The first local packaged pass completed five workflows, then Playwright lost an inspector promise while mocking the next native dialog in the font workflow. The trace shows the preceding Save and Close completed; the next Open action had not been dispatched. A targeted repeat of that same font workflow passed against the unchanged downloaded binary. The initial trace and targeted result were retained locally; no application change or blanket test retry was used. CI had independently passed the complete Windows and Linux desktop suites.
+## Earlier compatibility evidence retained
 
-The draft retains the Windows setup executable/blockmap, Linux AppImage/Debian package, both updater feeds and the replacement checksum manifest. Packaging requires both operating-system gates to succeed. The release remains unpublished for owner review.
+The preceding icon/asset build, source `8d51ac932ad30f252e0ffc7e8539360b8d5b0160`, passed [release run 42381825689](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42381825689) with all 40 Windows and 12 portable Linux desktop cases. Earlier local maintenance checks included 100 focused cases for 10,000-entry matching, bounded rendering, ambiguous filenames, usage scopes, stale workspaces, exclusive repair, cleanup and Undo; icon-specific verification added 11 focused checks.
 
-Public screenshots contain only synthetic fixtures: [canvas and code](canvas-code-ocean.png), [widget controls](widget-design.png), [app themes](app-themes.png), [theme creation](theme-creator.png), [legacy repair](legacy-repair.png), and [unused asset cleanup](asset-cleanup.png).
+Against that preceding packaged build, edited copies of **all four supplied private legacy projects** converted and reopened with their original JSON bytes preserved, and **22 asset files matched byte-for-byte**. The one genuinely absent image was repaired only in a test copy. Six packaged desktop workflows covered asset/font autosave, themes/code editing, guided legacy Save, batch repair/cleanup/Undo/conversion, conversion after autosave, and font round trips. Five passed in the initial local run; the font case passed on a targeted repeat after a Playwright inspector-promise failure while mocking a file dialog. A stalled earlier Windows CI attempt was cancelled and replaced with a successful fresh run. These are historical compatibility checks; the current build's full CI desktop gates above recheck these feature paths alongside the new AI workflow.
+
+The draft retains the Windows setup executable/blockmap, Linux AppImage/Debian package, both updater feeds and the replacement checksum manifest. It remains unpublished for owner review. Public screenshots use only synthetic fixtures: [canvas and code](canvas-code-ocean.png), [widget controls](widget-design.png), [app themes](app-themes.png), [theme creation](theme-creator.png), [legacy repair](legacy-repair.png), and [unused asset cleanup](asset-cleanup.png).
