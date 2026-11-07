@@ -28,6 +28,10 @@ The code editor also gains local, offline loading; HTML and CSS formatting; find
 
 Compatible upstream updates refresh the editor and its bundled preview/export assets. Bundled fonts and icons also load correctly through the desktop asset protocol. The npm audit is clear for both development and production dependencies, and font catalog generation no longer installs an unused CLI dependency chain.
 
+## Archive compatibility
+
+Archive loading now supports older Node 22 runtimes consistently. Cross-platform fixture and network-test improvements bring the full suite to **1,146 passing tests**.
+
 ## Downloads
 
 | Platform | Download |
@@ -41,4 +45,4 @@ macOS binaries are not included in this release.
 
 **Full changelog:** [v1.10.1 → v1.11.0](https://github.com/Shin-Aska/amagon-html-editor/compare/v1.10.1...v1.11.0)
 
-**Release review:** [Draft PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20)
+**Feature review:** [PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20) · [Validation report](https://github.com/Shin-Aska/amagon-html-editor/blob/main/docs/releases/1.11.0/validation.md)

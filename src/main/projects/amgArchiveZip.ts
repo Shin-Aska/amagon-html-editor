@@ -61,9 +61,9 @@ export type OpenedAmgZip = {
   readonly entries: ReadonlyMap<string, ArchiveEntryDataSource>;
 };
 
-function readEntryStream(archive: ArchiveFileReader, entry: PreflightEntry): ReadableStream<Uint8Array> {
+function readEntryStream(archive: ArchiveFileReader, entry: PreflightEntry): ReadableStream<Uint8Array<ArrayBuffer>> {
   let position = 0;
-  return new ReadableStream<Uint8Array>({
+  return new ReadableStream<Uint8Array<ArrayBuffer>>({
     async pull(controller) {
       const remaining = entry.compressedSize - position;
       if (remaining === 0) {
@@ -89,13 +89,8 @@ function createEntryDataSource(archive: ArchiveFileReader, entry: PreflightEntry
     async getData(writer) {
       const source = readEntryStream(archive, entry);
       const decompressed = entry.compressionMethod === 8
-        ? source
-          .pipeThrough(new TransformStream<Uint8Array, ArrayBuffer>({
-            transform(chunk, controller) {
-              controller.enqueue(new Uint8Array(chunk).buffer);
-            },
-          }))
-          .pipeThrough(new DecompressionStream("deflate-raw"))
+        // Keep byte views: older supported Node 22 releases cannot consume raw ArrayBuffer chunks.
+        ? source.pipeThrough(new DecompressionStream("deflate-raw"))
         : source;
       await decompressed
         .pipeThrough(new TransformStream<Uint8Array, Uint8Array>({

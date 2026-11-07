@@ -105,7 +105,7 @@ npm test         # Run all tests (vitest)
 npm test:watch   # Watch mode
 ```
 
-Tests live next to their source files (e.g. `Foo.tsx` → `Foo.test.tsx` or `__tests__/foo.test.ts`).
+Tests live next to their source files (e.g. `Foo.tsx` → `Foo.test.tsx` or `__tests__/foo.test.ts`). Backend filesystem/archive tests use the Node environment and native fixture paths. The low-memory suite command and stream/transport test conventions are in [Backend test portability](development.md#backend-test-portability).
 
 ---
 

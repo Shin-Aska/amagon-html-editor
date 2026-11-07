@@ -34,7 +34,7 @@ npm run dev
 
 See [docs/development.md](docs/development.md) for the full development guide, build commands, and Linux sandbox setup.
 
-New to the codebase? Start with [docs/getting-started-contributing.md](docs/getting-started-contributing.md) for a contributor-friendly tour of the architecture, conventions, and where to find things.
+New to the codebase? Start with [docs/getting-started-contributing.md](docs/getting-started-contributing.md) for a contributor-friendly tour of the architecture, conventions, and where to find things. For the one-worker test command and cross-platform backend checks, see [Backend test portability](docs/development.md#backend-test-portability).
 
 ## System Requirements & Compatibility
 

@@ -31,6 +31,8 @@ import {
   type ProjectServiceFiles,
 } from "./projectService";
 
+const testPath = (...parts: string[]): string => path.join(tmpdir(), "amagon-service-fixture", ...parts);
+
 const RECENT_ID = "00000000-0000-4000-8000-000000000001";
 const INITIAL_TRANSITION = {
   expectedSessionId: null,
@@ -163,14 +165,14 @@ const createHarness = (): Harness => {
       calls.push(`open-amg:${filePath}`);
       const project = archives.get(filePath);
       if (project === undefined) throw new TestFault("corrupt archive");
-      const workspacePath = `C:\\owned\\opened-${workspaceIndex += 1}`;
+      const workspacePath = testPath("owned", `opened-${workspaceIndex += 1}`);
       workspaceAssets.set(workspacePath, []);
       return {
         project,
         workspace: {
           path: workspacePath,
-          rootPath: "C:\\owned",
-          sentinelPath: `${workspacePath}\\.amagon-workspace.json`,
+          rootPath: testPath("owned"),
+          sentinelPath: path.join(workspacePath, ".amagon-workspace.json"),
           ownership: "app",
         },
       };
@@ -191,13 +193,13 @@ const createHarness = (): Harness => {
       rollback: async () => undefined,
     }),
     createWorkspace: async (_userDataPath, project, copy) => {
-      const workspacePath = `C:\\owned\\candidate-${workspaceIndex += 1}`;
+      const workspacePath = testPath("owned", `candidate-${workspaceIndex += 1}`);
       calls.push(`create-workspace:${workspacePath}:${copy?.sourceWorkspacePath ?? "new"}`);
       workspaceAssets.set(workspacePath, copy?.assetPaths ?? []);
       return {
         path: workspacePath,
-        rootPath: "C:\\owned",
-        sentinelPath: `${workspacePath}\\.amagon-workspace.json`,
+        rootPath: testPath("owned"),
+        sentinelPath: path.join(workspacePath, ".amagon-workspace.json"),
         ownership: "app",
       };
     },
@@ -211,7 +213,7 @@ const createHarness = (): Harness => {
   let failRecentPersist = false;
   let recentPersistGate: RecentPersistGate | null = null;
   const recents = createRecentProjectsStore({
-    storagePath: "C:\\user\\recent-projects.json",
+    storagePath: testPath("user", "recent-projects.json"),
     createId: () => RECENT_ID,
     persist: async (_storagePath, content) => {
       if (failRecentPersist) throw new TestFault("recent commit failed");
@@ -240,8 +242,8 @@ const createHarness = (): Harness => {
   });
   const sessions = new ProjectSessionRegistry();
   const service = createProjectService({
-    userDataPath: "C:\\user",
-    documentsPath: "C:\\documents",
+    userDataPath: testPath("user"),
+    documentsPath: testPath("documents"),
     dialogs: dialogPort,
     recents,
     files,
@@ -272,8 +274,8 @@ describe("project persistence service", () => {
     // Given: a conflicting target followed by an extensionless target.
     const harness = createHarness();
     harness.dialogs.saves.push(
-      { canceled: false, filePath: "C:\\projects\\demo.json" },
-      { canceled: false, filePath: "C:\\projects\\Demo Project" },
+      { canceled: false, filePath: testPath("projects", "demo.json") },
+      { canceled: false, filePath: testPath("projects", "Demo Project") },
     );
 
     // When: a new project is created.
@@ -282,22 +284,22 @@ describe("project persistence service", () => {
     // Then: only the enforced archive is committed before recents and activated.
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.session.displayPath).toBe("C:\\projects\\Demo Project.amg");
+    expect(result.session.displayPath).toBe(testPath("projects", "Demo Project.amg"));
     expect(harness.dialogs.requests).toEqual([
-      "save:C:\\documents\\demo-project.amg",
-      "save:C:\\documents\\demo-project.amg",
+      "save:" + testPath("documents", "demo-project.amg"),
+      "save:" + testPath("documents", "demo-project.amg"),
     ]);
     expect(harness.calls.filter((call) => call.startsWith("write-amg:"))).toEqual([
-      "write-amg:C:\\projects\\Demo Project.amg",
+      "write-amg:" + testPath("projects", "Demo Project.amg"),
     ]);
-    expect(harness.calls.indexOf("recent-commit")).toBeGreaterThan(harness.calls.indexOf("write-amg:C:\\projects\\Demo Project.amg"));
+    expect(harness.calls.indexOf("recent-commit")).toBeGreaterThan(harness.calls.indexOf("write-amg:" + testPath("projects", "Demo Project.amg")));
     expect(JSON.stringify(harness.archives.get(result.session.displayPath))).not.toContain(result.session.sessionId);
   });
 
   it("preserves an uppercase .AMG target and cancellation leaves no session", async () => {
     // Given: one uppercase target and a later canceled dialog.
     const harness = createHarness();
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\DEMO.AMG" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "DEMO.AMG") });
 
     // When: the first creation succeeds and a second is canceled.
     const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Demo", framework: "vanilla" });
@@ -306,7 +308,7 @@ describe("project persistence service", () => {
     const canceled = await harness.service.newProject({ ...discardTransition(created.session), name: "Other", framework: "vanilla" });
 
     // Then: casing is preserved and the active project is unchanged.
-    expect(created.success && created.session.displayPath).toBe("C:\\projects\\DEMO.AMG");
+    expect(created.success && created.session.displayPath).toBe(testPath("projects", "DEMO.AMG"));
     expect(canceled).toEqual({ success: false, canceled: true });
     expect((await harness.service.getDirectory()).directory).toContain("candidate-1");
   });
@@ -314,8 +316,8 @@ describe("project persistence service", () => {
   it("opens, saves, saves-as, closes, and reopens under new session identities", async () => {
     // Given: one valid archive and a duplicate target.
     const harness = createHarness();
-    harness.archives.set("C:\\projects\\source.amg", structuredClone(TEST_PROJECT));
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\source.amg"] });
+    harness.archives.set(testPath("projects", "source.amg"), structuredClone(TEST_PROJECT));
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "source.amg")] });
 
     // When: the archive opens, saves, duplicates, closes, and reopens.
     const opened = await harness.service.openProject(INITIAL_TRANSITION);
@@ -326,7 +328,7 @@ describe("project persistence service", () => {
       workspaceGeneration: opened.session.committedWorkspaceGeneration,
       snapshot: opened.session.data,
     });
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\copy.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "copy.amg") });
     const duplicated = await harness.service.saveAs({
       expectedSessionId: opened.session.sessionId,
       rendererGeneration: parseRendererGeneration(2),
@@ -341,7 +343,7 @@ describe("project persistence service", () => {
       snapshot: null,
       dirtyChoice: "discard",
     });
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\copy.amg"] });
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "copy.amg")] });
     const reopened = await harness.service.openProject(INITIAL_TRANSITION);
 
     // Then: generations echo commits and durable bytes contain neither identity.
@@ -351,7 +353,7 @@ describe("project persistence service", () => {
     expect(reopened.success).toBe(true);
     if (!reopened.success) return;
     expect(reopened.session.sessionId).not.toBe(duplicated.session.sessionId);
-    const persisted = JSON.stringify(harness.archives.get("C:\\projects\\copy.amg"));
+    const persisted = JSON.stringify(harness.archives.get(testPath("projects", "copy.amg")));
     expect(persisted).not.toContain(opened.session.sessionId);
     expect(persisted).not.toContain(duplicated.session.sessionId);
   });
@@ -360,8 +362,8 @@ describe("project persistence service", () => {
     // Given: an active replacement project and a stale prior identity.
     const harness = createHarness();
     harness.dialogs.saves.push(
-      { canceled: false, filePath: "C:\\projects\\first.amg" },
-      { canceled: false, filePath: "C:\\projects\\active.amg" },
+      { canceled: false, filePath: testPath("projects", "first.amg") },
+      { canceled: false, filePath: testPath("projects", "active.amg") },
     );
     const first = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "First", framework: "vanilla" });
     const active = first.success
@@ -395,9 +397,9 @@ describe("project persistence service", () => {
     // Given: an active replacement project and a queued Save As target for its predecessor.
     const harness = createHarness();
     harness.dialogs.saves.push(
-      { canceled: false, filePath: "C:\\projects\\first.amg" },
-      { canceled: false, filePath: "C:\\projects\\active.amg" },
-      { canceled: false, filePath: "C:\\projects\\stale-copy.amg" },
+      { canceled: false, filePath: testPath("projects", "first.amg") },
+      { canceled: false, filePath: testPath("projects", "active.amg") },
+      { canceled: false, filePath: testPath("projects", "stale-copy.amg") },
     );
     const first = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "First", framework: "vanilla" });
     const active = first.success
@@ -429,8 +431,8 @@ describe("project persistence service", () => {
     // Given: an active replacement project and a stale prior identity.
     const harness = createHarness();
     harness.dialogs.saves.push(
-      { canceled: false, filePath: "C:\\projects\\first.amg" },
-      { canceled: false, filePath: "C:\\projects\\active.amg" },
+      { canceled: false, filePath: testPath("projects", "first.amg") },
+      { canceled: false, filePath: testPath("projects", "active.amg") },
     );
     const first = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "First", framework: "vanilla" });
     const active = first.success
@@ -465,8 +467,8 @@ describe("project persistence service", () => {
     // Given: an active replacement project and a stale prior identity.
     const harness = createHarness();
     harness.dialogs.saves.push(
-      { canceled: false, filePath: "C:\\projects\\first.amg" },
-      { canceled: false, filePath: "C:\\projects\\active.amg" },
+      { canceled: false, filePath: testPath("projects", "first.amg") },
+      { canceled: false, filePath: testPath("projects", "active.amg") },
     );
     const first = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "First", framework: "vanilla" });
     const active = first.success
@@ -511,7 +513,7 @@ describe("project persistence service", () => {
   ])("preserves approved legacy external reference %s on Save and blocks conversion before writing", async (external) => {
     // Given: a loose legacy project with one approved external local reference.
     const harness = createHarness();
-    const sourcePath = "C:\\legacy\\project.json";
+    const sourcePath = testPath("legacy", "project.json");
     const original = legacyProject(external);
     harness.legacy.set(sourcePath, original);
     harness.dialogs.opens.push({ canceled: false, filePaths: [sourcePath] });
@@ -525,14 +527,14 @@ describe("project persistence service", () => {
       workspaceGeneration: opened.session.committedWorkspaceGeneration,
       snapshot: original,
     });
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\converted.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "converted.amg") });
     const blocked = await harness.service.saveAs({
       expectedSessionId: opened.session.sessionId,
       rendererGeneration: parseRendererGeneration(1),
       workspaceGeneration: opened.session.committedWorkspaceGeneration,
       snapshot: original,
     });
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\converted.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "converted.amg") });
     const converted = await harness.service.saveAs({
       expectedSessionId: opened.session.sessionId,
       rendererGeneration: parseRendererGeneration(2),
@@ -544,27 +546,27 @@ describe("project persistence service", () => {
     expect(saved.success).toBe(true);
     expect(harness.legacy.get(sourcePath)).toEqual(original);
     expect(blocked).toMatchObject({ success: false, error: { code: "PROJECT_NOT_PORTABLE" } });
-    expect(harness.calls.filter((call) => call === "write-amg:C:\\projects\\converted.amg")).toHaveLength(1);
+    expect(harness.calls.filter((call) => call === "write-amg:" + testPath("projects", "converted.amg"))).toHaveLength(1);
     expect(converted.success).toBe(true);
     if (!converted.success) return;
     expect(converted.session.kind).toBe("amg");
-    expect(converted.session.displayPath).toBe("C:\\projects\\converted.amg");
+    expect(converted.session.displayPath).toBe(testPath("projects", "converted.amg"));
     expect((await harness.service.getDirectory()).directory).toMatch(/candidate-/u);
   });
 
   it("keeps the prior session and recents when open or archive commit fails", async () => {
     // Given: one active archive, one corrupt archive, and an injected writer failure.
     const harness = createHarness();
-    harness.archives.set("C:\\projects\\good.amg", structuredClone(TEST_PROJECT));
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\good.amg"] });
+    harness.archives.set(testPath("projects", "good.amg"), structuredClone(TEST_PROJECT));
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "good.amg")] });
     const good = await harness.service.openProject(INITIAL_TRANSITION);
     if (!good.success) throw new TestFault("good open failed");
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\corrupt.amg"] });
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "corrupt.amg")] });
 
     // When: corrupt open and a failing Save As are attempted.
     const corrupt = await harness.service.openProject(discardTransition(good.session));
     harness.setWriter(async () => { throw new TestFault("archive write failed"); });
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\failed.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "failed.amg") });
     const failed = await harness.service.saveAs({
       expectedSessionId: good.session.sessionId,
       rendererGeneration: parseRendererGeneration(1),
@@ -584,18 +586,18 @@ describe("project persistence service", () => {
   it("does not activate new, open, or legacy Save As candidates when recents persistence fails", async () => {
     // Given: an active archive and a recent store that begins failing after initial activation.
     const harness = createHarness();
-    harness.archives.set("C:\\projects\\prior.amg", structuredClone(TEST_PROJECT));
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\prior.amg"] });
+    harness.archives.set(testPath("projects", "prior.amg"), structuredClone(TEST_PROJECT));
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "prior.amg")] });
     const prior = await harness.service.openProject(INITIAL_TRANSITION);
     if (!prior.success) throw new TestFault("prior open failed");
     const priorDirectory = (await harness.service.getDirectory()).directory;
     harness.setRecentFailure(true);
 
     // When: each transition commits/stages a candidate but cannot persist its recent entry.
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\new-failed.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "new-failed.amg") });
     const failedNew = await harness.service.newProject({ ...discardTransition(prior.session), name: "Failed", framework: "vanilla" });
-    harness.archives.set("C:\\projects\\open-failed.amg", structuredClone(TEST_PROJECT));
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\open-failed.amg"] });
+    harness.archives.set(testPath("projects", "open-failed.amg"), structuredClone(TEST_PROJECT));
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "open-failed.amg")] });
     const failedOpen = await harness.service.openProject(discardTransition(prior.session));
 
     // Then: neither transition activates, and both owned candidates are cleaned.
@@ -603,18 +605,18 @@ describe("project persistence service", () => {
     expect(failedOpen.success).toBe(false);
     expect((await harness.service.getDirectory()).directory).toBe(priorDirectory);
     expect(harness.sessions.active.id).toBe(prior.session.sessionId);
-    expect(harness.calls).toContain("cleanup:C:\\owned\\candidate-2");
-    expect(harness.calls).toContain("cleanup:C:\\owned\\opened-3");
+    expect(harness.calls).toContain("cleanup:" + testPath("owned", "candidate-2"));
+    expect(harness.calls).toContain("cleanup:" + testPath("owned", "opened-3"));
 
     // Given: a legacy source selected after recents persistence resumes.
     harness.setRecentFailure(false);
-    const legacyPath = "C:\\legacy\\project.json";
+    const legacyPath = testPath("legacy", "project.json");
     harness.legacy.set(legacyPath, legacyProject());
     harness.dialogs.opens.push({ canceled: false, filePaths: [legacyPath] });
     const legacy = await harness.service.openProject(discardTransition(prior.session));
     if (!legacy.success) throw new TestFault("legacy open failed");
     harness.setRecentFailure(true);
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\conversion-failed.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "conversion-failed.amg") });
 
     // When: conversion archive commit succeeds but recent persistence fails.
     const failedSaveAs = await harness.service.saveAs({
@@ -627,8 +629,8 @@ describe("project persistence service", () => {
     // Then: the legacy session stays active and the fresh conversion workspace is discarded.
     expect(failedSaveAs.success).toBe(false);
     expect(harness.sessions.active.id).toBe(legacy.session.sessionId);
-    expect((await harness.service.getDirectory()).directory).toBe("C:\\legacy");
-    expect(harness.calls.some((call) => call.startsWith("cleanup:C:\\owned\\candidate-"))).toBe(true);
+    expect((await harness.service.getDirectory()).directory).toBe(testPath("legacy"));
+    expect(harness.calls.some((call) => call.startsWith("cleanup:" + testPath("owned", "candidate-")))).toBe(true);
   });
 
   it("rejects forged recent authority before project filesystem access", async () => {
@@ -646,7 +648,7 @@ describe("project persistence service", () => {
   it("resolves a main-owned recent ID and rematerializes it under a new session", async () => {
     // Given: a committed archive whose opaque ID is held by the recent store.
     const harness = createHarness();
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\recent.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "recent.amg") });
     const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Recent", framework: "vanilla" });
     if (!created.success) throw new TestFault("new failed");
 
@@ -656,15 +658,15 @@ describe("project persistence service", () => {
     // Then: the stored path is opened and a newly branded session is returned.
     expect(reopened.success).toBe(true);
     if (!reopened.success) return;
-    expect(reopened.session.displayPath).toBe("C:\\projects\\recent.amg");
+    expect(reopened.session.displayPath).toBe(testPath("projects", "recent.amg"));
     expect(reopened.session.sessionId).not.toBe(created.session.sessionId);
-    expect(harness.calls).toContain("open-amg:C:\\projects\\recent.amg");
+    expect(harness.calls).toContain("open-amg:" + testPath("projects", "recent.amg"));
   });
 
   it("blocks non-portable AMG Save before archive IO", async () => {
     // Given: an active archive and a snapshot containing an external local reference.
     const harness = createHarness();
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\portable.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "portable.amg") });
     const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Portable", framework: "vanilla" });
     if (!created.success) throw new TestFault("new failed");
     const writesBefore = harness.calls.filter((call) => call.startsWith("write-amg:")).length;
@@ -685,7 +687,7 @@ describe("project persistence service", () => {
   it("persists actual renderer-built durable snapshots and rejects direct runtime references", async () => {
     // Given: Todo 3 builds AMG Save and Save As requests from current-session runtime state.
     const amg = createHarness();
-    amg.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\runtime.amg" });
+    amg.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "runtime.amg") });
     const created = await amg.service.newProject({ ...INITIAL_TRANSITION, name: "Runtime", framework: "vanilla" });
     if (!created.success) throw new TestFault("new failed");
     const amgWorkspace = (await amg.service.getDirectory()).directory;
@@ -721,7 +723,7 @@ describe("project persistence service", () => {
       workspaceGeneration: created.session.committedWorkspaceGeneration,
       snapshot: parseProjectDocumentV1(amgSaveSnapshot.project),
     });
-    amg.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\runtime-copy.amg" });
+    amg.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "runtime-copy.amg") });
     const duplicated = await amg.service.saveAs({
       expectedSessionId: created.session.sessionId,
       rendererGeneration: parseRendererGeneration(1),
@@ -733,7 +735,7 @@ describe("project persistence service", () => {
     expect(saved.success).toBe(true);
     expect(duplicated.success).toBe(true);
     if (!duplicated.success) throw new TestFault("AMG duplication failed");
-    for (const target of ["C:\\projects\\runtime.amg", "C:\\projects\\runtime-copy.amg"]) {
+    for (const target of [testPath("projects", "runtime.amg"), testPath("projects", "runtime-copy.amg")]) {
       const durableBytes = JSON.stringify(amg.archives.get(target));
       expect(durableBytes).toContain("assets/photo.png");
       expect(durableBytes).not.toContain(created.session.sessionId);
@@ -743,9 +745,9 @@ describe("project persistence service", () => {
 
     // Given: Todo 3 builds equivalent legacy Save and conversion snapshots.
     const legacy = createHarness();
-    const legacyPath = "C:\\legacy\\project.json";
+    const legacyPath = testPath("legacy", "project.json");
     legacy.legacy.set(legacyPath, legacyProject());
-    legacy.workspaceAssets.set("C:\\legacy", ["assets/photo.png"]);
+    legacy.workspaceAssets.set(testPath("legacy"), ["assets/photo.png"]);
     legacy.dialogs.opens.push({ canceled: false, filePaths: [legacyPath] });
     const opened = await legacy.service.openProject(INITIAL_TRANSITION);
     if (!opened.success) throw new TestFault("legacy open failed");
@@ -779,7 +781,7 @@ describe("project persistence service", () => {
       workspaceGeneration: opened.session.committedWorkspaceGeneration,
       snapshot: parseLegacyProjectDocument(legacySaveSnapshot.project),
     });
-    legacy.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\legacy-converted.amg" });
+    legacy.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "legacy-converted.amg") });
     const converted = await legacy.service.saveAs({
       expectedSessionId: opened.session.sessionId,
       rendererGeneration: parseRendererGeneration(2),
@@ -791,7 +793,7 @@ describe("project persistence service", () => {
     expect(legacySaved.success).toBe(true);
     expect(converted.success).toBe(true);
     if (!converted.success) throw new TestFault("legacy conversion failed");
-    for (const durable of [legacy.legacy.get(legacyPath), legacy.archives.get("C:\\projects\\legacy-converted.amg")]) {
+    for (const durable of [legacy.legacy.get(legacyPath), legacy.archives.get(testPath("projects", "legacy-converted.amg"))]) {
       const durableBytes = JSON.stringify(durable);
       expect(durableBytes).toContain("assets/photo.png");
       expect(durableBytes).not.toContain(opened.session.sessionId);
@@ -835,7 +837,7 @@ describe("project persistence service", () => {
   it("echoes the current workspace generation after a successful Save", async () => {
     // Given: an active archive with one main-owned workspace mutation.
     const harness = createHarness();
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\workspace.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "workspace.amg") });
     const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Workspace", framework: "vanilla" });
     if (!created.success) throw new TestFault("new failed");
     harness.sessions.active.recordWorkspaceMutation(created.session.sessionId);
@@ -858,7 +860,7 @@ describe("project persistence service", () => {
   it("drains queued work before replacing the active session", async () => {
     // Given: one save inside archive IO and a second save queued behind it.
     const harness = createHarness();
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\old.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "old.amg") });
     const old = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Old", framework: "vanilla" });
     if (!old.success) throw new TestFault("new failed");
     const entered = deferred<void>();
@@ -887,8 +889,8 @@ describe("project persistence service", () => {
     });
 
     // When: a validated archive waits for both queued saves before replacing the session.
-    harness.archives.set("C:\\projects\\replacement.amg", structuredClone(TEST_PROJECT));
-    harness.dialogs.opens.push({ canceled: false, filePaths: ["C:\\projects\\replacement.amg"] });
+    harness.archives.set(testPath("projects", "replacement.amg"), structuredClone(TEST_PROJECT));
+    harness.dialogs.opens.push({ canceled: false, filePaths: [testPath("projects", "replacement.amg")] });
     const replacing = harness.service.openProject({
       expectedSessionId: old.session.sessionId,
       rendererGeneration: parseRendererGeneration(2),
@@ -909,7 +911,7 @@ describe("project persistence service", () => {
   it("revalidates a queued renderer generation before a second archive write", async () => {
     // Given: an active session whose first save holds the FIFO mutation queue.
     const harness = createHarness();
-    harness.dialogs.saves.push({ canceled: false, filePath: "C:\\projects\\race.amg" });
+    harness.dialogs.saves.push({ canceled: false, filePath: testPath("projects", "race.amg") });
     const created = await harness.service.newProject({ ...INITIAL_TRANSITION, name: "Race", framework: "vanilla" });
     if (!created.success) throw new TestFault("new failed");
     const gate = deferred<void>();

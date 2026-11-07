@@ -82,3 +82,6 @@ Canvas widget clicks switch an open code editor to HTML, scroll to the widget’
 Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](../../docs/releases/1.11.0/validation.md).
 
 Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
+
+
+Backend archive streams must keep ArrayBuffer-backed `Uint8Array` chunks when calling `DecompressionStream` for Node 22 compatibility. Use the Node test environment and host-native filesystem fixture paths. Verify DNS pinning at the production HTTPS request/lookup boundary without binding privileged ports or depending on external network connectivity. See [backend test portability](../../docs/development.md#backend-test-portability).

@@ -1,8 +1,13 @@
 // @vitest-environment node
 
-import { createServer } from "node:net";
+import { EventEmitter } from "node:events";
+import type { LookupAddress } from "node:dns";
+import type { RequestOptions } from "node:https";
 import { describe, expect, it, vi } from "vitest";
 import { createPinnedHttpsFetcher, createSafeMediaFetcher, fetchPinnedHttps } from "./safeMediaNetwork";
+
+const requestHttps = vi.hoisted(() => vi.fn());
+vi.mock("node:https", () => ({ request: requestHttps }));
 
 const signal = new AbortController().signal;
 
@@ -116,16 +121,7 @@ describe("safe media network", () => {
   });
 
   it("pins the validated DNS result when a later answer changes to loopback", async () => {
-    // Given: DNS changes from public to loopback and a private listener owns the HTTPS port.
-    let privateConnections = 0;
-    const server = createServer((socket) => {
-      privateConnections += 1;
-      socket.destroy();
-    });
-    await new Promise<void>((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(443, "127.0.0.1", () => resolve());
-    });
+    // Given: DNS changes after validation, and the real connector's HTTPS boundary is observed.
     let resolution = 0;
     const lookup = vi.fn(async () => {
       resolution += 1;
@@ -133,21 +129,38 @@ describe("safe media network", () => {
         ? [{ address: "1.1.1.1", family: 4 as const }]
         : [{ address: "127.0.0.1", family: 4 as const }];
     });
-    const requestAbort = new AbortController();
-    const abortTimer = setTimeout(() => requestAbort.abort(), 500);
+    const captured: { url?: URL; options?: RequestOptions } = {};
+    const request = Object.assign(new EventEmitter(), {
+      end: () => queueMicrotask(() => request.emit("error", new Error("controlled transport failure"))),
+    });
+    requestHttps.mockReset();
+    requestHttps.mockImplementationOnce((url: URL, options: RequestOptions) => {
+      captured.url = url;
+      captured.options = options;
+      return request;
+    });
 
-    try {
-      // When: the real HTTPS connector attempts the policy-approved address.
-      const safeFetch = createSafeMediaFetcher({ fetchPinned: fetchPinnedHttps, lookup });
-      await expect(safeFetch("https://provider.example/media", requestAbort.signal)).rejects.toThrow();
+    // When: the production connector constructs its HTTPS request.
+    const safeFetch = createSafeMediaFetcher({ fetchPinned: fetchPinnedHttps, lookup });
+    await expect(safeFetch("https://provider.example/media", signal)).rejects.toThrow("controlled transport failure");
+    expect(requestHttps).toHaveBeenCalledTimes(1);
+    expect(captured.url?.href).toBe("https://provider.example/media");
+    expect(captured.options?.servername).toBe("provider.example");
+    expect(captured.options?.headers).toEqual({ Host: "provider.example" });
+    expect(captured.options?.signal).toBe(signal);
 
-      // Then: it never asks DNS again or opens a socket to the later loopback answer.
-      expect(lookup).toHaveBeenCalledTimes(1);
-      expect(privateConnections).toBe(0);
-    } finally {
-      clearTimeout(abortTimer);
-      await new Promise<void>((resolve) => server.close(() => resolve()));
-    }
+    // Then: both Node lookup forms return the pinned address without resolving DNS again.
+    const transportLookup = captured.options?.lookup;
+    if (transportLookup === undefined) throw new Error("HTTPS request has no pinned lookup");
+    const resolveTransport = (all: boolean) => new Promise<{ address: string | LookupAddress[]; family?: number }>((resolve, reject) => {
+      transportLookup("provider.example", { all }, (error, address, family) => {
+        if (error) reject(error);
+        else resolve({ address, family });
+      });
+    });
+    expect(await resolveTransport(false)).toEqual({ address: "1.1.1.1", family: 4 });
+    expect(await resolveTransport(true)).toEqual({ address: [{ address: "1.1.1.1", family: 4 }], family: undefined });
+    expect(lookup).toHaveBeenCalledTimes(1);
   });
 
   it("passes every validated public IPv4 and IPv6 address to the pinned connector", async () => {

@@ -66,3 +66,12 @@ Note: this needs to be re-run after any `npm install` that updates the `electron
 `npm run generate:fonts` downloads Fontsource APIv2 metadata from a pinned upstream commit, validates its shape, and fetches optional Google Fonts popularity ranks. The shipped editor continues to use the checked-in catalog offline. To verify generation without changing that catalog, run `npm run generate:fonts -- --output /tmp/amagon-fonts.json`. Update `METADATA_URL` in `scripts/google-fonts-metadata.ts` when intentionally refreshing the upstream snapshot.
 
 For 1.11.0 screenshots, build first and run `npx tsx scripts/capture-release-screenshots.ts`. Capture uses a disposable Electron profile and project. See [release validation](releases/1.11.0/validation.md) for dependency compatibility decisions and check results.
+
+
+## Backend test portability
+
+For a low-memory full run, use `npm test -- --maxWorkers=1 --testTimeout=30000`. Filesystem and archive tests use Vitest's Node environment. Build fixture directories with the host's `path.join` / `tmpdir` functions; keep literal Windows paths only when testing Windows reference compatibility.
+
+The AMG reader passes `Uint8Array<ArrayBuffer>` chunks to `DecompressionStream`, preserving support for older Node 22 runtimes that do not accept raw `ArrayBuffer` chunks. Reader, writer-readback, and archive-backed service tests exercise this path with real compressed archives. Keep extraction size/hash checks and bounded streaming intact. The [upstream Node fix](https://github.com/nodejs/node/pull/61913) documents normalization of raw `ArrayBuffer` inputs to byte views.
+
+The HTTPS DNS-pinning test observes the production connector's `https.request` options and executes both forms of its supplied lookup callback. It requires neither a privileged port nor an external network connection; the production HTTPS/port policy remains covered independently.

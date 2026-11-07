@@ -67,9 +67,9 @@ Bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 files 
 - Four real Electron screenshots are captured and visually checked.
 - A final registry check found the compatible react-resizable-panels 4.19.1 patch. Its manifest/lockfile update and follow-up layout and HTML-selection checks pass.
 
-### Broad-suite limitations
+### Initial broad-suite limitations
 
-The full one-worker Linux / Node 22.17.1 run completed: **1,132 passed, 14 failed across six files** (1,146 tests; 121 files). This is not a green full suite. The remaining failures are in the archive/path/privileged-port areas already recorded during the widget goal; no failing tests were deleted or weakened.
+The full one-worker Linux / Node 22.17.1 run completed: **1,132 passed, 14 failed across six files** (1,146 tests; 121 files). This initial run was not green; the post-merge follow-up below resolves all 14 failures. At that point, the failures were in the archive/path/privileged-port areas already recorded during the widget goal; no failing tests were deleted or weakened.
 
 | File under `src/main/projects/` | Failed checks | Observed failure |
 | --- | ---: | --- |
@@ -80,9 +80,19 @@ The full one-worker Linux / Node 22.17.1 run completed: **1,132 passed, 14 faile
 | `projectService.test.ts` | 5 | Three Windows-path fixture expectations on Linux; two archive-backed operations time out |
 | `safeMediaNetwork.test.ts` | 1 | The local test server cannot bind privileged port 443 (`EACCES`) |
 
-The 266 feature-focused checks are green, including every new renderer test file. All 18 follow-up protocol/lifecycle checks and the native font-loading regression check pass, validating the framework registration fix separately. These known broad-suite limitations remain review items for the draft; npm audit success is not being treated as proof that all tests pass.
+The 266 feature-focused checks are green, including every new renderer test file. All 18 follow-up protocol/lifecycle checks and the native font-loading regression check pass, validating the framework registration fix separately. These were review items in the initial draft; the post-merge source verification below records their resolution. npm audit success is not treated as proof that all tests pass.
 
-### Installer preparation
+### Post-merge backend follow-up
+
+After PR #20 merged, the 14 failures were traced to three causes: ten archive read/readback operations received raw `ArrayBuffer` chunks that hang on Node 22.17.1; three fixture cases assumed Windows filesystem paths on Linux; and one transport test required binding privileged port 443.
+
+The reader now retains ArrayBuffer-backed `Uint8Array` chunks, the fixtures use host-native paths, and the transport test executes the production connector's pinned lookup callbacks through an observed HTTPS request boundary. Existing archive integrity/size checks remain in place. These backend files were already present in 1.10.1.
+
+Verification on the post-merge source: **1,146 tests pass across all 121 files**, including all 110 checks in the six previously failing files. TypeScript and the main-process build pass. Real archive extraction and writing also succeed under Node 22.17.1 and Electron's Node 24.19.0. See [backend test portability](../../development.md#backend-test-portability) for the runtime and fixture conventions.
+
+Installer replacement is being prepared from the post-merge fixes. The completed rebuild and refreshed checksums will be recorded after packaging.
+
+### Initial installer preparation
 
 [GitHub Actions run 42325429867](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42325429867) **succeeded on Windows and Linux**: clean npm installs, production builds, TypeScript checks, packaging, and draft asset uploads. The artifacts were built from application commit `d0d81719f67acccbf443c285156c4500b4968cd1`; the follow-up verification commit changes release documentation only.
 
@@ -94,11 +104,11 @@ The [1.11.0 draft on the Releases page](https://github.com/Shin-Aska/amagon-html
 
 The downloaded AppImage's SHA-256 matches its recorded upload digest. A smoke check of the extracted **packaged** application confirms `app.isPackaged === true`, version `1.11.0`, project creation, actual bundled-font loading, the canvas/code layout, selected widget HTML highlighting, locally loaded editor workers, and no renderer page errors. Windows packaging is verified by CI; a Windows runtime launch was not performed on this Linux machine.
 
-[Draft PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20) contains the review summary and known full-suite limitations. No merge, public release, or version-tag push is part of this preparation.
+[PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20) introduced the widget, theme, and editor changes and has been merged. The post-merge follow-up above records the resolved test failures. The release remains a draft.
 
 ## Review and publication
 
-Publishing the draft release, merging the PR, and pushing the version tag are reserved for owner review. Windows x64 and Linux x64 match the previous release platform set; macOS binaries are not included.
+Publishing the draft release and pushing the version tag remain reserved for owner review. PR #20 has already been merged. Windows x64 and Linux x64 match the previous release platform set; macOS binaries are not included.
 
 ## Screenshots
 
