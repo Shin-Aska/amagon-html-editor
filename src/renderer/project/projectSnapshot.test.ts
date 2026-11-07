@@ -68,6 +68,33 @@ const projectFixture = (): ProjectData => ({
 });
 
 describe("project snapshot", () => {
+  it("opens and saves missing legacy assets for repair but blocks bundle conversion", () => {
+    const project = projectFixture();
+    project.pages[0]?.blocks.push({
+      id: "missing-image", type: "image", props: { src: "app-media://project-asset/assets/Absent Image.png" },
+      styles: {}, classes: [], children: [],
+    });
+    const context = { sessionId: SESSION_A, sessionKind: "legacy-json" as const, availableAssetPaths: [] };
+    const opened = materializeProjectSnapshot({ project, ...context });
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) throw new Error("legacy project did not materialize");
+    expect(opened.warnings).toEqual([{
+      code: "missing-asset", location: "$.pages[0].blocks[0].props.src", reference: "assets/Absent Image.png",
+    }]);
+    expect(opened.project.pages[0]?.blocks[0]?.props.src).toBe(`app-media://project-asset/${SESSION_A}/assets/Absent%20Image.png`);
+    const input = { project: opened.project, ...context, currentPageId: null, flushedBlocks: [], customCss: "" };
+    const saved = buildProjectSnapshot({ ...input, operation: "save" });
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) throw new Error("legacy save did not build");
+    expect(saved.project.pages[0]?.blocks[0]?.props.src).toBe("assets/Absent%20Image.png");
+    const reopened = materializeProjectSnapshot({ project: saved.project, ...context });
+    expect(reopened.ok).toBe(true);
+    const converted = buildProjectSnapshot({ ...input, operation: "save-as" });
+    expect(converted).toMatchObject({ ok: false, offenders: [{ code: "missing-asset" }] });
+    const bundle = materializeProjectSnapshot({ project: saved.project, ...context, sessionKind: "amg" });
+    expect(bundle).toMatchObject({ ok: false, offenders: [{ code: "missing-asset" }] });
+  });
+
   it("requires a canonical opaque session identity", () => {
     // Given
     type RawSessionIsAccepted = string extends BuildProjectSnapshotInput["sessionId"] ? true : false;

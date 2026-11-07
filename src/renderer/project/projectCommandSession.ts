@@ -100,7 +100,17 @@ export class ProjectCommandSessionInstaller {
         },
       });
       this.runtime.latestSaveSession = null;
-      this.hooks.publish({ session, dirty: false, message: null });
+      const missingAssets = [...new Set(materialized.warnings?.flatMap((warning) => (
+        warning.code === "missing-asset" && warning.reference !== undefined ? [warning.reference] : []
+      )) ?? [])];
+      const message: ProjectCommandMessage | null = missingAssets.length === 0 ? null : {
+        tone: "info",
+        title: "Project opened with missing assets",
+        detail: `Restore or replace: ${missingAssets.join(", ")}. You can continue editing this legacy project.`,
+        locations: [],
+      };
+      this.hooks.publish({ session, dirty: false, message });
+      if (message !== null) this.dependencies.notify(message);
       return { ok: true, value: undefined };
     } catch (error) {
       this.runtime.installing = false;

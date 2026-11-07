@@ -138,3 +138,9 @@ Canvas widget clicks switch an open code editor to HTML, scroll to the widget’
 Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](releases/1.11.0/validation.md).
 
 Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
+
+## Legacy assets and media imports
+
+Legacy JSON projects may open and Save with missing-asset warnings so their references can be repaired. Conversion to `.amg` requires the referenced files to exist. `projectPortability` keeps strict validation by default; only legacy open/save callers request `allowMissingLegacyAssets`, and bundle modes ignore that option.
+
+Import results use encoded runtime URLs while retaining raw filesystem-relative paths. Exercise spaces, Unicode, `#`, literal `%`, `%20`, and `%2F` filenames through image, single-image, and video IPC handlers. Regressions belong in `registerResourceMutationSecurity.test.ts`, `legacySessionlessAssetCompatibility.test.ts`, and the renderer snapshot/command tests. Keep personal reproduction projects outside the repository and use copies when testing Save.

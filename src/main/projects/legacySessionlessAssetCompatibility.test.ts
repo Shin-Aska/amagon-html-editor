@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -10,6 +10,8 @@ import { TEST_PROJECT } from "./amgArchiveFixtures";
 import { createDefaultProjectServiceFiles } from "./projectServiceFiles";
 import { stageLegacyProject } from "./projectServiceOpen";
 import { ProjectSessionRegistry } from "./projectSession";
+import { persistActiveProject } from "./projectServiceSave";
+import { parseProjectSessionId, parseRendererGeneration, parseWorkspaceGeneration } from "../../shared/projects/projectIpcContract";
 
 const roots: string[] = [];
 const LEGACY_HERO = "app-media://project-asset/assets/Hero Image.png";
@@ -56,6 +58,36 @@ const createLegacyProject = (
 };
 
 describe("legacy sessionless project assets", () => {
+  it("stages a repairable legacy project when a referenced image is absent", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "amagon-legacy-missing-"));
+    roots.push(root);
+    const projectPath = path.join(root, "project.json");
+    await mkdir(path.join(root, "assets"));
+    await writeFile(projectPath, JSON.stringify(createLegacyProject()), "utf8");
+    await writeFile(path.join(root, "assets", "gallery.png"), "gallery");
+
+    const runtime = {
+      userDataPath: root,
+      files: createDefaultProjectServiceFiles(),
+      sessions: new ProjectSessionRegistry(),
+    };
+    const state = await stageLegacyProject(projectPath, runtime);
+    expect(state.session.kind).toBe("legacy-json");
+    expect(JSON.stringify(state.data)).toContain(LEGACY_HERO);
+    expect(JSON.parse(await readFile(projectPath, "utf8"))).toEqual(createLegacyProject());
+    runtime.sessions.activate(state.session);
+    const snapshot = createLegacyProject("assets/Hero%20Image.png", "assets/gallery.png");
+    const saved = await persistActiveProject(state, runtime, {
+      expectedSessionId: parseProjectSessionId(state.session.id),
+      rendererGeneration: parseRendererGeneration(1),
+      workspaceGeneration: parseWorkspaceGeneration(0),
+      snapshot,
+    });
+    expect(saved.result.success).toBe(true);
+    expect(JSON.parse(await readFile(projectPath, "utf8"))).toEqual(snapshot);
+    expect((await stageLegacyProject(projectPath, runtime)).data).toEqual(snapshot);
+  });
+
   it("opens historical JSON and materializes its assets for the active session", async () => {
     // Given: a pre-session-ID project whose referenced assets exist beside project.json.
     const root = await mkdtemp(path.join(tmpdir(), "amagon-legacy-sessionless-"));

@@ -45,6 +45,7 @@ export const validateLegacyProject = async (
   if (workspacePath === null) return;
   const scan = scanProjectPortability(state.data, {
     mode: "legacy-durable",
+    allowMissingLegacyAssets: true,
     sessionId: requireSessionId(state.session),
     availableAssetPaths: await runtime.files.listAssetPaths(workspacePath),
   });
@@ -57,6 +58,7 @@ export const validateLegacyProject = async (
   const approved = [...new Set(references)].sort();
   const stored = scanProjectPortability(state.data, {
     mode: "legacy-stored",
+    allowMissingLegacyAssets: true,
     sessionId: requireSessionId(state.session),
     availableAssetPaths: await runtime.files.listAssetPaths(workspacePath),
     approvedExternalReferences: approved,

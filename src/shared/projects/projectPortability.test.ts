@@ -88,6 +88,31 @@ const createProject = (): ProjectData => ({
 });
 
 describe("ProjectData portability characterization", () => {
+  it.each(["bundle-durable", "bundle-runtime", "bundle-stored", "conversion-durable"] as const)(
+    "keeps missing assets fatal in %s even if legacy repair is requested", (mode) => {
+      const project = createProject();
+      project.customCss = mode === "bundle-durable"
+        ? `body { background: url(app-media://project-asset/${SESSION_A}/assets/absent.png) }`
+        : "body { background: url(assets/absent.png) }";
+      const result = transformProjectPortability(project, {
+        mode, sessionId: SESSION_A, availableAssetPaths: [], allowMissingLegacyAssets: true,
+      });
+      expect(result.ok).toBe(false);
+      expect(result.offenders).toContainEqual({ code: "missing-asset", location: "$.customCss", reference: "assets/absent.png" });
+    },
+  );
+
+  it("only downgrades missing assets during legacy repair, preserving unsafe-reference failures", () => {
+    const project = createProject();
+    project.customCss = "body { background: url(assets/absent.png); mask: url(assets/%2e%2e/private.svg) }";
+    const result = transformProjectPortability(project, {
+      mode: "legacy-stored", sessionId: SESSION_A, availableAssetPaths: [], allowMissingLegacyAssets: true,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.warnings).toContainEqual({ code: "missing-asset", location: "$.customCss", reference: "assets/absent.png" });
+    expect(result.offenders).toContainEqual({ code: "invalid-reference", location: "$.customCss", reference: "assets/%2e%2e/private.svg" });
+  });
+
   it("preserves representative serialization surfaces before transformation exists", () => {
     // Given
     const project = createProject();

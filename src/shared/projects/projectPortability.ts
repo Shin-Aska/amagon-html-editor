@@ -24,7 +24,13 @@ const isExternalLocalReference = (value: string): boolean => value.toLowerCase()
 
 const recordAsset = (assetPath: string, location: string, state: ScanState): void => {
   state.referencedAssets.add(assetPath);
-  if (!state.available.has(assetPath)) addOffender(state, "missing-asset", location, assetPath);
+  if (!state.available.has(assetPath)) {
+    if (state.options.allowMissingLegacyAssets && state.options.mode.startsWith("legacy-")) {
+      state.warnings.push({ code: "missing-asset", location, reference: assetPath });
+    } else {
+      addOffender(state, "missing-asset", location, assetPath);
+    }
+  }
 };
 
 const transformReference = (value: string, location: string, state: ScanState): string => {
@@ -186,6 +192,7 @@ const scanClone = (clone: PortabilityProject, options: ProjectPortabilityOptions
     available: new Set(options.availableAssetPaths),
     approvedExternal: new Set(options.approvedExternalReferences ?? []),
     offenders: [],
+    warnings: [],
     referencedAssets: new Set(),
   };
   Reflect.set(clone, "customCss", transformCss(clone.customCss, "$.customCss", state));
@@ -217,7 +224,7 @@ const scanClone = (clone: PortabilityProject, options: ProjectPortabilityOptions
 
   const offenders = state.offenders.sort((left, right) => (left.location === right.location ? (left.code < right.code ? -1 : left.code > right.code ? 1 : 0) : left.location < right.location ? -1 : 1));
   const referencedAssetPaths = [...state.referencedAssets].sort();
-  return { offenders, referencedAssetPaths };
+  return { offenders, referencedAssetPaths, ...(state.warnings.length > 0 ? { warnings: state.warnings } : {}) };
 };
 
 const runPortability = <Project extends PortabilityProject>(

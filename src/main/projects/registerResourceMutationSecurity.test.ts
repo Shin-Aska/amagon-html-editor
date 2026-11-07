@@ -80,6 +80,35 @@ afterEach(async () => {
 });
 
 describe("resource mutation security", () => {
+  it.each([
+    ["with space.png", "with%20space.png"],
+    ["100%.png", "100%25.png"],
+    ["literal%20name.png", "literal%2520name.png"],
+    ["café.png", "caf%C3%A9.png"],
+    ["hash#name.png", "hash%23name.png"],
+    ["literal%2Fname.png", "literal%252Fname.png"],
+  ])("imports literal filename %s through every media picker", async (fileName, encodedName) => {
+    const fixture = await createContext();
+    const sourcePath = path.join(fixture.root, fileName);
+    await writeFile(sourcePath, "media bytes");
+    registerAssetMutationIpc(fixture.context);
+    electronState.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: [sourcePath] });
+    for (const channel of ["assets:selectImage", "assets:selectSingleImage", "assets:selectVideo"]) {
+      const result = await invoke(channel, { expectedSessionId: fixture.sessionId });
+      const expectedAsset = {
+        name: fileName,
+        path: `app-media://project-asset/${fixture.sessionId}/assets/${encodedName}`,
+        relativePath: `assets/${fileName}`,
+      };
+      expect(result).toMatchObject({
+        success: true,
+        value: channel === "assets:selectSingleImage" ? expectedAsset : [expectedAsset],
+      });
+      expect(await readFile(path.join(fixture.workspacePath, "assets", fileName), "utf8")).toBe("media bytes");
+      await rm(path.join(fixture.workspacePath, "assets", fileName));
+    }
+  });
+
   it("classifies a physically copied system font as a portable import", async () => {
     const fixture = await createContext();
     const sourcePath = path.join(fixture.root, "impact.ttf");

@@ -140,6 +140,23 @@ const harness = (initial = project()): Harness => {
 };
 
 describe("project commands", () => {
+  it("installs legacy projects with missing assets and reports the filenames", async () => {
+    const initial = project("app-media://project-asset/assets/Absent Image.png");
+    const test = harness(initial);
+    test.load.mockResolvedValueOnce({ success: true, session: { ...session(initial), kind: "legacy-json" } });
+    expect((await test.commands.openProject()).ok).toBe(true);
+    expect(test.installed).toHaveLength(1);
+    expect(test.commands.state.message).toMatchObject({
+      tone: "info", title: "Project opened with missing assets",
+      detail: expect.stringContaining("assets/Absent Image.png"),
+    });
+    test.edits();
+    expect((await test.commands.save()).ok).toBe(true);
+    expect(test.save).toHaveBeenCalledOnce();
+    expect((await test.commands.saveAs()).ok).toBe(false);
+    expect(test.save).toHaveBeenCalledOnce();
+  });
+
   it("merges canonical font paths into the runtime portability inventory", () => {
     expect(mergeRuntimeAssetPaths(
       { success: true, assets: [{ relativePath: "assets/hero.png" }] },

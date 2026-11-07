@@ -16,11 +16,14 @@ export type ProjectPortabilityOptions = {
   readonly sessionId: string;
   readonly availableAssetPaths: readonly string[];
   readonly approvedExternalReferences?: readonly string[];
+  /** Permit repair of absent files in legacy JSON only; never relax bundle validation. */
+  readonly allowMissingLegacyAssets?: boolean;
 };
 
 export type ProjectPortabilityScan = {
   readonly offenders: readonly ProjectPortabilityOffender[];
   readonly referencedAssetPaths: readonly string[];
+  readonly warnings?: readonly ProjectPortabilityOffender[];
 };
 
 export type ProjectPortabilityResult<Project extends PortabilityProject = PortabilityProject> =
@@ -39,5 +42,6 @@ export type ScanState = {
   readonly available: ReadonlySet<string>;
   readonly approvedExternal: ReadonlySet<string>;
   readonly offenders: ProjectPortabilityOffender[];
+  readonly warnings: ProjectPortabilityOffender[];
   readonly referencedAssets: Set<string>;
 };

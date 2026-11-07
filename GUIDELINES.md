@@ -595,3 +595,9 @@ Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol,
 
 
 Backend archive streams must keep ArrayBuffer-backed `Uint8Array` chunks when calling `DecompressionStream` for Node 22 compatibility. Use the Node test environment and host-native filesystem fixture paths. Verify DNS pinning at the production HTTPS request/lookup boundary without binding privileged ports or depending on external network connectivity. See [backend test portability](docs/development.md#backend-test-portability).
+
+## Asset compatibility
+
+Filesystem-relative paths and encoded asset references are distinct: pass raw imported filenames through `encodeDurableAssetReference` before `buildRuntimeAssetUrl`. Keep `AssetInfo.relativePath` raw for filesystem mutations; encode literal `%` characters once, including names containing `%20` or `%2F`.
+
+Legacy JSON open and ordinary Save opt into `allowMissingLegacyAssets`, preserving unresolved project references and reporting warnings so users can repair them. The option only affects missing files in legacy modes. Invalid paths, stale sessions, external-file restrictions, `.amg` validation, and Save As conversion remain strict. Cover backend staging/save, renderer materialization, and all three media pickers when changing these boundaries.

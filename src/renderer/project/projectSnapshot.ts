@@ -38,6 +38,7 @@ export type ProjectSnapshotResult =
       readonly ok: true;
       readonly project: PersistedProjectSnapshot;
       readonly referencedAssetPaths: readonly string[];
+      readonly warnings?: readonly ProjectPortabilityOffender[];
     }
   | {
       readonly ok: false;
@@ -84,6 +85,7 @@ const transform = (
   }
   const result = transformProjectPortability(candidate, {
     mode,
+    allowMissingLegacyAssets: mode.startsWith("legacy-"),
     sessionId: context.sessionId,
     availableAssetPaths: context.availableAssetPaths,
     approvedExternalReferences: context.approvedExternalReferences,
@@ -103,6 +105,7 @@ const transform = (
     ok: true,
     project: durable,
     referencedAssetPaths: result.referencedAssetPaths,
+    ...(result.warnings === undefined ? {} : { warnings: result.warnings }),
   };
 };
 

@@ -2,7 +2,7 @@ import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { BrowserWindow } from "electron";
 import type { FontAsset } from "../../renderer/store/types";
-import { buildRuntimeAssetUrl } from "../../shared/projects/assetReference";
+import { buildRuntimeAssetUrl, encodeDurableAssetReference } from "../../shared/projects/assetReference";
 import type { AssetInfo, ProjectSessionId } from "../../shared/projects/projectIpcContract";
 import { inventoryWithHashes } from "./projectMutation";
 import type { ProjectSessionRegistry } from "./projectSession";
@@ -60,7 +60,7 @@ export const importedAsset = (
   type?: "image" | "video",
 ): AssetInfo => ({
   name: file.fileName,
-  path: buildRuntimeAssetUrl(sessionId, file.relativePath),
+  path: buildRuntimeAssetUrl(sessionId, encodeDurableAssetReference(file.relativePath)),
   relativePath: file.relativePath,
   ...(type === undefined ? {} : { type }),
 });
