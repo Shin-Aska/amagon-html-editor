@@ -1,460 +1,855 @@
-import {useEffect, useMemo, useRef, useState} from 'react'
-import Editor, {type OnChange, type OnMount} from '@monaco-editor/react'
-import './CodeEditor.css'
-import {useEditorStore} from '../../store/editorStore'
-import {useProjectStore} from '../../store/projectStore'
-import {pageToHtml} from '../../utils/blockToHtml'
-import {type HtmlDiagnostic, htmlToBlocks} from '../../utils/htmlToBlocks'
-import type * as MonacoType from 'monaco-editor'
-
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import { useEffect, useMemo, useRef, useState } from "react";
+import Editor, { loader, type OnMount } from "@monaco-editor/react";
+import type * as Monaco from "monaco-editor";
+import * as localMonaco from "monaco-editor/esm/vs/editor/editor.api";
+import "monaco-editor/esm/vs/editor/editor.all";
+import "monaco-editor/esm/vs/basic-languages/html/html.contribution";
+import "monaco-editor/esm/vs/basic-languages/css/css.contribution";
+import "monaco-editor/esm/vs/language/html/monaco.contribution";
+import "monaco-editor/esm/vs/language/css/monaco.contribution";
+import { useEditorStore } from "../../store/editorStore";
+import { useProjectStore } from "../../store/projectStore";
+import { useAppSettingsStore } from "../../store/appSettingsStore";
+import { pageToHtml } from "../../utils/blockToHtml";
+import { htmlToBlocks } from "../../utils/htmlToBlocks";
+import {
+  codeSessionGeneration,
+  registerCodeFlush,
+} from "../../utils/codeEditingSession";
+import {
+  CANVAS_SELECTION_EVENT,
+  revealCanvasBlock,
+} from "../../utils/canvasNavigation";
+import { commitPageCodeBlocks } from "../../utils/codePageCommit";
+import { APP_CSS_TOKENS } from "../../themes/appThemes";
+import type { AppPalette } from "../../themes/appThemes";
+import type { Block, Page } from "../../store/types";
+import {
+  blockIdAtOffset,
+  monacoAppTheme,
+  pageFilename,
+  projectClasses,
+  projectThemeVariableNames,
+  widgetHtmlRanges,
+  decorateWidgetHtml,
+  type WidgetHtmlRange,
+} from "./editorSupport";
+import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
+import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
+import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+import "./CodeEditor.css";
 
 (globalThis as unknown as { MonacoEnvironment?: unknown }).MonacoEnvironment = {
-    getWorker(_moduleId: string, label: string) {
-        if (label === 'html' || label === 'handlebars' || label === 'razor') return new htmlWorker();
-        if (label === 'css' || label === 'scss' || label === 'less') return new cssWorker();
-        if (label === 'typescript' || label === 'javascript') return new tsWorker();
-        return new editorWorker()
-    }
+  getWorker(_moduleId: string, label: string) {
+    if (["html", "handlebars", "razor"].includes(label))
+      return new htmlWorker();
+    if (["css", "scss", "less"].includes(label)) return new cssWorker();
+    if (["typescript", "javascript"].includes(label)) return new tsWorker();
+    return new editorWorker();
+  },
 };
-
-type ActiveTab = 'html' | 'css' | string
-
-function CodeEditor(): JSX.Element {
-    const blocks = useEditorStore((s) => s.blocks);
-    const setPageBlocks = useEditorStore((s) => s.setPageBlocks);
-    const isDragging = useEditorStore((s) => s.isDragging);
-    const setIsTypingCode = useEditorStore((s) => s.setIsTypingCode);
-    const customCss = useEditorStore((s) => s.customCss);
-    const setCustomCss = useEditorStore((s) => s.setCustomCss);
-    const framework = useProjectStore((s) => s.settings.framework);
-
-    const customCssFiles = useProjectStore((s) => s.settings.theme.customCssFiles) || [];
-    const updateCssFile = useProjectStore((s) => s.updateCssFile);
-
-    const editorRef = useRef<MonacoType.editor.IStandaloneCodeEditor | null>(null);
-    const monacoRef = useRef<typeof MonacoType | null>(null);
-    const htmlModelRef = useRef<MonacoType.editor.ITextModel | null>(null);
-    const cssModelRef = useRef<MonacoType.editor.ITextModel | null>(null);
-
-    // Dynamic refs for custom CSS files
-    const customCssModelsRef = useRef<Record<string, MonacoType.editor.ITextModel>>({});
-    const lastUserCustomCssEditAtRef = useRef<Record<string, number>>({});
-    const customCssTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-    const [activeTab, setActiveTab] = useState<ActiveTab>('html');
-
-    const applyingVisualUpdateRef = useRef(false);
-    const lastUserHtmlEditAtRef = useRef(0);
-    const lastUserCssEditAtRef = useRef(0);
-    const lastCommitFromCodeRef = useRef(false);
-    const htmlParseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const cssDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const currentPage = useProjectStore((s) => s.getCurrentPage());
-    const visualHtml = useMemo(() => {
-        return pageToHtml(blocks, {
-            framework,
-            customCss,
-            title: currentPage?.title || 'index',
-            pageTitle: currentPage?.pageTitle,
-            fullWidthFormControls: currentPage?.fullWidthFormControls,
-            includeEditorMetadata: true
-        })
-    }, [blocks, customCss, framework, currentPage]);
-
-    const getHtmlModel = (): MonacoType.editor.ITextModel | null => {
-        return htmlModelRef.current
-    };
-
-    const getCssModel = (): MonacoType.editor.ITextModel | null => {
-        return cssModelRef.current
-    };
-
-    const applyTextToModel = (model: MonacoType.editor.ITextModel, nextText: string): void => {
-        const editor = editorRef.current;
-        const monaco = monacoRef.current;
-        if (!editor || !monaco) return;
-
-        const prevText = model.getValue();
-        if (prevText === nextText) return;
-
-        if (editor.getModel() !== model) {
-            model.setValue(nextText);
-            return
-        }
-
-        let start = 0;
-        const prevLen = prevText.length;
-        const nextLen = nextText.length;
-        while (start < prevLen && start < nextLen && prevText.charCodeAt(start) === nextText.charCodeAt(start)) start++;
-
-        let endPrev = prevLen;
-        let endNext = nextLen;
-        while (
-            endPrev > start &&
-            endNext > start &&
-            prevText.charCodeAt(endPrev - 1) === nextText.charCodeAt(endNext - 1)
-            ) {
-            endPrev--;
-            endNext--
-        }
-
-        const startPos = model.getPositionAt(start);
-        const endPrevPos = model.getPositionAt(endPrev);
-        const range = new monaco.Range(startPos.lineNumber, startPos.column, endPrevPos.lineNumber, endPrevPos.column);
-
-        const inserted = nextText.slice(start, endNext);
-        const removedLen = endPrev - start;
-        const delta = inserted.length - removedLen;
-
-        const oldSelections = editor.getSelections() ?? [];
-
-        const shiftOffset = (offset: number): number => {
-            if (offset <= start) return offset;
-            if (offset >= endPrev) return Math.max(0, offset + delta);
-            return start + inserted.length
-        };
-
-        const newSelections = oldSelections.map((sel) => {
-            const startOffset = model.getOffsetAt({
-                lineNumber: sel.selectionStartLineNumber,
-                column: sel.selectionStartColumn
-            });
-            const posOffset = model.getOffsetAt({lineNumber: sel.positionLineNumber, column: sel.positionColumn});
-
-            const nextStart = model.getPositionAt(shiftOffset(startOffset));
-            const nextPos = model.getPositionAt(shiftOffset(posOffset));
-            return new monaco.Selection(nextStart.lineNumber, nextStart.column, nextPos.lineNumber, nextPos.column)
-        });
-
-        applyingVisualUpdateRef.current = true;
-        model.pushEditOperations(oldSelections, [{range, text: inserted}], () => newSelections);
-        applyingVisualUpdateRef.current = false
-    };
-
-    const setHtmlMarkers = (diagnostics: HtmlDiagnostic[]): void => {
-        const monaco = monacoRef.current;
-        const model = getHtmlModel();
-        if (!monaco || !model) return;
-
-        const markers: MonacoType.editor.IMarkerData[] = diagnostics.map((d) => ({
-            severity: d.severity === 'warning' ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error,
-            message: d.message,
-            startLineNumber: d.startLineNumber,
-            startColumn: d.startColumn,
-            endLineNumber: d.endLineNumber,
-            endColumn: Math.max(d.endColumn, d.startColumn + 1)
-        }));
-
-        monaco.editor.setModelMarkers(model, 'html-editor', markers)
-    };
-
-    const extractCustomCssFromHtml = (html: string): string | null => {
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const style = doc.querySelector('style#html-editor-custom-css') ?? doc.querySelector('head style');
-            return style?.textContent ?? ''
-        } catch {
-            return null
-        }
-    };
-
-    const formatHtml = async (): Promise<void> => {
-        const model = getHtmlModel();
-        if (!model) return;
-
-        try {
-            const prettierModule = await import('prettier/standalone');
-            const htmlPluginModule = await import('prettier/plugins/html');
-            const prettier = prettierModule as unknown as {
-                format: (input: string, opts: Record<string, unknown>) => Promise<string>
-            };
-            const htmlPlugin = (htmlPluginModule as unknown as { default?: unknown }).default ?? htmlPluginModule;
-
-            const formatted = await prettier.format(model.getValue(), {
-                parser: 'html',
-                plugins: [htmlPlugin]
-            });
-
-            applyTextToModel(model, formatted)
-        } catch (err) {
-            setHtmlMarkers([
-                {
-                    message: `Format failed: ${String(err)}`,
-                    severity: 'error',
-                    startLineNumber: 1,
-                    startColumn: 1,
-                    endLineNumber: 1,
-                    endColumn: 1
-                }
-            ])
-        }
-    };
-
-    const onMount: OnMount = (editor, monaco) => {
-        editorRef.current = editor;
-        monacoRef.current = monaco;
-
-        const htmlUri = monaco.Uri.parse('inmemory://model/index.html');
-        const cssUri = monaco.Uri.parse('inmemory://model/styles.css');
-
-        const htmlModel = monaco.editor.createModel('', 'html', htmlUri);
-        const cssModel = monaco.editor.createModel('', 'css', cssUri);
-
-        htmlModelRef.current = htmlModel;
-        cssModelRef.current = cssModel;
-
-        editor.setModel(htmlModel);
-
-        editor.updateOptions({
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            minimap: {enabled: false},
-            wordWrap: 'on',
-            tabSize: 2,
-            insertSpaces: true,
-            automaticLayout: true
-        });
-
-        applyTextToModel(htmlModel, visualHtml);
-        cssModel.setValue(customCss);
-
-        // Seed initial dynamic models
-        customCssFiles.forEach(file => {
-            const uri = monaco.Uri.parse(`inmemory://model/${file.id}.css`);
-            customCssModelsRef.current[file.id] = monaco.editor.createModel(file.css, 'css', uri)
-        })
-    };
-
-    const onChange: OnChange = (value) => {
-        if (applyingVisualUpdateRef.current) return;
-        const editor = editorRef.current;
-        const currentModel = editor?.getModel();
-        if (!currentModel) return;
-
-        const nextValue = value ?? '';
-        setIsTypingCode(true);
-
-        if (currentModel === getHtmlModel()) {
-            lastUserHtmlEditAtRef.current = Date.now();
-
-            if (htmlParseTimerRef.current) {
-                clearTimeout(htmlParseTimerRef.current);
-                htmlParseTimerRef.current = null
-            }
-
-            htmlParseTimerRef.current = setTimeout(() => {
-                const result = htmlToBlocks(nextValue);
-                setHtmlMarkers(result.diagnostics);
-
-                const hasErrors = result.diagnostics.some((d) => d.severity === 'error');
-                if (hasErrors) {
-                    setIsTypingCode(false);
-                    return
-                }
-
-                lastCommitFromCodeRef.current = true;
-                setPageBlocks(result.blocks);
-
-                const extractedCss = extractCustomCssFromHtml(nextValue);
-                if (extractedCss !== null && extractedCss !== customCss) {
-                    setCustomCss(extractedCss)
-                }
-
-                setIsTypingCode(false)
-            }, 800);
-            return
-        }
-
-        if (currentModel === getCssModel()) {
-            lastUserCssEditAtRef.current = Date.now();
-
-            if (cssDebounceTimerRef.current) {
-                clearTimeout(cssDebounceTimerRef.current);
-                cssDebounceTimerRef.current = null
-            }
-
-            cssDebounceTimerRef.current = setTimeout(() => {
-                setCustomCss(nextValue);
-                setIsTypingCode(false)
-            }, 500);
-            return
-        }
-
-        // Dynamic Custom CSS File
-        const fileId = Object.keys(customCssModelsRef.current).find(
-            id => customCssModelsRef.current[id] === currentModel
-        );
-        if (fileId) {
-            lastUserCustomCssEditAtRef.current[fileId] = Date.now();
-
-            if (customCssTimersRef.current[fileId]) {
-                clearTimeout(customCssTimersRef.current[fileId])
-            }
-
-            customCssTimersRef.current[fileId] = setTimeout(() => {
-                updateCssFile(fileId, {css: nextValue});
-                setIsTypingCode(false)
-            }, 500)
-        }
-    };
-
-    useEffect(() => {
-        const htmlModel = getHtmlModel();
-        if (!htmlModel) return;
-        if (isDragging) return;
-
-        if (lastCommitFromCodeRef.current) {
-            lastCommitFromCodeRef.current = false;
-            return
-        }
-
-        const msSinceType = Date.now() - lastUserHtmlEditAtRef.current;
-        if (msSinceType < 1200) return;
-
-        applyTextToModel(htmlModel, visualHtml)
-    }, [isDragging, visualHtml]);
-
-    useEffect(() => {
-        const cssModel = getCssModel();
-        if (!cssModel) return;
-
-        const msSinceType = Date.now() - lastUserCssEditAtRef.current;
-        if (msSinceType < 1200) return;
-
-        if (cssModel.getValue() !== customCss) {
-            cssModel.setValue(customCss)
-        }
-    }, [customCss]);
-
-    // Sync Dynamic Models
-    useEffect(() => {
-        const monaco = monacoRef.current;
-        if (!monaco) return;
-        const currentIds = new Set(customCssFiles.map(f => f.id));
-
-        // add missing models or sync existing
-        customCssFiles.forEach(file => {
-            if (!customCssModelsRef.current[file.id]) {
-                const uri = monaco.Uri.parse(`inmemory://model/${file.id}.css`);
-                customCssModelsRef.current[file.id] = monaco.editor.createModel(file.css, 'css', uri)
-            } else {
-                const model = customCssModelsRef.current[file.id];
-                const msSinceType = Date.now() - (lastUserCustomCssEditAtRef.current[file.id] || 0);
-                if (msSinceType > 1200 && model.getValue() !== file.css) {
-                    model.setValue(file.css)
-                }
-            }
-        });
-
-        // remove deleted models
-        Object.keys(customCssModelsRef.current).forEach(id => {
-            if (!currentIds.has(id)) {
-                customCssModelsRef.current[id].dispose();
-                delete customCssModelsRef.current[id];
-                if (activeTab === id) setActiveTab('html')
-            }
-        })
-    }, [customCssFiles, activeTab]);
-
-    // Determine which model to attach
-    useEffect(() => {
-        const editor = editorRef.current;
-        if (!editor) return;
-
-        let nextModel = getHtmlModel();
-        if (activeTab === 'css') nextModel = getCssModel();
-        else if (activeTab !== 'html' && customCssModelsRef.current[activeTab]) {
-            nextModel = customCssModelsRef.current[activeTab]
-        }
-
-        if (!nextModel) return;
-        if (editor.getModel() === nextModel) return;
-        editor.setModel(nextModel)
-    }, [activeTab]);
-
-    useEffect(() => {
-        return () => {
-            if (htmlParseTimerRef.current) {
-                clearTimeout(htmlParseTimerRef.current);
-                htmlParseTimerRef.current = null
-            }
-            if (cssDebounceTimerRef.current) {
-                clearTimeout(cssDebounceTimerRef.current);
-                cssDebounceTimerRef.current = null
-            }
-
-            Object.keys(customCssTimersRef.current).forEach(id => {
-                clearTimeout(customCssTimersRef.current[id])
-            });
-            customCssTimersRef.current = {};
-
-            const htmlModel = getHtmlModel();
-            const cssModel = getCssModel();
-
-            Object.keys(customCssModelsRef.current).forEach(id => {
-                customCssModelsRef.current[id].dispose()
-            });
-            customCssModelsRef.current = {};
-
-            htmlModelRef.current = null;
-            cssModelRef.current = null;
-
-            htmlModel?.dispose();
-            cssModel?.dispose();
-            setIsTypingCode(false)
-        }
-    }, [setIsTypingCode]);
-
-    return (
-        <div className="code-editor">
-            <div className="code-editor-header">
-        <span className={`code-editor-tab ${activeTab === 'html' ? 'active' : ''}`}
-              onClick={() => setActiveTab('html')}>
-          index.html
-        </span>
-                <span className={`code-editor-tab ${activeTab === 'css' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('css')}>
-          styles.css
-        </span>
-                {customCssFiles.map(file => (
-                    <span
-                        key={file.id}
-                        className={`code-editor-tab ${activeTab === file.id ? 'active' : ''}`}
-                        onClick={() => setActiveTab(file.id)}
-                        title={file.name}
-                    >
-            {file.name}
-          </span>
-                ))}
-                <div className="code-editor-header-spacer"/>
-                {activeTab === 'html' && (
-                    <button type="button" className="code-editor-action" onClick={() => void formatHtml()}>
-                        Format
-                    </button>
-                )}
-            </div>
-            <div className="code-editor-body">
-                <Editor
-                    defaultLanguage={activeTab === 'html' ? 'html' : 'css'}
-                    theme="vs-dark"
-                    onMount={onMount}
-                    onChange={onChange}
-                    options={{
-                        readOnly: isDragging,
-                        scrollBeyondLastLine: false,
-                        renderLineHighlight: 'all',
-                        overviewRulerBorder: false
-                    }}
-                />
-            </div>
-        </div>
-    )
+// Load installed Monaco locally, only when this lazy panel opens. No CDN fetch.
+loader.config({ monaco: localMonaco });
+
+interface DocumentEntry {
+  key: string;
+  tab: string;
+  pageId: string;
+  model: Monaco.editor.ITextModel;
+  listener: Monaco.IDisposable;
+  source: string;
+  dirty: boolean;
+  invalid: boolean;
+  view: Monaco.editor.ICodeEditorViewState | null;
+  timer?: ReturnType<typeof setTimeout>;
 }
+interface Draft {
+  text: string;
+  source: string;
+  invalid: boolean;
+  view: Monaco.editor.ICodeEditorViewState | null;
+}
+// Text drafts survive closing the panel. Monaco models are released when it closes.
+const drafts = new Map<string, Draft>();
+let draftGeneration = -1;
+const MAX_MODELS = 6;
+function rememberDraft(key: string, draft: Draft): void {
+  drafts.delete(key);
+  drafts.set(key, draft);
+  const clean = [...drafts.entries()].filter(([, value]) => !value.invalid);
+  for (const [id] of clean.slice(0, Math.max(0, clean.length - MAX_MODELS)))
+    drafts.delete(id);
+}
+function htmlFor(page: Page | null, blocks: Block[], css: string): string {
+  const s = useProjectStore.getState();
+  return pageToHtml(blocks, {
+    framework: s.settings.framework,
+    customCss: css,
+    title: page?.title || "index",
+    pageTitle: page?.pageTitle,
+    fullWidthFormControls: page?.fullWidthFormControls,
+    includeEditorMetadata: true,
+    decorateBlock: decorateWidgetHtml,
+  });
+}
+export default function CodeEditor(): JSX.Element {
+  const blocks = useEditorStore((s) => s.blocks),
+    css = useEditorStore((s) => s.customCss),
+    dragging = useEditorStore((s) => s.isDragging);
+  const selected = useEditorStore((s) => s.selectedBlockId);
+  const page = useProjectStore((s) => s.getCurrentPage()),
+    files = useProjectStore((s) => s.settings.theme.customCssFiles);
+  const framework = useProjectStore((s) => s.settings.framework),
+    loaded = useProjectStore((s) => s.isProjectLoaded);
+  const preferences = useAppSettingsStore((s) => s.codePreferences);
+  const mode = useAppSettingsStore((s) => s.theme),
+    colorTheme = useAppSettingsStore((s) => s.appColorTheme),
+    customThemes = useAppSettingsStore((s) => s.customAppThemes);
+  const [tab, setTab] = useState("html"),
+    [ready, setReady] = useState(false),
+    [optionsOpen, setOptionsOpen] = useState(false),
+    [problemsOpen, setProblemsOpen] = useState(false);
+  const [problems, setProblems] = useState<Monaco.editor.IMarker[]>([]),
+    [status, setStatus] = useState("Synced with canvas"),
+    [formatting, setFormatting] = useState(false);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null),
+    monacoRef = useRef<typeof Monaco | null>(null);
+  const entries = useRef(new Map<string, DocumentEntry>()),
+    suppress = useRef(false),
+    generation = useRef(codeSessionGeneration());
+  const visiblePage = useRef(page?.id),
+    activeEntry = useRef<DocumentEntry | null>(null),
+    disposables = useRef<Monaco.IDisposable[]>([]);
+  const codeDecorations =
+    useRef<Monaco.editor.IEditorDecorationsCollection | null>(null);
+  const [canvasSelectionTick, setCanvasSelectionTick] = useState(0);
+  const sourceRanges = useRef<{
+    model: Monaco.editor.ITextModel;
+    version: number;
+    ranges: Map<string, WidgetHtmlRange>;
+  } | null>(null);
+  const visualHtml = useMemo(
+    () =>
+      htmlFor(
+        page,
+        visiblePage.current === page?.id ? blocks : (page?.blocks ?? []),
+        css,
+      ),
+    [blocks, css, page, framework],
+  );
+  const currentKey =
+    tab === "html" ? `html:${page?.id}` : tab === "css" ? "css" : `file:${tab}`;
+  const latest = useRef({
+    page,
+    tab,
+    visualHtml,
+    css,
+    files,
+    currentKey,
+    preferences,
+  });
+  latest.current = {
+    page,
+    tab,
+    visualHtml,
+    css,
+    files,
+    currentKey,
+    preferences,
+  };
 
-export default CodeEditor
+  function updateStatus(): void {
+    const entry = activeEntry.current;
+    setStatus(
+      entry?.dirty
+        ? "Applying edits…"
+        : entry?.invalid
+          ? "Draft has errors · canvas unchanged"
+          : "Synced with canvas",
+    );
+    if (monacoRef.current && entry)
+      setProblems(
+        monacoRef.current.editor.getModelMarkers({ resource: entry.model.uri }),
+      );
+  }
+  function updateText(entry: DocumentEntry, value: string): void {
+    if (entry.model.getValue() === value) return;
+    suppress.current = true;
+    try {
+      const model = entry.model,
+        old = model.getValue();
+      let start = 0,
+        endOld = old.length,
+        endNew = value.length;
+      while (start < endOld && start < endNew && old[start] === value[start])
+        start++;
+      while (
+        endOld > start &&
+        endNew > start &&
+        old[endOld - 1] === value[endNew - 1]
+      ) {
+        endOld--;
+        endNew--;
+      }
+      const a = model.getPositionAt(start),
+        b = model.getPositionAt(endOld);
+      // Model edit operations keep undo history for inactive tabs too.
+      model.pushStackElement();
+      model.pushEditOperations(
+        [],
+        [
+          {
+            range: {
+              startLineNumber: a.lineNumber,
+              startColumn: a.column,
+              endLineNumber: b.lineNumber,
+              endColumn: b.column,
+            },
+            text: value.slice(start, endNew),
+          },
+        ],
+        () => null,
+      );
+      model.pushStackElement();
+    } finally {
+      suppress.current = false;
+    }
+  }
+  function commit(entry: DocumentEntry): void {
+    if (entry.timer) {
+      clearTimeout(entry.timer);
+      entry.timer = undefined;
+    }
+    if (!entry.dirty) return;
+    entry.dirty = false;
+    const project = useProjectStore.getState(),
+      editor = useEditorStore.getState(),
+      text = entry.model.getValue();
+    if (entry.tab === "html") {
+      const target = project.pages.find((p) => p.id === entry.pageId);
+      if (!target) return;
+      const result = htmlToBlocks(text),
+        monaco = monacoRef.current;
+      if (monaco)
+        monaco.editor.setModelMarkers(
+          entry.model,
+          "amagon-html",
+          result.diagnostics.map((d) => ({
+            ...d,
+            severity:
+              d.severity === "error"
+                ? monaco.MarkerSeverity.Error
+                : monaco.MarkerSeverity.Warning,
+          })),
+        );
+      entry.invalid = result.diagnostics.some((d) => d.severity === "error");
+      if (!entry.invalid) {
+        const doc = new DOMParser().parseFromString(text, "text/html");
+        const nextCss =
+          doc.querySelector("style#html-editor-custom-css")?.textContent ?? "";
+        entry.source = htmlFor(target, result.blocks, nextCss);
+        commitPageCodeBlocks(entry.pageId, result.blocks);
+        if (editor.customCss !== nextCss) editor.setCustomCss(nextCss);
+      }
+    } else if (entry.tab === "css") {
+      entry.source = text;
+      editor.setCustomCss(text);
+    } else if (
+      project.settings.theme.customCssFiles?.some((f) => f.id === entry.tab)
+    ) {
+      entry.source = text;
+      project.updateCssFile(entry.tab, { css: text });
+    }
+    rememberDraft(entry.key, {
+      text,
+      source: entry.source,
+      invalid: entry.invalid,
+      view: entry.view,
+    });
+    editor.setIsTypingCode([...entries.current.values()].some((e) => e.dirty));
+    updateStatus();
+  }
+  function flush(): void {
+    for (const entry of entries.current.values()) commit(entry);
+  }
+  function saveView(): void {
+    if (activeEntry.current)
+      activeEntry.current.view = editorRef.current?.saveViewState() ?? null;
+  }
+  function disposeEntry(entry: DocumentEntry): void {
+    commit(entry);
+    rememberDraft(entry.key, {
+      text: entry.model.getValue(),
+      source: entry.source,
+      invalid: entry.invalid,
+      view: entry.view,
+    });
+    entry.listener.dispose();
+    entry.model.dispose();
+    entries.current.delete(entry.key);
+  }
+  function attach(): void {
+    const editor = editorRef.current,
+      monaco = monacoRef.current,
+      { page, tab, currentKey, visualHtml, css, files } = latest.current;
+    if (!editor || !monaco) return;
+    saveView();
+    if (generation.current !== codeSessionGeneration()) {
+      for (const entry of [...entries.current.values()]) {
+        entry.dirty = false;
+        disposeEntry(entry);
+      }
+      entries.current.clear();
+      drafts.clear();
+      generation.current = codeSessionGeneration();
+      activeEntry.current = null;
+    }
+    if (draftGeneration !== generation.current) {
+      drafts.clear();
+      draftGeneration = generation.current;
+    }
+    const source =
+      tab === "html"
+        ? visualHtml
+        : tab === "css"
+          ? css
+          : files?.find((f) => f.id === tab)?.css;
+    if (source === undefined) return;
+    let entry = entries.current.get(currentKey);
+    if (!entry) {
+      while (entries.current.size >= MAX_MODELS) {
+        const candidate = [...entries.current.values()].find(
+          (e) => e !== activeEntry.current,
+        );
+        if (candidate) disposeEntry(candidate);
+        else break;
+      }
+      const draft = drafts.get(currentKey),
+        restore = draft && (draft.invalid || draft.source === source);
+      const model = monaco.editor.createModel(
+        restore ? draft.text : source,
+        tab === "html" ? "html" : "css",
+        monaco.Uri.parse(
+          `inmemory://amagon/${generation.current}/${encodeURIComponent(currentKey)}.${tab === "html" ? "html" : "css"}`,
+        ),
+      );
+      entry = {
+        key: currentKey,
+        tab,
+        pageId: page?.id ?? "",
+        model,
+        source,
+        dirty: false,
+        invalid: !!restore && draft.invalid,
+        view: restore ? draft.view : null,
+        listener: { dispose: () => undefined },
+      };
+      const target = entry;
+      entry.listener = model.onDidChangeContent(() => {
+        if (suppress.current) return;
+        target.dirty = true;
+        target.invalid = false;
+        useEditorStore.getState().setIsTypingCode(true);
+        useEditorStore.getState().markDirty();
+        if (target.timer) clearTimeout(target.timer);
+        target.timer = setTimeout(
+          () => commit(target),
+          target.tab === "html" ? 650 : 400,
+        );
+        updateStatus();
+      });
+      entries.current.set(currentKey, entry);
+      if (entry.invalid) {
+        entry.dirty = true;
+        commit(entry);
+      }
+    }
+    // Refresh LRU order and sync visual changes without overwriting pending/invalid code.
+    entries.current.delete(currentKey);
+    entries.current.set(currentKey, entry);
+    if (!entry.dirty && !entry.invalid && entry.source !== source) {
+      updateText(entry, source);
+      entry.source = source;
+    }
+    if (editor.getModel() !== entry.model) {
+      editor.setModel(entry.model);
+      if (entry.view) editor.restoreViewState(entry.view);
+    }
+    activeEntry.current = entry;
+    visiblePage.current = page?.id;
+    updateStatus();
+  }
+  function applyTheme(): void {
+    const monaco = monacoRef.current;
+    if (!monaco) return;
+    const style = getComputedStyle(document.body),
+      p = {} as AppPalette;
+    for (const key of Object.keys(APP_CSS_TOKENS) as (keyof AppPalette)[])
+      p[key] =
+        style.getPropertyValue(`--color-${APP_CSS_TOKENS[key]}`).trim() ||
+        "#808080";
+    monaco.editor.defineTheme(
+      "amagon-app",
+      monacoAppTheme(
+        document.body.classList.contains("dark") ? "dark" : "light",
+        p,
+      ),
+    );
+    monaco.editor.setTheme("amagon-app");
+  }
+  const onMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    const initialModel = editor.getModel();
+    attach();
+    initialModel?.dispose();
+    applyTheme();
+    setReady(true);
+    codeDecorations.current = editor.createDecorationsCollection();
+    disposables.current.push(
+      monaco.editor.onDidChangeMarkers(() => updateStatus()),
+    );
+    // Suggestions are generated on request from current project data, without indexing or a background service.
+    for (const language of ["html", "css"])
+      disposables.current.push(
+        monaco.languages.registerCompletionItemProvider(language, {
+          triggerCharacters: language === "css" ? ["-", "."] : ['"', " "],
+          provideCompletionItems: (model, position) => {
+            if (![...entries.current.values()].some((e) => e.model === model))
+              return { suggestions: [] };
+            const word = model.getWordUntilPosition(position),
+              range = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: word.startColumn,
+                endColumn: word.endColumn,
+              };
+            const project = useProjectStore.getState(),
+              allBlocks = project.pages.flatMap((p) =>
+                p.id === project.currentPageId
+                  ? useEditorStore.getState().blocks
+                  : p.blocks,
+              );
+            const suggestions: Monaco.languages.CompletionItem[] = [];
+            if (language === "css") {
+              const prefix = model
+                .getLineContent(position.lineNumber)
+                .slice(0, position.column - 1);
+              const cssRange = {
+                ...range,
+                startColumn: Math.max(
+                  1,
+                  range.startColumn -
+                    (prefix.slice(0, word.startColumn - 1).endsWith("--")
+                      ? 2
+                      : 0),
+                ),
+              };
+              for (const name of projectThemeVariableNames(
+                project.settings.theme,
+              ))
+                suggestions.push({
+                  label: name,
+                  kind: monaco.languages.CompletionItemKind.Variable,
+                  insertText: name,
+                  detail: "Project theme variable",
+                  range: cssRange,
+                });
+            }
+            for (const name of projectClasses(allBlocks))
+              suggestions.push({
+                label: name,
+                kind: monaco.languages.CompletionItemKind.Class,
+                insertText: name,
+                detail: "Project class",
+                range,
+              });
+            if (language === "html") {
+              for (const p of project.pages)
+                suggestions.push({
+                  label: pageFilename(p),
+                  kind: monaco.languages.CompletionItemKind.File,
+                  insertText: pageFilename(p),
+                  detail: p.title,
+                  range,
+                });
+              suggestions.push({
+                label: "amagon-section",
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText:
+                  '<section class="${1:section}">\n  <h2>${2:Heading}</h2>\n  <p>${3:Content}</p>\n</section>',
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                range,
+                detail: "Section snippet",
+              });
+            }
+            return { suggestions };
+          },
+        }),
+      );
+  };
+  useEffect(() => {
+    if (ready) attach();
+  }, [ready, currentKey, visualHtml, css, files, loaded]);
+  useEffect(() => {
+    if (ready) applyTheme();
+  }, [ready, mode, colorTheme, customThemes]);
+  useEffect(() => {
+    if (!ready) return;
+    // Live custom-theme previews change body tokens, not saved settings.
+    const observer = new MutationObserver(() => applyTheme());
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
+    });
+    return () => observer.disconnect();
+  }, [ready]);
+  useEffect(() => {
+    if (!ready) return;
+    const m = activeEntry.current?.model;
+    m?.updateOptions({ tabSize: preferences.tabSize, insertSpaces: true });
+  }, [ready, preferences.tabSize, currentKey]);
+  useEffect(() => {
+    const onCanvasSelection = (event: Event): void => {
+      const blockId = (event as CustomEvent<{ blockId: string | null }>).detail
+        ?.blockId;
+      if (blockId) setTab("html");
+      setCanvasSelectionTick((tick) => tick + 1);
+    };
+    window.addEventListener(CANVAS_SELECTION_EVENT, onCanvasSelection);
+    return () =>
+      window.removeEventListener(CANVAS_SELECTION_EVENT, onCanvasSelection);
+  }, []);
+  useEffect(() => {
+    if (!ready) return;
+    codeDecorations.current?.clear();
+    if (tab !== "html" || !selected) return;
+    const entry = activeEntry.current,
+      editor = editorRef.current,
+      monaco = monacoRef.current;
+    if (!entry || entry.tab !== "html" || !editor || !monaco) return;
+    const model = entry.model,
+      version = model.getVersionId();
+    if (
+      sourceRanges.current?.model !== model ||
+      sourceRanges.current.version !== version
+    ) {
+      sourceRanges.current = {
+        model,
+        version,
+        ranges: widgetHtmlRanges(model.getValue()),
+      };
+    }
+    const offsets = sourceRanges.current.ranges.get(selected);
+    if (!offsets) return;
+    const start = model.getPositionAt(offsets.start),
+      end = model.getPositionAt(offsets.end);
+    const range = new monaco.Range(
+      start.lineNumber,
+      start.column,
+      end.lineNumber,
+      end.column,
+    );
+    editor.revealLineInCenter(
+      start.lineNumber,
+      monaco.editor.ScrollType.Immediate,
+    );
+    codeDecorations.current?.set([
+      {
+        range,
+        options: {
+          isWholeLine: true,
+          className: "amagon-code-selection",
+          inlineClassName: "amagon-code-selection-text",
+          stickiness:
+            monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      },
+    ]);
+  }, [ready, selected, tab, visualHtml, currentKey, canvasSelectionTick]);
+  useEffect(() => {
+    const unregister = registerCodeFlush(flush);
+    return () => {
+      saveView();
+      flush();
+      unregister();
+      for (const d of disposables.current) d.dispose();
+      disposables.current = [];
+      codeDecorations.current?.clear();
+      sourceRanges.current = null;
+      for (const entry of [...entries.current.values()]) disposeEntry(entry);
+      // Keep only recent clean text snapshots. Invalid drafts stay until corrected or the project closes.
+      const clean = [...drafts.entries()].filter(([, d]) => !d.invalid);
+      for (const [key] of clean.slice(0, Math.max(0, clean.length - 6)))
+        drafts.delete(key);
+      useEditorStore.getState().setIsTypingCode(false);
+    };
+  }, []);
+  useEffect(() => {
+    if (tab !== "html" && tab !== "css" && !files?.some((f) => f.id === tab))
+      setTab("html");
+    for (const entry of [...entries.current.values()])
+      if (
+        entry.tab !== "html" &&
+        entry.tab !== "css" &&
+        !files?.some((f) => f.id === entry.tab)
+      )
+        disposeEntry(entry);
+  }, [files, tab]);
+  async function format(): Promise<void> {
+    const entry = activeEntry.current;
+    if (!entry || formatting) return;
+    setFormatting(true);
+    try {
+      const prettier = await import("prettier/standalone"),
+        plugin =
+          entry.tab === "html"
+            ? await import("prettier/plugins/html")
+            : await import("prettier/plugins/postcss");
+      if (entry.model.isDisposed()) return;
+      const version = entry.model.getVersionId();
+      const result = await prettier.format(entry.model.getValue(), {
+        parser: entry.tab === "html" ? "html" : "css",
+        plugins: [plugin],
+        tabWidth: preferences.tabSize,
+      });
+      if (!entry.model.isDisposed() && entry.model.getVersionId() !== version) {
+        setStatus("Code changed while formatting. Run Format again.");
+        return;
+      }
+      if (!entry.model.isDisposed()) {
+        // Formatting is a user edit: it must flow through the same sync/validation path.
+        entry.model.pushStackElement();
+        entry.model.pushEditOperations(
+          [],
+          [{ range: entry.model.getFullModelRange(), text: result }],
+          () => null,
+        );
+        entry.model.pushStackElement();
+        commit(entry);
+      }
+    } catch (error) {
+      setStatus(
+        `Format failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setFormatting(false);
+    }
+  }
+  function revealCanvas(): void {
+    const entry = activeEntry.current,
+      pos = editorRef.current?.getPosition();
+    if (!entry || !pos || entry.tab !== "html") return;
+    commit(entry);
+    if (entry.invalid) return;
+    const id = blockIdAtOffset(
+      entry.model.getValue(),
+      entry.model.getOffsetAt(pos),
+    );
+    if (id && useEditorStore.getState().getBlockById(id)) {
+      useEditorStore.getState().selectBlock(id);
+      revealCanvasBlock(id);
+      setStatus("Selected widget on canvas");
+    } else setStatus("Place the cursor inside a widget to reveal it");
+  }
+  return (
+    <div className="code-editor">
+      <div className="code-editor-header">
+        <div
+          className="code-editor-tabs"
+          role="tablist"
+          aria-label="Code files"
+        >
+          {[
+            { id: "html", name: pageFilename(page) },
+            { id: "css", name: "styles.css" },
+            ...(files ?? []).map((f) => ({ id: f.id, name: f.name })),
+          ].map((f) => (
+            <button
+              key={f.id}
+              role="tab"
+              aria-selected={tab === f.id}
+              type="button"
+              className={`code-editor-tab ${tab === f.id ? "active" : ""}`}
+              onClick={() => {
+                flush();
+                setTab(f.id);
+              }}
+            >
+              {f.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="code-editor-tools">
+        <button
+          type="button"
+          className="code-editor-action"
+          disabled={!ready || formatting || dragging}
+          onClick={() => void format()}
+        >
+          {formatting ? "Formatting…" : "Format"}
+        </button>
+        <button
+          type="button"
+          className="code-editor-action"
+          disabled={!ready}
+          onClick={() => {
+            editorRef.current?.focus();
+            void editorRef.current?.getAction("actions.find")?.run();
+          }}
+        >
+          Find
+        </button>
+        <button
+          type="button"
+          className="code-editor-action"
+          disabled={!ready}
+          onClick={() => {
+            editorRef.current?.focus();
+            void editorRef.current
+              ?.getAction("editor.action.startFindReplaceAction")
+              ?.run();
+          }}
+        >
+          Replace
+        </button>
+        {tab === "html" && (
+          <button
+            type="button"
+            className="code-editor-action"
+            disabled={!ready}
+            onClick={revealCanvas}
+          >
+            Reveal on canvas
+          </button>
+        )}
+        <button
+          type="button"
+          className="code-editor-action"
+          aria-expanded={optionsOpen}
+          onClick={() => setOptionsOpen(!optionsOpen)}
+        >
+          Editor options
+        </button>
+      </div>
+      {optionsOpen && (
+        <div className="code-editor-options">
+          <label>
+            Font size{" "}
+            <select
+              aria-label="Code font size"
+              value={preferences.fontSize}
+              onChange={(e) =>
+                void useAppSettingsStore.getState().saveSettings({
+                  codePreferences: {
+                    ...preferences,
+                    fontSize: Number(e.target.value),
+                  },
+                })
+              }
+            >
+              {Array.from({ length: 15 }, (_, i) => i + 10).map((size) => (
+                <option key={size} value={size}>
+                  {size} px
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Indent{" "}
+            <select
+              aria-label="Code indentation"
+              value={preferences.tabSize}
+              onChange={(e) =>
+                void useAppSettingsStore.getState().saveSettings({
+                  codePreferences: {
+                    ...preferences,
+                    tabSize: Number(e.target.value),
+                  },
+                })
+              }
+            >
+              <option value={2}>2 spaces</option>
+              <option value={4}>4 spaces</option>
+            </select>
+          </label>
+          {(["wordWrap", "minimap"] as const).map((key) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={preferences[key]}
+                onChange={(e) =>
+                  void useAppSettingsStore.getState().saveSettings({
+                    codePreferences: {
+                      ...preferences,
+                      [key]: e.target.checked,
+                    },
+                  })
+                }
+              />
+              {key === "wordWrap" ? "Word wrap" : "Minimap"}
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="code-editor-body">
+        <Editor
+          keepCurrentModel
+          onMount={onMount}
+          options={{
+            readOnly: dragging,
+            fontFamily: "var(--font-mono)",
+            fontSize: preferences.fontSize,
+            tabSize: preferences.tabSize,
+            insertSpaces: true,
+            wordWrap: preferences.wordWrap ? "on" : "off",
+            minimap: { enabled: preferences.minimap },
+            automaticLayout: true,
+            scrollBeyondLastLine: false,
+            renderLineHighlight: "all",
+            overviewRulerBorder: false,
+          }}
+        />
+      </div>
+      <div className="code-editor-status">
+        <span role="status" title={status}>
+          {status}
+        </span>
+        <button
+          type="button"
+          onClick={() => setProblemsOpen(!problemsOpen)}
+          aria-expanded={problemsOpen}
+        >
+          Problems ({problems.length})
+        </button>
+      </div>
+      {problemsOpen && (
+        <div className="code-editor-problems" aria-label="Code problems">
+          {!problems.length ? (
+            <p>No problems in this file.</p>
+          ) : (
+            problems.map((p, i) => (
+              <button
+                type="button"
+                key={i}
+                onClick={() => {
+                  editorRef.current?.setPosition({
+                    lineNumber: p.startLineNumber,
+                    column: p.startColumn,
+                  });
+                  editorRef.current?.revealLineInCenter(p.startLineNumber);
+                  editorRef.current?.focus();
+                }}
+              >
+                Line {p.startLineNumber}:{p.startColumn} · {p.message}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

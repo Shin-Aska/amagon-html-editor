@@ -1,6 +1,6 @@
-import {useState} from 'react'
+import {useState, type ReactNode} from 'react'
 import {useEditorStore} from '../../store/editorStore'
-import {componentRegistry, type PropSchema} from '../../registry/ComponentRegistry'
+import {buildDefaultBlockProps, componentRegistry, type PropSchema} from '../../registry/ComponentRegistry'
 import SpacingEditor from './SpacingEditor'
 import {ActionEffectEditor, AnimationEditor, BackgroundEditor, BorderEditor, HoverEffectEditor, LayoutEditor, TypographyEditor} from './StyleEditors'
 import CssClassesEditor from './CssClassesEditor'
@@ -19,9 +19,13 @@ import IconField from './IconField'
 import FontPickerField from './FontPickerField'
 
 import {useProjectStore} from '../../store/projectStore'
-import ArrayField, {type ArrayRecordField} from './ArrayField'
+import ArrayField, {JsonField, type ArrayRecordField} from './ArrayField'
 import InlineStylesEditor from './InlineStylesEditor'
 import './Inspector.css'
+import InspectorSection from './InspectorSection'
+import WidgetDesignEditor from './WidgetDesignEditor'
+import {AppearanceEditor, ExtendedLayoutEditor, MediaFitEditor, ThemeColorEditor} from './AppearanceEditor'
+import {isPropertyVisible, matchesInspectorSearch, propertyTab, sectionSearchTerms, type InspectorTab} from '../../registry/inspectorSchema'
 import {Check, Clipboard} from 'lucide-react'
 import {clearAnimationFromBlock, isBlockEligibleForAnimation} from '../../utils/animationPresets'
 import {clearHoverEffectFromBlock, isBlockEligibleForHoverEffect} from '../../utils/hoverEffects'
@@ -53,22 +57,6 @@ const socialPlatformOptions = [
     {label: 'YouTube', value: 'youtube'},
     {label: 'Website', value: 'website'}
 ];
-
-const MEASUREMENT_UNITS = ['px', 'pt', 'rem', 'em'] as const;
-
-type MeasurementUnit = typeof MEASUREMENT_UNITS[number];
-
-function parseMeasurementValue(val?: string): {num: string; unit: MeasurementUnit} {
-    if (!val) return {num: '', unit: 'rem'};
-    const match = val.trim().match(/^([\d.]+)\s*(px|pt|rem|em)?$/i);
-    if (match) {
-        return {
-            num: match[1],
-            unit: (match[2]?.toLowerCase() as MeasurementUnit) || 'rem'
-        };
-    }
-    return {num: val.replace(/[^\d.]/g, '') || '', unit: 'rem'}
-}
 
 const arrayEditorConfigs: Record<string, Record<string, ArrayEditorConfig>> = {
     breadcrumb: {
@@ -221,15 +209,15 @@ function getArrayEditorConfig(blockType: string, key: string): ArrayEditorConfig
 }
 
 function Inspector(): JSX.Element {
-    const selectedBlockId = useEditorStore((s) => s.selectedBlockId);
-    const getBlockById = useEditorStore((s) => s.getBlockById);
+    const block = useEditorStore((s) => s.selectedBlockId ? s.getBlockById(s.selectedBlockId) : null);
     const updateBlock = useEditorStore((s) => s.updateBlock);
 
+    const [tab, setTab] = useState<InspectorTab>('content');
+    const [search, setSearch] = useState('');
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
     const uniqueMetaKeys = useProjectStore((s) => s.uniqueMetaKeys);
 
-    const block = selectedBlockId ? getBlockById(selectedBlockId) : null;
     const definition = block ? componentRegistry.get(block.type) : null;
 
     if (!block || !definition) {
@@ -305,25 +293,35 @@ function Inspector(): JSX.Element {
         })
     };
 
+    const defaults = buildDefaultBlockProps(definition);
+    const renderSection = (title: string, sectionTab: InspectorTab, children: ReactNode, defaultOpen = false) => {
+        if ((!search.trim() && tab !== sectionTab && title !== 'Block Actions') || !matchesInspectorSearch(search, title, sectionSearchTerms[title])) return null;
+        return <InspectorSection key={`${block.id}-${title}`} title={title} defaultOpen={defaultOpen} forceOpen={Boolean(search.trim())}>{children}</InspectorSection>
+    };
+
     // Render different input types based on the schema
     const renderField = (key: string, schema: PropSchema, value: any) => {
         const val = value !== undefined ? value : schema.default;
 
         switch (schema.type) {
+            case 'object':
+                return <JsonField value={val} fallback={schema.default ?? {}} onChange={value => handlePropChange(key, value)}/>;
             case 'text':
                 return (
                     <input
+                        aria-label={schema.label}
                         type="text"
                         className="inspector-input"
-                        value={val || ''}
+                        value={val ?? ''}
                         onChange={(e) => handlePropChange(key, e.target.value)}
                     />
                 );
             case 'textarea':
                 return (
                     <textarea
+                        aria-label={schema.label}
                         className="inspector-input"
-                        value={val || ''}
+                        value={val ?? ''}
                         onChange={(e) => handlePropChange(key, e.target.value)}
                         rows={3}
                     />
@@ -331,6 +329,7 @@ function Inspector(): JSX.Element {
             case 'number':
                 return (
                     <input
+                        aria-label={schema.label}
                         type="number"
                         className="inspector-input"
                         value={val !== undefined ? val : ''}
@@ -343,6 +342,7 @@ function Inspector(): JSX.Element {
             case 'boolean':
                 return (
                     <input
+                        aria-label={schema.label}
                         type="checkbox"
                         checked={!!val}
                         onChange={(e) => handlePropChange(key, e.target.checked)}
@@ -351,10 +351,13 @@ function Inspector(): JSX.Element {
             case 'select':
                 return (
                     <select
+                        aria-label={schema.label}
                         className="inspector-select"
-                        value={val || ''}
-                        onChange={(e) => handlePropChange(key, e.target.value)}
+                        value={val ?? ''}
+                        onChange={(e) => handlePropChange(key, schema.options?.find(option => String(option.value) === e.target.value)?.value ?? e.target.value)}
                     >
+                        {!schema.options?.some(option => String(option.value) === String(val ?? '')) &&
+                            <option value={String(val ?? '')} disabled>{val === undefined || val === null || val === '' ? 'Widget default' : `Current: ${String(val)}`}</option>}
                         {schema.options?.map((opt) => (
                             <option key={String(opt.value)} value={String(opt.value)}>
                                 {opt.label}
@@ -366,72 +369,35 @@ function Inspector(): JSX.Element {
                 return (
                     <div className="color-picker-wrapper">
                         <input
-                            type="color"
+                            aria-label={schema.label}
+                        type="color"
                             value={val || '#000000'}
                             onChange={(e) => handlePropChange(key, e.target.value)}
                         />
                         <input
-                            type="text"
+                            aria-label={schema.label}
+                        type="text"
                             className="inspector-input color-hex-input"
-                            value={val || ''}
+                            value={val ?? ''}
                             onChange={(e) => handlePropChange(key, e.target.value)}
                             placeholder="#000000"
                         />
                     </div>
                 );
             case 'image':
-                return <ImageField value={val || ''} onChange={(v) => handlePropChange(key, v)}/>;
+                return <ImageField value={val ?? ''} onChange={(v) => handlePropChange(key, v)}/>;
             case 'video':
-                return <VideoField value={val || ''} onChange={(v) => handlePropChange(key, v)}/>;
+                return <VideoField value={val ?? ''} onChange={(v) => handlePropChange(key, v)}/>;
             case 'carousel':
                 return <CarouselField value={val || []} onChange={(v) => handlePropChange(key, v)}/>;
             case 'icon':
-                return <IconField value={val || ''} onChange={(v) => handlePropChange(key, v)}/>;
+                return <IconField value={val ?? ''} onChange={(v) => handlePropChange(key, v)}/>;
             case 'font-picker':
-                return <FontPickerField value={val || ''} onChange={(v) => handlePropChange(key, v)}/>;
-            case 'measurement': {
-                const measurementValue = parseMeasurementValue(val);
-
-                const handleMeasurementNumChange = (nextNum: string) => {
-                    if (!nextNum) {
-                        handlePropChange(key, undefined);
-                        return;
-                    }
-                    handlePropChange(key, `${nextNum}${measurementValue.unit}`)
-                };
-
-                const handleMeasurementUnitChange = (nextUnit: MeasurementUnit) => {
-                    if (!measurementValue.num) {
-                        handlePropChange(key, undefined);
-                        return;
-                    }
-                    handlePropChange(key, `${measurementValue.num}${nextUnit}`)
-                };
-
-                return (
-                    <div className="style-measurement-group">
-                        <input
-                            type="number"
-                            step="0.1"
-                            className="inspector-input"
-                            value={measurementValue.num}
-                            onChange={(e) => handleMeasurementNumChange(e.target.value)}
-                            placeholder="1"
-                        />
-                        <select
-                            className="inspector-select"
-                            value={measurementValue.unit}
-                            onChange={(e) => handleMeasurementUnitChange(e.target.value as MeasurementUnit)}
-                        >
-                            {MEASUREMENT_UNITS.map((unit) => (
-                                <option key={unit} value={unit}>
-                                    {unit}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                );
-            }
+                return <FontPickerField value={val ?? ''} onChange={(v) => handlePropChange(key, v)}/>;
+            case 'measurement':
+                return <input type="text" aria-label={schema.label} className="inspector-input"
+                    value={val ?? ''} placeholder="e.g. 2rem, 50%, clamp(1rem, 5vw, 4rem)"
+                    onChange={event => handlePropChange(key, event.target.value || undefined)}/>;
             case 'combobox': {
                 let comboOptions: string[] = [];
                 if (schema.dataSource === 'tags') {
@@ -450,7 +416,7 @@ function Inspector(): JSX.Element {
                 }
                 return (
                     <ComboboxField
-                        value={val || ''}
+                        value={val ?? ''}
                         options={comboOptions}
                         onChange={(v) => handlePropChange(key, v)}
                         placeholder={schema.default !== undefined ? String(schema.default) : ''}
@@ -485,7 +451,7 @@ function Inspector(): JSX.Element {
             case 'url':
                 return (
                     <UrlField
-                        value={val || ''}
+                        value={val ?? ''}
                         onChange={(v) => handlePropChange(key, v)}
                     />
                 );
@@ -600,7 +566,10 @@ function Inspector(): JSX.Element {
     const groupedProps: Record<string, { key: string; schema: PropSchema }[]> = {};
 
     Object.entries(definition.propsSchema).forEach(([key, schema]) => {
-        const groupName = schema.group || 'General';
+        if ((!search.trim() && propertyTab(key, schema) !== tab)
+            || !isPropertyVisible(key, definition, block.props)
+            || !matchesInspectorSearch(search, key, schema.label, schema.group, schema.description)) return;
+        const groupName = schema.group || (propertyTab(key, schema) === 'content' ? 'Content' : 'Options');
         if (!groupedProps[groupName]) {
             groupedProps[groupName] = []
         }
@@ -616,14 +585,41 @@ function Inspector(): JSX.Element {
                 </div>
                 <span className="inspector-type-badge">{block.type}</span>
             </div>
-            <div className="inspector-content">
+            <div className="inspector-navigation">
+                <div role="tablist" aria-label="Widget settings" className="inspector-tabs">
+                    {(['content', 'design', 'advanced'] as const).map(value => <button type="button" key={value}
+                        role="tab" id={`inspector-tab-${value}`} aria-controls="inspector-panel" aria-selected={tab === value}
+                        tabIndex={tab === value ? 0 : -1}
+                        onKeyDown={event => {
+                            const tabs = ['content', 'design', 'advanced'] as const;
+                            const index = tabs.indexOf(value);
+                            const next = event.key === 'ArrowRight' ? tabs[(index + 1) % 3]
+                                : event.key === 'ArrowLeft' ? tabs[(index + 2) % 3]
+                                : event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : undefined;
+                            if (next) {event.preventDefault(); setTab(next); setSearch(''); document.getElementById(`inspector-tab-${next}`)?.focus()}
+                        }} onClick={() => {setTab(value); setSearch('')}}>
+                        {value.charAt(0).toUpperCase() + value.slice(1)}
+                    </button>)}
+                </div>
+                <input type="search" className="inspector-input" aria-label="Search widget settings"
+                    placeholder="Search all settings…" value={search} onChange={event => setSearch(event.target.value)}/>
+                {search.trim() && <p className="inspector-field-note" role="status">Searching Content, Design, and Advanced.</p>}
+            </div>
+            <div className="inspector-content" id="inspector-panel" role="tabpanel" aria-labelledby={`inspector-tab-${tab}`}>
+                {Object.keys(groupedProps).length === 0 && !search.trim() && tab === 'content' &&
+                    <p className="inspector-field-note">This widget uses its nested elements for content. Select one on the canvas, or use Design to change its appearance.</p>}
+                {search.trim() && Object.keys(groupedProps).length === 0 && !Object.entries(sectionSearchTerms).some(([title, terms]) =>
+                    (title !== 'Media fit' || block.type === 'image') && matchesInspectorSearch(search, title, terms)) &&
+                    <p className="inspector-field-note" role="status">No matching settings. Try “color”, “spacing”, or “layout”.</p>}
                 {Object.entries(groupedProps).map(([groupName, props]) => (
-                    <div key={groupName} className="inspector-group">
-                        <h4 className="inspector-group-title">{groupName}</h4>
+                    <InspectorSection key={`${block.id}-${groupName}-${tab}`} title={groupName} defaultOpen forceOpen={Boolean(search.trim())}>
                         {props.map(({key, schema}) => (
-                            <div key={key} className="inspector-field">
+                            <div key={key} className="inspector-field" role="group" aria-label={schema.label}>
                                 <div className="inspector-field-header">
-                                    <label className="inspector-label">{schema.label}</label>
+                                    <span className="inspector-label">{schema.label}</span>
+                                    <button type="button" className="inspector-reset" title={`Reset ${schema.label}`}
+                                        aria-label={`Reset ${schema.label}`} disabled={JSON.stringify(block.props[key] ?? defaults[key]) === JSON.stringify(defaults[key])}
+                                        onClick={() => handlePropChange(key, defaults[key] === undefined ? undefined : structuredClone(defaults[key]))}>↺</button>
                                     {schema.description && (
                                         <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                                             <span className="inspector-help-tooltip" title={schema.description}>?</span>
@@ -658,15 +654,19 @@ function Inspector(): JSX.Element {
                                 </div>
                             </div>
                         ))}
-                    </div>
+                    </InspectorSection>
                 ))}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Animations
-                        <span className="style-info-btn"
-                              title="Entrance, hover, and action feedback for this selected widget. All effects respect reduced-motion preferences.">?</span>
-                    </h4>
+                {renderSection('Quick styles', 'design', <WidgetDesignEditor block={block}
+                    onChange={styles => updateBlock(block.id, {styles})}/>, true)}
+
+                {renderSection('Theme colors', 'design', <ThemeColorEditor styles={block.styles} onChange={handleStyleChange}/>)}
+
+                {renderSection('Appearance', 'design', <AppearanceEditor styles={block.styles} onChange={handleStyleChange}/>)}
+
+                {block.type === 'image' && renderSection('Media fit', 'design', <MediaFitEditor block={block} onChange={handleStyleChange}/>)}
+
+                {renderSection('Animations', 'design', <>
                     <div className="motion-editor-stack">
                         <AnimationEditor
                             animation={block.animation}
@@ -684,76 +684,38 @@ function Inspector(): JSX.Element {
                             onChange={handleActionEffectChange}
                         />
                     </div>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Layout
-                        <span className="style-info-btn"
-                              title="Display mode, positioning, sizing, and flexbox settings.">?</span>
-                    </h4>
+                {renderSection('Layout', 'design', <>
                     <LayoutEditor styles={block.styles} onChange={handleStyleChange}/>
-                </div>
+                    <ExtendedLayoutEditor styles={block.styles} onChange={handleStyleChange}/>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Spacing
-                        <span className="style-info-btn"
-                              title="Margin (outside space) and padding (inside space) for each side.">?</span>
-                    </h4>
+                {renderSection('Spacing', 'design', <>
                     <SpacingEditor styles={block.styles} onChange={handleStyleChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Typography
-                        <span className="style-info-btn"
-                              title="Font, size, weight, line height, spacing, color, and alignment.">?</span>
-                    </h4>
+                {renderSection('Typography', 'design', <>
                     <TypographyEditor styles={block.styles} onChange={handleStyleChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Background
-                        <span className="style-info-btn"
-                              title="Background color, image, sizing, position, and repeat behavior.">?</span>
-                    </h4>
+                {renderSection('Background', 'design', <>
                     <BackgroundEditor styles={block.styles} onChange={handleStyleChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Border
-                        <span className="style-info-btn" title="Corner radius, border width, style, and color.">?</span>
-                    </h4>
+                {renderSection('Border', 'design', <>
                     <BorderEditor styles={block.styles} onChange={handleStyleChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Inline Styles
-                        <span className="style-info-btn"
-                              title="Raw CSS property-value pairs applied directly to this element. Useful for properties not covered above.">?</span>
-                    </h4>
+                {renderSection('Inline Styles', 'advanced', <>
                     <InlineStylesEditor styles={block.styles} onChange={handleStyleChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Responsive
-                        <span className="style-info-btn"
-                              title="Bootstrap utility classes that apply only at specific screen sizes (e.g. d-md-none).">?</span>
-                    </h4>
+                {renderSection('Responsive', 'design', <>
                     <ResponsiveOverrides classes={block.classes} onChange={handleClassesChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Element ID
-                        <span className="style-info-btn"
-                              title="Unique identifier for this element. Used for anchors, JavaScript targeting, and linking.">?</span>
-                    </h4>
+                {renderSection('Element ID', 'advanced', <>
                     <div className="inspector-field">
                         <div className="inspector-field-header">
                             <label className="inspector-label">ID</label>
@@ -762,6 +724,7 @@ function Inspector(): JSX.Element {
                             <input
                                 type="text"
                                 className="inspector-input inspector-id-input"
+                                aria-label="Element ID"
                                 value={typeof block.props.id === 'string' ? block.props.id : ''}
                                 onChange={(e) => handleElementIdChange(e.target.value)}
                                 placeholder={block.id}
@@ -771,34 +734,19 @@ function Inspector(): JSX.Element {
                             Defaults to generated ID: <code>{block.id}</code>
                         </div>
                     </div>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        CSS Classes
-                        <span className="style-info-btn"
-                              title="Bootstrap or custom CSS classes added to this element. Multiple classes are space-separated.">?</span>
-                    </h4>
+                {renderSection('CSS Classes', 'advanced', <>
                     <CssClassesEditor classes={block.classes} onChange={handleClassesChange}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Event Actions
-                        <span className="style-info-btn"
-                              title="JavaScript to run when events like click or hover fire on this element.">?</span>
-                    </h4>
+                {renderSection('Event Actions', 'advanced', <>
                     <EventActionsEditor blockId={block.id} events={block.events || {}}/>
-                </div>
+                </>)}
 
-                <div className="inspector-group">
-                    <h4 className="inspector-group-title">
-                        Block Actions
-                        <span className="style-info-btn"
-                              title="Quick operations on this block: duplicate, delete, move up/down, or save as a reusable component.">?</span>
-                    </h4>
+                {renderSection('Block Actions', 'advanced', <>
                     <BlockActions blockId={block.id} blockType={block.type}/>
-                </div>
+                </>, true)}
             </div>
         </div>
     )

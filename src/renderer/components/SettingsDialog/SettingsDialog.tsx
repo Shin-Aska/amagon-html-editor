@@ -5,11 +5,10 @@ import {
     KeyRound,
     LayoutPanelLeft,
     Monitor,
-    Moon,
     RefreshCw,
     Settings,
     Sparkles,
-    Sun
+    Palette
 } from 'lucide-react'
 import { getApi } from '../../utils/api'
 import { useAppSettingsStore } from '../../store/appSettingsStore'
@@ -22,6 +21,7 @@ import { tutorialSteps } from '../Tutorial/tutorialSteps'
 import CredentialEditModal from './CredentialEditModal'
 import SettingsWorkspace, { type SettingsSection } from '../SettingsWorkspace/SettingsWorkspace'
 import './SettingsDialog.css'
+import AppearanceSettings from './AppearanceSettings'
 
 const DANGEROUS_CLI_PROVIDERS: AiProvider[] = ['junie-cli']
 const DANGEROUS_CRED_IDS = DANGEROUS_CLI_PROVIDERS.map((provider) => `ai:${provider}`)
@@ -63,10 +63,11 @@ interface SettingsDialogProps {
     initialTab?: TabType
 }
 
-type TabType = 'general' | 'keys' | 'ai' | 'media'
+type TabType = 'appearance' | 'general' | 'keys' | 'ai' | 'media'
 
 const SETTINGS_SECTIONS: readonly SettingsSection<TabType>[] = [
     { id: 'general', label: 'General', description: 'Personalize your editing workspace.', icon: <Monitor size={18} /> },
+    { id: 'appearance', label: 'Appearance', description: 'Color themes for the app and code editor.', icon: <Palette size={18} /> },
     { id: 'keys', label: 'Credentials', description: 'Manage credentials for AI, multimedia, and publishing.', icon: <KeyRound size={18} /> },
     { id: 'ai', label: 'AI Assistant', description: 'Choose the provider and model for your assistant.', icon: <Sparkles size={18} /> },
     { id: 'media', label: 'Media Search', description: 'Choose where to search for images and videos.', icon: <ImageIcon size={18} /> }
@@ -80,8 +81,6 @@ export default function SettingsDialog({
     const [activeTab, setActiveTab] = useState<TabType>(initialTab)
     const overlayRef = useRef<HTMLDivElement>(null)
 
-    const theme = useAppSettingsStore((s) => s.theme);
-    const setTheme = useAppSettingsStore((s) => s.setTheme);
     const defaultLayout = useAppSettingsStore((s) => s.defaultLayout);
     const setDefaultLayout = useAppSettingsStore((s) => s.setDefaultLayout);
     const libraryPreviewMode = useAppSettingsStore((s) => s.libraryPreviewMode);
@@ -378,34 +377,9 @@ export default function SettingsDialog({
                         </>
                     )}
                 >
+                            {activeTab === 'appearance' && <AppearanceSettings />}
                             {activeTab === 'general' && (
                                 <div className="settings-section settings-section--general animate-fade-in">
-                                    <div className="settings-row">
-                                        <div className="settings-label">
-                                            <span className="settings-label-title">Theme</span>
-                                            <span
-                                                className="settings-label-desc">Switch between dark and light mode</span>
-                                        </div>
-                                        <div className="settings-control">
-                                            <div className="theme-toggle">
-                                                <button
-                                                    className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                                                    aria-pressed={theme === 'light'}
-                                                    onClick={() => setTheme('light')}
-                                                >
-                                                    <Sun size={14} /> Light
-                                                </button>
-                                                <button
-                                                    className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                                                    aria-pressed={theme === 'dark'}
-                                                    onClick={() => setTheme('dark')}
-                                                >
-                                                    <Moon size={14} /> Dark
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <div className="settings-row">
                                         <div className="settings-label">
                                             <span className="settings-label-title">Default Layout</span>
@@ -425,6 +399,7 @@ export default function SettingsDialog({
                                                     <option value="no-inspector">No Right Inspector</option>
                                                     <option value="canvas-only">Canvas Only</option>
                                                     <option value="code-focus">Code Focus</option>
+                                                    <option value="canvas-code">Canvas + Code (Side by side)</option>
                                                     <option value="zen">Zen Mode</option>
                                                 </select>
                                             </div>

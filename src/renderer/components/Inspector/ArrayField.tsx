@@ -1,7 +1,8 @@
 import {useCallback, useEffect, useState} from 'react'
 import './ArrayField.css'
 import {useEditorStore} from '../../store/editorStore'
-import {ArrowDown, ArrowUp, ChevronDown, ChevronRight, Palette, Plus, Star, Trash2} from 'lucide-react'
+import {generateBlockId} from '../../store/types'
+import {ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, Palette, Plus, Star, Trash2} from 'lucide-react'
 import IconField from './IconField'
 import ImageField from './ImageField'
 import UrlField from './UrlField'
@@ -51,6 +52,26 @@ function cloneDefault(value: unknown): unknown {
         return JSON.parse(JSON.stringify(value))
     }
     return value
+}
+
+function cloneRepeatedItem(item: ArrayItem): ArrayItem {
+    const copy = structuredClone(item);
+    const seen = new WeakSet<object>();
+    const visit = (value: unknown): void => {
+        if (typeof value !== 'object' || value === null || seen.has(value)) return;
+        seen.add(value);
+        if (Array.isArray(value)) value.forEach(visit);
+        else if (isRecordItem(value)) {
+            // Tabs can contain editable block trees, including nested tabs.
+            // Give those blocks new identities while retaining authored props.
+            if (typeof value.id === 'string' && typeof value.type === 'string'
+                && isRecordItem(value.props) && isRecordItem(value.styles)
+                && Array.isArray(value.classes) && Array.isArray(value.children)) value.id = generateBlockId();
+            Object.values(value).forEach(visit)
+        }
+    };
+    visit(copy);
+    return copy
 }
 
 function createRecordItem(fields: ArrayRecordField[] | undefined): ArrayRecordItem {
@@ -104,7 +125,7 @@ function labelizeKey(key: string): string {
         .replace(/^\w/, (c) => c.toUpperCase())
 }
 
-function JsonField({
+export function JsonField({
                        value,
                        fallback,
                        onChange
@@ -132,6 +153,7 @@ function JsonField({
     return (
         <div className="array-json-field">
       <textarea
+          aria-label="Structured settings (JSON)"
           className={`array-textarea ${error ? 'has-error' : ''}`}
           value={draft}
           rows={4}
@@ -371,7 +393,13 @@ function ArrayField({
     const removeItem = (index: number) => {
         const next = [...normalizeValue()];
         next.splice(index, 1);
-        onChange(next);
+        const nextDefault = defaultIndex === index ? Math.max(0, index - 1)
+            : defaultIndex > index ? defaultIndex - 1 : defaultIndex;
+        if (onChangeBoth) onChangeBoth(next, nextDefault);
+        else {
+            onChange(next);
+            if (onDefaultChange && nextDefault !== defaultIndex) onDefaultChange(nextDefault)
+        }
 
         if (expandedIndex === index) {
             setExpandedIndex(null)
@@ -379,13 +407,18 @@ function ArrayField({
             setExpandedIndex(expandedIndex - 1)
         }
 
-        if (onDefaultChange) {
-            if (defaultIndex === index) {
-                onDefaultChange(Math.max(0, index - 1))
-            } else if (defaultIndex > index) {
-                onDefaultChange(defaultIndex - 1)
-            }
+    };
+
+    const duplicateItem = (index: number) => {
+        const next = [...normalizeValue()];
+        next.splice(index + 1, 0, cloneRepeatedItem(next[index]));
+        const nextDefault = defaultIndex > index ? defaultIndex + 1 : defaultIndex;
+        if (onChangeBoth) onChangeBoth(next, nextDefault);
+        else {
+            onChange(next);
+            if (onDefaultChange && nextDefault !== defaultIndex) onDefaultChange(nextDefault)
         }
+        setExpandedIndex(index + 1)
     };
 
     const renderRecordField = (item: ArrayItem, index: number, field: ArrayRecordField) => {
@@ -591,6 +624,8 @@ function ArrayField({
                                             onChange={(e) => updateStringItem(index, e.target.value)}
                                         />
                                         <div className="array-item-actions">
+                                            <button type="button" className="array-action-btn" title="Duplicate item"
+                                                    onClick={() => duplicateItem(index)}><Copy size={14}/></button>
                                             <button
                                                 className="array-action-btn"
                                                 onClick={() => moveItem(index, 'up')}
@@ -620,13 +655,19 @@ function ArrayField({
                                     <div className="array-item-object">
                                         <div
                                             className="array-item-header"
+                                            role="group"
                                             onClick={() => setExpandedIndex(isExpanded ? null : index)}
                                         >
-                                            <div className="array-item-title">
+                                            <button type="button" className="array-item-title array-expand-button"
+                                                aria-expanded={isExpanded} onClick={(event) => {
+                                                    event.stopPropagation(); setExpandedIndex(isExpanded ? null : index)
+                                                }}>
                                                 {isExpanded ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
                                                 <span>{formatRecordSummary(isRecordItem(item) ? item : {}, index, itemLabelKey)}</span>
-                                            </div>
+                                            </button>
                                             <div className="array-item-actions" onClick={(e) => e.stopPropagation()}>
+                                                <button type="button" className="array-action-btn" title="Duplicate item"
+                                                        onClick={() => duplicateItem(index)}><Copy size={14}/></button>
                                                 <button
                                                     className="array-action-btn"
                                                     onClick={() => moveItem(index, 'up')}

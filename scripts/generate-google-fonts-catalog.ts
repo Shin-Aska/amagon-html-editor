@@ -1,7 +1,8 @@
-import {APIv2} from 'google-font-metadata';
+import {fetchFontMetadata} from './google-fonts-metadata';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {parseArgs} from 'node:util';
 
 interface GoogleFontMeta {
   family: string;
@@ -14,7 +15,10 @@ interface GoogleFontMeta {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const outputPath = path.join(__dirname, '../src/renderer/data/google-fonts-catalog.json');
+const {values} = parseArgs({options: {output: {type: 'string'}}});
+const outputPath = values.output
+  ? path.resolve(values.output)
+  : path.join(__dirname, '../src/renderer/data/google-fonts-catalog.json');
 
 /**
  * Fetch popularity ranks from the public Google Fonts metadata endpoint.
@@ -24,7 +28,7 @@ const outputPath = path.join(__dirname, '../src/renderer/data/google-fonts-catal
 async function fetchPopularityMap(): Promise<Map<string, number>> {
   const map = new Map<string, number>();
   try {
-    const res = await fetch('https://fonts.google.com/metadata/fonts');
+    const res = await fetch('https://fonts.google.com/metadata/fonts', {signal: AbortSignal.timeout(30_000)});
     if (!res.ok) {
       console.warn(`Warning: Could not fetch popularity data (${res.status}). Falling back to alphabetical order.`);
       return map;
@@ -46,7 +50,7 @@ async function fetchPopularityMap(): Promise<Map<string, number>> {
   return map;
 }
 
-const processFonts = (popularityMap: Map<string, number>): GoogleFontMeta[] => {
+const processFonts = (APIv2: Awaited<ReturnType<typeof fetchFontMetadata>>, popularityMap: Map<string, number>): GoogleFontMeta[] => {
   const fonts: GoogleFontMeta[] = [];
 
   for (const fontId in APIv2) {
@@ -81,8 +85,9 @@ const processFonts = (popularityMap: Map<string, number>): GoogleFontMeta[] => {
 
 const generateCatalog = async () => {
   try {
+    const metadata = await fetchFontMetadata();
     const popularityMap = await fetchPopularityMap();
-    const catalog = processFonts(popularityMap);
+    const catalog = processFonts(metadata, popularityMap);
     const jsonContent = JSON.stringify(catalog, null, 2);
 
     const outputDir = path.dirname(outputPath);

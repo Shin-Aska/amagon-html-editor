@@ -21,7 +21,7 @@ interface ParsedAiResponse {
     blocks: Block[] | null
 }
 
-const BOOTSTRAP_PREVIEW_CSS_URL = 'app-framework://asset/bootstrap/5.3.3/css/bootstrap.min.css';
+const BOOTSTRAP_PREVIEW_CSS_URL = 'app-framework://asset/bootstrap/5.3.8/css/bootstrap.min.css';
 
 function stripCopilotCliDecorations(content: string): string {
     return content

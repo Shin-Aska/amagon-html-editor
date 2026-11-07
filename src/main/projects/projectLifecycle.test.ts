@@ -9,7 +9,7 @@ import { APP_MEDIA_PRIVILEGES, createProjectMediaHandler } from "./projectMediaP
 import { createLifecycleController, focusSecondInstance } from "./projectLifecycle";
 import { ProjectSession, ProjectSessionRegistry } from "./projectSession";
 import { cleanupStaleOwnedWorkspaces, createOwnedWorkspace } from "./projectWorkspace";
-import { initializeProjectStartup } from "./projectStartup";
+import { APP_FRAMEWORK_PRIVILEGES, initializeProjectStartup } from "./projectStartup";
 
 const temporaryRoots: string[] = [];
 
@@ -33,20 +33,23 @@ const workspaceFixture = async () => {
 describe("project lifecycle", () => {
   it("runs privileged registration once before acquiring the startup lock", () => {
     const calls: string[] = [];
+    const registerSchemes = vi.fn(() => { calls.push("register"); });
     const locked = initializeProjectStartup({
-      registerScheme: (scheme, privileges) => calls.push(`register:${scheme}:${JSON.stringify(privileges)}`),
+      registerSchemes,
       requestSingleInstanceLock: () => { calls.push("lock"); return true; },
       quit: () => calls.push("quit"),
     });
     expect(locked).toBe(true);
-    expect(calls).toEqual([
-      `register:app-media:${JSON.stringify(APP_MEDIA_PRIVILEGES)}`,
-      "lock",
+    expect(calls).toEqual(["register", "lock"]);
+    expect(registerSchemes).toHaveBeenCalledOnce();
+    expect(registerSchemes).toHaveBeenCalledWith([
+      { scheme: "app-media", privileges: APP_MEDIA_PRIVILEGES },
+      { scheme: "app-framework", privileges: APP_FRAMEWORK_PRIVILEGES },
     ]);
 
     const secondCalls: string[] = [];
     expect(initializeProjectStartup({
-      registerScheme: () => secondCalls.push("register"),
+      registerSchemes: () => secondCalls.push("register"),
       requestSingleInstanceLock: () => { secondCalls.push("lock"); return false; },
       quit: () => secondCalls.push("quit"),
     })).toBe(false);
@@ -55,6 +58,7 @@ describe("project lifecycle", () => {
 
   it("registers the media scheme with the required streaming privileges", () => {
     expect(APP_MEDIA_PRIVILEGES).toEqual({ standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true });
+    expect(APP_FRAMEWORK_PRIVILEGES).toEqual({ standard: true, secure: true, supportFetchAPI: true, corsEnabled: true });
   });
 
   it("allows exactly one close re-entry only after the renderer accepts", () => {

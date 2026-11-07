@@ -665,6 +665,16 @@ export default function Toolbar({
                                             Code Focus
                                         </div>
                                         <div
+                                            className={`toolbar-layout-item ${editorLayout === 'canvas-code' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                onSetEditorLayout('canvas-code');
+                                                setShowLayoutMenu(false);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            Canvas + Code
+                                        </div>
+                                        <div
                                             className={`toolbar-layout-item ${editorLayout === 'zen' ? 'active' : ''}`}
                                             onClick={() => {
                                                 onSetEditorLayout('zen');
@@ -693,9 +703,10 @@ export default function Toolbar({
                                 <Sun size={16} aria-hidden="true"/>}
                         </button>
 
+
                         <button
                             className={`toolbar-btn ${showSettings ? 'active' : ''}`}
-                            onClick={() => setShowSettings(true)}
+                            onClick={() => {setSettingsInitialTab('general');setShowSettings(true)}}
                             title="Global Settings"
                             aria-label="Open global settings"
                             aria-pressed={showSettings}

@@ -59,7 +59,7 @@ const projectFiles = createDefaultProjectServiceFiles();
 let projectService: ProjectPersistenceService | null = null;
 
 const hasSingleInstanceLock = initializeProjectStartup({
-  registerScheme: (scheme, privileges) => protocol.registerSchemesAsPrivileged([{ scheme, privileges }]),
+  registerSchemes: (schemes) => protocol.registerSchemesAsPrivileged(schemes),
   requestSingleInstanceLock: () => app.requestSingleInstanceLock(),
   quit: () => app.quit(),
 });

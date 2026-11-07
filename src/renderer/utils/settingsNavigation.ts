@@ -1,6 +1,6 @@
 export const OPEN_GLOBAL_SETTINGS_EVENT = 'hoarses:open-global-settings';
 
-export type GlobalSettingsTab = 'general' | 'keys'
+export type GlobalSettingsTab = 'general' | 'keys' | 'appearance'
 
 export interface OpenGlobalSettingsDetail {
     tab?: GlobalSettingsTab

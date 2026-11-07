@@ -27,9 +27,9 @@ import {
 import type {Block, FrameworkChoice, Page, PageFolder} from '../store/types'
 
 const FRAMEWORK_BASE_PATH = 'app-framework://asset'
-const BOOTSTRAP_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.3/css/bootstrap.min.css`
-const BOOTSTRAP_ICONS_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css`
-const BOOTSTRAP_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.3/js/bootstrap.bundle.min.js`
+const BOOTSTRAP_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.8/css/bootstrap.min.css`
+const BOOTSTRAP_ICONS_PAGE_CSS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css`
+const BOOTSTRAP_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/bootstrap/5.3.8/js/bootstrap.bundle.min.js`
 const TAILWIND_PAGE_JS_URL = `${FRAMEWORK_BASE_PATH}/tailwind/tailwindcss-browser.js`
 const BUTTON_VARIANT_CLASS_PATTERN = /^btn(?:-outline)?-(?:primary|secondary|success|danger|warning|info|light|dark|link)$/
 
@@ -510,6 +510,25 @@ function normalizeIconSizeToken(value: unknown): 'xs' | 'sm' | 'md' | 'lg' | 'xl
 
 // ─── Style serialization ─────────────────────────────────────────────────────
 
+const TEMPLATE_PRESENTATION_UTILITIES: Record<string, string[]> = {
+    modal: ['shadow-sm'], offcanvas: ['shadow-sm'],
+    'cookie-banner': ['shadow', 'bg-body', 'p-3', 'position-fixed'],
+    'back-to-top': ['rounded', 'shadow', 'position-fixed'],
+    'before-after': ['rounded', 'overflow-hidden', 'w-100']
+};
+
+const BOOTSTRAP_STYLE_UTILITIES: readonly [RegExp, RegExp][] = [
+    [/^padding/, /^p[xytrblse]?-(?:\w+-)?(?:[0-5]|auto)$/],
+    [/^margin/, /^m[xytrblse]?-(?:\w+-)?(?:[0-5]|auto)$/],
+    [/^background/, /^bg-/], [/^color$/, /^text-(?:primary|secondary|success|danger|warning|info|light|dark|body|muted|white|black|reset)/],
+    [/^borderRadius$/, /^rounded(?:-|$)/], [/^boxShadow$/, /^shadow(?:-|$)/],
+    [/^display$/, /^d-/], [/^width$/, /^w-/], [/^height$/, /^h-/],
+    [/^textAlign$/, /^text-(?:start|center|end)$/],
+    [/^gap$/, /^gap-/], [/^justifyContent$/, /^justify-content-/], [/^alignItems$/, /^align-items-/],
+    [/^flexDirection$/, /^flex-(?:row|column)/], [/^flexWrap$/, /^flex-(?:no)?wrap/],
+    [/^overflow$/, /^overflow-/], [/^position$/, /^position-/]
+];
+
 function stylesToString(styles: Record<string, string>): string {
     return Object.entries(styles)
         .filter(([, v]) => v !== '' && v !== undefined)
@@ -519,6 +538,20 @@ function stylesToString(styles: Record<string, string>): string {
 
 function getEffectiveStyles(block: Block, framework?: FrameworkChoice, includeAnimation: boolean = true): Record<string, string> {
     const styles: Record<string, string> = {...block.styles};
+
+    // Bootstrap utilities use !important. Explicit inspector overrides must win
+    // without deleting those authored classes (resetting styles restores them).
+    if (framework !== 'tailwind' && Object.keys(block.styles).length > 0) {
+        // Some composite renderers add these root utilities after resolving the
+        // block's classes. Include them when resolving explicit style priority.
+        const classes = [...block.classes, ...getPropDrivenClasses(block), ...(TEMPLATE_PRESENTATION_UTILITIES[block.type] ?? [])];
+        for (const [key, value] of Object.entries(styles)) {
+            if (value && !/!important\s*$/i.test(value)
+                && BOOTSTRAP_STYLE_UTILITIES.some(([property, utility]) => property.test(key) && classes.some(cls => utility.test(cls)))) {
+                styles[key] = `${value} !important`
+            }
+        }
+    }
 
     if (block.type === 'navbar' && block.props.sticky) {
         // In Tailwind mode, sticky positioning is handled by classes (sticky, top-0, z-30)
@@ -1970,7 +2003,8 @@ function getBlockContent(
     block: Block,
     isExportMode?: boolean,
     framework: FrameworkChoice = 'bootstrap-5',
-    includeEditorMetadata: boolean = false
+    includeEditorMetadata: boolean = false,
+    decorateBlock?: (html: string, block: Block) => string
 ): string {
     const {type, props} = block;
 
@@ -2207,7 +2241,8 @@ function getBlockContent(
           ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, {
                     framework,
                     includeDataAttributes: !isExportMode,
-                    includeEditorMetadata
+                    includeEditorMetadata,
+                    decorateBlock
                 }) : escapeAttrValue(tab.content)}
         </div>`).join('\n');
 
@@ -2258,7 +2293,8 @@ function getBlockContent(
           ${tab.blocks && tab.blocks.length > 0 ? blockToHtml(tab.blocks, {
                     framework,
                     includeDataAttributes: !isExportMode,
-                    includeEditorMetadata
+                    includeEditorMetadata,
+                    decorateBlock
                 }) : escapeAttrValue(tab.content)}
         </div>`
             }).join('\n');
@@ -2386,6 +2422,7 @@ export interface BlockToHtmlOptions {
     indentSize?: number      // Spaces per indent (default 2)
     includeDataAttributes?: boolean  // Include data-block-id for editor use
     includeEditorMetadata?: boolean
+    decorateBlock?: (html: string, block: Block) => string // Optional source decoration; default exports are unchanged.
     pages?: Page[]           // Page list for components that use pages as datasource (e.g. navbar)
     folders?: PageFolder[]   // Folder list for effective tag resolution
     framework?: FrameworkChoice
@@ -2400,6 +2437,7 @@ export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): 
         indentSize = 2,
         includeDataAttributes = false,
         includeEditorMetadata = false,
+        decorateBlock,
         pages,
         folders,
         framework = 'bootstrap-5',
@@ -2407,7 +2445,7 @@ export function blockToHtml(blocks: Block[], options: BlockToHtmlOptions = {}): 
         includeAnimation = true,
         includeHoverEffects = true
     } = options;
-    return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n')
+    return blocks.map((block) => renderBlock(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n')
 }
 
 function renderBlock(
@@ -2421,7 +2459,26 @@ function renderBlock(
     framework: FrameworkChoice = 'bootstrap-5',
     fullWidthFormControls: boolean = true,
     includeAnimation: boolean = true,
-    includeHoverEffects: boolean = true
+    includeHoverEffects: boolean = true,
+    decorateBlock?: (html: string, block: Block) => string
+): string {
+    const html = renderBlockMarkup(block, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock);
+    return decorateBlock ? decorateBlock(html, block) : html
+}
+
+function renderBlockMarkup(
+    block: Block,
+    indent: number,
+    indentSize: number,
+    includeDataAttributes: boolean,
+    includeEditorMetadata: boolean,
+    pages?: Page[],
+    folders?: PageFolder[],
+    framework: FrameworkChoice = 'bootstrap-5',
+    fullWidthFormControls: boolean = true,
+    includeAnimation: boolean = true,
+    includeHoverEffects: boolean = true,
+    decorateBlock?: (html: string, block: Block) => string
 ): string {
     const pad = ' '.repeat(indent * indentSize);
     const eventAttr = eventsToAttributes(block.events);
@@ -2487,7 +2544,7 @@ ${pad}  ${imageMarkup}
 ${pad}</a>`
         }
 
-        const {classAttr, styleAttr} = rootPresentationAttributes(block, {classes: imgClasses.split(/\s+/).filter(Boolean), styles: {...getEffectiveStyles(block, framework, includeAnimation), ...imgStyles}, includeAnimation, includeHoverEffects});
+        const {classAttr, styleAttr} = rootPresentationAttributes(block, {classes: imgClasses.split(/\s+/).filter(Boolean), styles: {...imgStyles, ...getEffectiveStyles(block, framework, includeAnimation)}, includeAnimation, includeHoverEffects});
         return `${pad}<img${classAttr} src="${escapeAttrValue(src)}" alt="${escapeAttrValue(alt)}"${styleAttr}${loadingAttr}${eventAttr ? ` ${eventAttr}` : ''}${dataAttr} />`
     }
 
@@ -2868,14 +2925,16 @@ ${pad}</div>`
         const isExportMode = !includeDataAttributes;
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="offcanvas"` : '';
         const stateAttrs = `data-amagon-offcanvas="true" data-offcanvas-placement="${placement}" data-offcanvas-backdrop="${backdrop}" data-offcanvas-scroll="${scroll}"`;
-        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n');
         const themeSurface = 'var(--theme-surface)';
         const themeText = 'var(--theme-text)';
         const themeBorder = 'var(--theme-border)';
+        const customPanelStyles = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
+        const customPanelStyleAttr = customPanelStyles ? ` style="${customPanelStyles}"` : '';
 
         if (!isExportMode) {
             if (framework === 'tailwind') {
-                return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-offcanvas-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
+                return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-offcanvas-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText}; ${customPanelStyles}" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
 ${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="flex items-center gap-2 font-bold">
 ${pad}      <span>☰</span> ${escapeAttrValue(title)}
@@ -2888,7 +2947,7 @@ ${pad}  </div>
 ${pad}</div>`
             }
 
-            return `${pad}<div class="card mb-3 editor-outline-gated editor-offcanvas-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
+            return `${pad}<div class="card mb-3 editor-outline-gated editor-offcanvas-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText}; ${customPanelStyles}" ${stateAttrs}${dataAttr ? ` ${dataAttr}` : ''}>
 ${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="fw-bold d-flex align-items-center gap-2">
 ${pad}      <span>☰</span> ${escapeAttrValue(title)}
@@ -2928,7 +2987,7 @@ ${pad}</div>`
             return `${pad}<div ${stateAttrs} data-tw-offcanvas-wrapper="true">
 ${pad}  <button type="button" class="inline-flex items-center justify-center rounded-md border border-[var(--theme-primary)] bg-[var(--theme-primary)] px-4 py-2 text-sm font-medium text-white" onclick="${openAction}">Toggle panel</button>
 ${backdrop ? `${pad}  <div id="${backdropId}" class="fixed inset-0 z-40 hidden bg-black/40" onclick="${closeAction}"></div>` : ''}
-${pad}  <aside id="${id}" class="fixed ${placementClasses} ${hiddenTransformClass} z-50 hidden border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-xl transition-transform" data-tw-offcanvas-panel="true" aria-labelledby="${id}Label">
+${pad}  <aside id="${id}" class="fixed ${placementClasses} ${hiddenTransformClass} z-50 hidden border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-xl transition-transform" ${customPanelStyleAttr} data-tw-offcanvas-panel="true" aria-labelledby="${id}Label">
 ${pad}    <div class="flex items-center justify-between border-b border-[var(--theme-border)] px-4 py-3">
 ${pad}      <h2 id="${id}Label" class="text-lg font-semibold text-[var(--theme-text)]" data-tw-offcanvas-title>${escapeAttrValue(title)}</h2>
 ${pad}      <button type="button" class="rounded-md px-2 py-1 text-[var(--theme-text-muted)]" onclick="${closeAction}" aria-label="Close">✕</button>
@@ -2945,7 +3004,7 @@ ${pad}</div>`
 
         return `${pad}<div ${stateAttrs}>
 ${pad}  <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#${id}" aria-controls="${id}">Toggle panel</button>
-${pad}  <div class="offcanvas offcanvas-${placement}" tabindex="-1" id="${id}" aria-labelledby="${id}Label"${backdropAttr}${scrollAttr}${dataAttr ? ` ${dataAttr}` : ''}>
+${pad}  <div class="offcanvas offcanvas-${placement}" tabindex="-1" id="${id}" aria-labelledby="${id}Label"${customPanelStyleAttr}${backdropAttr}${scrollAttr}${dataAttr ? ` ${dataAttr}` : ''}>
 ${pad}    <div class="offcanvas-header">
 ${pad}      <h5 class="offcanvas-title" id="${id}Label">${escapeAttrValue(title)}</h5>
 ${pad}      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -2973,7 +3032,7 @@ ${pad}</div>`
         const stateAttrs = `data-amagon-card="true" data-card-variant="${variant}" data-card-outline="${outline}" data-card-image-position="${imagePosition}"`;
         const styleString = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
         const styleAttr = styleString ? ` style="${styleString}"` : '';
-        const childBlocksHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+        const childBlocksHtml = (block.children || []).map((child) => renderBlock(child, indent + 2, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n');
         const hasChildren = childBlocksHtml.trim().length > 0;
         const contentHtml = `${title ? `${pad}      <h5 class="card-title">${escapeAttrValue(title)}</h5>` : ''}
 ${subtitle ? `${pad}      <h6 class="card-subtitle mb-2 text-body-secondary">${escapeAttrValue(subtitle)}</h6>` : ''}
@@ -3906,15 +3965,17 @@ ${pad}</div>`
         const themeSurface = 'var(--theme-surface)';
         const themeText = 'var(--theme-text)';
         const themeBorder = 'var(--theme-border)';
+        const customPanelStyles = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
+        const customPanelStyleAttr = customPanelStyles ? ` style="${customPanelStyles}"` : '';
         const isExportMode = !includeDataAttributes;
 
-        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+        const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n');
         const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="modal"` : '';
 
         if (!isExportMode) {
             // Editor preview mode
             if (framework === 'tailwind') {
-                return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${dataAttr}>
+                return `${pad}<div class="mb-4 rounded-xl border shadow-sm editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText}; ${customPanelStyles}" ${dataAttr}>
 ${pad}  <div class="flex items-center justify-between px-4 py-3" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="flex items-center gap-2 font-bold">
 ${pad}      <span>🔲</span> ${escapeAttrValue(title)}
@@ -3926,7 +3987,7 @@ ${childrenHtml}
 ${pad}  </div>
 ${pad}</div>`
             }
-            return `${pad}<div class="card mb-3 editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText};" ${dataAttr}>
+            return `${pad}<div class="card mb-3 editor-outline-gated editor-modal-preview" style="border: 2px dashed ${themeBorder}; background-color: ${themeSurface}; color: ${themeText}; ${customPanelStyles}" ${dataAttr}>
 ${pad}  <div class="card-header d-flex justify-content-between align-items-center" style="background-color: rgba(0,0,0,0.03); border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: ${themeBorder};">
 ${pad}    <div class="fw-bold d-flex align-items-center gap-2">
 ${pad}      <span>🔲</span> ${escapeAttrValue(title)}
@@ -3948,7 +4009,7 @@ ${pad}</button>
 ${pad}<div class="fixed inset-0 z-50 hidden" id="${id}" aria-labelledby="${id}Label" aria-hidden="true">
 ${pad}  <div class="absolute inset-0 bg-black/50" onclick="${closeAction}"></div>
 ${pad}  <div class="relative flex min-h-full items-center justify-center p-4">
-${pad}    <div class="w-full max-w-2xl rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-xl">
+${pad}    <div class="w-full max-w-2xl rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] shadow-xl"${customPanelStyleAttr}>
 ${pad}      <div class="flex items-center justify-between border-b border-[var(--theme-border)] px-6 py-4">
 ${pad}        <h2 class="text-xl font-semibold text-[var(--theme-text)]" id="${id}Label">${escapeAttrValue(title)}</h2>
 ${pad}        ${showClose ? `<button type="button" class="rounded-md px-3 py-2 text-[var(--theme-text-muted)]" onclick="${closeAction}" aria-label="Close">✕</button>` : ''}
@@ -3974,7 +4035,7 @@ ${pad}</button>
 ${pad}<!-- Modal -->
 ${pad}<div class="modal fade" id="${id}" tabindex="-1" aria-labelledby="${id}Label" aria-hidden="true">
 ${pad}  <div class="${dialogClasses}">
-${pad}    <div class="modal-content" style="background-color: ${themeSurface}; color: ${themeText}; border-color: ${themeBorder};">
+${pad}    <div class="modal-content" style="background-color: ${themeSurface}; color: ${themeText}; border-color: ${themeBorder}; ${customPanelStyles}">
 ${pad}      <div class="modal-header" style="border-bottom-color: ${themeBorder};">
 ${pad}        <h1 class="modal-title fs-5" id="${id}Label">${escapeAttrValue(title)}</h1>
 ${pad}        ${showClose ? `<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--theme-close-filter, none);"></button>` : ''}
@@ -4058,18 +4119,20 @@ ${pad}</div>`
         const withText = String(block.props.withText ?? '').trim();
         const withIcon = String(block.props.withIcon ?? '').trim();
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="divider"` : '';
+        const customStyles = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
+        const customStyleAttr = customStyles ? ` style="${customStyles}"` : '';
 
         if (withText || withIcon) {
             const iconMarkup = renderInlineIcon(withIcon);
             const centerContent = iconMarkup || (withText ? escapeAttrValue(withText) : '');
             if (framework === 'tailwind') {
-                return `${pad}<div class="flex items-center gap-3 my-4"${dataAttr}>
+                return `${pad}<div class="flex items-center gap-3 my-4"${customStyleAttr}${dataAttr}>
 ${pad}  <div class="flex-1 border-t" style="border-style: ${divStyle}; border-color: ${color || 'currentColor'}; border-width: ${thickness};"></div>
 ${pad}  <span class="text-sm text-[var(--theme-text-muted)]">${centerContent}</span>
 ${pad}  <div class="flex-1 border-t" style="border-style: ${divStyle}; border-color: ${color || 'currentColor'}; border-width: ${thickness};"></div>
 ${pad}</div>`
             }
-            return `${pad}<div class="d-flex align-items-center gap-2 my-3"${dataAttr}>
+            return `${pad}<div class="d-flex align-items-center gap-2 my-3"${customStyleAttr}${dataAttr}>
 ${pad}  <hr class="flex-grow-1 m-0" style="border-style: ${divStyle}; border-color: ${color || ''}; border-width: ${thickness};">
 ${pad}  <span class="text-muted small">${centerContent}</span>
 ${pad}  <hr class="flex-grow-1 m-0" style="border-style: ${divStyle}; border-color: ${color || ''}; border-width: ${thickness};">
@@ -4077,13 +4140,14 @@ ${pad}</div>`
         }
 
         if (divStyle === 'gradient') {
-            return `${pad}<div class="my-4" style="height: ${thickness}; background: linear-gradient(to right, transparent, ${color || 'currentColor'}, transparent);"${dataAttr}></div>`
+            return `${pad}<div class="my-4" style="height: ${thickness}; background: linear-gradient(to right, transparent, ${color || 'currentColor'}, transparent); ${customStyles}"${dataAttr}></div>`
         }
 
         const hrStyle = [
             divStyle !== 'solid' ? `border-style: ${divStyle};` : '',
             color ? `border-color: ${color};` : '',
-            thickness !== '1px' ? `border-width: ${thickness};` : ''
+            thickness !== '1px' ? `border-width: ${thickness};` : '',
+            customStyles
         ].filter(Boolean).join(' ');
         const hrClasses = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects}).join(' ');
         return `${pad}<hr${hrClasses ? ` class="${hrClasses}"` : ''}${hrStyle ? ` style="${hrStyle}"` : ''}${dataAttr}>`
@@ -4093,7 +4157,8 @@ ${pad}</div>`
     if (block.type === 'spacer') {
         const height = String(block.props.height ?? '2rem').trim() || '2rem';
         const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="spacer"` : '';
-        return `${pad}<div aria-hidden="true" style="height: ${escapeAttrValue(height)};"${dataAttr}></div>`
+        const {classAttr, styleAttr} = rootPresentationAttributes(block, {classes: finalClasses, styles: {height, ...getEffectiveStyles(block, framework, includeAnimation)}, includeAnimation, includeHoverEffects});
+        return `${pad}<div aria-hidden="true"${classAttr}${styleAttr}${dataAttr}></div>`
     }
 
     // Special handling for Radio (composite component)
@@ -4337,7 +4402,7 @@ ${pad}</div>`
         if (!hasBgMedia && !overlay && !fullHeight && ctaButtons.length === 0 && alignment === 'center') {
             // No special rendering needed — fall through to generic
         } else {
-            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n');
             const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
             const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
             const styleAttrs: string[] = [];
@@ -4400,7 +4465,7 @@ ${pad}</div>`
 
         if (hasEnhancements) {
             const dataAttr = includeDataAttributes ? `data-block-id="${block.id}" data-block-type="footer"` : '';
-            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+            const childrenHtml = (block.children || []).map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n');
             const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
             const styleStr = stylesToString(getEffectiveStyles(block, framework, includeAnimation));
             const styleAttr = styleStr ? ` style="${styleStr}"` : '';
@@ -5130,8 +5195,8 @@ ${pad}</div>`
             const tag = resolveTag(block);
             const classes = resolveFrameworkClasses(block, framework, {fullWidthFormControls, includeAnimation, includeHoverEffects});
             const styles: Record<string, string> = {...getEffectiveStyles(block, framework, includeAnimation)};
-            if (bgColor) styles.backgroundColor = bgColor;
-            if (bgImage) {
+            if (bgColor && !styles.backgroundColor) styles.backgroundColor = bgColor;
+            if (bgImage && !styles.backgroundImage) {
                 styles.backgroundImage = `url('${bgImage}')`;
                 styles.backgroundSize = styles.backgroundSize || 'cover';
                 styles.backgroundPosition = styles.backgroundPosition || 'center'
@@ -5141,7 +5206,7 @@ ${pad}</div>`
             const attrStr = propsToAttributes(tag, block.type, block.props);
             const dataAttr = includeDataAttributes ? ` data-block-id="${block.id}" data-block-type="container"` : '';
             const elementId = String(block.props.id || block.id);
-            const childrenHtml = block.children.map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects)).join('\n');
+            const childrenHtml = block.children.map((child) => renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock)).join('\n');
 
             const overlayHtml = bgOverlay
                 ? framework === 'tailwind'
@@ -5162,7 +5227,7 @@ ${pad}</${tag}>`
     const tag = resolveTag(block);
     const isVoid = VOID_ELEMENTS.has(tag);
     const isExportMode = !includeDataAttributes;
-    const textContent = getBlockContent(block, isExportMode, framework, includeEditorMetadata);
+    const textContent = getBlockContent(block, isExportMode, framework, includeEditorMetadata, decorateBlock);
     const hasChildren = block.children.length > 0;
     const hasContent = textContent.length > 0;
 
@@ -5253,7 +5318,7 @@ ${pad}</${tag}>`
         fullAttrString.trim().length === 0
     ) {
         return block.children
-            .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects))
+            .map((child) => renderBlock(child, indent, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock))
             .join('\n')
     }
 
@@ -5275,7 +5340,7 @@ ${pad}</${tag}>`
 
     if (hasChildren) {
         for (const child of block.children) {
-            lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects))
+            lines.push(renderBlock(child, indent + 1, indentSize, includeDataAttributes, includeEditorMetadata, pages, folders, framework, fullWidthFormControls, includeAnimation, includeHoverEffects, decorateBlock))
         }
     } else if (tag === 'form' && includeDataAttributes) {
         // Empty form indicator for editor mode

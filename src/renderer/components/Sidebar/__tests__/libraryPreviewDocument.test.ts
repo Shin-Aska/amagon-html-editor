@@ -39,7 +39,7 @@ describe('passive library document', () => {
         expect(doc.querySelector('h1')?.textContent).toBe('Edited page title')
         expect(doc.documentElement.dataset.pageTheme).toBe('dark')
         expect(doc.body.textContent).toContain('h1 { color: tomato; }')
-        expect(doc.querySelector('link')?.href).toBe('app-framework://asset/bootstrap/5.3.3/css/bootstrap.min.css')
+        expect(doc.querySelector('link')?.href).toBe('app-framework://asset/bootstrap/5.3.8/css/bootstrap.min.css')
     })
 
     it('shows a useful form sample without adding fields to an authored empty form', () => {

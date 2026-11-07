@@ -562,9 +562,9 @@ describe('pageToHtml', () => {
 
     it('includes local Bootstrap 5 assets for bootstrap-5 framework', () => {
         const html = pageToHtml([], {framework: 'bootstrap-5'});
-        expect(html).toContain('app-framework://asset/bootstrap/5.3.3/css/bootstrap.min.css');
-        expect(html).toContain('app-framework://asset/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css');
-        expect(html).toContain('app-framework://asset/bootstrap/5.3.3/js/bootstrap.bundle.min.js')
+        expect(html).toContain('app-framework://asset/bootstrap/5.3.8/css/bootstrap.min.css');
+        expect(html).toContain('app-framework://asset/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css');
+        expect(html).toContain('app-framework://asset/bootstrap/5.3.8/js/bootstrap.bundle.min.js')
     });
 
     it('includes local Tailwind asset for tailwind framework', () => {

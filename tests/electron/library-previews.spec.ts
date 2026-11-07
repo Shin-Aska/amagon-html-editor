@@ -83,7 +83,8 @@ test('live libraries update real content and Classic releases previews across ta
         const homePreview = page.frameLocator('.sidebar .library-preview-frame').first()
         await expect(homePreview.getByRole('heading', {name: 'Welcome to Test Site'})).toBeVisible()
         await page.frameLocator('.canvas-iframe').getByRole('heading', {name: 'Welcome to Test Site'}).click()
-        await page.locator('.inspector input.inspector-input').first().fill('Updated live without saving')
+        await page.locator('.inspector').getByRole('tab', {name: 'Content', exact: true}).click()
+        await page.locator('.inspector').getByRole('textbox', {name: 'Text', exact: true}).fill('Updated live without saving')
         // Then: the page thumbnail reflects the unsaved editor state.
         await expect(homePreview.getByRole('heading', {name: 'Updated live without saving'})).toBeVisible()
         await waitForThumbnails(page)

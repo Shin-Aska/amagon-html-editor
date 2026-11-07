@@ -95,7 +95,7 @@ export interface UserBlock {
 
 export type FrameworkChoice = 'bootstrap-5' | 'tailwind' | 'vanilla'
 
-export type EditorLayout = 'standard' | 'no-sidebar' | 'no-inspector' | 'canvas-only' | 'code-focus' | 'zen'
+export type EditorLayout = 'standard' | 'no-sidebar' | 'no-inspector' | 'canvas-only' | 'code-focus' | 'canvas-code' | 'zen'
 
 // ─── Project Theme ────────────────────────────────────────────────────────────
 

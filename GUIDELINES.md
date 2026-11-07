@@ -20,7 +20,7 @@
 
 | Layer | Technology |
 |-------|------------|
-| Desktop shell | Electron 41 |
+| Desktop shell | Electron 42 |
 | Frontend | React 19, TypeScript 6.0 |
 | Build | Vite 7 via electron-vite 5 |
 | State | Zustand 5 |
@@ -571,3 +571,24 @@ The Google Fonts browser provides catalog browsing and font download without an 
 - **UI component:** `GoogleFontBrowser.tsx` with search, category filter, pagination, and variant picker
 - **Download handler:** IPC `fonts:downloadGoogleFont` fetches `.woff2` from `fonts.gstatic.com` and saves to `assets/fonts/`
 - **Export distinction:** Downloaded fonts are self-hosted (`@font-face`); typed-only fonts use CDN `<link>` tags
+
+
+## Widget inspector and customization
+
+The shared inspector uses Content/Design/Advanced tabs and lazy collapsible `InspectorSection` panels. `registry/inspectorSchema.ts` controls property placement, conditional visibility, and search aliases; `registry/widgetDesigns.ts` explicitly assigns all 63 types a design profile. Presets and new appearance/layout controls use the existing `Block.styles` model. Property reset uses `buildDefaultBlockProps`; style reset preserves props/classes/events/children. Keep registry coverage and preview/export tests for Bootstrap, Tailwind, and vanilla when adding widgets. Explicit style overrides take precedence over conflicting Bootstrap utility classes during serialization.
+
+
+## Application appearance and code editing
+
+App Settings → Appearance provides six light/dark color families plus custom app themes with live preview, contrast feedback, and JSON sharing. These preferences never change the website’s project theme. The lazy code editor uses locally bundled Monaco, app-matched colors, page-specific drafts, a six-model LRU, HTML/CSS formatting, find/replace, editor preferences, clickable diagnostics, canvas navigation, and on-demand project suggestions. Minimap defaults off; no new dependencies or background indexing services. See [app appearance and code editor](docs/app-appearance-and-code-editor.md) for formats, memory limits, and draft lifetime.
+
+
+The **Canvas + Code** layout places a resizable canvas on the left and code editor on the right, with the sidebar and inspector hidden. Select it from Change Layout or as the default in App Settings → General. It opens code automatically; the code toggle switches between this layout and Canvas Only. App color themes remain in App Settings → Appearance; the toolbar color-theme shortcut has been removed.
+
+
+Canvas widget clicks switch an open code editor to HTML, scroll to the widget’s opening tag, and highlight its complete markup. Re-clicking the same widget reveals it again. Source-only widget identities preserve export markup; a single-version source-range cache uses the existing HTML parser and preserves code drafts.
+
+
+Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](docs/releases/1.11.0/validation.md).
+
+Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.

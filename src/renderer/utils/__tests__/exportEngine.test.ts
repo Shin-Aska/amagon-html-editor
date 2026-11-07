@@ -400,7 +400,7 @@ describe('exportEngine', () => {
         const html = files.find((f) => f.path === 'index.html');
         const htmlText = html && typeof html.content === 'string' ? html.content : '';
         expect(htmlText).toContain('./assets/frameworks/tailwind/tailwindcss-browser.js');
-        expect(htmlText).toContain('./assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css');
+        expect(htmlText).toContain('./assets/frameworks/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css');
         expect(htmlText).not.toContain('bootstrap.min.css');
         expect(htmlText).not.toContain('bootstrap.bundle.min.js')
     });
