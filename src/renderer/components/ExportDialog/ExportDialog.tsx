@@ -1,3 +1,4 @@
+import {useProjectCommandState} from "../../project/projectCommands"
 import {useEffect, useMemo, useState} from 'react'
 import {getApi} from '../../utils/api'
 import {exportProject} from '../../utils/exportEngine'
@@ -13,6 +14,7 @@ type ExportMode = 'multi' | 'single'
 
 export default function ExportDialog({onClose}: ExportDialogProps): JSX.Element {
     const api = getApi();
+    const projectSessionId = useProjectCommandState().session?.sessionId;
 
     const getProjectData = useProjectStore((s) => s.getProjectData);
     const currentPageId = useProjectStore((s) => s.currentPageId);
@@ -80,6 +82,7 @@ export default function ExportDialog({onClose}: ExportDialogProps): JSX.Element 
             const isSingle = mode === 'single';
 
             const files = await exportProject(projectData, {
+                projectSessionId,
                 customCss,
                 includeJs,
                 minify,

@@ -14,7 +14,7 @@ const commands = vi.hoisted(() => ({
     id: "font-1",
     name: "Fixture Font",
     fileName: "fixture.woff2",
-    relativePath: "fonts/fixture.woff2",
+    relativePath: "assets/fonts/fixture.woff2",
     format: "woff2",
     source: "imported",
   }] })),
@@ -63,6 +63,23 @@ describe("FontManager project session", () => {
 
     expect(commands.importFonts).toHaveBeenCalledOnce();
     expect(useProjectStore.getState().fonts.map((font) => font.id)).toContain("font-1");
+  });
+
+  it.each([
+    "assets/fonts/literal%20font.ttf",
+    "app-media://project-asset/font_session_123/assets/fonts/literal%2520font.ttf",
+  ])("checks and deletes the exact raw font path for %s", async (relativePath) => {
+    const checkFileExists = vi.fn(async () => ({ exists: true }));
+    Reflect.defineProperty(window.api.fonts, "checkFileExists", { value: checkFileExists });
+    commands.deleteFont.mockResolvedValue({ ok: true });
+    const font = { id: "literal", name: "Literal", fileName: "literal%20font.ttf", relativePath, format: "ttf" as const, source: "imported" as const };
+    await act(async () => useProjectStore.setState({ fonts: [font] }));
+    expect(checkFileExists).toHaveBeenCalledWith({ relativePath: "assets/fonts/literal%20font.ttf" });
+    const button = container.querySelector<HTMLButtonElement>(`button[title='Delete "Literal"']`);
+    expect(button).not.toBeNull();
+    await act(async () => button?.click());
+    expect(commands.deleteFont).toHaveBeenLastCalledWith("assets/fonts/literal%20font.ttf");
+    expect(useProjectStore.getState().fonts).toEqual([]);
   });
 
   it.each([

@@ -75,6 +75,10 @@ export const setLibraryPreviewModeThroughUi = async (page: Page, mode: "live" | 
 
 export const openProjectThroughUi = async (request: ProjectUiRequest): Promise<void> => {
   await queueNativeDialogs(request.harness.app, { opens: [[request.filePath]] });
+  // firstWindow() and reload() can resolve before React mounts the welcome screen.
+  await expect(request.harness.page.locator('#html-editor-layout').or(
+    request.harness.page.getByRole('button', { name: /Open Project/u }),
+  )).toBeVisible();
   const welcomeOpen = request.harness.page.getByRole("button", { name: /Open Project/u });
   if (await welcomeOpen.isVisible()) await welcomeOpen.click();
   else await request.harness.page.keyboard.press("Control+O");

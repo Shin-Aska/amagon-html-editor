@@ -125,12 +125,7 @@ test("app themes and code editing stay independent, reliable and bounded", async
           .evaluate((el) => el.style.getPropertyValue("--color-accent")),
       )
       .toBe(BUILTIN_APP_THEMES[4].dark.accent);
-    if (await page.getByRole("button", { name: /New Project/ }).isVisible()) {
-      await page
-        .locator(".recent-item")
-        .filter({ hasText: "Theme Studio" })
-        .click();
-    }
+    await page.locator(".recent-item").filter({ hasText: "Theme Studio" }).click();
     await settleEditor(harness);
     await page.getByRole("button", { name: "Pages", exact: true }).click();
     await page

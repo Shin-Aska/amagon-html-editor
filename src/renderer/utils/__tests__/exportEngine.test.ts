@@ -43,6 +43,45 @@ describe('exportEngine', () => {
         expect(resolved.sort()).toEqual([...urls].sort());
     });
 
+    it.each(["assets/fonts/My Font%20.ttf", "app-media://project-asset/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/assets/fonts/My%20Font%2520.ttf"])(
+        'exports imported and reopened fonts through the current session: %s', async (relativePath) => {
+            const project: ProjectData = {
+                customCss: '', userBlocks: [], pages: [{id: 'home', title: 'Home', slug: 'index', meta: {}, blocks: []}],
+                projectSettings: {name: 'Fonts', framework: 'vanilla', theme: createDefaultTheme(), globalStyles: {}, fonts: [
+                    {id: 'font', name: 'My Font', fileName: 'My Font%20.ttf', relativePath, format: 'ttf', source: 'imported'},
+                ]},
+            };
+            const requested: string[] = [];
+            const files = await exportProject(project, {
+                projectSessionId: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                resolveAsset: async url => {
+                    requested.push(url);
+                    return url === 'app-media://project-asset/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/assets/fonts/My%20Font%2520.ttf'
+                        ? {bytes: new Uint8Array([1, 2, 3])} : null;
+                },
+            });
+            expect(requested).toEqual(['app-media://project-asset/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/assets/fonts/My%20Font%2520.ttf']);
+            expect(files.find(file => file.path === 'assets/fonts/My_Font_20.ttf')?.content).toEqual(new Uint8Array([1, 2, 3]));
+            expect(files.find(file => file.path === 'styles.css')?.content).toContain('./assets/fonts/My_Font_20.ttf');
+            expect(files.find(file => file.path === 'styles.css')?.content).not.toContain('app-media://');
+        },
+    );
+
+    it('keeps distinct font files when safe export filenames collide', async () => {
+        const project: ProjectData = {
+            customCss: '', userBlocks: [], pages: [],
+            projectSettings: {name: 'Fonts', framework: 'vanilla', theme: createDefaultTheme(), globalStyles: {}, fonts: ['a b.ttf', 'a#b.ttf'].map((fileName, index) => ({
+                id: String(index), name: String(index), fileName, relativePath: `assets/fonts/${fileName}`, format: 'ttf', source: 'imported',
+            }))},
+        };
+        const files = await exportProject(project, {projectSessionId: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', resolveAsset: async url => ({bytes: new Uint8Array([url.includes('%23') ? 2 : 1])})});
+        expect(files.find(file => file.path === 'assets/fonts/a_b.ttf')?.content).toEqual(new Uint8Array([1]));
+        expect(files.find(file => file.path === 'assets/fonts/a_b_1.ttf')?.content).toEqual(new Uint8Array([2]));
+        const css = files.find(file => file.path === 'styles.css')?.content;
+        expect(css).toContain('./assets/fonts/a_b.ttf');
+        expect(css).toContain('./assets/fonts/a_b_1.ttf');
+    });
+
     it('consolidates app-media assets into assets/ and rewrites HTML refs to ./assets/...', async () => {
         const project: ProjectData = {
             customCss: '',

@@ -95,6 +95,26 @@ describe("project snapshot", () => {
     expect(bundle).toMatchObject({ ok: false, offenders: [{ code: "missing-asset" }] });
   });
 
+  it.each(["My Font.ttf", "100%.ttf", "literal%20font.ttf", "café.ttf"])(
+    "saves and reopens a newly imported raw font filename: %s", (fileName) => {
+      for (const sessionKind of ["amg", "legacy-json"] as const) {
+        const assetPath = `assets/fonts/${fileName}`;
+        const project = projectFixture();
+        project.projectSettings.fonts = [{ id: "font", name: "Fixture", fileName, relativePath: assetPath, format: "ttf", source: "imported" }];
+        const context = { sessionId: SESSION_A, sessionKind, availableAssetPaths: [assetPath] };
+        const save = (data: ProjectData) => buildProjectSnapshot({ ...context, project: data, currentPageId: null, flushedBlocks: [], customCss: "", operation: "save" });
+        const saved = save(project);
+        expect(saved.ok).toBe(true);
+        if (!saved.ok) throw new Error(JSON.stringify(saved.offenders));
+        expect(saved.project.projectSettings.fonts?.[0]?.relativePath).toBe(`assets/fonts/${encodeURIComponent(fileName)}`);
+        const opened = materializeProjectSnapshot({ ...context, project: saved.project });
+        expect(opened.ok).toBe(true);
+        if (!opened.ok) throw new Error("Font could not reopen");
+        expect(save(opened.project)).toEqual(saved);
+      }
+    },
+  );
+
   it("requires a canonical opaque session identity", () => {
     // Given
     type RawSessionIsAccepted = string extends BuildProjectSnapshotInput["sessionId"] ? true : false;

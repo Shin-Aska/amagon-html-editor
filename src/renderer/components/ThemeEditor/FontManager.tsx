@@ -16,7 +16,7 @@ import { type GoogleFontMeta, googleFontsCatalog } from "../../data/googleFontsC
 import { InternetFontPreview } from "./InternetFontPreview";
 import TypographyFontPicker from "./TypographyFontPicker";
 import { projectCommands, useProjectCommandState } from "../../project/projectCommands";
-import { projectFontUrl } from "../../utils/projectFontUrl";
+import { projectFontAssetPath, projectFontUrl } from "../../utils/projectFontUrl";
 import "./FontManager.css";
 
 type FilterTab = "all" | "imported" | "system" | "internet";
@@ -71,19 +71,22 @@ export default function FontManager({
     async function check() {
       const next = new Set<string>();
       for (const font of fonts) {
-        if (!font.relativePath) continue;
+        const relativePath = projectFontAssetPath(font.relativePath, sessionId);
+        if (relativePath === undefined) continue;
         try {
           const res = await window.api.fonts.checkFileExists({
-            relativePath: font.relativePath,
+            relativePath,
           });
           if (res.exists) next.add(font.relativePath);
-        } catch {}
+        } catch {
+          continue;
+        }
       }
       if (!cancelled) setExistingFiles(next);
     }
     check();
     return () => { cancelled = true; };
-  }, [fonts]);
+  }, [fonts, sessionId]);
 
   useEffect(() => {
     if (systemFonts.length > 0) return;
@@ -222,8 +225,13 @@ export default function FontManager({
   };
 
   const handleDeleteFont = async (font: FontAsset) => {
+    const relativePath = projectFontAssetPath(font.relativePath, sessionId);
+    if (relativePath === undefined) {
+      showToast("This font file is unavailable in the current project", "error");
+      return;
+    }
     try {
-      const res = await projectCommands.deleteFont(font.relativePath);
+      const res = await projectCommands.deleteFont(relativePath);
       if (res.ok) {
         removeFontStore(font.id);
         showToast(`Deleted "${font.name}"`, "success");

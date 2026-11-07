@@ -5,6 +5,7 @@ import {buildAnimationStylesCss} from './animationPresets'
 import {buildHoverEffectStylesCss} from './hoverEffects'
 import {buildActionEffectRuntimeScript, buildActionEffectStylesCss} from './actionEffects'
 import {getApi} from './api'
+import {projectFontUrl} from './projectFontUrl'
 import {isRelativePathTraversalReference} from '../../shared/projects/assetReference'
 
 export interface ExportFile {
@@ -21,6 +22,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 export interface ExportEngineOptions {
+    projectSessionId?: string
     assetsDir?: string
     resolveAsset?: (url: string) => Promise<ResolvedAsset | null>
     customCss?: string
@@ -90,7 +92,7 @@ export async function exportProject(
     project: ProjectData,
     options: ExportEngineOptions = {}
 ): Promise<ExportFile[]> {
-    const exportFonts = normalizeFontsForExport(project.projectSettings.fonts);
+    const exportFonts = normalizeFontsForExport(project.projectSettings.fonts, options.projectSessionId);
 
     const pageIdToFileName = new Map<string, string>();
     const pageSlugToFileName = new Map<string, string>();
@@ -592,33 +594,36 @@ function buildStylesCss(
     return lines.join('\n')
 }
 
-function normalizeFontsForExport(fonts: FontAsset[] | undefined): FontAsset[] {
-    if (!Array.isArray(fonts) || fonts.length === 0) return [];
+interface ExportFont extends FontAsset {
+    assetReference: string
+}
 
-    return fonts.map((font) => {
-        const rawRel = String(font.relativePath || '')
-            .replace(/^[/\\]+/, '')
-            .replace(/\\/g, '/');
-
-        // Preserve empty path for system-font stubs without a physical file
-        if (!rawRel && !font.fileName) {
-            return {...font, relativePath: ''};
+function normalizeFontsForExport(fonts: FontAsset[] | undefined, sessionId: string | undefined): ExportFont[] {
+    const outputPaths = new Map<string, string>();
+    const used = new Set<string>();
+    return (fonts ?? []).map(font => {
+        const reference = String(font.relativePath || '');
+        if (!reference && !font.fileName) return {...font, relativePath: '', assetReference: ''};
+        const rawPath = reference || `assets/fonts/${font.fileName}`;
+        const assetReference = sessionId || /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(rawPath)
+            ? projectFontUrl(rawPath, sessionId)
+            : `app-media://project-asset/${rawPath}`;
+        let outputPath = outputPaths.get(assetReference);
+        if (!outputPath) {
+            const baseName = sanitizeFileName(font.fileName || reference.split('/').at(-1) || `font.${font.format}`);
+            const {name, ext} = splitExt(baseName);
+            outputPath = `assets/fonts/${baseName}`;
+            let suffix = 1;
+            while (used.has(outputPath)) outputPath = `assets/fonts/${name}_${suffix++}${ext}`;
+            used.add(outputPath);
+            outputPaths.set(assetReference, outputPath);
         }
-
-        const normalizedRel =
-            rawRel.startsWith('assets/fonts/')
-                ? rawRel
-                : `assets/fonts/${sanitizeFileName(
-                    font.fileName ||
-                    (font.name ? `${font.name}.${font.format}` : `font.${font.format}`)
-                )}`;
-
-        return {...font, relativePath: normalizedRel}
-    })
+        return {...font, relativePath: outputPath, assetReference};
+    });
 }
 
 async function buildFontFiles(
-    fonts: FontAsset[],
+    fonts: ExportFont[],
     resolveAsset: (url: string) => Promise<ResolvedAsset | null>
 ): Promise<ExportFile[]> {
     if (!fonts || fonts.length === 0) return [];
@@ -635,11 +640,7 @@ async function buildFontFiles(
         if (!rel.startsWith('assets/fonts/')) continue;
         if (written.has(rel)) continue;
 
-        const url = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(rel)
-            ? rel
-            : `app-media://project-asset/${rel}`;
-
-        const resolved = await resolveAsset(url);
+        const resolved = await resolveAsset(font.assetReference);
         if (!resolved) continue;
 
         written.add(rel);

@@ -147,3 +147,54 @@ test("legacy missing assets stay repairable while portable conversion requires t
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("imported font filenames save, export and delete after reopening", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "amagon-font-filenames-"));
+  const harness = await launchPortableEditor(root);
+  const {page} = harness;
+  try {
+    const fileName = "My Font%20.woff2";
+    const input = path.join(root, fileName);
+    const bytes = await readFile(path.resolve("public/frameworks/google-fonts/Inter/inter-v20-1.woff2"));
+    await writeFile(input, bytes);
+    const target = path.join(root, "fonts.amg");
+    await createProjectThroughUi({harness, filePath: target, name: "Font round trip"});
+    await page.getByTitle("Theme Editor", {exact: true}).click();
+    await page.getByRole("button", {name: "Typography", exact: true}).click();
+    await queueNativeDialogs(harness.app, {opens: [[input]]});
+    await page.getByRole("button", {name: /Import Font File/u}).click();
+    await expect(page.getByText("Imported 1 font file", {exact: true})).toBeVisible();
+    await page.getByRole("button", {name: "Done", exact: true}).click();
+    await page.getByRole("button", {name: "Save project", exact: true}).click();
+    await expect(page.locator(".status-icon").filter({hasText: /^Saved$/})).toBeVisible();
+    await expect(page.getByRole("button", {name: "Save project", exact: true})).toBeEnabled();
+    await closeProjectThroughUi(harness);
+    await openProjectThroughUi({harness, filePath: target});
+    await page.getByRole("button", {name: "Export project", exact: true}).click();
+    await queueNativeDialogs(harness.app, {opens: [[root]]});
+    await page.locator(".export-modal").getByRole("button", {name: "Export", exact: true}).click();
+    await expect(page.getByText("Export complete", {exact: true})).toBeVisible();
+    const output = path.join(root, "Font round trip");
+    expect(await readFile(path.join(output, "assets/fonts/My_Font_20.woff2"))).toEqual(bytes);
+    expect(await readFile(path.join(output, "styles.css"), "utf8")).toContain('./assets/fonts/My_Font_20.woff2');
+    await page.locator(".export-modal").getByRole("button", {name: "Close", exact: true}).click();
+    await page.getByTitle("Theme Editor", {exact: true}).click();
+    await page.getByRole("button", {name: "Typography", exact: true}).click();
+    const remove = page.locator('button[title^="Delete "]').filter({has: page.locator('svg')});
+    await expect(remove).toHaveCount(1);
+    await remove.click();
+    await expect(remove).toHaveCount(0);
+    await page.getByRole("button", {name: "Done", exact: true}).click();
+    await page.getByRole("button", {name: "Save project", exact: true}).click();
+    await expect(page.locator(".status-icon").filter({hasText: /^Saved$/})).toBeVisible();
+    await expect(page.getByRole("button", {name: "Save project", exact: true})).toBeEnabled();
+    await closeProjectThroughUi(harness);
+    await openProjectThroughUi({harness, filePath: target});
+    const listed = await page.evaluate(() => window.api.fonts.listProject());
+    expect(listed).toMatchObject({success: true, fonts: []});
+    expect(harness.pageErrors).toEqual([]);
+  } finally {
+    await stopPortableEditor(harness);
+    await rm(root, {recursive: true, force: true});
+  }
+});

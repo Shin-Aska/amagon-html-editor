@@ -46,6 +46,10 @@ Media imports now preserve filenames containing spaces, Unicode, `#`, and litera
 
 The correction applies to Asset Manager imports and the image, single-image, and video pickers. Imported files remain available after saving and reopening the project.
 
+## Reliable font imports and exports
+
+Imported fonts with spaces or percent characters now Save and reopen correctly. Reopened font files can be deleted, and exported sites include the original font bytes with safe, distinct filenames. Empty layout widgets also retain correctly sized library previews.
+
 ## Downloads
 
 | Platform | Download |

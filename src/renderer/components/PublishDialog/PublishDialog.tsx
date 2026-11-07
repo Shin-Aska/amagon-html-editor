@@ -1,3 +1,4 @@
+import {useProjectCommandState} from "../../project/projectCommands"
 import {useEffect, useState} from 'react'
 import {getApi} from '../../utils/api'
 import {useProjectStore} from '../../store/projectStore'
@@ -25,6 +26,7 @@ const STEP_TO_INDEX: Record<Step, number> = {
 
 export default function PublishDialog({open, onClose}: PublishDialogProps): JSX.Element | null {
     const api = getApi();
+    const projectSessionId = useProjectCommandState().session?.sessionId;
 
     const [step, setStep] = useState<Step>('select');
     const [providers, setProviders] = useState<PublishProviderInfo[]>([]);
@@ -117,6 +119,7 @@ export default function PublishDialog({open, onClose}: PublishDialogProps): JSX.
 
         const projectData = getProjectData();
         const files = await exportProject(projectData, {
+                projectSessionId,
             customCss,
             inlineCss: false,
             inlineAssets: false,

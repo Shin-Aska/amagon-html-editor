@@ -145,6 +145,7 @@ test('settings preserve keyboard, nested dialogs, editing target, and preference
         await appOpener.click();
         const app = harness.page.locator('.settings-dialog');
         await app.getByLabel('Default Layout', { exact: true }).selectOption('zen');
+        await app.getByRole('button', { name: 'Appearance', exact: true }).click();
         await app.getByRole('button', { name: 'Light', exact: true }).click();
         await expect(harness.page.locator('body')).not.toHaveClass(/dark/);
         await capture(harness, 'settings-app-light.png', { actions: ['Select Light app theme', 'Choose Zen default layout'], state: 'Light token variant and live preferences' });
@@ -155,6 +156,7 @@ test('settings preserve keyboard, nested dialogs, editing target, and preference
         await done.click();
         await appOpener.click();
         await expect(app.getByLabel('Default Layout', { exact: true })).toHaveValue('zen');
+        await app.getByRole('button', { name: 'Appearance', exact: true }).click();
         await app.getByRole('button', { name: 'Dark', exact: true }).click();
         await app.getByRole('button', { name: 'Credentials', exact: true }).click();
         await app.getByRole('button', { name: 'Add Credential', exact: true }).click();

@@ -19,7 +19,7 @@ Legacy open and ordinary Save now opt into missing-file warnings while retaining
 
 ## Regression gates
 
-Code changes on main and all pull requests run the complete Node 22 regression suite, process-ownership safety tests, and TypeScript checks on both Windows and Linux. Documentation-only pushes to main do not repeat this work. Release packaging additionally requires the complete Windows desktop suite (37 cases) and the six portable Linux desktop cases, all using one worker. Both platforms must complete verification before either packaging job starts. Failed UI checks retain synthetic-fixture screenshots and traces for diagnosis.
+Code changes on main and all pull requests run the complete Node 22 regression suite, process-ownership safety tests, and TypeScript checks on both Windows and Linux. Documentation-only pushes to main do not repeat this work. Release packaging additionally requires the complete Windows desktop suite (38 cases) and the seven portable Linux desktop cases, all using one worker. Both platforms must complete verification before either packaging job starts. Failed UI checks retain synthetic-fixture screenshots and traces for diagnosis.
 
 The two new desktop cases cover eight literal filenames through actual imports and archive save/reopen, and legacy missing-file repair through Asset Manager followed by strict portable conversion. Browser and Node test files use their own runners; process-ownership checks were not removed. Missing-file notices remain visible until the user dismisses them.
 
@@ -35,7 +35,7 @@ The downloaded AppImage, Windows installer, blockmap, and both update feeds inde
 
 The downloaded and extracted AppImage reports `app.isPackaged === true` and version `1.11.1`. In that packaged application, fresh temporary copies of **all four supplied legacy projects opened, Saved, and reopened**. Existing images loaded, and the genuinely absent image remained a repairable warning. The four filename import cases also passed in the packaged application and survived `.amg` save/close/reopen, with zero renderer page errors. Private project files and screenshots were not uploaded.
 
-Windows packaging is verified by CI and downloaded-file integrity checks; a Windows runtime launch was not performed on this Linux machine. The release remains a draft for owner review. The published 1.11.0 release and its assets were verified unchanged.
+Windows packaging is verified by CI and downloaded-file integrity checks; a Windows runtime launch was not performed on this Linux machine. The release remains a draft for owner review. The previously published 1.11.0 release and tag have since been withdrawn.
 
 The release illustrations reuse the four public feature screenshots, now copied under 1.11.1. Private reproduction projects and screenshots are excluded.
 
@@ -47,6 +47,10 @@ A fresh build with the regression gates will replace the initial draft artifacts
 
 The first CI desktop gate caught unhandled Monaco 0.54 word-highlighter cancellation during rapid model switching. A stronger local rapid-switch test reproduced the same stack. A narrowly scoped Vite transform now attaches Monaco’s own cancellation-aware error handler to the highlighter promises in production and development prebundling, preserving highlighting and reporting unexpected failures. Three tests execute the installed highlighter/Delayer code to check cancellation, real-error reporting, and upgrade guards. See [upstream issue #5294](https://github.com/microsoft/monaco-editor/issues/5294).
 
-The complete Windows suite also contained a legacy fixture that predated the external-file authority restriction. It now separately asserts that unsafe external references are rejected and that in-project missing assets can be repaired through an explicit picker import. No unsafe reference acceptance or test assertion was disabled.
+The complete Windows suite also contained a legacy fixture that predated the external-file authority restriction. It now separately asserts that document-derived external references grant no asset-read authority and that in-project missing assets can be repaired through an explicit picker import. No unsafe reference acceptance or test assertion was disabled.
 
 The strengthened asset test also deletes the literal `%20` filename and verifies its space-named neighbour survives another archive save/reopen. The rapid model-switch test passes after the Monaco fix, and development prebundling was independently checked to contain all three cancellation handlers. Main TypeScript, build-configuration TypeScript, and the production build pass.
+
+The broader review reproduced seven font failures before changes: raw imported filenames could not be saved correctly, loaded font URLs were passed to raw-path mutation IPC, and exports discarded source session URLs. Focused save/reopen, delete, and export tests now pass. Additional coverage checks stale-session rejection and safe filename collisions. A desktop font workflow imports a literal-percent filename, saves/reopens, exports and compares the original bytes, then deletes the reopened font and verifies another saved round trip.
+
+The first full Windows run passed 30 desktop workflows and exposed seven failures. Four were startup/reload races in test helpers, one targeted the old General location of Appearance settings, one expected legacy open to reject strings that the existing contract preserves without read authority, and one exposed zero-height empty-widget preview bodies. These are being corrected and the full release gates must pass before installer uploads.

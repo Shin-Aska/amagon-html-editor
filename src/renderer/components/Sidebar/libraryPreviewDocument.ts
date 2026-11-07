@@ -85,7 +85,7 @@ export function libraryPreviewDocument(options: LibraryDocumentOptions): string 
     appendStyle(doc, options.customCss)
     appendStyle(doc, `
         * { box-sizing: border-box; }
-        html, body { margin: 0; min-height: 100%; }
+        html, body { margin: 0; min-height: 100vh; }
         body { overflow: hidden; background: var(--theme-bg); color: var(--theme-text); }
         img, video { max-width: 100%; }
         *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }

@@ -194,10 +194,14 @@ test.describe.serial("AMG desktop project format", () => {
     await writeFile(corruptPath, replaceAsciiSameLength(forcedZip64.archive, "assets/photo.txt", "assets/../bad.tx"));
     const harness = await launchAmagon(root);
     try {
-      // A document cannot grant access to an arbitrary external local file.
+      // Legacy strings remain repairable, but cannot authorize local file reads.
       await queueNativeDialogs(harness.app, { opens: [[unsafeLegacyPath]] });
       const unsafe = await loadProjectThroughBridge(harness.page, null);
-      expect(unsafe).toMatchObject({ success: false, error: { code: "PROJECT_NOT_PORTABLE" } });
+      expect(unsafe.success).toBe(true);
+      if (!unsafe.success) throw new Error("Legacy open failed");
+      const denied = await harness.page.evaluate(reference => window.api.assets.readAsset(reference), externalPath);
+      expect(denied.success).toBe(false);
+      expect((await closeProjectThroughBridge(harness.page, unsafe.session, "discard")).success).toBe(true);
       expect(await readFile(unsafeLegacyPath, "utf8")).toBe(unsafeLegacy);
       await queueNativeDialogs(harness.app, { opens: [[legacyPath]] });
 

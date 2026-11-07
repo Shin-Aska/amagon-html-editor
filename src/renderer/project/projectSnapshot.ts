@@ -5,6 +5,8 @@ import {
   type ProjectPortabilityOffender,
   type ProjectPortabilityMode,
 } from "../../shared/projects/projectPortability";
+import { AssetReferenceError } from "../../shared/projects/assetReference";
+import { projectFontUrl } from "../utils/projectFontUrl";
 import type { Block, ProjectData } from "../store/types";
 
 export type RendererProjectSessionKind = "amg" | "legacy-json";
@@ -122,6 +124,20 @@ export const buildProjectSnapshot = (
   const merged: ProjectData = {
     ...input.project,
     customCss: input.customCss,
+    projectSettings: {
+      ...input.project.projectSettings,
+      ...(input.project.projectSettings.fonts === undefined ? {} : {
+        fonts: input.project.projectSettings.fonts.map(font => {
+          // Native imports return raw paths; reopened fonts already carry a session URL.
+          try {
+            return { ...font, relativePath: projectFontUrl(font.relativePath, input.sessionId) };
+          } catch (error) {
+            if (error instanceof AssetReferenceError) return font; // Report via portability validation below.
+            throw error;
+          }
+        }),
+      }),
+    },
     pages,
   };
   return transform(merged, input, persistenceMode(input.sessionKind, input.operation));
