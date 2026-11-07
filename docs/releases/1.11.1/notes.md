@@ -60,6 +60,10 @@ The correction applies to Asset Manager imports and the image, single-image, and
 
 Imported fonts with spaces or percent characters now Save and reopen correctly. Reopened font files can be deleted, and exported sites include the original font bytes with safe, distinct filenames. Empty layout widgets also retain correctly sized library previews.
 
+## Linux desktop integration
+
+The Debian package now installs transparent square icons from **2048×2048 down to 16×16**, including standard launcher and menu sizes. Its desktop entry and running-window identity are synchronized so KDE and other Linux desktops can find the app icon and associate its windows correctly. The existing logo is preserved.
+
 ## Downloads
 
 | Platform | Download |
@@ -74,7 +78,3 @@ macOS binaries are not included in this release.
 **Full changelog:** [v1.10.1 → v1.11.1](https://github.com/Shin-Aska/amagon-html-editor/compare/v1.10.1...v1.11.1)
 
 **Feature review:** [PR #20](https://github.com/Shin-Aska/amagon-html-editor/pull/20) · [Validation report](https://github.com/Shin-Aska/amagon-html-editor/blob/main/docs/releases/1.11.1/validation.md)
-
-## Linux desktop integration
-
-The Debian package now installs transparent square icons from **2048×2048 down to 16×16**, including standard launcher and menu sizes. Its desktop entry and running-window identity are synchronized so KDE and other Linux desktops can find the app icon and associate its windows correctly. The existing logo is preserved.
