@@ -54,6 +54,10 @@ src/
 - **Theme gallery & theme packs**: Browsable gallery of pre-built themes with categories, tags, and dark variants. `ThemePack` definitions in `src/renderer/themes/themePacks.ts`, gallery registry in `themeGalleryRegistry.ts`, live mini preview via `ThemeMiniPreview.tsx`. Themes include `ComponentTokens` for consistent button/card/heading/form styling. Applied through `ThemeEditor`.
 - **Page & section templates**: Reusable, theme-aware layout templates. `PageTemplate` and `SectionTemplate` types in `src/renderer/templates/templateTypes.ts` with categories (landing, portfolio, hero, pricing, testimonials, etc.). Built-in templates in `pageTemplates.ts` and `sectionTemplates.ts`. Inserted via sidebar template gallery UI.
 
+## AI provider compatibility
+
+AI-provider compatibility is covered by `src/main/openaiProvider.ts`, AI service/config/store tests, and the portable `ai-provider-connectivity.spec.ts` Settings workflow. OpenAI model discovery supports modern GPT families, excludes specialized endpoints, and preserves HTTP/network errors with credentials redacted. GPT 5+ and o-series generation use Responses; older GPT models keep Chat Completions. Credential rotation retains an explicitly selected model. Codex is a read-only completion provider launched with `--skip-git-repo-check`; do not require Git initialization or change user trust configuration. An empty Codex model uses the CLI's own configured default. Live test keys are entered through the app's Credentials UI.
+
 ## Hard Constraints
 
 - Never use `as any`, `@ts-ignore`, `@ts-expect-error` for type suppression.

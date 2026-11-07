@@ -258,11 +258,11 @@ export default function SettingsDialog({
             if (models.length === 0) {
                 setModelRefreshStatus({
                     type: 'error',
-                    message: provider.endsWith('-cli') || provider === 'opencode'
+                    message: useAiStore.getState().providerModelErrors?.[provider] || (provider.endsWith('-cli') || provider === 'opencode'
                         ? (provider === 'opencode'
                             ? 'No models returned. Check that the OpenCode service is installed and running.'
                             : 'No models returned. Check that the CLI is installed, signed in, and up to date.')
-                        : 'No models returned. Check the provider credentials or connection.'
+                        : 'No models returned. Check the provider credentials or connection.')
                 })
                 return []
             }

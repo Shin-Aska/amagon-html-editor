@@ -60,6 +60,8 @@ Other supported providers include Mistral and several CLI-based tools (GitHub Co
 
 Open the AI panel from the sidebar, click the settings icon, choose a provider, and add credentials if needed. Ollama and the CLI providers use your local setup, and Amagon discovers available models automatically.
 
+For OpenAI, save the key under **Settings → Credentials**, then use **AI Assistant → Refresh Models List**. The list includes modern GPT models and excludes image, audio, and other specialized endpoints. Refresh failures show the provider's error with API keys redacted. Modern GPT and reasoning models use Responses; older models retain Chat Completions compatibility. Updating a key preserves an available selected model; unavailable saved models are replaced by an available default. Codex runs as a read-only completion provider and also works when Amagon starts outside a Git repository; no Git setup is required for your HTML project.
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |

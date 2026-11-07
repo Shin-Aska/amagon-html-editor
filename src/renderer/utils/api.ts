@@ -59,7 +59,7 @@ function upsertMockAssets(newAssets: MockAsset[]): void {
 
 let mockAiConfig: AiConfig = {
     provider: 'openai',
-    model: 'gpt-4o',
+    model: 'gpt-5.4-mini',
     apiKey: '',
     ollamaUrl: 'http://localhost:11434',
     dismissedMissingProviders: [],
@@ -804,7 +804,7 @@ const mockApi = {
             mockAiConfig = {
                 ...mockAiConfig,
                 provider: activeProviderRemoved ? 'openai' : mockAiConfig.provider,
-                model: activeProviderRemoved ? 'gpt-4o' : mockAiConfig.model,
+                model: activeProviderRemoved ? 'gpt-5.4-mini' : mockAiConfig.model,
                 apiKey: activeProviderRemoved ? '' : mockAiConfig.apiKey,
                 dismissedMissingProviders: mockAiConfig.dismissedMissingProviders.filter((item) => item !== provider),
                 removedProviders: [...new Set([...mockAiConfig.removedProviders, provider])]
@@ -816,7 +816,7 @@ const mockApi = {
             return {
                 success: true,
                 models: {
-                    openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
+                    openai: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-4.1'],
                     anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
                     google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
                     ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3'],
@@ -837,7 +837,7 @@ const mockApi = {
             // Simulate a brief network delay
             await new Promise((r) => setTimeout(r, 600));
             const fallback: Record<string, string[]> = {
-                openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
+                openai: ['gpt-5.4-mini', 'gpt-5.4', 'gpt-4.1'],
                 anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
                 google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
                 ollama: ['llama3.3', 'deepseek-r1', 'qwen3', 'mistral', 'phi4', 'gemma3'],

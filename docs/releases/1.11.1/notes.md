@@ -26,6 +26,12 @@ Rapid file switching also handles background symbol-highlighting cancellations c
 
 The code editor also gains local, offline loading; HTML and CSS formatting; find and replace; clickable diagnostics; editor preferences; and page-specific drafts that survive switching tabs. A small model cache and an off-by-default minimap keep the experience light.
 
+## Reliable AI connections
+
+Codex now works when Amagon starts outside a Git repository, so HTML projects need no Git setup. Completion requests use a read-only sandbox and respect the CLI's configured model when no model is selected in Amagon.
+
+OpenAI model discovery includes current GPT and reasoning models. Modern models use Responses, while older models retain Chat Completions compatibility. Updating credentials preserves an available model selection; unavailable saved models switch to an available default. Model refresh now shows authentication, permission, and connection errors with API keys redacted.
+
 ## Updated dependencies
 
 Compatible upstream updates refresh the editor and its bundled preview/export assets. Bundled fonts and icons also load correctly through the desktop asset protocol. The npm audit is clear for both development and production dependencies, and font catalog generation no longer installs an unused CLI dependency chain.

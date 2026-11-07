@@ -6,6 +6,7 @@ const api = vi.hoisted(() => ({
     setConfig: vi.fn(),
     removeProvider: vi.fn(),
     checkCliAvailability: vi.fn(),
+    getModels: vi.fn(),
     fetchModelsForProvider: vi.fn()
 }))
 
@@ -35,6 +36,7 @@ describe('missing local AI provider', () => {
             config: openCodeConfig,
             configLoaded: false,
             missingProvider: null,
+            providerModelErrors: {},
             providerModels: {opencode: ['opencode/gpt-5']}
         })
         api.getConfig.mockResolvedValue({success: true, config: openCodeConfig})
@@ -103,5 +105,31 @@ describe('missing local AI provider', () => {
         await modelsLoad
 
         expect(useAiStore.getState().providerModels.opencode).toBeUndefined()
+    })
+
+    it('keeps a provider error visible and clears it after a successful refresh', async () => {
+        api.fetchModelsForProvider.mockResolvedValueOnce({success: false, error: 'OpenAI API error (403): Missing api.model.read', models: []})
+        expect(await useAiStore.getState().fetchModelsForProvider('openai', '')).toEqual([])
+        expect(useAiStore.getState().providerModelErrors.openai).toContain('api.model.read')
+        api.fetchModelsForProvider.mockResolvedValueOnce({success: true, models: ['gpt-5.4-mini']})
+        expect(await useAiStore.getState().fetchModelsForProvider('openai', '')).toEqual(['gpt-5.4-mini'])
+        expect(useAiStore.getState().providerModelErrors.openai).toBe('')
+    })
+
+    it('replaces an unavailable saved OpenAI model with an available default', async () => {
+        useAiStore.setState({config: {...openCodeConfig, provider: 'openai', model: 'retired-model'}})
+        api.getModels.mockResolvedValue({success: true, models: {openai: ['gpt-6-sol', 'gpt-5.4-mini']}})
+        api.setConfig.mockResolvedValue({success: true, config: {...openCodeConfig, provider: 'openai', model: 'gpt-5.4-mini'}})
+        await useAiStore.getState().loadModels()
+        expect(api.setConfig).toHaveBeenCalledWith({model: 'gpt-5.4-mini'})
+        expect(useAiStore.getState().config.model).toBe('gpt-5.4-mini')
+    })
+
+    it('preserves a selected OpenAI model that is still available', async () => {
+        useAiStore.setState({config: {...openCodeConfig, provider: 'openai', model: 'gpt-6-sol'}})
+        api.getModels.mockResolvedValue({success: true, models: {openai: ['gpt-6-sol', 'gpt-5.4-mini']}})
+        await useAiStore.getState().loadModels()
+        expect(api.setConfig).not.toHaveBeenCalled()
+        expect(useAiStore.getState().config.model).toBe('gpt-6-sol')
     })
 })

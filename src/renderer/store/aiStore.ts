@@ -74,6 +74,7 @@ interface AiState {
     isLoading: boolean
     config: AiConfig
     providerModels: Record<string, string[]>
+    providerModelErrors: Record<string, string>
     configLoaded: boolean
     modelsLoaded: boolean
     showSettings: boolean
@@ -125,7 +126,7 @@ function getBlockRegistrySchema(): string {
 
 const DEFAULT_CONFIG: AiConfig = {
     provider: 'openai',
-    model: 'gpt-4o',
+    model: 'gpt-5.4-mini',
     apiKey: '',
     ollamaUrl: 'http://localhost:11434',
     dismissedMissingProviders: [],
@@ -138,6 +139,7 @@ export const useAiStore = create<AiStore>((set, get) => ({
     isLoading: false,
     config: {...DEFAULT_CONFIG},
     providerModels: {},
+    providerModelErrors: {},
     configLoaded: false,
     modelsLoaded: false,
     showSettings: false,
@@ -274,6 +276,14 @@ export const useAiStore = create<AiStore>((set, get) => ({
                     Object.entries(fetchedModels).filter(([provider]) => !removedProviders.some((removed) => removed === provider))
                 )
                 set({providerModels, modelsLoaded: true});
+                const current = get().config
+                const models = providerModels.openai ?? []
+                if (current.provider === 'openai' && models.length > 0 && !models.includes(current.model)) {
+                    // An older persisted model must not remain hidden behind a
+                    // picker that visually shows a different available model.
+                    const model = models.includes(DEFAULT_CONFIG.model) ? DEFAULT_CONFIG.model : models[0]
+                    await get().saveConfig({model})
+                }
                 return
             }
         } catch {
@@ -290,11 +300,17 @@ export const useAiStore = create<AiStore>((set, get) => ({
                 // Merge into providerModels so the dropdown can use them
                 set((state) => state.config.removedProviders.some((removedProvider) => removedProvider === provider)
                     ? {}
-                    : {providerModels: {...state.providerModels, [provider]: result.models}});
+                    : {
+                        providerModels: {...state.providerModels, [provider]: result.models},
+                        providerModelErrors: {...state.providerModelErrors, [provider]: ''},
+                    });
                 return result.models as string[]
             }
-        } catch {
-            // ignore
+            throw new Error(result.error || 'Could not load models. Check the provider credentials or connection.')
+        } catch (error) {
+            set((state) => state.config.removedProviders.some((removedProvider) => removedProvider === provider)
+                ? {}
+                : {providerModelErrors: {...state.providerModelErrors, [provider]: error instanceof Error ? error.message : 'Could not load models. Check your connection.'}})
         }
         return []
     },
@@ -322,7 +338,9 @@ export const useAiStore = create<AiStore>((set, get) => ({
         set((state) => {
             const providerModels = {...state.providerModels}
             delete providerModels[provider]
-            return {config: result.config, missingProvider: null, providerModels}
+            const providerModelErrors = {...state.providerModelErrors}
+            delete providerModelErrors[provider]
+            return {config: result.config, missingProvider: null, providerModels, providerModelErrors}
         })
         dispatchAiAvailabilityChanged()
     }

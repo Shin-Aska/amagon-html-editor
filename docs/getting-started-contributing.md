@@ -2,6 +2,8 @@
 
 Welcome to **Amagon** (internal codename: *Hoarses*). This guide will get you from zero to productive in the codebase.
 
+For AI-provider changes, cover model discovery and generation separately. OpenAI's protocol helpers live in `src/main/openaiProvider.ts`; retain modern GPT/reasoning models, legacy Chat Completions support, explicit model selections, and redacted discovery errors. Codex completion calls must work without a Git repository and use a read-only sandbox. `tests/electron/ai-provider-connectivity.spec.ts` checks modern model choices and API-error recovery through the real Settings UI with fake credentials; it is included in the portable release test command. Enter real credentials only in the app when performing optional live verification.
+
 Amagon is a desktop HTML editor built with Electron, React, and TypeScript. You drag-and-drop blocks onto a canvas, edit properties in an inspector panel, switch to a Monaco code editor for raw HTML when you need it, and export standalone sites. It is an alternative to tools like Pingendo or Bootstrap Studio, with a built-in AI assistant that understands your project's block structure and theme.
 
 > **For AI assistants:** read `.aiassistant/rules/project-context.md` first, then come back here for the human-friendly tour.

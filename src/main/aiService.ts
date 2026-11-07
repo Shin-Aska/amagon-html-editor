@@ -10,6 +10,7 @@ import {z} from 'zod'
 import {decryptApiKey, encryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cryptoHelpers'
 import {CLI_BINARY_NAMES, detectCli, fetchCliModels, spawnCliChat} from './cliHelpers'
 import {createOpencode, createOpencodeClient} from '@opencode-ai/sdk'
+import {DEFAULT_OPENAI_MODEL, OPENAI_FALLBACK_MODELS, openAIError, openAIResponseContent, parseOpenAIModels, usesOpenAIResponses} from './openaiProvider'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,7 +66,7 @@ interface PersistedAiConfig {
 
 const DEFAULT_CONFIG: AiConfig = {
     provider: 'openai',
-    model: 'gpt-4o',
+    model: DEFAULT_OPENAI_MODEL,
     apiKey: '',
     ollamaUrl: 'http://localhost:11434',
     dismissedMissingProviders: [],
@@ -81,7 +82,7 @@ export {encryptApiKey, decryptApiKey, maskApiKey, MASKED_KEY_PREFIX} from './cry
 
 // Fallback model lists — used when dynamic fetching is unavailable
 const FALLBACK_MODELS: Record<AiProvider, string[]> = {
-    openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini', 'o1', 'o1-mini'],
+    openai: OPENAI_FALLBACK_MODELS,
     anthropic: ['claude-sonnet-4-20250514', 'claude-3-7-sonnet-20250219', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
     google: ['gemini-2.5-flash-preview-05-20', 'gemini-2.5-pro-preview-05-06', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash'],
     ollama: [],
@@ -105,8 +106,8 @@ export {FALLBACK_MODELS as PROVIDER_MODELS}
 
 function getDefaultModelForProvider(provider: AiProvider, preferredModel?: string): string {
     const providerModels = FALLBACK_MODELS[provider];
-    if (preferredModel && (provider === 'ollama' || providerModels.includes(preferredModel))) {
-        return preferredModel
+    if (preferredModel?.trim()) {
+        return preferredModel.trim()
     }
     return providerModels[0] ?? ''
 }
@@ -480,30 +481,28 @@ ${blockRegistryJson}
 // ---------------------------------------------------------------------------
 
 async function chatOpenAI(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
-    const url = 'https://api.openai.com/v1/chat/completions';
-    const body = JSON.stringify({
-        model: config.model,
-        messages: messages.map((m) => ({role: m.role, content: m.content})),
-        temperature: 0.7,
-        max_tokens: 4096
-    });
+    const responses = usesOpenAIResponses(config.model);
+    const url = `https://api.openai.com/v1/${responses ? 'responses' : 'chat/completions'}`;
+    const input = messages.map((m) => ({role: m.role, content: m.content}));
+    const body = JSON.stringify(responses
+        ? {model: config.model, input, max_output_tokens: 4096, store: false}
+        : {model: config.model, messages: input, temperature: 0.7, max_tokens: 4096});
 
     const response = await net.fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.apiKey}`
+            Authorization: `Bearer ${config.apiKey.trim()}`
         },
         body
     });
 
     if (!response.ok) {
         const errorText = await response.text();
-        return {content: '', error: `OpenAI API error (${response.status}): ${errorText}`}
+        return {content: '', error: openAIError(response.status, errorText, config.apiKey.trim())}
     }
 
-    const data = await response.json() as any;
-    return {content: data.choices?.[0]?.message?.content ?? ''}
+    return {content: openAIResponseContent(await response.json(), responses)}
 }
 
 async function chatAnthropic(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
@@ -796,10 +795,16 @@ async function runCliChat(
 }
 
 async function chatCodexCli(messages: ChatMessage[], config: AiConfig): Promise<ProviderResponse> {
+    // Desktop launches need not start in a repository. This adapter returns text;
+    // all project changes remain reviewable actions inside Amagon.
+    const args = ['exec', '--skip-git-repo-check', '--sandbox', 'read-only'];
+    const model = normalizeCliModel('codex-cli', config.model);
+    if (model && model !== 'default') args.push('--model', model);
+    args.push('-');
     return runCliChat(
         'codex-cli',
-        ['exec', '--model', normalizeCliModel('codex-cli', config.model), '-'],
-        messages
+        args,
+        [{role: 'system', content: 'You are Amagon’s chat/completion provider. Answer only from the supplied conversation. Do not inspect, create, modify, delete, or run local files.'}, ...messages]
     )
 }
 
@@ -976,21 +981,11 @@ async function fetchOpenAIModels(apiKey: string): Promise<string[]> {
             headers: {Authorization: `Bearer ${apiKey}`},
             signal: controller.signal
         });
-        if (!response.ok) return [];
-        const data = (await response.json()) as any;
-        if (!Array.isArray(data.data)) return [];
-
-        // Keep only chat-capable models
-        const chatPrefixes = ['gpt-4', 'gpt-3.5', 'o1', 'o3', 'o4', 'chatgpt'];
-        return data.data
-            .map((m: any) => m.id as string)
-            .filter((id: string) =>
-                chatPrefixes.some((p) => id.startsWith(p)) &&
-                !id.includes('instruct') &&
-                !id.includes('realtime')
-            )
-            .sort()
-            .reverse()
+        if (!response.ok) throw new Error(openAIError(response.status, await response.text(), apiKey));
+        return parseOpenAIModels(await response.json())
+    } catch (error) {
+        if (controller.signal.aborted) throw new Error('OpenAI model discovery timed out. Check your connection and try again.');
+        throw error
     } finally {
         clearTimeout(timer)
     }
@@ -1081,11 +1076,15 @@ export async function fetchModelsForProvider(
     apiKey: string,
     ollamaUrl?: string
 ): Promise<string[]> {
+    // Manual refresh must preserve authentication/network errors for the UI.
+    if (provider === 'openai') {
+        if (!apiKey.trim()) throw new Error('Add an OpenAI API key in Credentials before loading models.');
+        return fetchOpenAIModels(apiKey.trim())
+    }
     try {
         if (isCliProvider(provider)) return await fetchCliModels(provider, FALLBACK_MODELS[provider]);
         if (provider === 'opencode') return await fetchOpencodeModels();
         if (provider !== 'ollama' && provider !== 'anthropic' && !apiKey) return [];
-        if (provider === 'openai') return await fetchOpenAIModels(apiKey);
         if (provider === 'google') return await fetchGoogleModels(apiKey);
         if (provider === 'mistral') return await fetchMistralModels(apiKey);
         if (provider === 'ollama') {

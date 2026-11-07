@@ -292,6 +292,8 @@ The AI service lives in `src/main/aiService.ts`. It:
 
 **CLI model discovery:** Available models depend on the installed CLI version; the AI settings tab shows an update hint.
 
+**OpenAI/Codex compatibility:** `src/main/openaiProvider.ts` owns model filtering, Responses selection, text extraction, and redacted API errors. Accept current GPT families from `/v1/models` rather than a GPT-4-only whitelist; exclude specialized non-chat endpoints and expired models, and retain explicit model selections when rotating credentials. Modern GPT (5+) and o-series requests use Responses without legacy `max_tokens`/temperature parameters; older GPT models keep Chat Completions. Manual discovery errors propagate through IPC to `aiStore.providerModelErrors` and the Settings refresh status. Codex completion calls use `exec --skip-git-repo-check --sandbox read-only`, keep a selected model, or use the CLI's configured default if none is selected. Do not require a Git repository or change the user's trust configuration. Regression coverage includes `openaiProvider.test.ts`, the AI service/config/store tests, and `tests/electron/ai-provider-connectivity.spec.ts` (also included in the portable release gate). The desktop test uses fake credentials and intercepts the OpenAI endpoint; live keys belong only in the app's Credentials UI.
+
 API keys are encrypted at rest using Electron `safeStorage` (OS keyring) with an AES-256-GCM fallback. Keys are stored per-provider in `ai-config.json` and never leave the main process.
 
 ---

@@ -40,6 +40,13 @@ describe('AI provider removal persistence', () => {
         storage.content = ''
     })
 
+    it('preserves a dynamically discovered model when replacing the active provider key', async () => {
+        storage.exists = true
+        storage.content = JSON.stringify({provider: 'openai', model: 'gpt-6-sol', encryptedApiKeys: {}})
+        await saveApiKeyForProvider('openai', 'replacement-test-key')
+        expect((await loadConfig()).model).toBe('gpt-6-sol')
+    })
+
     it('defaults provider preference lists for older config files', async () => {
         // Given an older config without provider preference fields.
         storage.content = JSON.stringify({provider: 'opencode', model: 'opencode/gpt-5', encryptedApiKeys: {}, ollamaUrl: 'http://localhost:11434'})
