@@ -29,7 +29,7 @@ export async function launchPortableEditor(
   if (!child.pid) throw new Error("Electron process did not start");
   const page = await app.firstWindow();
   const pageErrors: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("pageerror", (error) => pageErrors.push(error.stack ?? error.message));
   return {
     app,
     page,

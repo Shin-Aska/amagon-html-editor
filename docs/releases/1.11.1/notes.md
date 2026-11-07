@@ -22,6 +22,8 @@ Create a theme from any starting palette, preview changes live, check text contr
 
 The new **Canvas + Code** layout gives both views their own resizable space. Click a widget in the canvas to switch to HTML, scroll to its opening tag, and highlight its complete markup—even when you click the same widget again.
 
+Rapid file switching also handles background symbol-highlighting cancellations cleanly.
+
 The code editor also gains local, offline loading; HTML and CSS formatting; find and replace; clickable diagnostics; editor preferences; and page-specific drafts that survive switching tabs. A small model cache and an off-by-default minimap keep the experience light.
 
 ## Updated dependencies

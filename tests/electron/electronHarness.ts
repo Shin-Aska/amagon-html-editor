@@ -165,7 +165,7 @@ export const launchAmagon = async (tempRoot: string): Promise<AmagonHarness> => 
     const page = await app.firstWindow({ timeout: electronStepTimeoutMs });
     await page.waitForLoadState("domcontentloaded", { timeout: electronStepTimeoutMs });
     const pageErrors: string[] = [];
-    page.on("pageerror", (error) => pageErrors.push(error.message));
+    page.on("pageerror", (error) => pageErrors.push(error.stack ?? error.message));
     await waitForRendererReady(page, pageErrors);
     return { app, page, profilePath, process, mainProcessId, launchToken, processTree, pageErrors };
   } catch (error) {

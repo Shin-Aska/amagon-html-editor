@@ -12,6 +12,7 @@ const filenames = [
   ["plain.png", "plain.png"],
   ["with space.png", "with%20space.png"],
   ["100%.png", "100%25.png"],
+  ["literal name.png", "literal%20name.png"],
   ["literal%20name.png", "literal%2520name.png"],
   ["literal%2Fname.png", "literal%252Fname.png"],
   ["café.png", "caf%C3%A9.png"],
@@ -65,6 +66,22 @@ test("literal media filenames display and survive a portable project round trip"
     expect(listed.success).toBe(true);
     expect(listed.assets.map((asset: { relativePath: string }) => asset.relativePath).sort())
       .toEqual(filenames.map(([name]) => `assets/${name}`).sort());
+    // A literal percent sequence must never delete its space-named neighbour.
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.locator(".am-asset-item").filter({
+      has: page.getByRole("img", { name: "literal%20name.png", exact: true }),
+    }).getByTitle("Delete asset", { exact: true }).click();
+    await expect(page.getByRole("img", { name: "literal%20name.png", exact: true })).toHaveCount(0);
+    await expectLoadedImage(page, "literal name.png");
+    await page.locator(".am-close-btn").click();
+    await page.getByRole("button", { name: "Save project", exact: true }).click();
+    await expect(page.locator(".status-icon").filter({ hasText: /^Saved$/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save project", exact: true })).toBeEnabled();
+    await closeProjectThroughUi(harness);
+    await openProjectThroughUi({ harness, filePath: target });
+    await page.getByTitle("Asset Manager", { exact: true }).click();
+    await expect(page.getByRole("img", { name: "literal%20name.png", exact: true })).toHaveCount(0);
+    await expectLoadedImage(page, "literal name.png");
     expect(harness.pageErrors).toEqual([]);
   } finally {
     await stopPortableEditor(harness);

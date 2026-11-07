@@ -1,6 +1,6 @@
 # Amagon 1.11.1 release validation
 
-Prepared 7 November 2026 on `main`. Both npm manifests identify version **1.11.1**. This replacement release combines the widget, theme, and code-editor improvements with corrected asset handling. The complete feature notes and four public screenshots are now under 1.11.1. The 1.11.0 release and tag are scheduled for withdrawal after validation; 1.11.1 remains a draft.
+Prepared 7 November 2026 on `main`. Both npm manifests identify version **1.11.1**. This replacement release combines the widget, theme, and code-editor improvements with corrected asset handling. The complete feature notes and four public screenshots are now under 1.11.1. The 1.11.0 release and tag have been withdrawn; 1.11.1 remains a draft.
 
 ## Reproduction and changes
 
@@ -19,9 +19,9 @@ Legacy open and ordinary Save now opt into missing-file warnings while retaining
 
 ## Regression gates
 
-Code changes on main and all pull requests run the complete Node 22 regression suite, process-ownership safety tests, and TypeScript checks on both Windows and Linux. Documentation-only pushes to main do not repeat this work. Release packaging additionally requires the complete Windows desktop suite (37 cases) and the six portable Linux desktop cases, all using one worker. Failed UI checks retain synthetic-fixture screenshots and traces for diagnosis.
+Code changes on main and all pull requests run the complete Node 22 regression suite, process-ownership safety tests, and TypeScript checks on both Windows and Linux. Documentation-only pushes to main do not repeat this work. Release packaging additionally requires the complete Windows desktop suite (37 cases) and the six portable Linux desktop cases, all using one worker. Both platforms must complete verification before either packaging job starts. Failed UI checks retain synthetic-fixture screenshots and traces for diagnosis.
 
-The two new desktop cases cover seven literal filenames through actual imports and archive save/reopen, and legacy missing-file repair through Asset Manager followed by strict portable conversion. Browser and Node test files use their own runners; process-ownership checks were not removed. Missing-file notices remain visible until the user dismisses them.
+The two new desktop cases cover eight literal filenames through actual imports and archive save/reopen, and legacy missing-file repair through Asset Manager followed by strict portable conversion. Browser and Node test files use their own runners; process-ownership checks were not removed. Missing-file notices remain visible until the user dismisses them.
 
 The local six-case desktop run passed on the rebuilt application, including themes/code editing, canvas layout, selection/highlighting, widget content/design/reset, literal filenames, and missing-file repair/conversion. Fresh full and production-only npm audits both report **zero vulnerabilities**. No dependency versions were changed for these verification improvements.
 
@@ -42,3 +42,11 @@ The release illustrations reuse the four public feature screenshots, now copied 
 ## Consolidated installer rebuild
 
 A fresh build with the regression gates will replace the initial draft artifacts. Its source commit, workflow results, fresh checksums, and packaged-app verification will be recorded here once complete.
+
+## Additional finding from the broader review
+
+The first CI desktop gate caught unhandled Monaco 0.54 word-highlighter cancellation during rapid model switching. A stronger local rapid-switch test reproduced the same stack. A narrowly scoped Vite transform now attaches Monaco’s own cancellation-aware error handler to the highlighter promises in production and development prebundling, preserving highlighting and reporting unexpected failures. Three tests execute the installed highlighter/Delayer code to check cancellation, real-error reporting, and upgrade guards. See [upstream issue #5294](https://github.com/microsoft/monaco-editor/issues/5294).
+
+The complete Windows suite also contained a legacy fixture that predated the external-file authority restriction. It now separately asserts that unsafe external references are rejected and that in-project missing assets can be repaired through an explicit picker import. No unsafe reference acceptance or test assertion was disabled.
+
+The strengthened asset test also deletes the literal `%20` filename and verifies its space-named neighbour survives another archive save/reopen. The rapid model-switch test passes after the Monaco fix, and development prebundling was independently checked to contain all three cancellation handlers. Main TypeScript, build-configuration TypeScript, and the production build pass.

@@ -317,6 +317,20 @@ test("app themes and code editing stay independent, reliable and bounded", async
           .filter((model) => model.uri.authority === "amagon").length;
       }),
     ).toBeLessThanOrEqual(6);
+    // Rapid real page selections exercise worker cancellation and model eviction.
+    await page.evaluate(async () => {
+      const pages = [...document.querySelectorAll<HTMLElement>(".page-item")];
+      for (let pass = 0; pass < 3; pass++) {
+        for (const item of pages) {
+          item.click();
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        }
+      }
+    });
+    expect(await page.evaluate(() => {
+      const m = Reflect.get(window, "monaco") as typeof Monaco;
+      return m.editor.getModels().filter(model => model.uri.authority === "amagon").length;
+    })).toBeLessThanOrEqual(6);
     await page
       .locator(".page-item")
       .filter({ has: page.locator(".page-name", { hasText: /^Home$/ }) })

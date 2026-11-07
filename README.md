@@ -171,3 +171,5 @@ Release 1.11.1 combines the widget, theme, and code-editor improvements with the
 Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
 
 Release builds run the full regression suite and desktop workflow checks before packaging. Use `npm test -- --maxWorkers=1` and `npm run test:e2e:release` to run these checks locally after building the app.
+
+Monaco 0.54 word-highlighter cancellation is handled by a scoped build/development transform in `scripts/monacoCancellation.ts`. Real errors remain reported, and rapid page switching is covered by desktop tests. No extra runtime dependency or background service is added.

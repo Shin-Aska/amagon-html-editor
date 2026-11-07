@@ -1,3 +1,5 @@
+> Historical preparation record: the 1.11.0 release and tag were withdrawn. Use the [complete 1.11.1 release](../1.11.1/notes.md) and [current validation](../1.11.1/validation.md).
+
 # Amagon 1.11.0 release validation
 
 Prepared 7 November 2026 on `feat/1.11.0`; this is a minor release in the Amagon 1.x series. The GitHub PR and release remain drafts for owner review.

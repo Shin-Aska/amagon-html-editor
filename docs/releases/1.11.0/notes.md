@@ -1,3 +1,5 @@
+> Historical preparation record: the 1.11.0 release and tag were withdrawn. Use the [complete 1.11.1 release](../1.11.1/notes.md) and [current validation](../1.11.1/validation.md).
+
 ![Canvas and code in Ocean, with selected widget HTML highlighted](canvas-code-ocean.png)
 
 Amagon 1.11.0 makes the whole editor easier to shape around the way you work: clearer controls for every widget, built-in and custom app themes, and a canvas that connects directly to your code.

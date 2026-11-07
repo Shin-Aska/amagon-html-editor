@@ -177,20 +177,28 @@ test.describe.serial("AMG desktop project format", () => {
   });
 
   test("preserves legacy sources and rolls back malicious archive opens", async () => {
-    // Given: one legacy project with an external reference and valid/invalid synthetic AMG fixtures.
+    // Given: an unsafe external reference, a repairable legacy project, and valid/invalid AMG fixtures.
     const root = await mkdtemp(path.join(os.tmpdir(), "amagon-e2e-legacy-"));
     const externalPath = path.join(root, "external.png");
     const legacyPath = path.join(root, "legacy.json");
+    const unsafeLegacyPath = path.join(root, "unsafe-legacy.json");
     const convertedPath = path.join(root, "converted.amg");
     const forcedZip64Path = path.join(root, "forced-zip64.amg");
     const corruptPath = path.join(root, "traversal.amg");
     await writeFile(externalPath, new Uint8Array([137, 80, 78, 71]));
-    await writeFile(legacyPath, JSON.stringify(projectWithReference(externalPath), null, 2));
+    const unsafeLegacy = JSON.stringify(projectWithReference(externalPath), null, 2);
+    await writeFile(unsafeLegacyPath, unsafeLegacy);
+    await writeFile(legacyPath, JSON.stringify(projectWithReference("assets/external.png"), null, 2));
     const forcedZip64 = await buildAmgFixture({ zip64: true });
     await writeFile(forcedZip64Path, forcedZip64.archive);
     await writeFile(corruptPath, replaceAsciiSameLength(forcedZip64.archive, "assets/photo.txt", "assets/../bad.tx"));
     const harness = await launchAmagon(root);
     try {
+      // A document cannot grant access to an arbitrary external local file.
+      await queueNativeDialogs(harness.app, { opens: [[unsafeLegacyPath]] });
+      const unsafe = await loadProjectThroughBridge(harness.page, null);
+      expect(unsafe).toMatchObject({ success: false, error: { code: "PROJECT_NOT_PORTABLE" } });
+      expect(await readFile(unsafeLegacyPath, "utf8")).toBe(unsafeLegacy);
       await queueNativeDialogs(harness.app, { opens: [[legacyPath]] });
 
       // When: legacy JSON is opened and saved in place.
@@ -212,7 +220,7 @@ test.describe.serial("AMG desktop project format", () => {
       let activeLegacySession = ordinarySave.session;
       const legacyAfterOrdinarySave = await readFile(legacyPath);
 
-      // Then: conversion rejects the external path, succeeds after explicit import, and leaves the source unchanged.
+      // Then: conversion rejects missing bytes, succeeds after explicit import, and leaves the source unchanged.
       await queueNativeDialogs(harness.app, { saves: [convertedPath] });
       const rejected = await saveProjectAsThroughBridge(
         harness.page,

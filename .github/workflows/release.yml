@@ -13,9 +13,16 @@ permissions:
   contents: write
 
 jobs:
+  verify:
+    uses: ./.github/workflows/regression.yml
+    with:
+      desktop: true
+
   release:
+    needs: verify
     # Use a matrix to run the job on different OS virtual machines
     strategy:
+      fail-fast: false
       matrix:
         # Keep the same Windows/Linux download set as previous releases.
         os: [ubuntu-latest, windows-latest]
@@ -35,36 +42,11 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Test Regression Suite
-        run: npm test -- --maxWorkers=1
-
-      - name: Test Electron Process Ownership
-        run: npm run test:e2e:ownership
-
       - name: Build Code
         run: npm run build
 
       - name: Check TypeScript
         run: npx tsc --noEmit -p tsconfig.json
-
-      - name: Verify Desktop Workflows
-        shell: bash
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            xvfb-run --auto-servernum npm run test:e2e:release
-          else
-            npm run test:e2e:electron
-          fi
-
-      - name: Upload Desktop Diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-evidence-${{ matrix.os }}
-          path: .omo/evidence/amg-bundled-project-format/task-13-amg-bundled-project-format/test-results
-          if-no-files-found: ignore
-          include-hidden-files: true
-          retention-days: 7
 
       - name: Build and Publish with electron-builder
         env:

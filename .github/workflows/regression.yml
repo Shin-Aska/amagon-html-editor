@@ -10,6 +10,16 @@ on:
       - .aiassistant/rules/project-context.md
   pull_request:
   workflow_dispatch:
+    inputs:
+      desktop:
+        description: Build and run desktop workflows too
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      desktop:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -36,4 +46,27 @@ jobs:
       - name: Test Electron Process Ownership
         run: npm run test:e2e:ownership
       - name: Check TypeScript
-        run: npx tsc --noEmit -p tsconfig.json
+        run: |
+          npx tsc --noEmit -p tsconfig.json
+          npx tsc --noEmit -p tsconfig.node.json
+      - name: Build Code
+        if: inputs.desktop
+        run: npm run build
+      - name: Verify Desktop Workflows
+        if: inputs.desktop
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            xvfb-run --auto-servernum npm run test:e2e:release
+          else
+            npm run test:e2e:electron
+          fi
+      - name: Upload Desktop Diagnostics
+        if: failure() && inputs.desktop
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-evidence-${{ matrix.os }}
+          path: .omo/evidence/amg-bundled-project-format/task-13-amg-bundled-project-format/test-results
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
