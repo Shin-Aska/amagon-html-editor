@@ -1,56 +1,44 @@
 # Amagon 1.11.1 release validation
 
-Prepared 7 November 2026 on `main`. Both npm manifests identify version **1.11.1**. This replacement release combines the widget, theme, and code-editor improvements with corrected asset handling. The complete feature notes and four public screenshots are now under 1.11.1. The 1.11.0 release and tag have been withdrawn; 1.11.1 remains a draft.
+Prepared 7 November 2026. Both npm manifests identify **1.11.1**. Application source: `152c599363582910ee74ce48d960b9536edc717f`. The replacement draft combines all widget, theme, and code-editor improvements with the asset fixes, complete feature notes, and four public screenshots. The 1.11.0 release and tag were withdrawn. Version 1.11.1 remains unpublished.
 
-## Reproduction and changes
+## Reproduction and fixes
 
-The packaged 1.11.0 application reproduced both reported failures. A legacy project with one genuinely absent in-project image could not open because missing-file diagnostics were fatal. Media import copied files first, then interpreted raw filesystem filenames as encoded asset references, producing errors for spaces and percent signs or an incorrect URL for a literal `%20` filename.
+The packaged 1.11.0 application reproduced both reported failures. One supplied legacy project referenced a genuinely absent in-project image; missing-file diagnostics prevented the entire project from opening. Media import copied files before interpreting raw filesystem filenames as encoded references, causing errors for spaces and percent characters and incorrect URLs for literal `%20` names.
 
-Legacy open and ordinary Save now opt into missing-file warnings while retaining unresolved references for repair. Strict validation remains the default; bundle open/save and legacy-to-bundle conversion still reject missing assets, and invalid paths remain blocking. Import results encode filesystem-relative paths before building session URLs while retaining raw paths for filesystem operations.
+Legacy open and ordinary Save now report missing-file warnings while retaining references for repair. The notice persists until dismissed. Bundle open/save and conversion remain strict about missing bytes. Unsafe paths, traversal, and stale session references remain blocked. Legacy external strings can be preserved without granting local-file read authority; conversion requires explicit import.
 
-## Source verification
+Import results encode raw filesystem paths once when constructing session URLs. Font imports now receive the same treatment at the renderer persistence boundary. Font existence checks and deletion convert only current-session font URLs back to raw paths. Export retains the original scoped source URL for reading bytes and uses safe, distinct output filenames, including when sanitized names collide.
 
-- Added **14 regression cases**, including all three media pickers, spaces, Unicode, `#`, literal `%`, `%20`, `%2F`, legacy staging/save/reopen, renderer warnings, and strict bundle/path checks.
-- A fresh, sequential full run passed **all 1,160 tests across all 121 files**, with no failures or timeouts. A further export regression verifies six encoded filename variants, matching HTML paths, and matching asset bytes; all 17 export tests pass.
-- TypeScript checking and the production build passed again after making missing-file notices persistent and dismissible. All 30 focused command/export checks pass, and the separate five process-ownership safety tests pass.
-- After the version bump, all **70 focused checks** across five asset/legacy/renderer test files passed.
-- The rebuilt Electron application opened all four supplied legacy projects. Existing images loaded; the genuinely absent file was identified in a warning. The original private archive was unchanged and is not included in this repository or the release.
-- Imports named `plain.png`, `with space.png`, `100%.png`, and `literal%20name.png` displayed without error and survived an actual `.amg` save/close/reopen round trip, with zero renderer page errors.
+The broader desktop gate also reproduced unhandled Monaco 0.54 word-highlighter cancellation during rapid model switching. A scoped Vite transform attaches Monaco's cancellation-aware error handler to the affected promises in production and development prebundling. Highlighting remains enabled and unexpected errors remain reportable. Tests execute the installed highlighter and Delayer code, verify real-error reporting, and guard against unreviewed upstream source changes. See [upstream issue #5294](https://github.com/microsoft/monaco-editor/issues/5294).
 
-## Regression gates
+Empty layout-widget preview documents now fill the iframe viewport. Desktop test helpers wait for the welcome screen before opening projects, reload tests await recent-project entries, and settings tests use the current Appearance tab. No failing test was removed or uncaught renderer error filtered out.
 
-Code changes on main and all pull requests run the complete Node 22 regression suite, process-ownership safety tests, and TypeScript checks on both Windows and Linux. Documentation-only pushes to main do not repeat this work. Release packaging additionally requires the complete Windows desktop suite (38 cases) and the seven portable Linux desktop cases, all using one worker. Both platforms must complete verification before either packaging job starts. Failed UI checks retain synthetic-fixture screenshots and traces for diagnosis.
+## Regression evidence
 
-The two new desktop cases cover eight literal filenames through actual imports and archive save/reopen, and legacy missing-file repair through Asset Manager followed by strict portable conversion. Browser and Node test files use their own runners; process-ownership checks were not removed. Missing-file notices remain visible until the user dismisses them.
+- [Cross-platform regression run 42354517381](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42354517381): **1,179 tests across 122 files passed on both Windows and Linux**, plus **five process-ownership checks per platform** and both application/build-configuration TypeScript checks.
+- The local production build and TypeScript checks pass. All **44 focused font, snapshot, and export tests** pass; seven font failures were reproduced before their fixes.
+- All **seven portable desktop workflows pass locally and in Linux CI**: themes/code editing with rapid model switching and bounded model count; canvas/code layout; canvas-to-HTML selection; widget content/design/reset; eight literal media filenames; legacy missing-file repair/conversion; and font import/save/reopen/export/delete.
+- Media coverage includes spaces, Unicode, `#`, literal `%`, `%20`, and `%2F`. Deleting a literal `%20` filename preserves its space-named neighbour through another saved round trip.
+- The font desktop workflow exports through the real native bridge and compares the emitted font bytes with the original public font fixture, then deletes the reopened font and verifies another saved round trip.
+- A fresh full npm audit reports **zero vulnerabilities**. No dependency was added for these fixes.
 
-The local six-case desktop run passed on the rebuilt application, including themes/code editing, canvas layout, selection/highlighting, widget content/design/reset, literal filenames, and missing-file repair/conversion. Fresh full and production-only npm audits both report **zero vulnerabilities**. No dependency versions were changed for these verification improvements.
+## Release gates
 
-## Initial installer verification
+Code changes on main and all pull requests run the complete regression suite, ownership checks, and both TypeScript checks on Windows and Linux. Release packaging additionally requires **all 38 Windows desktop workflows and all seven portable Linux workflows**. Both platforms must finish verification before either packaging job can upload installers. Each test run uses one worker; failures retain synthetic-fixture screenshots and traces for diagnosis.
 
-[GitHub Actions run 42345677471](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42345677471) **succeeded on Windows and Linux**, including clean dependency installs, production builds, TypeScript checks, packaging, and draft uploads. Both jobs built tag `v1.11.1` at application commit `9cf7f7532dd4253d6650e41a6e58924f8e37270c`. The subsequent verification commit changes release records only.
+[Release workflow 42354525667](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42354525667) **passed both platform gates and both installer builds**, using the exact application commit above. Windows passed all **38 desktop workflows**; Linux passed all **seven**. Both jobs used clean dependency installs, production builds, TypeScript checks, packaging, and draft uploads.
 
-The [1.11.1 draft on the Releases page](https://github.com/Shin-Aska/amagon-html-editor/releases) contains seven assets: the Windows x64 installer, its blockmap and update feed; the Linux x64 AppImage, Debian package and update feed; and [SHA256SUMS.txt](SHA256SUMS.txt). The manifest records GitHub's SHA-256 upload digests for all six build files. Its uploaded digest also matches the committed manifest.
+The compact editor case now runs at 1008 × 660 and verifies real text focus after clicking the measured code viewport. Its local run passes. Mouse and keyboard divider resizing were independently reproduced successfully. The complete preview preference/restart workflow also passes locally through the portable harness.
 
-The downloaded AppImage, Windows installer, blockmap, and both update feeds independently match their SHA-256 upload digests and declared sizes. Both feeds identify version 1.11.1; their SHA-512 checksums match the downloaded Windows installer and Linux AppImage respectively.
+## Installer verification
 
-The downloaded and extracted AppImage reports `app.isPackaged === true` and version `1.11.1`. In that packaged application, fresh temporary copies of **all four supplied legacy projects opened, Saved, and reopened**. Existing images loaded, and the genuinely absent image remained a repairable warning. The four filename import cases also passed in the packaged application and survived `.amg` save/close/reopen, with zero renderer page errors. Private project files and screenshots were not uploaded.
+The draft contains **seven fresh assets**: the Windows x64 installer, blockmap, and update feed; the Linux x64 AppImage, Debian package, and update feed; and [SHA256SUMS.txt](SHA256SUMS.txt). All seven asset IDs differ from the initial draft build. Every downloaded build file independently matches its SHA-256 upload digest and declared size, including the Debian package. Both feeds identify version 1.11.1; all referenced installer/package SHA-512 digests and sizes match the downloaded files. The uploaded checksum manifest also matches the committed file.
 
-Windows packaging is verified by CI and downloaded-file integrity checks; a Windows runtime launch was not performed on this Linux machine. The release remains a draft for owner review. The previously published 1.11.0 release and tag have since been withdrawn.
+The downloaded, extracted AppImage reports `app.isPackaged === true` and version `1.11.1`. Fresh temporary copies of **all four supplied legacy projects opened, Saved, and reopened**. Nine existing local images loaded successfully; the one genuinely absent image remained a repairable warning. Image references survived saving and reopening. Imports named `plain.png`, `with space.png`, `100%.png`, and `literal%20name.png` displayed correctly and survived an actual `.amg` save/close/reopen round trip. All of these checks recorded zero renderer errors.
 
-The release illustrations reuse the four public feature screenshots, now copied under 1.11.1. Private reproduction projects and screenshots are excluded.
+The same downloaded application's `resources/app.asar` passed **two additional desktop workflows** with packaged/version/path assertions: the complete compact theme/code-editor case (including rapid model switching, bounded model count, recovery, formatting, undo, and saved-code reopening), and the font import/save/reopen/export/delete case. The latter compares exported font bytes with the original fixture and verifies that deletion survives another saved round trip. Both recorded zero renderer errors.
 
-## Consolidated installer rebuild
+Windows runtime workflows pass in CI; the downloaded Windows installer was integrity-checked on Linux. A Windows installer installation was not performed on this machine. The release remains a draft for owner review.
 
-A fresh build with the regression gates will replace the initial draft artifacts. Its source commit, workflow results, fresh checksums, and packaged-app verification will be recorded here once complete.
-
-## Additional finding from the broader review
-
-The first CI desktop gate caught unhandled Monaco 0.54 word-highlighter cancellation during rapid model switching. A stronger local rapid-switch test reproduced the same stack. A narrowly scoped Vite transform now attaches Monaco’s own cancellation-aware error handler to the highlighter promises in production and development prebundling, preserving highlighting and reporting unexpected failures. Three tests execute the installed highlighter/Delayer code to check cancellation, real-error reporting, and upgrade guards. See [upstream issue #5294](https://github.com/microsoft/monaco-editor/issues/5294).
-
-The complete Windows suite also contained a legacy fixture that predated the external-file authority restriction. It now separately asserts that document-derived external references grant no asset-read authority and that in-project missing assets can be repaired through an explicit picker import. No unsafe reference acceptance or test assertion was disabled.
-
-The strengthened asset test also deletes the literal `%20` filename and verifies its space-named neighbour survives another archive save/reopen. The rapid model-switch test passes after the Monaco fix, and development prebundling was independently checked to contain all three cancellation handlers. Main TypeScript, build-configuration TypeScript, and the production build pass.
-
-The broader review reproduced seven font failures before changes: raw imported filenames could not be saved correctly, loaded font URLs were passed to raw-path mutation IPC, and exports discarded source session URLs. Focused save/reopen, delete, and export tests now pass. Additional coverage checks stale-session rejection and safe filename collisions. A desktop font workflow imports a literal-percent filename, saves/reopens, exports and compares the original bytes, then deletes the reopened font and verifies another saved round trip.
-
-The first full Windows run passed 30 desktop workflows and exposed seven failures. Four were startup/reload races in test helpers, one targeted the old General location of Appearance settings, one expected legacy open to reject strings that the existing contract preserves without read authority, and one exposed zero-height empty-widget preview bodies. These are being corrected and the full release gates must pass before installer uploads.
+The private reproduction archive and screenshots are excluded from the repository, release, and CI. Packaged-app checks use fresh temporary copies; the original archive remains untouched. Release illustrations are the four public feature screenshots under this directory.
