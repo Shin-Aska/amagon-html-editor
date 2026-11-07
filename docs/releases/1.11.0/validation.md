@@ -90,17 +90,27 @@ The reader now retains ArrayBuffer-backed `Uint8Array` chunks, the fixtures use 
 
 Verification on the post-merge source: **1,146 tests pass across all 121 files**, including all 110 checks in the six previously failing files. TypeScript and the main-process build pass. Real archive extraction and writing also succeed under Node 22.17.1 and Electron's Node 24.19.0. See [backend test portability](../../development.md#backend-test-portability) for the runtime and fixture conventions.
 
-Installer replacement is being prepared from the post-merge fixes. The completed rebuild and refreshed checksums will be recorded after packaging.
+The Windows/Linux installers have been rebuilt from the post-merge fixes, with refreshed checksums and a passing packaged-app archive round trip.
+
+### Rebuilt installers from main
+
+[GitHub Actions run 42329767378](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42329767378) **succeeded on Windows and Linux**, including clean installs, production builds, TypeScript checks, packaging, and replacement uploads. The rebuilt application source is commit `344aac2960ec56e1c9ba30e9f4d6db4fa3aaf20a`. The subsequent checksum/verification commit changes release records only.
+
+All six build files have fresh uploaded asset IDs in the existing **1.11.0 draft**: Windows installer, blockmap and update feed; Linux AppImage, Debian package and update feed. [SHA256SUMS.txt](SHA256SUMS.txt) now records the replacement upload digests. Both update feeds identify version 1.11.0 and reference the fresh file sizes; the Linux feed's SHA-512 matches the downloaded AppImage.
+
+The downloaded AppImage matches GitHub's SHA-256 digest. Inspection of its packaged main-process code confirms that the typed-byte-array archive fix is present. A smoke check of the **rebuilt packaged application** passes version detection, project creation, archive close/reopen, bundled-font loading, canvas/code layout, selected widget HTML highlighting, local editor workers, and zero renderer page errors. Windows packaging is verified by CI; a Windows runtime launch was not performed on this Linux machine.
+
+The complete source test suite remains green: **1,146 passed, zero failed**. Fresh full and production-only npm audits both report zero vulnerabilities. The release remains unpublished and no version tag has been pushed.
 
 ### Initial installer preparation
 
 [GitHub Actions run 42325429867](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42325429867) **succeeded on Windows and Linux**: clean npm installs, production builds, TypeScript checks, packaging, and draft asset uploads. The artifacts were built from application commit `d0d81719f67acccbf443c285156c4500b4968cd1`; the follow-up verification commit changes release documentation only.
 
-The [1.11.0 draft on the Releases page](https://github.com/Shin-Aska/amagon-html-editor/releases) contains:
+The [1.11.0 draft on the Releases page](https://github.com/Shin-Aska/amagon-html-editor/releases) initially contained:
 
 - Windows x64 installer, blockmap, and `latest.yml`.
 - Linux x64 AppImage, Debian package, and `latest-linux.yml`.
-- [SHA256SUMS.txt](SHA256SUMS.txt), using GitHub's upload digests for all six build files.
+- [Initial checksums](https://github.com/Shin-Aska/amagon-html-editor/blob/c79d6cbfce93279ac3bb317ff0bedb15cfe2e441/docs/releases/1.11.0/SHA256SUMS.txt), using GitHub's upload digests for the original six build files.
 
 The downloaded AppImage's SHA-256 matches its recorded upload digest. A smoke check of the extracted **packaged** application confirms `app.isPackaged === true`, version `1.11.0`, project creation, actual bundled-font loading, the canvas/code layout, selected widget HTML highlighting, locally loaded editor workers, and no renderer page errors. Windows packaging is verified by CI; a Windows runtime launch was not performed on this Linux machine.
 
