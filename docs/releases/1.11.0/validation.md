@@ -86,7 +86,7 @@ The 266 feature-focused checks are green, including every new renderer test file
 
 [GitHub Actions run 42325429867](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42325429867) **succeeded on Windows and Linux**: clean npm installs, production builds, TypeScript checks, packaging, and draft asset uploads. The artifacts were built from application commit `d0d81719f67acccbf443c285156c4500b4968cd1`; the follow-up verification commit changes release documentation only.
 
-The [draft release](https://github.com/Shin-Aska/amagon-html-editor/releases/tag/untagged-43b7a8467192e783c491) contains:
+The [1.11.0 draft on the Releases page](https://github.com/Shin-Aska/amagon-html-editor/releases) contains:
 
 - Windows x64 installer, blockmap, and `latest.yml`.
 - Linux x64 AppImage, Debian package, and `latest-linux.yml`.
