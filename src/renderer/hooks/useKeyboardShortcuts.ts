@@ -1,7 +1,7 @@
 import {useCallback, useEffect} from 'react'
 import {useEditorStore} from '../store/editorStore'
 import {cloneBlockTree} from '../templates/templateFactories'
-import {type Block, createBlock} from '../store/types'
+import {type Block, type EditorLayout, createBlock} from '../store/types'
 
 interface UseKeyboardShortcutsOptions {
     enabled?: boolean
@@ -16,7 +16,7 @@ interface UseKeyboardShortcutsOptions {
     rightPanelOpen: boolean
     codeEditorOpen: boolean
     onNewProject: () => void
-    onSetEditorLayout?: (layout: 'standard' | 'no-sidebar' | 'no-inspector' | 'canvas-only' | 'code-focus' | 'zen') => void
+    onSetEditorLayout?: (layout: EditorLayout) => void
 }
 
 // Get siblings of a block
@@ -249,18 +249,20 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
     // Main keyboard handler
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        // Leave input, select, textarea, contenteditable, and Monaco keys to their controls.
+        // Leave input, select, textarea, contenteditable, resize-handle, and Monaco keys to their controls.
         const target = e.target as HTMLElement;
         // If e.target is the Window (e.g. from artificial window.dispatchEvent bubbling from Canvas), these properties will be undefined
         const closestContentEditable = target?.closest?.('[contenteditable="true"]') ?? null;
         const closestMonacoEditor = target?.closest?.('.monaco-editor') ?? null;
+        const closestResizeHandle = target?.closest?.('[data-separator]') ?? null;
         const isInputElement =
             target?.tagName === 'INPUT' ||
             target?.tagName === 'SELECT' ||
             target?.tagName === 'TEXTAREA' ||
             target?.contentEditable === 'true' ||
             closestContentEditable !== null ||
-            closestMonacoEditor !== null;
+            closestMonacoEditor !== null ||
+            closestResizeHandle !== null;
 
         const isCtrl = e.ctrlKey || e.metaKey;
 

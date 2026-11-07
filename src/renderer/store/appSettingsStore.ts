@@ -1,10 +1,15 @@
 import {create} from 'zustand'
 import {getApi} from '../utils/api'
+import {applyAppPalette, normalizeCustomAppThemes, resolveAppTheme, type AppColorTheme} from '../themes/appThemes'
+import {DEFAULT_CODE_PREFERENCES, normalizeCodePreferences, type CodePreferences} from '../utils/codePreferences'
 import type {EditorLayout} from './types'
 import {isMotionPreviewMode, type MotionPreviewMode} from '../utils/motionPreview'
 
 export interface AppSettings {
     theme: 'light' | 'dark'
+    appColorTheme: string
+    customAppThemes: AppColorTheme[]
+    codePreferences: CodePreferences
     defaultLayout: EditorLayout
     showTabChildSelectionWarning: boolean
     tutorialEnabled: boolean
@@ -22,7 +27,7 @@ interface AppSettingsState extends AppSettings {
 
 interface AppSettingsActions {
     loadSettings: () => Promise<void>
-    saveSettings: (patch: Partial<AppSettings>) => Promise<void>
+    saveSettings: (patch: Partial<AppSettings>) => Promise<boolean>
     setTheme: (theme: 'light' | 'dark') => void
     setDefaultLayout: (layout: EditorLayout) => void
     setShowTabChildSelectionWarning: (show: boolean) => void
@@ -37,6 +42,9 @@ type AppSettingsStore = AppSettingsState & AppSettingsActions
 
 const DEFAULT_SETTINGS: AppSettings = {
     theme: 'dark',
+    appColorTheme: 'classic',
+    customAppThemes: [],
+    codePreferences: DEFAULT_CODE_PREFERENCES,
     defaultLayout: 'standard',
     showTabChildSelectionWarning: true,
     tutorialEnabled: true,
@@ -67,20 +75,19 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
                     : DEFAULT_SETTINGS.motionPreviewMode;
                 const libraryPreviewMode = result.settings.libraryPreviewMode === 'classic' ? 'classic' : 'live';
                 const libraryPreviewCacheSlots = normalizePreviewCacheSlots(result.settings.libraryPreviewCacheSlots);
-                set({...DEFAULT_SETTINGS, ...result.settings, motionPreviewMode, libraryPreviewMode, libraryPreviewCacheSlots, loaded: true})
+                const customAppThemes = normalizeCustomAppThemes(result.settings.customAppThemes);
+                const appColorTheme = resolveAppTheme(result.settings.appColorTheme, customAppThemes).id;
+                const theme = result.settings.theme === 'light' ? 'light' : 'dark';
+                const codePreferences = normalizeCodePreferences(result.settings.codePreferences);
+                set({...DEFAULT_SETTINGS, ...result.settings, theme, customAppThemes, appColorTheme, codePreferences, motionPreviewMode, libraryPreviewMode, libraryPreviewCacheSlots, loaded: true})
             } else {
                 set({...DEFAULT_SETTINGS, loaded: true})
             }
         } catch {
             set({...DEFAULT_SETTINGS, loaded: true})
         } finally {
-            // Regardless of load success, apply the resolved theme
-            const theme = get().theme;
-            if (theme === 'dark') {
-                document.body.classList.add('dark')
-            } else {
-                document.body.classList.remove('dark')
-            }
+            const state = get();
+            applyAppPalette(state.theme, resolveAppTheme(state.appColorTheme,state.customAppThemes)[state.theme]);
         }
     },
 
@@ -88,6 +95,9 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
         const current = get();
         const nextSettings: AppSettings = {
             theme: patch.theme ?? current.theme,
+            appColorTheme: patch.appColorTheme ?? current.appColorTheme,
+            customAppThemes: normalizeCustomAppThemes(patch.customAppThemes ?? current.customAppThemes),
+            codePreferences: normalizeCodePreferences(patch.codePreferences ?? current.codePreferences),
             defaultLayout: patch.defaultLayout ?? current.defaultLayout,
             showTabChildSelectionWarning: patch.showTabChildSelectionWarning ?? current.showTabChildSelectionWarning,
             tutorialEnabled: patch.tutorialEnabled ?? current.tutorialEnabled,
@@ -98,24 +108,23 @@ export const useAppSettingsStore = create<AppSettingsStore>((set, get) => ({
             libraryPreviewCacheSlots: normalizePreviewCacheSlots(patch.libraryPreviewCacheSlots ?? current.libraryPreviewCacheSlots),
             motionPreviewMode: patch.motionPreviewMode ?? current.motionPreviewMode
         };
+        nextSettings.appColorTheme = resolveAppTheme(nextSettings.appColorTheme,nextSettings.customAppThemes).id;
         set({...nextSettings});
+        applyAppPalette(nextSettings.theme,resolveAppTheme(nextSettings.appColorTheme,nextSettings.customAppThemes)[nextSettings.theme]);
 
         try {
             const api = getApi();
-            await api.app.saveSettings(nextSettings)
+            const result = await api.app.saveSettings(nextSettings);
+            if (!result.success) throw new Error(result.error || 'Could not persist app settings');
+            return true
         } catch (err) {
-            console.error('Failed to save app settings', err)
+            console.error('Failed to save app settings', err);
+            return false
         }
     },
 
     setTheme: (theme: 'light' | 'dark') => {
-        set({theme});
-        if (theme === 'dark') {
-            document.body.classList.add('dark')
-        } else {
-            document.body.classList.remove('dark')
-        }
-        get().saveSettings({theme})
+        void get().saveSettings({theme})
     },
 
     setDefaultLayout: (layout: EditorLayout) => {

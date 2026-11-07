@@ -1,5 +1,5 @@
 import {lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {Group as PanelGroup, Panel, Separator as PanelResizeHandle} from 'react-resizable-panels'
+import {Group as PanelGroup, Panel, Separator as PanelResizeHandle, useGroupRef} from 'react-resizable-panels'
 import {
   DndContext,
   type DragCancelEvent,
@@ -185,9 +185,29 @@ function App(): JSX.Element {
         }
     }, [isProjectLoaded, api]);
 
-    // Auto-open code editor if switching to code-focus layout
+    const centerGroupRef = useGroupRef();
+    const sideBySide = editorLayout === 'canvas-code';
+    const handleToggleCodeEditor = useCallback(() => {
+        if (editorLayout === 'canvas-code') {
+            setCodeEditorOpen(false);
+            setEditorLayout('canvas-only')
+        } else if (editorLayout === 'canvas-only') {
+            setCodeEditorOpen(true);
+            setEditorLayout('canvas-code')
+        } else setCodeEditorOpen(open => !open)
+    }, [editorLayout, setEditorLayout]);
+
     useEffect(() => {
-        if (editorLayout === 'code-focus') {
+        if (!sideBySide || !isProjectLoaded) return;
+        const frame = requestAnimationFrame(() => {
+            centerGroupRef.current?.setLayout({'panel-canvas': 50, 'panel-code': 50})
+        });
+        return () => cancelAnimationFrame(frame)
+    }, [sideBySide, isProjectLoaded, centerGroupRef]);
+
+    // Layouts dedicated to code open the editor automatically.
+    useEffect(() => {
+        if (editorLayout === 'code-focus' || editorLayout === 'canvas-code') {
             setCodeEditorOpen(true)
         }
     }, [editorLayout]);
@@ -272,7 +292,7 @@ function App(): JSX.Element {
     // Derived panel visibility from layout
     const showSidebar = editorLayout === 'standard' || editorLayout === 'no-inspector';
     const showInspector = editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'zen';
-    const showCodeEditor = codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen');
+    const showCodeEditor = sideBySide || codeEditorOpen && (editorLayout === 'standard' || editorLayout === 'no-sidebar' || editorLayout === 'no-inspector' || editorLayout === 'code-focus' || editorLayout === 'zen');
     const showCanvas = editorLayout !== 'code-focus';  // Hide canvas in code-focus layout
     useKeyboardShortcuts({
         enabled: isProjectLoaded,
@@ -280,12 +300,12 @@ function App(): JSX.Element {
         onSaveAs: handleSaveAs,
         onOpen: handleLoad,
         onExport: handleExport,
-        onToggleCodeEditor: () => setCodeEditorOpen(prev => !prev),
+        onToggleCodeEditor: handleToggleCodeEditor,
         onToggleLeftPanel: handleToggleSidebar,
         onToggleRightPanel: handleToggleInspector,
         leftPanelOpen: showSidebar,
         rightPanelOpen: showInspector,
-        codeEditorOpen,
+        codeEditorOpen: showCodeEditor,
         onNewProject: handleNewProject,
         onSetEditorLayout: setEditorLayout
     });
@@ -366,7 +386,7 @@ function App(): JSX.Element {
                     handleToggleInspector();
                     break;
                 case 'toggle-code-editor':
-                    setCodeEditorOpen(prev => !prev);
+                    handleToggleCodeEditor();
                     break;
                 case 'command-palette':
                     setCommandPaletteOpen(prev => !prev);
@@ -379,7 +399,7 @@ function App(): JSX.Element {
                     break
             }
         })
-    }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector, welcomeInitializing]);
+    }, [api, handleNewProject, handleLoad, handleSave, handleSaveAs, handleExport, handleToggleSidebar, handleToggleInspector, handleToggleCodeEditor, welcomeInitializing]);
 
     const [activeWidget, setActiveWidget] = useState<{
         widgetType: string;
@@ -596,11 +616,11 @@ function App(): JSX.Element {
                     <Toolbar
                         leftPanelOpen={showSidebar}
                         rightPanelOpen={showInspector}
-                        codeEditorOpen={codeEditorOpen}
+                        codeEditorOpen={showCodeEditor}
                         editorLayout={editorLayout}
                     onToggleLeftPanel={handleToggleSidebar}
                     onToggleRightPanel={handleToggleInspector}
-                    onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
+                    onToggleCodeEditor={handleToggleCodeEditor}
                     onSetEditorLayout={setEditorLayout}
                     onOpenThemeEditor={() => setShowThemeEditor(true)}
                     onOpenPublish={() => setShowPublish(true)}
@@ -628,22 +648,24 @@ function App(): JSX.Element {
                         )}
 
                         <Panel className="panel panel-center" id="panel-center" defaultSize="55%">
-                            <PanelGroup id="html-editor-center" orientation="vertical">
+                            <PanelGroup id="html-editor-center" groupRef={centerGroupRef}
+                                orientation={sideBySide ? 'horizontal' : 'vertical'}
+                                className={sideBySide ? 'canvas-code-layout' : undefined}>
                                 {showCanvas && (
-                                    <Panel className="canvas-area" id="panel-canvas" defaultSize="70%">
+                                    <Panel className="canvas-area" id="panel-canvas" defaultSize={sideBySide ? "50%" : "70%"} minSize={sideBySide ? "20%" : "10%"}>
                                         <Canvas/>
                                         <DragOverlayManager onDropTargetChange={setDropHint}/>
                                     </Panel>
                                 )}
 
                                 {showCodeEditor && showCanvas && (
-                                    <PanelResizeHandle className="panel-resize-handle-horizontal"/>
+                                    <PanelResizeHandle aria-label="Resize canvas and code" className={sideBySide ? "panel-resize-handle" : "panel-resize-handle-horizontal"}/>
                                 )}
 
                                 {showCodeEditor && (
                                     <Panel
-                                        defaultSize="30%"
-                                        minSize="10%"
+                                        defaultSize={sideBySide ? "50%" : "30%"}
+                                        minSize={sideBySide ? "20%" : "10%"}
                                         maxSize="80%"
                                         className="code-editor-area"
                                         id="panel-code"
@@ -725,7 +747,7 @@ function App(): JSX.Element {
                     onOpen={handleLoad}
                     onSave={handleSave}
                     onExport={handleExport}
-                    onToggleCodeEditor={() => setCodeEditorOpen(!codeEditorOpen)}
+                    onToggleCodeEditor={handleToggleCodeEditor}
                     onToggleLeftPanel={handleToggleSidebar}
                     onToggleRightPanel={handleToggleInspector}
                 />

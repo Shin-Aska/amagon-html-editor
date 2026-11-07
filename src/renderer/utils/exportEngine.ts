@@ -81,9 +81,9 @@ const GENERIC_FONTS = new Set([
 
 const EXPORT_STYLESHEET_HREF = './styles.css';
 const FRAMEWORK_BASE_URL = 'app-framework://asset';
-const BOOTSTRAP_EXPORT_CSS_URL = `${FRAMEWORK_BASE_URL}/bootstrap/5.3.3/css/bootstrap.min.css`;
-const BOOTSTRAP_ICONS_EXPORT_CSS_URL = `${FRAMEWORK_BASE_URL}/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css`;
-const BOOTSTRAP_EXPORT_JS_URL = `${FRAMEWORK_BASE_URL}/bootstrap/5.3.3/js/bootstrap.bundle.min.js`;
+const BOOTSTRAP_EXPORT_CSS_URL = `${FRAMEWORK_BASE_URL}/bootstrap/5.3.8/css/bootstrap.min.css`;
+const BOOTSTRAP_ICONS_EXPORT_CSS_URL = `${FRAMEWORK_BASE_URL}/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css`;
+const BOOTSTRAP_EXPORT_JS_URL = `${FRAMEWORK_BASE_URL}/bootstrap/5.3.8/js/bootstrap.bundle.min.js`;
 const TAILWIND_EXPORT_JS_URL = `${FRAMEWORK_BASE_URL}/tailwind/tailwindcss-browser.js`;
 
 export async function exportProject(
@@ -823,21 +823,21 @@ function getFrameworkHead(
         case 'bootstrap-5': {
             const cssLink = inline && content.css
                 ? `    <style>${content.css}</style>`
-                : `    <link href="./assets/frameworks/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">`;
+                : `    <link href="./assets/frameworks/bootstrap/5.3.8/css/bootstrap.min.css" rel="stylesheet">`;
             const iconsLink = inline && content.iconsCss
                 ? `    <style>${content.iconsCss}</style>`
-                : `    <link href="./assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css" rel="stylesheet">`;
+                : `    <link href="./assets/frameworks/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css" rel="stylesheet">`;
             const jsScript = includeJs
                 ? inline && content.js
                     ? `    <script>${content.js}<\/script>`
-                    : `    <script src="./assets/frameworks/bootstrap/5.3.3/js/bootstrap.bundle.min.js" defer><\/script>`
+                    : `    <script src="./assets/frameworks/bootstrap/5.3.8/js/bootstrap.bundle.min.js" defer><\/script>`
                 : '';
             return [cssLink, iconsLink, jsScript].filter(Boolean).join('\n');
         }
         case 'tailwind': {
             const iconsLink = inline && content.iconsCss
                 ? `    <style>${content.iconsCss}</style>`
-                : `    <link href="./assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css" rel="stylesheet">`;
+                : `    <link href="./assets/frameworks/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css" rel="stylesheet">`;
             const jsScript = includeJs
                 ? inline && content.js
                     ? `    <script>${content.js}<\/script>`
@@ -893,20 +893,20 @@ function buildFrameworkAssetFiles(
 
     if (framework === 'bootstrap-5') {
         if (assets.css) {
-            files.push({path: 'assets/frameworks/bootstrap/5.3.3/css/bootstrap.min.css', content: assets.css})
+            files.push({path: 'assets/frameworks/bootstrap/5.3.8/css/bootstrap.min.css', content: assets.css})
         }
         if (assets.iconsCss) {
-            files.push({path: 'assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css', content: assets.iconsCss})
+            files.push({path: 'assets/frameworks/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css', content: assets.iconsCss})
         }
         if (assets.js) {
-            files.push({path: 'assets/frameworks/bootstrap/5.3.3/js/bootstrap.bundle.min.js', content: assets.js})
+            files.push({path: 'assets/frameworks/bootstrap/5.3.8/js/bootstrap.bundle.min.js', content: assets.js})
         }
         // Bootstrap Icons font files are referenced by the CSS via relative ../fonts/ path
         // They need to be available, but we cannot fetch binary files from the renderer.
         // For now, non-inlined Tailwind/Bootstrap exports fall back to CDN unless icons are inlined as base64.
     } else if (framework === 'tailwind') {
         if (assets.iconsCss) {
-            files.push({path: 'assets/frameworks/bootstrap-icons/1.11.3/css/bootstrap-icons.min.css', content: assets.iconsCss})
+            files.push({path: 'assets/frameworks/bootstrap-icons/1.13.2/css/bootstrap-icons.min.css', content: assets.iconsCss})
         }
         if (assets.js) {
             files.push({path: 'assets/frameworks/tailwind/tailwindcss-browser.js', content: assets.js})

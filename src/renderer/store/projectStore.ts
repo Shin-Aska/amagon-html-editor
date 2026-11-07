@@ -1,3 +1,4 @@
+import {flushCodeEdits, resetCodeSession} from '../utils/codeEditingSession';
 import { create } from "zustand";
 import type {
   CssFile,
@@ -321,6 +322,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     // ─── Project-level ───────────────────────────────────────────────
 
     setProject: (data, filePath) => {
+      resetCodeSession();
       // Backward compatibility: migrate old string theme to ProjectTheme object
       const incoming = data.projectSettings;
       const fallbackTheme =
@@ -398,6 +400,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     closeProject: () => {
+      resetCodeSession();
       const newDefault = createDefaultPage();
       const counts = buildMetaKeyCounts([newDefault]);
       set({
@@ -457,6 +460,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     getProjectData: () => {
+      flushCodeEdits();
       const state = get();
       return {
         customCss: state.customCss,
@@ -1049,6 +1053,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     // ─── Page management ─────────────────────────────────────────────
 
     addPage: (title, slug) => {
+      flushCodeEdits();
       const state = get();
       const base = normalizeSlug(slug ?? title) || "page";
       const unique = ensureUniqueSlug(base, state.pages);
@@ -1070,6 +1075,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     removePage: (id) => {
+      flushCodeEdits();
       set((state) => {
         const removed = state.pages.find((p) => p.id === id);
         const filtered = state.pages.filter((p) => p.id !== id);
@@ -1124,6 +1130,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
     },
 
     setCurrentPage: (id) => {
+      flushCodeEdits();
       set({ currentPageId: id });
     },
 

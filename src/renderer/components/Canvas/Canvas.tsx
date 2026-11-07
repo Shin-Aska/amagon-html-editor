@@ -1,3 +1,4 @@
+import {REVEAL_CANVAS_BLOCK_EVENT, notifyCanvasSelection} from '../../utils/canvasNavigation'
 import {useEffect, useMemo, useRef, useState} from 'react'
 import {Layers} from 'lucide-react'
 import ContextMenu, {type ContextMenuItem} from '../ContextMenu/ContextMenu'
@@ -180,6 +181,7 @@ function Canvas(): JSX.Element {
                     break;
                 case 'clicked':
                     selectBlock(data.blockId ?? null);
+                    notifyCanvasSelection(data.blockId ?? null);
                     maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent);
                     setContextMenu(null);
                     break;
@@ -189,6 +191,7 @@ function Canvas(): JSX.Element {
                 case 'contextMenu':
                     if (data.blockId) {
                         selectBlock(data.blockId);
+                        notifyCanvasSelection(data.blockId);
                         maybeShowNestedTabSelectionToast(data.redirectedFromNestedTabContent);
                         const iframeRect = iframeRef.current?.getBoundingClientRect();
                         if (iframeRect && data.clientX !== undefined && data.clientY !== undefined) {
@@ -362,6 +365,15 @@ function Canvas(): JSX.Element {
         if (!runtimeReady) return;
         postToIframe({type: 'setCustomCss', css: customCss})
     }, [customCss, runtimeReady]);
+
+    useEffect(() => {
+        const reveal = (event: Event): void => {
+            const blockId = (event as CustomEvent<{blockId?: string}>).detail?.blockId;
+            if (runtimeReady && typeof blockId === 'string') postToIframe({type: 'scrollToElement', blockId})
+        };
+        window.addEventListener(REVEAL_CANVAS_BLOCK_EVENT, reveal);
+        return () => window.removeEventListener(REVEAL_CANVAS_BLOCK_EVENT, reveal)
+    }, [runtimeReady]);
 
     useEffect(() => {
         if (!runtimeReady) return;

@@ -564,3 +564,8 @@ export const useEditorStore = create<EditorStore>((set, get) => {
         }
     }
 });
+
+// Keep toolbar/canvas mode in sync when changed from App Settings or loaded at startup.
+useAppSettingsStore.subscribe((next, previous) => {
+    if (next.theme !== previous.theme) useEditorStore.setState({theme: next.theme})
+});

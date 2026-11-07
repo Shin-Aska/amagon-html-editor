@@ -72,8 +72,8 @@ export function libraryPreviewDocument(options: LibraryDocumentOptions): string 
         stylesheet.href = options.frameworkBase + path
         doc.head.append(stylesheet)
     }
-    if (framework === 'bootstrap-5') link('bootstrap/5.3.3/css/bootstrap.min.css')
-    if (framework !== 'vanilla') link('bootstrap-icons/1.11.3/css/bootstrap-icons.min.css')
+    if (framework === 'bootstrap-5') link('bootstrap/5.3.8/css/bootstrap.min.css')
+    if (framework !== 'vanilla') link('bootstrap-icons/1.13.2/css/bootstrap-icons.min.css')
     if (framework === 'tailwind') {
         const script = doc.createElement('script')
         // Chromium does not serialize the nonce property on this detached document.

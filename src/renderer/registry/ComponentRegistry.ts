@@ -30,6 +30,8 @@ export interface PropSchema {
     max?: number
     step?: number
     group?: string // for grouping in inspector
+    tab?: 'content' | 'design' | 'advanced'
+    visibleWhen?: {prop: string; equals?: string | number | boolean}
     dataSource?: string // for combobox: e.g. 'tags' to pull options from project tags
 }
 

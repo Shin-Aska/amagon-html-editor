@@ -1,6 +1,6 @@
 name: Build and Release Electron App
 
-# Strategy: Only run on version tags to save private repo minutes
+# Version tags or manual branch builds prepare drafts for owner review.
 on:
   push:
     tags:
@@ -17,9 +17,7 @@ jobs:
     # Use a matrix to run the job on different OS virtual machines
     strategy:
       matrix:
-        # NOTE: macos-latest is temporarily excluded since this is a private repo
-        # macOS GitHub runners consume minutes at a 10x multiplier!
-        # Once public, you can freely add `macos-latest` back to this array.
+        # Keep the same Windows/Linux download set as previous releases.
         os: [ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.os }}
@@ -40,9 +38,13 @@ jobs:
       - name: Build Code
         run: npm run build
 
+      - name: Check TypeScript
+        run: npx tsc --noEmit -p tsconfig.json
+
       - name: Build and Publish with electron-builder
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EP_DRAFT: 'true'
         shell: bash
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then

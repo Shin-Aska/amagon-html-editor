@@ -322,3 +322,14 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-text-muted);
 }
+
+/* Side-by-side editing uses the same canvas and lazy editor, without duplicate views. */
+.canvas-code-layout #panel-code > .code-editor-area {
+    border-top: 0;
+    min-width: 0;
+}
+
+.canvas-code-layout > .panel-resize-handle {
+    width: 3px;
+    min-width: 3px;
+}

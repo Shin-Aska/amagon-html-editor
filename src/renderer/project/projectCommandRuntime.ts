@@ -1,3 +1,4 @@
+import {flushCodeEdits} from '../utils/codeEditingSession';
 import { LegacyProjectDocumentSchema, parseLegacyProjectDocument } from "../../shared/projects/projectDocumentSchema";
 import type { AssetInfo, FontMutationBridge, MutationResult, ProjectBridge, ProjectSession, SessionRequest } from "../../shared/projects/projectIpcContract";
 import { parseProjectSessionId, parseRendererGeneration, parseWorkspaceGeneration } from "../../shared/projects/projectIpcContract";
@@ -184,6 +185,7 @@ export const createRuntimeProjectCommands = (): ProjectCommands => {
     },
     mediaSearch: { downloadAndImport: electron?.mediaSearch.downloadAndImport ?? (async (request) => missingMutation<AssetInfo>(request)) },
     readProject: () => {
+      flushCodeEdits();
       const project = useProjectStore.getState();
       const editor = useEditorStore.getState();
       return { project: project.getProjectData(), currentPageId: project.currentPageId, blocks: editor.getFullBlocks(), customCss: editor.customCss };

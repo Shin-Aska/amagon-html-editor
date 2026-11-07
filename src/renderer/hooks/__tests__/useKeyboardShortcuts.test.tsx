@@ -102,3 +102,16 @@ describe('useKeyboardShortcuts', () => {
         unmount()
     })
 });
+
+
+it('leaves resize-handle arrow and tab keys to the panel library',()=>{
+    const unmount=renderHarness({enabled:true,onNewProject:vi.fn(),onOpen:vi.fn()});
+    const divider=document.createElement('div');divider.setAttribute('data-separator','inactive');divider.setAttribute('role','separator');document.body.append(divider);
+    try{
+        for(const key of ['ArrowRight','ArrowLeft','Tab']){
+            const event=new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true});
+            act(()=>divider.dispatchEvent(event));
+            expect(event.defaultPrevented).toBe(false);
+        }
+    }finally{divider.remove();unmount()}
+});

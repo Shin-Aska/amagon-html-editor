@@ -117,3 +117,24 @@ Tests live next to their source files (e.g. `Foo.tsx` → `Foo.test.tsx` or `__t
 - **Known compatibility issues** → [`docs/post-install.md`](post-install.md)
 
 Happy hacking.
+
+
+## Working on widget editing
+
+Start with `src/renderer/registry/ComponentRegistry.ts` and `registerBlocks.ts` for widget properties. The shared inspector groups controls into Content, Design, and Advanced; `inspectorSchema.ts` handles tab placement, visibility, and search aliases. Assign every widget a profile in `widgetDesigns.ts`. Extend existing styles rather than introducing a new project format. Run the inspector experience tests and widget-design export coverage with one Vitest worker; `tests/electron/widget-experience.spec.ts` exercises the desktop workflow.
+
+
+## Application appearance and code editing
+
+App Settings → Appearance provides six light/dark color families plus custom app themes with live preview, contrast feedback, and JSON sharing. These preferences never change the website’s project theme. The lazy code editor uses locally bundled Monaco, app-matched colors, page-specific drafts, a six-model LRU, HTML/CSS formatting, find/replace, editor preferences, clickable diagnostics, canvas navigation, and on-demand project suggestions. Minimap defaults off; no new dependencies or background indexing services. See [app appearance and code editor](app-appearance-and-code-editor.md) for formats, memory limits, and draft lifetime.
+
+
+The **Canvas + Code** layout places a resizable canvas on the left and code editor on the right, with the sidebar and inspector hidden. Select it from Change Layout or as the default in App Settings → General. It opens code automatically; the code toggle switches between this layout and Canvas Only. App color themes remain in App Settings → Appearance; the toolbar color-theme shortcut has been removed.
+
+
+Canvas widget clicks switch an open code editor to HTML, scroll to the widget’s opening tag, and highlight its complete markup. Re-clicking the same widget reveals it again. Source-only widget identities preserve export markup; a single-version source-range cache uses the existing HTML parser and preserves code drafts.
+
+
+Release 1.11.0 is prepared on `feat/1.11.0`. The npm manifest and lockfile record compatible upstream updates; bundled Bootstrap 5.3.8, Bootstrap Icons 1.13.2, and Highlight.js 11.12.0 assets match previews and exports. Font catalog generation fetches validated, pinned upstream data instead of installing an unused generation CLI. See [release validation](releases/1.11.0/validation.md).
+
+Bundled framework fonts and icons use the CORS-enabled `app-framework` protocol, registered together with `app-media` in one call before Electron is ready.
