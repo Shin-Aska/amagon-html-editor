@@ -17,8 +17,16 @@ Legacy open and ordinary Save now opt into missing-file warnings while retaining
 - The rebuilt Electron application opened all four supplied legacy projects. Existing images loaded; the genuinely absent file was identified in a warning. The original private archive was unchanged and is not included in this repository or the release.
 - Imports named `plain.png`, `with space.png`, `100%.png`, and `literal%20name.png` displayed without error and survived an actual `.amg` save/close/reopen round trip, with zero renderer page errors.
 
-## Installer preparation
+## Built installers
 
-Windows x64 and Linux x64 installers will be built from the hotfix version tag using the existing release workflow. Build results, uploaded asset digests, and a downloaded packaged-app check will be recorded here after completion. The release remains a draft for owner review.
+[GitHub Actions run 42345677471](https://github.com/Shin-Aska/amagon-html-editor/actions/runs/42345677471) **succeeded on Windows and Linux**, including clean dependency installs, production builds, TypeScript checks, packaging, and draft uploads. Both jobs built tag `v1.11.1` at application commit `9cf7f7532dd4253d6650e41a6e58924f8e37270c`. The subsequent verification commit changes release records only.
+
+The [1.11.1 draft on the Releases page](https://github.com/Shin-Aska/amagon-html-editor/releases) contains seven assets: the Windows x64 installer, its blockmap and update feed; the Linux x64 AppImage, Debian package and update feed; and [SHA256SUMS.txt](SHA256SUMS.txt). The manifest records GitHub's SHA-256 upload digests for all six build files. Its uploaded digest also matches the committed manifest.
+
+The downloaded AppImage, Windows installer, blockmap, and both update feeds independently match their SHA-256 upload digests and declared sizes. Both feeds identify version 1.11.1; their SHA-512 checksums match the downloaded Windows installer and Linux AppImage respectively.
+
+The downloaded and extracted AppImage reports `app.isPackaged === true` and version `1.11.1`. In that packaged application, fresh temporary copies of **all four supplied legacy projects opened, Saved, and reopened**. Existing images loaded, and the genuinely absent image remained a repairable warning. The four filename import cases also passed in the packaged application and survived `.amg` save/close/reopen, with zero renderer page errors. Private project files and screenshots were not uploaded.
+
+Windows packaging is verified by CI and downloaded-file integrity checks; a Windows runtime launch was not performed on this Linux machine. The release remains a draft for owner review. The published 1.11.0 release and its assets were verified unchanged.
 
 The release illustration reuses the public Ocean editor screenshot from 1.11.0. Private reproduction projects and screenshots are excluded.
