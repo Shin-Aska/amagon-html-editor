@@ -46,7 +46,8 @@ export const createMainWindowController = <TWindow extends ManagedWindow>(
       title: "Amagon",
       icon: path.join(
         context.moduleDirectory,
-        context.platform === "win32" ? "../../assets/app.ico" : "../../assets/app.png",
+        context.platform === "win32" ? "../../assets/app.ico"
+          : context.platform === "linux" ? "../../assets/icons/512x512.png" : "../../assets/app.png",
       ),
       webPreferences: {
         preload: path.join(context.moduleDirectory, "../preload/index.mjs"),

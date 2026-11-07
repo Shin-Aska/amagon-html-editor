@@ -61,3 +61,6 @@ jobs:
           elif [ "$RUNNER_OS" == "macOS" ]; then
             npm run dist:mac -- --publish always
           fi
+      - name: Verify Debian launcher icons and desktop identity
+        if: runner.os == 'Linux'
+        run: npm run check:linux-package

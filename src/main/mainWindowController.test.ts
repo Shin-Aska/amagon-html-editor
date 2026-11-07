@@ -20,6 +20,22 @@ const fakeLifecycle = (): LifecycleController => ({
 });
 
 describe("main window controller", () => {
+  it.each([
+    ['linux', 'assets/icons/512x512.png'],
+    ['win32', 'assets/app.ico'],
+    ['darwin', 'assets/app.png'],
+  ] as const)('loads the platform icon for %s', async (platform, icon) => {
+    let configured: BrowserWindowConstructorOptions | undefined;
+    const controller = createMainWindowController({
+      moduleDirectory: '/app/out/main', rendererUrl: undefined, platform,
+      createRequestId: () => 'request', quit: vi.fn(), stopAutosave: vi.fn(),
+      createWindow: options => {configured = options; return fakeWindow();},
+      onClosed: vi.fn(), onClose: vi.fn(), createLifecycle: fakeLifecycle,
+    });
+    await controller.createWindow();
+    expect(String(configured?.icon).replace(/\\/gu, '/')).toBe(`/app/${icon}`);
+  });
+
   it("creates and recreates windows with fresh lifecycle ownership", async () => {
     const windows = [fakeWindow(), fakeWindow()];
     const lifecycles = [fakeLifecycle(), fakeLifecycle()];
