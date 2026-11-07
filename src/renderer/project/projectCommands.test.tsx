@@ -368,6 +368,8 @@ describe("project commands", () => {
 
     expect(test.commands.state.progress).toMatchObject({ phase: "writing", completed: 2 });
     expect(test.commands.state.busy).toBe("save");
+    test.progress({operation: 'save', phase: 'cleaning', completed: 4, total: 4, busy: false});
+    expect(test.commands.state.busy).toBeNull();
   });
 
   it("preserves the active project and renders capacity failures from main", async () => {

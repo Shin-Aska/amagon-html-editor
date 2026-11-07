@@ -38,11 +38,16 @@ const parseProcessIdentities = (output: string): readonly ProcessIdentity[] => {
   return candidates.filter(isProcessIdentity);
 };
 
+export const processIdentityFilter = (processIds: readonly number[]): string => {
+  if (!processIds.length || processIds.some(pid => !Number.isSafeInteger(pid) || pid <= 0)) throw new TypeError('Process lookups require positive integer PIDs');
+  return [...new Set(processIds)].sort((left, right) => left - right).map(pid => `ProcessId = ${pid}`).join(' OR ');
+};
+
 const readProcessIdentities = async (processIds: readonly number[]): Promise<readonly ProcessIdentity[]> => {
   if (processIds.length === 0 || process.platform !== "win32") return [];
   const script = [
-    `$ids = @(${processIds.join(",")})`,
-    "$records = @(Get-CimInstance Win32_Process | Where-Object { $ids -contains [int]$_.ProcessId } | Sort-Object ProcessId | ForEach-Object { [PSCustomObject]@{ pid = [int]$_.ProcessId; creationTime = $_.CreationDate.ToFileTimeUtc().ToString(); executablePath = $_.ExecutablePath; name = $_.Name; commandLine = $_.CommandLine } })",
+    `$filter = '${processIdentityFilter(processIds)}'`,
+    "$records = @(Get-CimInstance Win32_Process -Filter $filter -Property ProcessId,CreationDate,ExecutablePath,Name,CommandLine | Sort-Object ProcessId | ForEach-Object { [PSCustomObject]@{ pid = [int]$_.ProcessId; creationTime = $_.CreationDate.ToFileTimeUtc().ToString(); executablePath = $_.ExecutablePath; name = $_.Name; commandLine = $_.CommandLine } })",
     "if ($records.Count -eq 0) { '[]' } else { $records | ConvertTo-Json -Compress }",
   ].join("; ");
   return parseProcessIdentities(await runWindowsCommand("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script]));

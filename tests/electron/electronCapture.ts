@@ -20,7 +20,8 @@ type CaptureHarness = {
 type CaptureRecord = CaptureIntent & {
   readonly file: string;
   readonly capturedAt: string;
-  readonly source: "real Electron out/main/index.js";
+  readonly source: "real Electron out/main/index.js" | "packaged Electron application";
+  readonly version: string;
   readonly viewport: { readonly width: number; readonly height: number; readonly devicePixelRatio: number };
   readonly windowBounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | null;
   readonly image: { readonly width: number; readonly height: number; readonly sha256: string };
@@ -41,16 +42,19 @@ export const capture = async (
     height: window.innerHeight,
     devicePixelRatio: window.devicePixelRatio,
   }));
-  const windowBounds = await harness.app.evaluate(({ BrowserWindow }, url) => (
-    BrowserWindow.getAllWindows().find((window) => window.webContents.getURL() === url)?.getBounds() ?? null
-  ), harness.page.url());
+  const runtime = await harness.app.evaluate(({ app, BrowserWindow }, url) => ({
+    bounds: BrowserWindow.getAllWindows().find((window) => window.webContents.getURL() === url)?.getBounds() ?? null,
+    packaged: app.isPackaged,
+    version: app.getVersion(),
+  }), harness.page.url());
   captureRecords.push({
     ...intent,
     file: name,
     capturedAt: new Date().toISOString(),
-    source: "real Electron out/main/index.js",
+    source: runtime.packaged ? "packaged Electron application" : "real Electron out/main/index.js",
+    version: runtime.version,
     viewport,
-    windowBounds,
+    windowBounds: runtime.bounds,
     image: {
       width: bytes.readUInt32BE(16),
       height: bytes.readUInt32BE(20),

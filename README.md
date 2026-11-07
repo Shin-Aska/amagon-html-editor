@@ -23,7 +23,7 @@ Amagon is an offline desktop HTML editor for building block-based pages visually
 
 New desktop projects use the portable `.amg` format: one ZIP64-capable file containing the project document and its imported assets. Existing `.json` projects remain supported. On desktop, Save or Save As opens a guided `.amg` conversion dialog: repair any missing assets with Locate file or Recheck assets, then choose where to save the bundle. The original JSON is not replaced. Conversion never silently replaces the legacy source.
 
-Legacy projects with missing images still open for editing and identify the missing asset paths in a notice that stays until dismissed. Restore the files or replace their references before converting to `.amg`. Media imports preserve filenames containing spaces, Unicode, `#`, and literal `%` characters.
+Legacy projects with missing images still open for editing and identify the missing asset paths in a notice that stays until dismissed. Restore the files or replace their references before converting to `.amg`. Media imports preserve filenames containing spaces, Unicode, `#`, and literal `%` characters. Autosave keeps a pending tick through imports and in-flight saves so newly imported assets and font metadata are saved after the current operation settles.
 
 For large projects, **Locate multiple files** repairs matching filenames in batches, and searchable lists show 25 entries at a time. The conversion dialog and **Asset Manager → Review unused assets** offer cleanup of unused files and unused missing font entries. Review the selection, confirm, and use **Undo cleanup** to restore it before leaving or converting the project. Files move to project trash and are excluded from the saved bundle; assets with uncertain usage are kept.
 

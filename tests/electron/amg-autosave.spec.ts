@@ -1,9 +1,10 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { inspectAmgArchive, readArchivePaths } from "./archiveAssertions";
-import { capture, launchAmagon, sendAutosaveTick, stopAmagon, type AmagonHarness } from "./electronHarness";
+import { capture, sendAutosaveTick, type AmagonHarness } from "./electronHarness";
+import {launchPortableEditor, stopPortableEditor} from "./portableEditorHarness";
 import { createProjectThroughUi, importFontThroughUi, importMediaThroughUi } from "./projectUi";
 
 const archivePollTimeoutMs = 15_000;
@@ -19,18 +20,18 @@ const waitForArchivePath = async (archivePath: string, expectedPath: string): Pr
   }, { timeout: archivePollTimeoutMs }).toBe(true);
 };
 
-test("asset-only and font-only mutations autosave without an explicit Save command", async () => {
+test("asset-only and font-only mutations autosave without an explicit Save command", async ({}, testInfo) => {
   // Given: a real editor session with fast production autosave ticks and local import files.
   const root = await mkdtemp(path.join(os.tmpdir(), "amagon-e2e-autosave-"));
   const target = path.join(root, "autosave.amg");
   const imagePath = path.join(root, "pixel.png");
   const fontPath = path.join(root, "fixture.woff2");
-  await writeFile(imagePath, new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]));
-  await writeFile(fontPath, new Uint8Array([119, 79, 70, 50, 0, 0, 0, 0]));
+  await writeFile(imagePath, await readFile(path.resolve("docs/images/logo.png")));
+  await writeFile(fontPath, await readFile(path.resolve("public/frameworks/google-fonts/Inter/inter-v20-1.woff2")));
   let harness: AmagonHarness | null = null;
   let primaryError: unknown;
   try {
-    harness = await launchAmagon(root);
+    harness = await launchPortableEditor(root);
     await createProjectThroughUi({ harness, filePath: target, name: "Autosave Matrix" });
 
     // When: media is imported through the visible Asset Manager.
@@ -67,6 +68,21 @@ test("asset-only and font-only mutations autosave without an explicit Save comma
     expect(harness.pageErrors).toEqual([]);
   } catch (error) {
     primaryError = error;
+    if (harness) {
+      try {
+        const state = await harness.page.evaluate(async () => ({
+          status: document.querySelector('.status-icon')?.textContent,
+          toast: document.querySelector('.toast')?.textContent,
+          fonts: await window.api.fonts.listProject(),
+          saveDisabled: document.querySelector<HTMLButtonElement>('button[aria-label="Save project"]')?.disabled,
+        }));
+        const archive = await readArchivePaths(target).catch(cause => [String(cause)]);
+        await testInfo.attach('autosave-failure-state', {body: JSON.stringify({state, archive, pageErrors: harness.pageErrors}, null, 2), contentType: 'application/json'});
+        await harness.page.screenshot({path: testInfo.outputPath('autosave-failure.png')});
+      } catch (diagnosticError) {
+        await testInfo.attach('autosave-diagnostic-error', {body: String(diagnosticError), contentType: 'text/plain'});
+      }
+    }
     throw error;
   } finally {
     const cleanupErrors: unknown[] = [];
@@ -78,7 +94,7 @@ test("asset-only and font-only mutations autosave without an explicit Save comma
           if (!(error instanceof Error) || !error.message.includes("closed")) cleanupErrors.push(error);
         }
         try {
-          await stopAmagon(harness);
+          await stopPortableEditor(harness);
         } catch (error) {
           cleanupErrors.push(error);
         }

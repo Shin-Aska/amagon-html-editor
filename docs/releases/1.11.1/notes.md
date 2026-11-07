@@ -48,7 +48,7 @@ Large missing-asset sets now have searchable, paginated lists and **Locate multi
 
 ![Guided legacy asset repair and AMG conversion](legacy-repair.png)
 
-Save validation now inventories nested media, fonts, and other project assets correctly. Conversion after an asset import and legacy autosave also adopts the new bundle without falsely reporting a stale save.
+Save validation now inventories nested media, fonts, and other project assets correctly. Conversion after an asset import and legacy autosave also adopts the new bundle without falsely reporting a stale save. Autosave now carries pending ticks through imports and save acknowledgements, capturing newly imported assets and font metadata once the current operation settles.
 
 ## Reliable image and video imports
 

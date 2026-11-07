@@ -7,6 +7,7 @@ import {
   isTrustedMainProcess,
   normalizeUserDataDir,
   selectLiveCapturedProcesses,
+  processIdentityFilter,
   type ProcessIdentity,
 } from "./processOwnership";
 
@@ -19,6 +20,13 @@ const capturedElectron: ProcessIdentity = {
   name: "electron.exe",
   pid: 19724,
 };
+
+test('process identity queries request exact PIDs and reject invalid filters', () => {
+  assert.equal(processIdentityFilter([42, 7, 42]), 'ProcessId = 7 OR ProcessId = 42');
+  for (const values of [[], [0], [-1], [1.5], [Number.POSITIVE_INFINITY], [Number.MAX_SAFE_INTEGER + 1]]) {
+    assert.throws(() => processIdentityFilter(values), /positive integer PIDs/);
+  }
+});
 
 const reusedDiscordProcess: ProcessIdentity = {
   commandLine: "DiscordSystemHelper.exe --type=utility",

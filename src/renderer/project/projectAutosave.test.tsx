@@ -92,12 +92,50 @@ const setup = (choice: "save" | "discard" | "cancel" = "cancel") => {
     load,
     newProject,
     close,
+    selectImage,
     edit: () => edit(),
     setSnapshotError: (error: Error | null) => { snapshotError = error; },
   };
 };
 
 describe("project autosave and dirty transitions", () => {
+  it('saves edits from a tick received while the previous save is awaiting acknowledgement', async () => {
+    const test = setup();
+    let finish: (result: Awaited<ReturnType<ProjectBridge['save']>>) => void = () => undefined;
+    test.save.mockImplementationOnce(() => new Promise(resolve => {finish = resolve;}));
+    test.save.mockImplementation(async request => ({success: true, session: session(request.rendererGeneration, request.workspaceGeneration)}));
+    await test.commands.openProject();
+    test.edit();
+    const first = test.commands.autosave();
+    test.edit();
+    const queued = test.commands.autosave();
+    const coalesced = test.commands.autosave();
+    finish({success: true, session: session(1, 0)});
+    expect((await first).ok).toBe(true);
+    expect((await queued).ok).toBe(true);
+    expect((await coalesced).ok).toBe(true);
+    expect(test.save).toHaveBeenCalledTimes(2);
+    expect(test.save.mock.calls[1]?.[0].rendererGeneration).toBe(2);
+    expect(test.commands.state.dirty).toBe(false);
+  });
+
+  it('defers a tick during an import until its workspace mutation is recorded', async () => {
+    const test = setup();
+    let finish: (result: MutationResult<readonly AssetInfo[]>) => void = () => undefined;
+    test.selectImage.mockImplementationOnce(() => new Promise(resolve => {finish = resolve;}));
+    await test.commands.openProject();
+    const importing = test.commands.selectImages().then(result => {test.edit(); return result;});
+    const queued = test.commands.autosave();
+    expect(test.save).not.toHaveBeenCalled();
+    finish({success: true, sessionId: SESSION, changed: true, workspaceGeneration: parseWorkspaceGeneration(1), value: []});
+    expect((await importing).ok).toBe(true);
+    expect((await queued).ok).toBe(true);
+    expect(test.save).toHaveBeenCalledOnce();
+    expect(test.save.mock.calls[0]?.[0].workspaceGeneration).toBe(1);
+    expect(test.save.mock.calls[0]?.[0].rendererGeneration).toBe(1);
+    expect(test.commands.state.dirty).toBe(false);
+  });
+
   it("does not write a clean project on an autosave tick", async () => {
     const test = setup();
     await test.commands.openProject();

@@ -11,6 +11,7 @@ import {
 } from "../../shared/projects/projectIpcContract";
 import { buildProjectSnapshot } from "./projectSnapshot";
 import {createAssetMaintenanceCommands} from './projectAssetMaintenance';
+import {DeferredProjectAutosave} from './deferredProjectAutosave';
 import {
   type CoordinatorSaveKind,
 } from "./projectSaveCoordinator";
@@ -31,7 +32,13 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
   const sessionRuntime: ProjectCommandSessionRuntime = { coordinator: null, installing: false, latestSaveSession: null, availableAssetPaths: [] };
   let mutating = false;
   let preparingConversion = false;
+  let ownedOperation: ProjectOperation | null = null;
   let runSave: (kind: CoordinatorSaveKind) => Promise<ProjectCommandResult>;
+  const deferredAutosave = new DeferredProjectAutosave({
+    getSessionId: () => state.session?.sessionId ?? null,
+    blocked: () => mutating || preparingConversion || state.busy !== null || ownedOperation !== null,
+    save: () => runSave('autosave'),
+  });
   const getLatestSaveSession = (): ProjectSession | null => sessionRuntime.latestSaveSession;
 
   const publish = (patch: Partial<ProjectCommandState>): void => {
@@ -132,6 +139,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
         };
       }
     }
+    ownedOperation = operation;
     publish({ busy: operation, message: null });
     try {
       const result = await request(transition);
@@ -140,12 +148,15 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     } catch (error) {
       return unexpected(error);
     } finally {
+      ownedOperation = null;
       publish({ busy: null });
+      deferredAutosave.flush();
     }
   };
 
   runSave = async (kind: CoordinatorSaveKind): Promise<ProjectCommandResult> => {
     if (sessionRuntime.coordinator === null || state.session === null) return fail({ tone: "error", title: "No project is open", detail: "Open or create a project first.", locations: [] });
+    if (kind === 'autosave' && !preparingConversion && (mutating || state.busy === 'save')) return deferredAutosave.defer(state.session.sessionId);
     if (state.busy !== null) return fromError({ code: "BUSY", operation: state.busy });
     if (preparingConversion) {
       if (kind === "autosave") return {ok: true, value: undefined};
@@ -156,13 +167,14 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       let proceed: boolean;
       try { proceed = await dependencies.prepareLegacyConversion(state.session); }
       catch (error) { return unexpected(error); }
-      finally { preparingConversion = false; }
+      finally { preparingConversion = false; deferredAutosave.flush(); }
       if (!proceed) return fail({tone: "info", title: "Conversion canceled", detail: "Your edits and repaired assets remain available. The legacy JSON was not replaced.", locations: []}, true);
       kind = "save-as";
     }
     if (kind === "autosave" && !sessionRuntime.coordinator.state.dirty) return { ok: true, value: undefined };
     const operation = kind === "save-as" ? "save-as" : "save";
     sessionRuntime.latestSaveSession = null;
+    ownedOperation = operation;
     publish({ busy: operation, message: null });
     try {
       const result = kind === "autosave" ? await sessionRuntime.coordinator.requestAutosave() : kind === "save-as" ? await sessionRuntime.coordinator.requestSaveAs() : await sessionRuntime.coordinator.requestSave();
@@ -188,7 +200,9 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     } catch (error) {
       return unexpected(error);
     } finally {
+      ownedOperation = null;
       publish({ busy: null });
+      deferredAutosave.flush();
     }
   };
 
@@ -217,6 +231,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       return unexpected(error);
     } finally {
       mutating = false;
+      deferredAutosave.flush();
     }
   };
 
@@ -230,6 +245,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       if (!saved.ok) return saved;
       return close("discard");
     }
+    ownedOperation = 'close';
     publish({ busy: "close", message: null });
     try {
       let request: Parameters<ProjectCommandDependencies["project"]["close"]>[0];
@@ -266,7 +282,9 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       sessionRuntime.installing = false;
       return unexpected(error);
     } finally {
+      ownedOperation = null;
       publish({ busy: null });
+      deferredAutosave.flush();
     }
   };
 
@@ -276,7 +294,10 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     dependencies.markDirty();
     publish({ dirty: true });
   });
-  const unsubscribeProgress = dependencies.project.onProgress((progress) => publish({ progress, busy: progress.busy ? progress.operation : state.busy }));
+  const unsubscribeProgress = dependencies.project.onProgress((progress) => {
+    publish({progress, busy: ownedOperation ?? (progress.busy ? progress.operation : null)});
+    deferredAutosave.flush();
+  });
 
   return {
     ...createAssetMaintenanceCommands({dependencies, getSession: () => state.session, getGenerations: () => sessionRuntime.coordinator?.state, runMutation}),
@@ -297,7 +318,7 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
       preparingConversion = true;
       try { await dependencies.prepareAssetCleanup(state.session); return {ok: true, value: undefined}; }
       catch (error) { return unexpected(error); }
-      finally { preparingConversion = false; }
+      finally { preparingConversion = false; deferredAutosave.flush(); }
     },
     repairAsset: (relativePath) => runMutation(expectedSessionId => dependencies.assets.repairMissing({expectedSessionId, relativePath})),
     selectImages: () => runMutation((expectedSessionId) => dependencies.assets.selectImage({ expectedSessionId })),
@@ -309,6 +330,6 @@ export const createProjectCommands = (dependencies: ProjectCommandDependencies):
     downloadGoogleFont: (family, variants) => runMutation((expectedSessionId) => dependencies.fonts.downloadGoogleFont({ expectedSessionId, family, variants })),
     deleteFont: (relativePath) => runMutation((expectedSessionId) => dependencies.fonts.deleteFont({ expectedSessionId, relativePath })),
     downloadMedia: (downloadId) => runMutation((expectedSessionId) => dependencies.mediaSearch.downloadAndImport({ expectedSessionId, downloadId })),
-    dispose: () => { unsubscribeEdits(); unsubscribeProgress(); listeners.clear(); },
+    dispose: () => { deferredAutosave.dispose(); unsubscribeEdits(); unsubscribeProgress(); listeners.clear(); },
   };
 };

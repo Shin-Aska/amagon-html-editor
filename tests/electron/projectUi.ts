@@ -86,6 +86,8 @@ export const openProjectThroughUi = async (request: ProjectUiRequest): Promise<v
 };
 
 export const closeProjectThroughUi = async (harness: AmagonHarness): Promise<void> => {
+  // The archive can be committed before its renderer acknowledgement finishes.
+  await expect(harness.page.getByRole('button', {name: 'Save project', exact: true})).toBeEnabled();
   const discardDirtyProject = async (dialog: Dialog): Promise<void> => {
     if (dialog.message() === "Save changes before closing?") await dialog.dismiss();
     else if (dialog.message() === "Discard unsaved changes?") await dialog.accept();

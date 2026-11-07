@@ -14,20 +14,20 @@ The review renders at most 25 entries and supports searching, pagination, and fi
 
 Unused cleanup covers both unused files and missing, unapplied font entries. Usage checks consider all pages, themes, presets, saved blocks, templates and custom CSS. Linked resources, dynamic code and uncertain font usage are retained. Cleanup rechecks current references and workspace generation before moving selected files outside `assets/` into project trash. Associated unused font metadata is removed; session-scoped Undo restores the last cleanup without overwriting reimported files. Trash is excluded from bundles. The same review is available from Asset Manager.
 
-Import, font persistence/export, archive compatibility, Monaco cancellation handling, widget previews, app themes and code-editor improvements remain covered. No dependency or background index was added.
+Import, font persistence/export, archive compatibility, Monaco cancellation handling, widget previews, app themes and code-editor improvements remain covered. Autosave ticks received during an import or save acknowledgement now coalesce into one pending save scoped to the original session; the save runs after operation and caller metadata updates settle. Completed native progress cannot leave a stale busy flag. No dependency, background index or idle polling timer was added.
 
 ## Completed local verification
 
 - Production build and both application/build-configuration TypeScript checks passed.
-- **70 focused checks passed**, including 10,000-entry matching/review/notification coverage, conservative usage detection, stale sessions/workspaces, exclusive repair, cleanup and Undo, metadata-only cleanup, and module architecture.
-- The broad local run passed 1,218 tests and caught a newly added quoted-space-filename case before the final scan correction. The corrected scan and all focused checks then passed; a fresh complete Windows/Linux run is required below.
-- **All 11 portable desktop workflows passed**: guided legacy repair, 50-file batch repair with reviewed cleanup/Undo/conversion/reopening, literal media filename round trips, conversion after autosave, imported font round trips/export/deletion, app themes/code editing, canvas/code layout and selection, both theme-transition formats, and widget controls.
+- **100 focused checks passed**, including 10,000-entry matching/review/notification coverage, conservative usage detection, stale sessions/workspaces, exclusive repair, cleanup and Undo, metadata-only cleanup, and module architecture.
+- The earlier Windows/Linux baseline passed all 1,220 tests. Subsequent Windows desktop verification exposed a process-inventory timeout and a font-autosave timing failure. Process queries now filter exact PIDs while preserving all identity checks and bounds. Two deterministic controller tests reproduced dropped ticks during an import or save acknowledgement; the corrected queue and all 100 focused checks pass. There are now six process-ownership checks. A fresh complete Windows/Linux run is required below.
+- **The three critical desktop workflows passed after the autosave correction**: asset/font autosave, guided legacy repair and 50-file batch repair/cleanup/Undo/conversion. The other nine portable workflows are being rerun; the previously completed run covered guided legacy repair, 50-file batch repair with reviewed cleanup/Undo/conversion/reopening, literal media filename round trips, conversion after autosave, imported font round trips/export/deletion, app themes/code editing, canvas/code layout and selection, both theme-transition formats, and widget controls.
 - Edited copies of **all four supplied legacy projects converted and reopened**, preserving edits and original JSON bytes. **22 asset files were checked byte-for-byte**; the one genuinely absent image was repaired using a public replacement in a test copy. No private content was uploaded, and no renderer exceptions were observed.
 - A fresh full npm audit reported **zero vulnerabilities**.
 
 ## Required release gates
 
-The complete suite, process ownership checks and both TypeScript checks run on Windows and Linux. Release packaging additionally requires all Windows desktop cases and the 11 portable Linux cases; both verification jobs must pass before either platform uploads installers.
+The complete suite (now 1,225 tests across 126 files), six process ownership checks and both TypeScript checks run on Windows and Linux. Release packaging additionally requires all Windows desktop cases and the 12 portable Linux cases; both verification jobs must pass before either platform uploads installers.
 
 After packaging, download and independently verify all six installer/feed assets, validate update-feed SHA-512 hashes, replace the checksum manifest, and test the actual packaged AppImage (including version/packaged-state assertions, batch repair/cleanup, and all four private legacy project copies). Keep the release unpublished for owner review.
 
